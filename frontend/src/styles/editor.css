@@ -370,6 +370,10 @@
   margin-top: -40px; /* lift the draggable modules above the top plane of the halves */
 }
 
+.kb-palette-spacer {
+  height: 46px; /* same footprint as the palette row (Color mode has no palette) */
+}
+
 .kb-slots {
   display: flex;
   gap: 0;

@@ -79,14 +79,16 @@ function Column({ col, align, ...kp }) {
 }
 
 function LedCol({ positions, keysByPosition, selectedPosition, onSelectKey }) {
+  // Side (underglow) LEDs — sized to match the end-column keycaps so they scale
+  // with KEY_UNIT instead of drifting smaller after a geometry change.
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0.3 * REM, marginTop: 2.2 * REM, padding: "0 6px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 0.34 * REM, marginTop: 1.5 * REM, padding: "0 6px" }}>
       {positions.map((pos) => {
         const color = keysByPosition[pos]?.colorHex;
         return (
           <button key={pos} className={"kb-led" + (selectedPosition === pos ? " selected" : "")}
             title={`LED ${pos}`} onClick={() => onSelectKey(pos)}
-            style={{ width: 1 * REM, height: 1.8 * REM, background: color || "var(--neutral20)" }} />
+            style={{ width: NORMAL_W, height: 1.9 * REM, background: color || "var(--neutral20)" }} />
         );
       })}
     </div>
@@ -133,7 +135,7 @@ export default function KeymapBoard(props) {
       </div>
 
       <div className="kb-center">
-        {showModulePalette && (
+        {showModulePalette ? (
           <div className="kb-palette-row">
             {["track", "touch", "tune"].map((t) => (
               <img key={t} src={MODULE_IMG[t]} alt={t} draggable
@@ -143,6 +145,10 @@ export default function KeymapBoard(props) {
                 className={"kb-palette-mod" + (pickedModule === t ? " picked" : "")} />
             ))}
           </div>
+        ) : (
+          // No palette in Color mode — reserve its footprint so the slots still
+          // land in the pocket (not shoved to the top by space-between).
+          <div className="kb-palette-row kb-palette-spacer" aria-hidden="true" />
         )}
         <div className="kb-slots">
           <ModuleSlot id="left" pos={88} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
