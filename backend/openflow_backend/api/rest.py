@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import platform
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, File, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
 from .. import __version__
@@ -113,6 +113,16 @@ async def restore_backup(body: dict = Body(...)) -> dict:
     try:
         return await run_in_threadpool(bak.restore_backup, body["name"])
     except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/import-backup-file")
+async def import_backup_file(file: UploadFile = File(...)) -> dict:
+    """Install an uploaded .db or NayaFlow backup .zip as the current data."""
+    raw = await file.read()
+    try:
+        return await run_in_threadpool(bak.import_db_bytes, raw, file.filename or "upload.db")
+    except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 

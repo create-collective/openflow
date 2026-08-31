@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { pickFile } from "../lib/files";
 
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
 const REPOS = {
@@ -185,9 +186,19 @@ export default function Settings() {
                 <div style={{ maxWidth: 720 }}>
                   <h3>Local Backups</h3>
                   <p className="page-sub">OpenFlow auto-backs up your data every 30 minutes. Restore any snapshot below.</p>
-                  <div className="btn-row" style={{ marginBottom: 16 }}>
+                  <div className="btn-row" style={{ marginBottom: 8 }}>
                     <button className="btn primary" disabled={busy} onClick={() => run("Backup now", async () => { const r = await api.createBackup(); setBackups(await api.backups()); return r; })}>Backup now</button>
+                    <button className="btn" disabled={busy} onClick={async () => {
+                      const f = await pickFile(".db,.zip");
+                      if (!f) return;
+                      if (!confirm("Import this backup as your current data? Your current data is snapshotted first.")) return;
+                      run("Import backup", async () => { const r = await api.importBackupFile(f); setBackups(await api.backups()); return r; });
+                    }}>Import backup file…</button>
                   </div>
+                  <p className="page-sub" style={{ marginBottom: 12 }}>
+                    Import a NayaFlow backup (its <code>.zip</code> or the <code>user-data.db</code> inside) — OpenFlow uses the same
+                    data format, so your NayaFlow profiles, layers, colors and bindings come straight across.
+                  </p>
                   {backups.dir && <div className="page-sub" style={{ marginBottom: 8 }}>Folder: <span style={{ fontFamily: "var(--font-mono)" }}>{backups.dir}</span></div>}
                   {backups.backups.length === 0 ? <div className="empty">No backups yet.</div> : backups.backups.map((b) => (
                     <div className="skp-row" key={b.name} style={{ cursor: "default" }}>

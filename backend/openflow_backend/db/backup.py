@@ -7,8 +7,13 @@ Backups are plain SQLite snapshots in the app's backups dir.
 
 from __future__ import annotations
 
+import io
 import shutil
+import sqlite3
+import tempfile
+import zipfile
 from datetime import datetime
+from pathlib import Path
 
 from ..config import backups_dir, db_path
 
@@ -63,3 +68,38 @@ def restore_backup(name: str) -> dict:
     create_backup(kind="pre-restore")
     shutil.copyfile(src, db_path())
     return {"ok": True}
+
+
+def import_db_bytes(raw: bytes, filename: str) -> dict:
+    """Install an uploaded database as the current data. Accepts a raw .db or a
+    NayaFlow backup .zip (which bundles user-data.db) — OpenFlow uses NayaFlow's
+    schema, so a NayaFlow backup drops straight in."""
+    db_bytes = raw
+    if filename.lower().endswith(".zip"):
+        with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+            member = next((n for n in zf.namelist() if n.lower().endswith(".db")), None)
+            if member is None:
+                raise ValueError("zip contains no .db file")
+            db_bytes = zf.read(member)
+
+    # Validate it is a SQLite DB with the expected schema.
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tf:
+        tf.write(db_bytes)
+        tmp_path = Path(tf.name)
+    try:
+        conn = sqlite3.connect(tmp_path)
+        try:
+            has_profiles = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='profiles'"
+            ).fetchone()
+            if not has_profiles:
+                raise ValueError("not a NayaFlow/OpenFlow database (no profiles table)")
+            n = conn.execute("SELECT COUNT(*) FROM profiles").fetchone()[0]
+        finally:
+            conn.close()
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    create_backup(kind="pre-import")
+    db_path().write_bytes(db_bytes)
+    return {"ok": True, "profiles": n}

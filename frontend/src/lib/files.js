@@ -39,3 +39,14 @@ export function pickJSONFile() {
 export function safeName(s) {
   return (s || "backup").replace(/[^a-z0-9_-]+/gi, "_");
 }
+
+// Open a file picker and resolve the chosen File object (for binary uploads).
+export function pickFile(accept) {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    if (accept) input.accept = accept;
+    input.onchange = () => resolve((input.files && input.files[0]) || null);
+    input.click();
+  });
+}

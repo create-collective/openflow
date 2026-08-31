@@ -67,6 +67,14 @@ export const api = {
   backups: () => req("GET", "/api/backups"),
   createBackup: () => req("POST", "/rpc/create-backup", {}),
   restoreBackup: (name) => req("POST", "/rpc/restore-backup", { name }),
+  importBackupFile: async (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(BASE + "/rpc/import-backup-file", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Import failed");
+    return data;
+  },
 
   // The original single device-control entry point.
   sendCommand: (event, frames = [], opts = {}) =>

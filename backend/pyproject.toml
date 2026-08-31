@@ -13,6 +13,7 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "pyserial>=3.5",
     "sse-starlette>=2.0",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
