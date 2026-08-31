@@ -386,9 +386,10 @@
   gap: 0;
   padding-bottom: 6px;
 }
-/* Slide each thumb group under its half so the 1u space lands below B. */
-.kb-thumbs > .kb-thumb-group:first-child { transform: translateX(-92px); }
-.kb-thumbs > .kb-thumb-group:last-child  { transform: translateX(92px); }
+/* Slide each thumb group toward its half — but leave NayaFlow's diagonal gap
+   between the 1u space and the B / 2u-space above it (don't cram it under B). */
+.kb-thumbs > .kb-thumb-group:first-child { transform: translateX(-64px); }
+.kb-thumbs > .kb-thumb-group:last-child  { transform: translateX(64px); }
 
 .kb-thumb-group {
   display: flex;
