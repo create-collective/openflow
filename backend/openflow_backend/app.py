@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,13 +11,29 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api import rest, sse
 from .api.state import shutdown_service
+from .db import backup as bak
 from .db.database import init_db
+
+AUTO_BACKUP_INTERVAL_S = 30 * 60  # every 30 minutes, like NayaFlow
+
+
+async def _auto_backup_loop():
+    while True:
+        await asyncio.sleep(AUTO_BACKUP_INTERVAL_S)
+        try:
+            await asyncio.to_thread(bak.create_backup, "auto")
+        except Exception:
+            pass  # never let a backup failure take down the app
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    task = asyncio.create_task(_auto_backup_loop())
     yield
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
     shutdown_service()
 
 

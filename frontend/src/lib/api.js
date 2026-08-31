@@ -62,6 +62,12 @@ export const api = {
   dumpSettings: (side) => req("POST", "/rpc/dump-settings", { side }),
   checkForUpdates: () => req("POST", "/rpc/check-for-updates"),
 
+  settings: () => req("GET", "/api/settings"),
+  setSetting: (key, value) => req("POST", "/rpc/set-setting", { key, value }),
+  backups: () => req("GET", "/api/backups"),
+  createBackup: () => req("POST", "/rpc/create-backup", {}),
+  restoreBackup: (name) => req("POST", "/rpc/restore-backup", { name }),
+
   // The original single device-control entry point.
   sendCommand: (event, frames = [], opts = {}) =>
     req("POST", "/rpc/send-nayacore-zmq-message", {

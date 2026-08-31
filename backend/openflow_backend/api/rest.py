@@ -15,8 +15,10 @@ from fastapi import APIRouter, Body, HTTPException
 from fastapi.concurrency import run_in_threadpool
 
 from .. import __version__
+from ..db import backup as bak
 from ..db import macros as mac
 from ..db import profiles as prof
+from ..db import settings as settings_db
 from ..db import userdata as ud
 from ..device import actions_catalog
 from ..device.commands import CommandError, dispatch
@@ -76,6 +78,40 @@ async def set_module_setting(body: dict = Body(...)) -> dict:
         return await run_in_threadpool(
             ud.set_module_setting, body["configId"], body["fieldId"], body["value"]
         )
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/settings")
+async def get_settings() -> dict:
+    return await run_in_threadpool(settings_db.get_settings)
+
+
+@router.post("/rpc/set-setting")
+async def set_setting(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(settings_db.set_setting, body["key"], body["value"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/backups")
+async def backups() -> dict:
+    return await run_in_threadpool(bak.list_backups)
+
+
+@router.post("/rpc/create-backup")
+async def create_backup(body: dict = Body(default={})) -> dict:
+    try:
+        return await run_in_threadpool(bak.create_backup, "manual")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/restore-backup")
+async def restore_backup(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(bak.restore_backup, body["name"])
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 

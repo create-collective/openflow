@@ -690,6 +690,69 @@
   left: 21px;
 }
 
+/* Settings page */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 28px;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-tab {
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.settings-tab:hover {
+  background: var(--neutral12);
+  color: var(--text);
+}
+
+.settings-tab.active {
+  background: color-mix(in srgb, var(--accent) 22%, var(--neutral12));
+  color: var(--text);
+}
+
+.settings-content h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.settings-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-links a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.settings-out {
+  margin-top: 16px;
+  background: var(--neutral6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .skp-clear {
   margin-top: 16px;
 }
