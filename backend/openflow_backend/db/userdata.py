@@ -198,6 +198,139 @@ def clear_key_binding(layer_id: str, position_id: int, behavior: str | None = No
         conn.close()
 
 
+KEYS_PER_LAYER = 97  # position_id 0-96, matching the recovered data
+
+
+def create_layer(profile_id: str, name: str) -> dict:
+    """Create a new layer under a profile with a full set of (unbound) keys."""
+    conn = connect()
+    try:
+        now = _now()
+        lid = str(uuid.uuid4())
+        max_order = conn.execute(
+            "SELECT COALESCE(MAX(order_id), -1) FROM layers WHERE profile_id=?", (profile_id,)
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO layers (name, order_id, profile_id, id, updated_at, created_at) "
+            "VALUES (?,?,?,?,?,?)",
+            (name, max_order + 1, profile_id, lid, now, now),
+        )
+        for pos in range(KEYS_PER_LAYER):
+            conn.execute(
+                "INSERT INTO keys (color_hex, position_id, layer_id, id, updated_at, created_at) "
+                "VALUES (?,?,?,?,?,?)",
+                (UNSET_COLOR, pos, lid, str(uuid.uuid4()), now, now),
+            )
+        conn.commit()
+        return {"ok": True, "id": lid, "name": name}
+    finally:
+        conn.close()
+
+
+def rename_layer(layer_id: str, name: str) -> dict:
+    conn = connect()
+    try:
+        cur = conn.execute(
+            "UPDATE layers SET name=?, updated_at=? WHERE id=?", (name, _now(), layer_id)
+        )
+        if cur.rowcount == 0:
+            raise ValueError(f"no layer {layer_id}")
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+def delete_layer(layer_id: str) -> dict:
+    conn = connect()
+    try:
+        row = conn.execute("SELECT profile_id FROM layers WHERE id=?", (layer_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"no layer {layer_id}")
+        n = conn.execute(
+            "SELECT COUNT(*) FROM layers WHERE profile_id=?", (row["profile_id"],)
+        ).fetchone()[0]
+        if n <= 1:
+            raise ValueError("cannot delete the only layer")
+        key_ids = [r["id"] for r in conn.execute("SELECT id FROM keys WHERE layer_id=?", (layer_id,))]
+        for kid in key_ids:
+            conn.execute("DELETE FROM key_bindings WHERE key_id=?", (kid,))
+        conn.execute("DELETE FROM keys WHERE layer_id=?", (layer_id,))
+        conn.execute("DELETE FROM layers WHERE id=?", (layer_id,))
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+def duplicate_layer(layer_id: str) -> dict:
+    """Copy a layer with all its keys, colors, and bindings."""
+    conn = connect()
+    try:
+        now = _now()
+        src = conn.execute(
+            "SELECT name, profile_id, icon_id, animation_id FROM layers WHERE id=?", (layer_id,)
+        ).fetchone()
+        if src is None:
+            raise ValueError(f"no layer {layer_id}")
+        new_lid = str(uuid.uuid4())
+        max_order = conn.execute(
+            "SELECT COALESCE(MAX(order_id), -1) FROM layers WHERE profile_id=?", (src["profile_id"],)
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO layers (name, order_id, icon_id, profile_id, animation_id, id, updated_at, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (f"{src['name']} copy", max_order + 1, src["icon_id"], src["profile_id"],
+             src["animation_id"], new_lid, now, now),
+        )
+        for k in conn.execute(
+            "SELECT id, color_hex, position_id FROM keys WHERE layer_id=?", (layer_id,)
+        ).fetchall():
+            new_kid = str(uuid.uuid4())
+            conn.execute(
+                "INSERT INTO keys (color_hex, position_id, layer_id, id, updated_at, created_at) "
+                "VALUES (?,?,?,?,?,?)",
+                (k["color_hex"], k["position_id"], new_lid, new_kid, now, now),
+            )
+            for b in conn.execute(
+                "SELECT context, action_code, action_type, behavior FROM key_bindings WHERE key_id=?",
+                (k["id"],),
+            ).fetchall():
+                conn.execute(
+                    "INSERT INTO key_bindings (context, action_code, action_type, behavior, key_id, id, updated_at, created_at) "
+                    "VALUES (?,?,?,?,?,?,?,?)",
+                    (b["context"], b["action_code"], b["action_type"], b["behavior"],
+                     new_kid, str(uuid.uuid4()), now, now),
+                )
+        conn.commit()
+        return {"ok": True, "id": new_lid}
+    finally:
+        conn.close()
+
+
+def set_base_layer(layer_id: str) -> dict:
+    """Make a layer the base (order_id 0); shift the others after it."""
+    conn = connect()
+    try:
+        row = conn.execute("SELECT profile_id FROM layers WHERE id=?", (layer_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"no layer {layer_id}")
+        others = [
+            r["id"] for r in conn.execute(
+                "SELECT id FROM layers WHERE profile_id=? AND id!=? ORDER BY order_id",
+                (row["profile_id"], layer_id),
+            )
+        ]
+        now = _now()
+        conn.execute("UPDATE layers SET order_id=0, updated_at=? WHERE id=?", (now, layer_id))
+        for i, oid in enumerate(others, start=1):
+            conn.execute("UPDATE layers SET order_id=?, updated_at=? WHERE id=?", (i, now, oid))
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
 def set_layer_animation(layer_id: str, animation: str | None) -> dict:
     """Set a layer's LED animation (solid/swirl/breathe/spectrum, or None)."""
     conn = connect()

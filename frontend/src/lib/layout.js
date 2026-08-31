@@ -79,12 +79,13 @@ export function buildLayout() {
     { id: "left", positionId: 88, x: FINGER_W + 0.2, y: 2.2, w: 1.7, h: 1.7 },
     { id: "right", positionId: 89, x: TOTAL - FINGER_W - 1.9, y: 2.2, w: 1.7, h: 1.7 },
   ];
-  // Draggable module palette: a column of 3 between the slots (Bindings only).
+  // Draggable module palette: a row of 3 across the top of the center gap
+  // (Bindings only), above the two module slots.
   const cx = TOTAL / 2;
   const palette = [
-    { type: "track", x: cx - 0.6, y: 0.5, w: 1.2, h: 1.2 },
-    { type: "touch", x: cx - 0.6, y: 2.5, w: 1.2, h: 1.2 },
-    { type: "tune", x: cx - 0.6, y: 4.5, w: 1.2, h: 1.2 },
+    { type: "track", x: cx - 2.05, y: 0.5, w: 1.3, h: 1.3 },
+    { type: "touch", x: cx - 0.65, y: 0.5, w: 1.3, h: 1.3 },
+    { type: "tune", x: cx + 0.75, y: 0.5, w: 1.3, h: 1.3 },
   ];
 
   // Normalize so min x/y is 0 (LED bars sit at negative x).

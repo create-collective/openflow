@@ -177,6 +177,46 @@ async def set_layer_animation(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/rpc/create-layer")
+async def create_layer(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(ud.create_layer, body["profileId"], body.get("name", "New Layer"))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/rename-layer")
+async def rename_layer(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(ud.rename_layer, body["layerId"], body["name"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/delete-layer")
+async def delete_layer(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(ud.delete_layer, body["layerId"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/duplicate-layer")
+async def duplicate_layer(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(ud.duplicate_layer, body["layerId"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/set-base-layer")
+async def set_base_layer(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(ud.set_base_layer, body["layerId"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/api/diagnostics/report")
 async def diagnostics_report() -> dict:
     svc = get_service()

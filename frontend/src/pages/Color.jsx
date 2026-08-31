@@ -108,6 +108,11 @@ export default function Color() {
           layers={profile.layers}
           activeLayerId={activeLayerId}
           onSelect={(id) => setActiveLayerId(id)}
+          onAdd={async (name) => { const r = await api.createLayer(profile.id, name); await load(); setActiveLayerId(r.id); }}
+          onRename={async (id, name) => { await api.renameLayer(id, name); await load(); }}
+          onDuplicate={async (id) => { await api.duplicateLayer(id); await load(); }}
+          onDelete={async (id) => { await api.deleteLayer(id); if (activeLayerId === id) setActiveLayerId(null); await load(); }}
+          onSetBase={async (id) => { await api.setBaseLayer(id); await load(); }}
         />
         <div className="board-wrap">
           <div className="board-header"><strong>{layer?.name}</strong> — LED view</div>
