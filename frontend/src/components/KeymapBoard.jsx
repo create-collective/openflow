@@ -10,6 +10,16 @@ const MODULE_IMG = { track: "/modules/track-plain.png", touch: "/modules/touch.p
 const NORMAL_W = 44 * KEY_UNIT; // a plain keycap's width; columns are fixed to this
                                 // so wide/hex keys overflow toward center, not push neighbors
 
+// Pick a legible legend color for a keycap painted with an LED color: dark text
+// on bright keys, light text on dark ones (mirrors NayaFlow's LED view).
+function contrastText(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return undefined;
+  const n = parseInt(m[1], 16);
+  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.6 ? "#0a0a0a" : "#f5f5f5";
+}
+
 // One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked,
 // with the resolved legend centered per-shape.
 function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
@@ -19,6 +29,7 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
   const legend = keyLegend(data?.binding, layerMap);
   const color = data?.colorHex;
   const showColor = mode === "color" && color;
+  const textColor = showColor ? contrastText(color) : undefined;
   const fill = showColor ? color : "var(--neutral6)";
   const stroke = selected ? "var(--accent)" : "var(--border-strong)";
   const wrap = KEY_WRAPPERS[pos] || {};
@@ -43,15 +54,15 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
           <path d={shape.d} fill={fill} stroke={stroke} strokeWidth="2" />
         )}
       </svg>
-      {mode !== "color" && legend.layer && (
-        <span className="kc-legend kc-layer" style={{ top: shape.legend.top, left: shape.legend.left }}>
+      {legend.layer && (
+        <span className="kc-legend kc-layer" style={{ top: shape.legend.top, left: shape.legend.left, color: textColor }}>
           <LayersIcon size={14} />
           <span className="kc-layernum">{legend.layer.num}</span>
         </span>
       )}
-      {mode !== "color" && !legend.layer && (legend.main || legend.sub) && (
-        <span className="kc-legend" style={{ top: shape.legend.top, left: shape.legend.left }}>
-          {legend.sub && <span className="kc-sub">{legend.sub}</span>}
+      {!legend.layer && (legend.main || legend.sub) && (
+        <span className="kc-legend" style={{ top: shape.legend.top, left: shape.legend.left, color: textColor }}>
+          {legend.sub && <span className="kc-sub" style={{ color: textColor }}>{legend.sub}</span>}
           <span className="kc-main">{legend.main}</span>
         </span>
       )}
@@ -79,16 +90,16 @@ function Column({ col, align, ...kp }) {
 }
 
 function LedCol({ positions, keysByPosition, selectedPosition, onSelectKey }) {
-  // Side (underglow) LEDs — sized to match the end-column keycaps so they scale
-  // with KEY_UNIT instead of drifting smaller after a geometry change.
+  // Side (underglow) LEDs — narrow indicators like NayaFlow's LED view; the
+  // 7-tall column is spaced to span the full height of the end key column.
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0.34 * REM, marginTop: 1.5 * REM, padding: "0 6px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 0.62 * REM, marginTop: 1.3 * REM, padding: "0 7px" }}>
       {positions.map((pos) => {
         const color = keysByPosition[pos]?.colorHex;
         return (
           <button key={pos} className={"kb-led" + (selectedPosition === pos ? " selected" : "")}
             title={`LED ${pos}`} onClick={() => onSelectKey(pos)}
-            style={{ width: NORMAL_W, height: 1.9 * REM, background: color || "var(--neutral20)" }} />
+            style={{ width: 1.2 * REM, height: 1.7 * REM, background: color || "var(--neutral20)" }} />
         );
       })}
     </div>

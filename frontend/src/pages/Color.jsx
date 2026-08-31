@@ -117,6 +117,13 @@ export default function Color() {
     return map;
   }, [layer]);
 
+  // layerId -> index, so layer-switch keys show "layers icon + number" in the LED view too.
+  const layerMap = useMemo(() => {
+    const m = {};
+    profile?.layers.forEach((l, i) => (m[l.id] = i));
+    return m;
+  }, [profile]);
+
   async function onKey(positionId) {
     if (!layer) return;
     try {
@@ -178,7 +185,7 @@ export default function Color() {
         </div>
         <div className="board-wrap">
           <div className="board-header"><strong>{layer?.name}</strong> — LED view</div>
-          <KeymapBoard keysByPosition={keysByPosition} mode="color" onSelectKey={onKey} />
+          <KeymapBoard keysByPosition={keysByPosition} mode="color" onSelectKey={onKey} layerMap={layerMap} />
         </div>
       </div>
 
