@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 // Layer selector (top-left): profile name + ordered layers with a per-layer
 // 3-dot submenu (rename / use as base / duplicate / delete) and an add-layer row.
 export default function LayerList({
-  profile,
   layers,
   activeLayerId,
   onSelect,
@@ -12,6 +11,8 @@ export default function LayerList({
   onDuplicate,
   onDelete,
   onSetBase,
+  onExportLayer,
+  onImportLayer,
 }) {
   const [menuFor, setMenuFor] = useState(null); // layer id whose menu is open
   const [renaming, setRenaming] = useState(null); // layer id being renamed
@@ -45,11 +46,6 @@ export default function LayerList({
 
   return (
     <div className="layer-list" ref={rootRef}>
-      <div className="layer-profile">
-        <span className="layer-profile-dot" />
-        {profile?.name || "Profile"}
-      </div>
-
       {layers.map((l, i) => (
         <div key={l.id} className={"layer-row" + (l.id === activeLayerId ? " active" : "")}>
           {renaming === l.id ? (
@@ -86,6 +82,7 @@ export default function LayerList({
                 Use as base layer
               </button>
               <button onClick={() => { onDuplicate(l.id); setMenuFor(null); }}>Duplicate</button>
+              <button onClick={() => { onExportLayer(l.id); setMenuFor(null); }}>Export to file…</button>
               {confirmDel === l.id ? (
                 <button className="danger" onClick={() => { onDelete(l.id); setMenuFor(null); setConfirmDel(null); }}>
                   Really delete?
@@ -118,7 +115,10 @@ export default function LayerList({
           onBlur={() => { if (newName.trim()) onAdd(newName.trim()); setAdding(false); setNewName(""); }}
         />
       ) : (
-        <button className="layer-add" onClick={() => setAdding(true)}>+ Add layer</button>
+        <div className="layer-add-row">
+          <button className="layer-add" onClick={() => setAdding(true)}>+ Add layer</button>
+          <button className="layer-add import" title="Import a layer from a file" onClick={onImportLayer}>Import…</button>
+        </div>
       )}
     </div>
   );

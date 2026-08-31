@@ -14,10 +14,134 @@
 }
 
 /* Layer list (top-left) */
+.layer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .layer-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* Profile bar */
+.profile-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.profile-name {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+
+.profile-name:hover {
+  background: var(--neutral12);
+}
+
+.profile-name-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-caret {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.profile-menu-btn {
+  opacity: 1;
+}
+
+.profile-menu {
+  position: absolute;
+  top: 100%;
+  left: 4px;
+  right: 4px;
+  z-index: 30;
+  background: var(--neutral12);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.profile-menu.switch {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.profile-menu button {
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.profile-menu button:hover:not(:disabled) {
+  background: var(--neutral20);
+}
+
+.profile-menu button.active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.profile-menu button.danger {
+  color: var(--err);
+}
+
+.profile-menu button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.profile-menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
+
+.layer-add-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.layer-add-row .layer-add {
+  margin-top: 0;
+  flex: 1;
+}
+
+.layer-add.import {
+  flex: 0 0 auto;
 }
 
 .layer-profile {

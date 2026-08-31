@@ -16,6 +16,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from .. import __version__
 from ..db import macros as mac
+from ..db import profiles as prof
 from ..db import userdata as ud
 from ..device import actions_catalog
 from ..device.commands import CommandError, dispatch
@@ -173,6 +174,70 @@ async def fill_layer_color(body: dict = Body(...)) -> dict:
 async def set_layer_animation(body: dict = Body(...)) -> dict:
     try:
         return await run_in_threadpool(ud.set_layer_animation, body["layerId"], body.get("animation"))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/create-profile")
+async def create_profile(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(prof.create_profile, body.get("name", "New Profile"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/rename-profile")
+async def rename_profile(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(prof.rename_profile, body["profileId"], body["name"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/duplicate-profile")
+async def duplicate_profile(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(prof.duplicate_profile, body["profileId"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/delete-profile")
+async def delete_profile(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(prof.delete_profile, body["profileId"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/export-profile")
+async def export_profile(profileId: str) -> dict:
+    try:
+        return await run_in_threadpool(prof.export_profile, profileId)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/import-profile")
+async def import_profile(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(prof.import_profile, body["data"], body.get("name"))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/export-layer")
+async def export_layer(layerId: str) -> dict:
+    try:
+        return await run_in_threadpool(prof.export_layer, layerId)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/import-layer")
+async def import_layer(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(prof.import_layer, body["profileId"], body["data"])
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 

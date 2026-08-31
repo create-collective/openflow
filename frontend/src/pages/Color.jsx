@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { hsvToHex, isValidHex } from "../lib/color";
+import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
+import ProfileBar from "../components/ProfileBar";
 
 // Base swatches (recovered "Rainbow" palette + off). Users add custom colors.
 const BASE_SWATCHES = [
@@ -23,7 +25,10 @@ const TOOLS = [
 ];
 
 export default function Color() {
-  const [profile, setProfile] = useState(null);
+  const [profiles, setProfiles] = useState([]);
+  const [activeProfileId, setActiveProfileId] = useState(() => {
+    try { return localStorage.getItem("openflow.activeProfile") || null; } catch { return null; }
+  });
   const [activeLayerId, setActiveLayerId] = useState(null);
   const [brush, setBrush] = useState("#00ff00");
   const [tool, setTool] = useState("brush");
@@ -38,19 +43,74 @@ export default function Color() {
   const load = useCallback(async () => {
     try {
       const ud = await api.userdata();
-      const p = ud.profiles[0] || null;
-      setProfile(p);
-      if (p && p.layers[0]) setActiveLayerId((cur) => cur || p.layers[0].id);
+      setProfiles(ud.profiles || []);
     } catch (e) {
       setErr(e.message);
     }
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  const profile = useMemo(
+    () => profiles.find((p) => p.id === activeProfileId) || profiles[0] || null,
+    [profiles, activeProfileId]
+  );
+
+  useEffect(() => {
+    if (!profile) return;
+    if (!profile.layers.some((l) => l.id === activeLayerId)) {
+      setActiveLayerId(profile.layers[0]?.id || null);
+    }
+  }, [profile, activeLayerId]);
+
   const layer = useMemo(
-    () => profile?.layers.find((l) => l.id === activeLayerId) || null,
+    () => profile?.layers.find((l) => l.id === activeLayerId) || profile?.layers[0] || null,
     [profile, activeLayerId]
   );
+
+  function persistProfile(id) {
+    try { localStorage.setItem("openflow.activeProfile", id || ""); } catch { /* ignore */ }
+  }
+  function switchProfile(id) {
+    setActiveProfileId(id);
+    persistProfile(id);
+    const p = profiles.find((x) => x.id === id);
+    setActiveLayerId(p?.layers[0]?.id || null);
+  }
+  const profileHandlers = {
+    onSwitch: switchProfile,
+    onNew: async () => { const r = await api.createProfile("New Profile"); await load(); switchProfile(r.id); },
+    onRename: async (id, name) => { await api.renameProfile(id, name); await load(); },
+    onDuplicate: async (id) => { const r = await api.duplicateProfile(id); await load(); switchProfile(r.id); },
+    onDelete: async (id) => { await api.deleteProfile(id); persistProfile(null); setActiveProfileId(null); await load(); },
+    onExport: async (id) => {
+      const data = await api.exportProfile(id);
+      downloadJSON(`${safeName(profiles.find((p) => p.id === id)?.name)}.openflow-profile.json`, data);
+    },
+    onImport: async () => {
+      try {
+        const data = await pickJSONFile();
+        if (!data) return;
+        const r = await api.importProfile(data);
+        await load();
+        switchProfile(r.id);
+      } catch (e) { setErr(e.message); }
+    },
+  };
+  const layerFileHandlers = {
+    onExportLayer: async (id) => {
+      const data = await api.exportLayer(id);
+      const l = profile.layers.find((x) => x.id === id);
+      downloadJSON(`${safeName(l?.name)}.openflow-layer.json`, data);
+    },
+    onImportLayer: async () => {
+      try {
+        const data = await pickJSONFile();
+        if (!data || !profile) return;
+        await api.importLayer(profile.id, data);
+        await load();
+      } catch (e) { setErr(e.message); }
+    },
+  };
   const keysByPosition = useMemo(() => {
     const map = {};
     layer?.keys.forEach((k) => (map[k.positionId] = k));
@@ -58,19 +118,18 @@ export default function Color() {
   }, [layer]);
 
   async function onKey(positionId) {
-    if (!activeLayerId) return;
+    if (!layer) return;
     try {
       if (tool === "pipette") {
         const c = keysByPosition[positionId]?.colorHex;
         if (c) { setBrush(c); setHex(c); }
         return;
       }
-      const color = tool === "fill" ? null : null; // set below
       const value = brush;
       if (tool === "fill") {
-        await api.fillLayerColor({ layerId: activeLayerId, colorHex: value });
+        await api.fillLayerColor({ layerId: layer.id, colorHex: value });
       } else {
-        await api.setKeyColor({ layerId: activeLayerId, positionId, colorHex: value });
+        await api.setKeyColor({ layerId: layer.id, positionId, colorHex: value });
       }
       await load();
     } catch (e) {
@@ -91,8 +150,8 @@ export default function Color() {
   }
 
   async function setAnimation(anim) {
-    if (!activeLayerId) return;
-    await api.setLayerAnimation({ layerId: activeLayerId, animation: anim });
+    if (!layer) return;
+    await api.setLayerAnimation({ layerId: layer.id, animation: anim });
     await load();
   }
 
@@ -103,17 +162,20 @@ export default function Color() {
   return (
     <div className="editor">
       <div className="editor-top">
-        <LayerList
-          profile={profile}
-          layers={profile.layers}
-          activeLayerId={activeLayerId}
-          onSelect={(id) => setActiveLayerId(id)}
-          onAdd={async (name) => { const r = await api.createLayer(profile.id, name); await load(); setActiveLayerId(r.id); }}
-          onRename={async (id, name) => { await api.renameLayer(id, name); await load(); }}
-          onDuplicate={async (id) => { await api.duplicateLayer(id); await load(); }}
-          onDelete={async (id) => { await api.deleteLayer(id); if (activeLayerId === id) setActiveLayerId(null); await load(); }}
-          onSetBase={async (id) => { await api.setBaseLayer(id); await load(); }}
-        />
+        <div className="layer-col">
+          <ProfileBar profiles={profiles} activeProfileId={profile.id} {...profileHandlers} />
+          <LayerList
+            layers={profile.layers}
+            activeLayerId={layer?.id}
+            onSelect={(id) => setActiveLayerId(id)}
+            onAdd={async (name) => { const r = await api.createLayer(profile.id, name); await load(); setActiveLayerId(r.id); }}
+            onRename={async (id, name) => { await api.renameLayer(id, name); await load(); }}
+            onDuplicate={async (id) => { await api.duplicateLayer(id); await load(); }}
+            onDelete={async (id) => { await api.deleteLayer(id); if (activeLayerId === id) setActiveLayerId(null); await load(); }}
+            onSetBase={async (id) => { await api.setBaseLayer(id); await load(); }}
+            {...layerFileHandlers}
+          />
+        </div>
         <div className="board-wrap">
           <div className="board-header"><strong>{layer?.name}</strong> — LED view</div>
           <KeymapBoard keysByPosition={keysByPosition} mode="color" onSelectKey={onKey} />
