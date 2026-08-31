@@ -6,6 +6,8 @@ import {
 } from "../lib/boardgeom";
 
 const MODULE_IMG = { track: "/modules/track-plain.png", touch: "/modules/touch.png", tune: "/modules/tune.png" };
+const NORMAL_W = 44 * KEY_UNIT; // a plain keycap's width; columns are fixed to this
+                                // so wide/hex keys overflow toward center, not push neighbors
 
 // One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked,
 // with the resolved legend centered per-shape.
@@ -28,9 +30,6 @@ function KeyCap({ pos, data, mode, selected, onSelectKey }) {
         width: w, height: h, position: "relative", padding: 0, border: "none",
         background: "none", cursor: "pointer",
         marginTop: (wrap.pt || 0) * REM,
-        // horizontal wrapper offsets as transform so they don't widen the column
-        transform: (wrap.ml || wrap.mr)
-          ? `translateX(${((wrap.ml || 0) - (wrap.mr || 0)) * REM}px)` : undefined,
         filter: selected ? "drop-shadow(0 0 3px var(--accent))" : undefined,
       }}
     >
@@ -53,10 +52,15 @@ function KeyCap({ pos, data, mode, selected, onSelectKey }) {
   );
 }
 
-function Column({ col, ...kp }) {
+function Column({ col, align, ...kp }) {
+  // Fixed column width so wide (2u space) and hex keys overflow toward the center
+  // instead of pushing neighbours. Left half aligns keys to the outer (left) edge;
+  // right half to the outer (right) edge — mirroring NayaFlow.
   return (
     <div style={{
-      display: "flex", flexDirection: "column", gap: 0.1 * REM, alignItems: "center",
+      display: "flex", flexDirection: "column", gap: 0.1 * REM,
+      alignItems: align === "end" ? "flex-end" : "flex-start",
+      width: NORMAL_W, flexShrink: 0,
       marginTop: (col.mt || 0) * REM, marginRight: (col.mr || 0) * REM, marginLeft: (col.ml || 0) * REM,
     }}>
       {col.keys.map((pos) => (
@@ -118,7 +122,7 @@ export default function KeymapBoard(props) {
       {mode === "color" && <LedCol positions={LEFT_LEDS} keysByPosition={keysByPosition} selectedPosition={selectedPosition} onSelectKey={onSelectKey} />}
 
       <div className="kb-half">
-        {LEFT_COLS.map((col, i) => <Column key={i} col={col} {...kp} />)}
+        {LEFT_COLS.map((col, i) => <Column key={i} col={col} align="start" {...kp} />)}
       </div>
 
       <div className="kb-center">
@@ -146,7 +150,7 @@ export default function KeymapBoard(props) {
       </div>
 
       <div className="kb-half">
-        {RIGHT_COLS.map((col, i) => <Column key={i} col={col} {...kp} />)}
+        {RIGHT_COLS.map((col, i) => <Column key={i} col={col} align="end" {...kp} />)}
       </div>
 
       {mode === "color" && <LedCol positions={RIGHT_LEDS} keysByPosition={keysByPosition} selectedPosition={selectedPosition} onSelectKey={onSelectKey} />}
