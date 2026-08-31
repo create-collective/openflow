@@ -23,21 +23,17 @@ from .database import connect
 
 UNSET_COLOR = "#xxxxxx"
 
+# NayaFlow's on-board data stores the primary slot as 'press'; we present it as
+# 'tap' (they are the same behaviour) and treat both as the tap slot on write.
+TAP_ALIASES = ("tap", "press")
+
+
+def _norm_behavior(behavior: str) -> str:
+    return "tap" if behavior in TAP_ALIASES else behavior
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-
-
-def _binding_dict(row) -> dict | None:
-    if row is None or row["binding_id"] is None:
-        return None
-    return {
-        "id": row["binding_id"],
-        "behavior": row["behavior"],
-        "actionType": row["action_type"],
-        "actionCode": row["action_code"],
-        "context": row["context"],
-    }
 
 
 def get_userdata() -> dict:
@@ -92,17 +88,39 @@ def _keys_for_layer(conn, layer_id: str) -> list[dict]:
         """,
         (layer_id,),
     ).fetchall()
-    out = []
+    keys: dict[str, dict] = {}
+    order: list[str] = []
     for r in rows:
-        out.append(
-            {
-                "id": r["key_id"],
+        kid = r["key_id"]
+        if kid not in keys:
+            keys[kid] = {
+                "id": kid,
                 "positionId": r["position_id"],
                 "colorHex": None if r["color_hex"] in (None, UNSET_COLOR) else r["color_hex"],
-                "binding": _binding_dict(r),
+                "bindings": {},  # behavior -> binding
             }
-        )
+            order.append(kid)
+        if r["binding_id"] is not None:
+            beh = _norm_behavior(r["behavior"])
+            keys[kid]["bindings"][beh] = {
+                "id": r["binding_id"],
+                "behavior": beh,
+                "actionType": r["action_type"],
+                "actionCode": r["action_code"],
+                "context": r["context"],
+            }
+    out = []
+    for kid in order:
+        k = keys[kid]
+        # Convenience: the tap binding is what the board legend shows.
+        k["binding"] = k["bindings"].get("tap")
+        out.append(k)
     return out
+
+
+def _behavior_match(behavior: str) -> tuple[str, ...]:
+    """Which stored behavior values count as the same slot as `behavior`."""
+    return TAP_ALIASES if _norm_behavior(behavior) == "tap" else (behavior,)
 
 
 def set_key_binding(
@@ -110,10 +128,11 @@ def set_key_binding(
     position_id: int,
     action_code: str,
     action_type: str,
-    behavior: str = "press",
+    behavior: str = "tap",
     context: str | None = None,
 ) -> dict:
-    """Create or update the binding on (layer_id, position_id). Offline write."""
+    """Create or update one behavior slot on (layer_id, position_id). Offline write."""
+    behavior = _norm_behavior(behavior)
     conn = connect()
     try:
         key = conn.execute(
@@ -124,8 +143,11 @@ def set_key_binding(
             raise ValueError(f"no key at layer={layer_id} position={position_id}")
         key_id = key["id"]
         now = _now()
+        match = _behavior_match(behavior)
+        placeholders = ",".join("?" * len(match))
         existing = conn.execute(
-            "SELECT id FROM key_bindings WHERE key_id = ?", (key_id,)
+            f"SELECT id FROM key_bindings WHERE key_id = ? AND behavior IN ({placeholders})",
+            (key_id, *match),
         ).fetchone()
         if existing:
             conn.execute(
@@ -143,23 +165,16 @@ def set_key_binding(
                 (context, action_code, action_type, behavior, key_id, binding_id, now, now),
             )
         conn.commit()
-        return {
-            "ok": True,
-            "keyId": key_id,
-            "binding": {
-                "id": binding_id,
-                "behavior": behavior,
-                "actionType": action_type,
-                "actionCode": action_code,
-                "context": context,
-            },
-        }
+        return {"ok": True, "keyId": key_id, "binding": {
+            "id": binding_id, "behavior": behavior, "actionType": action_type,
+            "actionCode": action_code, "context": context,
+        }}
     finally:
         conn.close()
 
 
-def clear_key_binding(layer_id: str, position_id: int) -> dict:
-    """Remove the binding on a key (leaves the key present, unbound)."""
+def clear_key_binding(layer_id: str, position_id: int, behavior: str | None = None) -> dict:
+    """Remove one behavior slot (or all, if behavior is None) from a key."""
     conn = connect()
     try:
         key = conn.execute(
@@ -168,7 +183,15 @@ def clear_key_binding(layer_id: str, position_id: int) -> dict:
         ).fetchone()
         if key is None:
             raise ValueError(f"no key at layer={layer_id} position={position_id}")
-        conn.execute("DELETE FROM key_bindings WHERE key_id = ?", (key["id"],))
+        if behavior is None:
+            conn.execute("DELETE FROM key_bindings WHERE key_id = ?", (key["id"],))
+        else:
+            match = _behavior_match(behavior)
+            placeholders = ",".join("?" * len(match))
+            conn.execute(
+                f"DELETE FROM key_bindings WHERE key_id = ? AND behavior IN ({placeholders})",
+                (key["id"], *match),
+            )
         conn.commit()
         return {"ok": True, "keyId": key["id"]}
     finally:

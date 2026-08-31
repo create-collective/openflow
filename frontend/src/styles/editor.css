@@ -127,6 +127,40 @@
   font-size: 12px;
 }
 
+/* Center module slots */
+.kb-module {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px dashed var(--border-strong);
+  background: radial-gradient(circle at 50% 40%, var(--neutral17), var(--neutral6));
+  border-radius: 999px;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: default;
+}
+
+.kb-module.clickable {
+  cursor: pointer;
+}
+
+.kb-module.clickable:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.kb-module-icon {
+  font-size: 20px;
+}
+
+.kb-module-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
 /* Bottom row: selected key + palette */
 .editor-bottom {
   display: grid;
@@ -174,6 +208,34 @@
 
 .skp-act {
   font-weight: 600;
+  flex: 1;
+}
+
+.skp-row {
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+.skp-row.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.skp-x {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.skp-x:hover {
+  color: var(--err);
+}
+
+.palette-key.soon {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .skp-clear {

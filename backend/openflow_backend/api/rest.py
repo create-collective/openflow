@@ -77,7 +77,7 @@ async def set_key_binding(body: dict = Body(...)) -> dict:
             int(body["positionId"]),
             body["actionCode"],
             body["actionType"],
-            body.get("behavior", "press"),
+            body.get("behavior", "tap"),
             body.get("context"),
         )
     except (KeyError, ValueError) as e:
@@ -88,7 +88,7 @@ async def set_key_binding(body: dict = Body(...)) -> dict:
 async def clear_key_binding(body: dict = Body(...)) -> dict:
     try:
         return await run_in_threadpool(
-            ud.clear_key_binding, body["layerId"], int(body["positionId"])
+            ud.clear_key_binding, body["layerId"], int(body["positionId"]), body.get("behavior")
         )
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))

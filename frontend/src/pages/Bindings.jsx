@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { POS_LABEL } from "../lib/layout";
 import KeymapBoard from "../components/KeymapBoard";
@@ -11,7 +12,9 @@ export default function Bindings() {
   const [catalog, setCatalog] = useState(null);
   const [activeLayerId, setActiveLayerId] = useState(null);
   const [selectedPos, setSelectedPos] = useState(null);
+  const [activeSlot, setActiveSlot] = useState("tap");
   const [err, setErr] = useState(null);
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     try {
@@ -42,6 +45,11 @@ export default function Bindings() {
 
   const selectedKey = selectedPos != null ? keysByPosition[selectedPos] : null;
 
+  const moduleLabels = useMemo(() => {
+    // Placeholder module labels; wired to module_config_bindings in Modules work.
+    return { left: "Module", right: "Module" };
+  }, []);
+
   async function bind(pick) {
     if (selectedPos == null || !activeLayerId) return;
     try {
@@ -50,7 +58,7 @@ export default function Bindings() {
         positionId: selectedPos,
         actionCode: pick.actionCode,
         actionType: pick.actionType,
-        behavior: "press",
+        behavior: activeSlot,
       });
       await load();
     } catch (e) {
@@ -58,10 +66,14 @@ export default function Bindings() {
     }
   }
 
-  async function clearBinding() {
+  async function clearSlot(slot) {
     if (selectedPos == null || !activeLayerId) return;
     try {
-      await api.clearKeyBinding({ layerId: activeLayerId, positionId: selectedPos });
+      await api.clearKeyBinding({
+        layerId: activeLayerId,
+        positionId: selectedPos,
+        behavior: slot,
+      });
       await load();
     } catch (e) {
       setErr(e.message);
@@ -100,7 +112,12 @@ export default function Bindings() {
             keysByPosition={keysByPosition}
             mode="bindings"
             selectedPosition={selectedPos}
-            onSelectKey={setSelectedPos}
+            onSelectKey={(pos) => {
+              setSelectedPos(pos);
+              setActiveSlot("tap");
+            }}
+            onSelectModule={(side) => navigate(`/module-configuration?side=${side}`)}
+            moduleLabels={moduleLabels}
           />
         </div>
       </div>
@@ -110,8 +127,11 @@ export default function Bindings() {
       <div className="editor-bottom">
         <SelectedKeyPanel
           label={selectedPos != null ? POS_LABEL[selectedPos] : null}
-          binding={selectedKey?.binding}
-          onClear={clearBinding}
+          bindings={selectedKey?.bindings || {}}
+          slots={catalog?.behaviorSlots || []}
+          activeSlot={activeSlot}
+          onSelectSlot={setActiveSlot}
+          onClearSlot={clearSlot}
         />
         <ActionPalette
           catalog={catalog}
