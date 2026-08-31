@@ -21,7 +21,7 @@ export default function ActionPalette({ catalog, layers, macros = [], disabled, 
             className={"palette-tab" + (tab?.id === t.id ? " active" : "")}
             onClick={() => setTabId(t.id)}
           >
-            {t.label}
+            {t.id === "layers" ? <LayersIcon size={16} /> : t.label}
           </button>
         ))}
       </div>

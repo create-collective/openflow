@@ -29,11 +29,11 @@ export const RIGHT_COLS = [
 // Per-key protrusion wrappers (rem offsets applied to the individual key).
 export const KEY_WRAPPERS = {
   50: { pt: 0.1, ml: 2.6 },
-  66: { pt: 0.1, ml: 4.0 },
+  66: { pt: 0.1, ml: 4.0, dx: 2.6 },  // Space: reach inner edge to line up with Enter
   36: { mr: 0.2 },
   39: { ml: 2.6 },
   57: { pt: 0.1, ml: 2.6 },
-  69: { pt: 0.1, mr: 4.0 },
+  69: { pt: 0.1, mr: 4.0, dx: -2.6 }, // Space: reach inner edge to line up with Bksp
 };
 
 export const LEFT_THUMBS = [37, 53, 67];

@@ -31,6 +31,7 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
         width: w, height: h, position: "relative", padding: 0, border: "none",
         background: "none", cursor: "pointer",
         marginTop: (wrap.pt || 0) * REM,
+        transform: wrap.dx ? `translateX(${wrap.dx * REM}px)` : undefined,
         filter: selected ? "drop-shadow(0 0 3px var(--accent))" : undefined,
       }}
     >
@@ -133,22 +134,20 @@ export default function KeymapBoard(props) {
       </div>
 
       <div className="kb-center">
-        <div className="kb-center-modules">
-          {showModulePalette && (
-            <div className="kb-palette-row">
-              {["track", "touch", "tune"].map((t) => (
-                <img key={t} src={MODULE_IMG[t]} alt={t} draggable
-                  title={`Drag ${t} to a slot, or click then click a slot`}
-                  onDragStart={(e) => e.dataTransfer.setData("text/plain", t)}
-                  onClick={() => onPickModule && onPickModule(pickedModule === t ? null : t)}
-                  className={"kb-palette-mod" + (pickedModule === t ? " picked" : "")} />
-              ))}
-            </div>
-          )}
-          <div className="kb-slots">
-            <ModuleSlot id="left" pos={88} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
-            <ModuleSlot id="right" pos={89} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
+        {showModulePalette && (
+          <div className="kb-palette-row">
+            {["track", "touch", "tune"].map((t) => (
+              <img key={t} src={MODULE_IMG[t]} alt={t} draggable
+                title={`Drag ${t} to a slot, or click then click a slot`}
+                onDragStart={(e) => e.dataTransfer.setData("text/plain", t)}
+                onClick={() => onPickModule && onPickModule(pickedModule === t ? null : t)}
+                className={"kb-palette-mod" + (pickedModule === t ? " picked" : "")} />
+            ))}
           </div>
+        )}
+        <div className="kb-slots">
+          <ModuleSlot id="left" pos={88} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
+          <ModuleSlot id="right" pos={89} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
         </div>
         <div className="kb-thumbs">
           <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} />)}</div>

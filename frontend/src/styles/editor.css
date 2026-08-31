@@ -360,26 +360,20 @@
   justify-content: space-between;
   align-items: center;
   align-self: stretch;
-  min-width: 250px;
+  min-width: 300px;
   padding: 0 4px 8px;
-}
-
-.kb-center-modules {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding-top: 0;
 }
 
 .kb-palette-row {
   display: flex;
-  gap: 10px;
+  gap: 14px;
+  margin-top: -40px; /* lift the draggable modules above the top plane of the halves */
 }
 
 .kb-slots {
   display: flex;
-  gap: 78px; /* spread: left slot toward G, right slot toward H */
+  gap: 190px; /* spread the two active slots out to each half's inner edge */
+  align-items: center;
 }
 
 .kb-thumbs {
@@ -454,8 +448,8 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  width: 58px;
-  height: 58px;
+  width: 74px;
+  height: 74px;
   border: 1px dashed var(--border-strong);
   background: radial-gradient(circle at 50% 40%, var(--neutral17), var(--neutral6));
   border-radius: 999px;
