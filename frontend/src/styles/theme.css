@@ -1,0 +1,81 @@
+/*
+ * OpenFlow theme.
+ *
+ * Neutral tonal palette is lifted verbatim from NayaFlow 1.25.1's recovered CSS
+ * (index-0wmCXqHW.css) — a standard Material tonal system, safe to reuse as
+ * design tokens. The ACCENT is deliberately NOT Naya's brand green (#1dd791):
+ * per the clean-reskin decision, OpenFlow uses its own accent so it is visually
+ * in the same family without imitating Naya's brand. Placeholder — finalize with
+ * the OpenFlow brand.
+ */
+
+:root {
+  --neutral0: #000000;
+  --neutral4: #0e0e11;
+  --neutral6: #131316;
+  --neutral10: #1c1b1f;
+  --neutral12: #201f23;
+  --neutral17: #2a292d;
+  --neutral20: #313034;
+  --neutral22: #353438;
+  --neutral24: #3a393c;
+  --neutral30: #47464a;
+  --neutral40: #5f5e62;
+  --neutral50: #78767a;
+  --neutral60: #929094;
+  --neutral70: #adaaaf;
+  --neutral80: #c9c5ca;
+  --neutral90: #e5e1e6;
+  --neutral95: #f3eff4;
+  --neutral100: #ffffff;
+
+  /* Semantic (dark) */
+  --bg: var(--neutral4);
+  --bg-elevated: var(--neutral10);
+  --bg-card: var(--neutral6);
+  --border: var(--neutral20);
+  --border-strong: var(--neutral30);
+  --text: var(--neutral95);
+  --text-muted: var(--neutral60);
+  --text-dim: var(--neutral50);
+
+  /* OpenFlow accent (placeholder — not Naya green) */
+  --accent: #19c3d4;
+  --accent-hover: #37d3e2;
+  --accent-fg: #04121a;
+
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #f87171;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Fira Code", Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openflow-backend"
+version = "0.0.1"
+description = "OpenFlow backend — open-source replacement for NayaFlow's flow-bg-server + NayaCore, built on the nayactl CDC protocol."
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pyserial>=3.5",
+    "sse-starlette>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "httpx>=0.27"]
+
+[project.scripts]
+openflow-backend = "openflow_backend.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["openflow_backend*"]
+
+[tool.setuptools.package-data]
+openflow_backend = ["db/*.sql"]

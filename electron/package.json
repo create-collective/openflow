@@ -1,0 +1,16 @@
+{
+  "name": "openflow-electron",
+  "private": true,
+  "version": "0.0.1",
+  "description": "OpenFlow desktop shell — spawns the Python backend and hosts the renderer.",
+  "license": "Apache-2.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:dev": "cross-env OPENFLOW_DEV=1 electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "cross-env": "^7.0.3"
+  }
+}

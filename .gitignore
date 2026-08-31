@@ -1,0 +1,18 @@
+# Python
+backend/.venv/
+**/__pycache__/
+*.pyc
+backend/*.egg-info/
+backend/build/
+backend/dist/
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+electron/node_modules/
+
+# Local data (never commit user databases or dumps)
+*.db
+*.db-journal
+*.db-wal
+data/
