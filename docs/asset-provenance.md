@@ -36,6 +36,14 @@ copyleft.
   recovered strings may be consulted to understand *what* a control does, but the
   wording is OpenFlow's own.)
 
+## Module display images (`frontend/public/modules/*.png`)
+
+The Track/Touch/Tune module images are outline depictions derived from NayaFlow's
+module visuals (centers made transparent). They're functional hardware-shape
+depictions used as UI placeholders. Before public release, confirm they're clean
+(redraw from the FCC photos / hardware if needed) — treat as the same category as
+other Naya-original imagery until then.
+
 ## Open items
 
 - Finalize the OpenFlow name, logo, and accent color (currently placeholders).

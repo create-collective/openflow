@@ -334,6 +334,10 @@
   justify-content: center;
   padding: 12px 0 20px;
 }
+.mod-img {
+  width: 170px;
+  height: auto;
+}
 .mod-ring {
   width: 120px;
   height: 120px;
