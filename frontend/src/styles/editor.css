@@ -163,6 +163,11 @@
   color: var(--text);
 }
 
+.kb-module.filled {
+  border-style: solid;
+  background: transparent;
+}
+
 .kb-module-icon {
   font-size: 20px;
 }
@@ -171,6 +176,43 @@
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
+}
+
+.kb-module-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Draggable module palette (Bindings center column) */
+.kb-palette-mod {
+  object-fit: contain;
+  cursor: grab;
+  border-radius: 8px;
+  opacity: 0.85;
+  transition: opacity 0.12s, transform 0.12s;
+}
+
+.kb-palette-mod:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.kb-palette-mod:active {
+  cursor: grabbing;
+}
+
+.kb-palette-mod.picked {
+  opacity: 1;
+  outline: 2px solid var(--accent);
+  border-radius: 10px;
+  transform: scale(1.08);
+}
+
+.kb-module.droptarget {
+  border-color: var(--accent);
+  border-style: dashed;
 }
 
 /* Bottom row: selected key + palette */

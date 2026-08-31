@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 
 // Module configuration (Touch / Track / Tune). Grouped list on the left; the
@@ -40,12 +41,19 @@ export default function Modules() {
   const [tab, setTab] = useState("bindings");
   const [activeTarget, setActiveTarget] = useState(null);
   const [err, setErr] = useState(null);
+  const [searchParams] = useSearchParams();
+  const wantType = (searchParams.get("type") || "").toUpperCase();
 
   async function load() {
     try {
       const r = await api.modules();
-      setModules(r.modules || []);
-      if (!selectedId && r.modules?.[0]) setSelectedId(r.modules[0].id);
+      const mods = r.modules || [];
+      setModules(mods);
+      if (!selectedId && mods.length) {
+        // Prefer a config matching ?type= (from a Bindings module click).
+        const match = wantType && mods.find((m) => m.type === wantType);
+        setSelectedId((match || mods[0]).id);
+      }
     } catch (e) {
       setErr(e.message);
     }

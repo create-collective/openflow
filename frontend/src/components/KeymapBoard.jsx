@@ -14,12 +14,17 @@ export default function KeymapBoard({
   selectedPosition = null,
   onSelectKey = () => {},
   onSelectModule = null,
-  moduleLabels = {},
+  moduleAssign = {},
+  showModulePalette = false,
+  onAssignModule = null,
+  pickedModule = null,
+  onPickModule = null,
   unitPx = 42,
 }) {
   const layout = useMemo(() => buildLayout(), []);
   const px = (u) => u * unitPx;
-  const pad = 7; // px inset -> gap between adjacent keys (breathing room)
+  const pad = 7; // px inset -> gap between adjacent keys
+  const MODULE_IMG = { track: "/modules/track-plain.png", touch: "/modules/touch.png", tune: "/modules/tune.png" };
 
   return (
     <div
@@ -77,24 +82,64 @@ export default function KeymapBoard({
           );
         })}
 
-      {layout.modules.map((m) => (
-        <button
-          key={m.id}
-          className={"kb-module" + (onSelectModule ? " clickable" : "")}
-          title={`${m.id} module — configure`}
-          onClick={() => onSelectModule && onSelectModule(m.id)}
-          style={{
-            position: "absolute",
-            left: px(m.x) + pad / 2,
-            top: px(m.y) + pad / 2,
-            width: px(m.w) - pad,
-            height: px(m.h) - pad,
-          }}
-        >
-          <span className="kb-module-icon">◉</span>
-          <span className="kb-module-label">{moduleLabels[m.id] || "Module"}</span>
-        </button>
-      ))}
+      {layout.modules.map((m) => {
+        const assigned = moduleAssign[m.id];
+        return (
+          <button
+            key={m.id}
+            className={"kb-module" + (assigned ? " filled" : "") + ((assigned || onAssignModule) ? " clickable" : "") + (pickedModule ? " droptarget" : "")}
+            title={assigned ? `${assigned} module — click to configure` : `${m.id} slot — drag or click-place a module`}
+            onClick={() => {
+              if (pickedModule && onAssignModule) onAssignModule(m.id, pickedModule);
+              else if (assigned && onSelectModule) onSelectModule(assigned);
+            }}
+            onDragOver={(e) => { if (onAssignModule) { e.preventDefault(); } }}
+            onDrop={(e) => {
+              if (!onAssignModule) return;
+              e.preventDefault();
+              const type = e.dataTransfer.getData("text/plain");
+              if (type) onAssignModule(m.id, type);
+            }}
+            style={{
+              position: "absolute",
+              left: px(m.x) + pad / 2,
+              top: px(m.y) + pad / 2,
+              width: px(m.w) - pad,
+              height: px(m.h) - pad,
+            }}
+          >
+            {assigned ? (
+              <img src={MODULE_IMG[assigned]} alt={assigned} className="kb-module-img" />
+            ) : (
+              <>
+                <span className="kb-module-icon">◉</span>
+                <span className="kb-module-label">{m.id}</span>
+              </>
+            )}
+          </button>
+        );
+      })}
+
+      {showModulePalette &&
+        layout.palette.map((p) => (
+          <img
+            key={p.type}
+            src={MODULE_IMG[p.type]}
+            alt={p.type}
+            title={`Drag ${p.type} onto a slot, or click then click a slot`}
+            draggable
+            onDragStart={(e) => e.dataTransfer.setData("text/plain", p.type)}
+            onClick={() => onPickModule && onPickModule(pickedModule === p.type ? null : p.type)}
+            className={"kb-palette-mod" + (pickedModule === p.type ? " picked" : "")}
+            style={{
+              position: "absolute",
+              left: px(p.x) + pad / 2,
+              top: px(p.y) + pad / 2,
+              width: px(p.w) - pad,
+              height: px(p.h) - pad,
+            }}
+          />
+        ))}
     </div>
   );
 }

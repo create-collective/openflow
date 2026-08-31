@@ -74,19 +74,26 @@ export function buildLayout() {
     ledZones.push({ positionId: pid, x: TOTAL + 0.75, y: barTop + i * barGap, w: barW, h: barH })
   );
 
-  // Modules spread toward each half, leaving the center open.
+  // Module slots spread toward each half, leaving the center open.
   const modules = [
-    { id: "left", positionId: 88, x: FINGER_W + 0.4, y: 2.0, w: 1.8, h: 1.8 },
-    { id: "right", positionId: 89, x: TOTAL - FINGER_W - 2.2, y: 2.0, w: 1.8, h: 1.8 },
+    { id: "left", positionId: 88, x: FINGER_W + 0.2, y: 2.2, w: 1.7, h: 1.7 },
+    { id: "right", positionId: 89, x: TOTAL - FINGER_W - 1.9, y: 2.2, w: 1.7, h: 1.7 },
+  ];
+  // Draggable module palette: a column of 3 between the slots (Bindings only).
+  const cx = TOTAL / 2;
+  const palette = [
+    { type: "track", x: cx - 0.6, y: 0.5, w: 1.2, h: 1.2 },
+    { type: "touch", x: cx - 0.6, y: 2.5, w: 1.2, h: 1.2 },
+    { type: "tune", x: cx - 0.6, y: 4.5, w: 1.2, h: 1.2 },
   ];
 
   // Normalize so min x/y is 0 (LED bars sit at negative x).
-  const all = [...keys, ...ledZones, ...modules];
+  const all = [...keys, ...ledZones, ...modules, ...palette];
   const minX = Math.min(...all.map((k) => k.x));
   const minY = Math.min(...all.map((k) => k.y));
   for (const k of all) { k.x -= minX; k.y -= minY; }
 
   const width = Math.max(...all.map((k) => k.x + k.w));
   const height = Math.max(...all.map((k) => k.y + k.h));
-  return { keys, ledZones, modules, width, height, unit: 1 };
+  return { keys, ledZones, modules, palette, width, height, unit: 1 };
 }

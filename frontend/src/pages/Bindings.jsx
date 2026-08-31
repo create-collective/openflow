@@ -15,7 +15,28 @@ export default function Bindings() {
   const [selectedPos, setSelectedPos] = useState(null);
   const [activeSlot, setActiveSlot] = useState("tap");
   const [err, setErr] = useState(null);
+  const [pickedModule, setPickedModule] = useState(null);
+  const [moduleAssign, setModuleAssign] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("openflow.moduleAssign")) || { left: null, right: null };
+    } catch {
+      return { left: null, right: null };
+    }
+  });
   const navigate = useNavigate();
+
+  function assignModule(slot, type) {
+    setModuleAssign((prev) => {
+      const next = { ...prev, [slot]: type };
+      try {
+        localStorage.setItem("openflow.moduleAssign", JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+    setPickedModule(null);
+  }
 
   const load = useCallback(async () => {
     try {
@@ -46,11 +67,6 @@ export default function Bindings() {
   }, [layer]);
 
   const selectedKey = selectedPos != null ? keysByPosition[selectedPos] : null;
-
-  const moduleLabels = useMemo(() => {
-    // Placeholder module labels; wired to module_config_bindings in Modules work.
-    return { left: "Module", right: "Module" };
-  }, []);
 
   async function bind(pick) {
     if (selectedPos == null || !activeLayerId) return;
@@ -118,8 +134,12 @@ export default function Bindings() {
               setSelectedPos(pos);
               setActiveSlot("tap");
             }}
-            onSelectModule={(side) => navigate(`/module-configuration?side=${side}`)}
-            moduleLabels={moduleLabels}
+            moduleAssign={moduleAssign}
+            showModulePalette
+            onAssignModule={assignModule}
+            pickedModule={pickedModule}
+            onPickModule={setPickedModule}
+            onSelectModule={(type) => navigate(`/module-configuration?type=${type}`)}
           />
         </div>
       </div>
