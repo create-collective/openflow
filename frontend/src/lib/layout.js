@@ -1,10 +1,11 @@
 // Naya Create physical layout for the on-screen board.
 //
-// position_id -> physical label comes from the recovered `Zdt` map, but the
-// VISUAL placement is not the naive matrix: e.g. RETURN (pos 7, label LH1) and
-// BACKSPACE (pos 8, RH1) render as 2u vertical keys at each half's inner-top,
-// while the thumb clusters are only H2/H3/H4. We encode the real geometry
-// explicitly (unit = one 1u key), tuned against the NayaFlow screenshots.
+// position_id -> physical label from the recovered `Zdt` map; visual placement is
+// explicit (unit = one 1u key), tuned against the NayaFlow screenshots
+// (uipolish2 / reallifelook). RETURN (7) / BACKSPACE (8) are 2u inner keys; the
+// thumb cluster (H2/H3/H4) is a separate arc BELOW the main block so it never
+// collides with the wide bottom-row Space; modules sit spread in the center gap;
+// the 7+7 side LEDs (positions 74-87) render in color mode.
 
 export const POS_LABEL = {
   0: "LA1", 1: "LB1", 2: "LC1", 3: "LD1", 4: "LE1", 5: "LF1", 6: "LG1", 7: "LH1",
@@ -20,28 +21,28 @@ export const POS_LABEL = {
   69: "RE5", 70: "RD5", 71: "RC5", 72: "RB5", 73: "RA5",
 };
 
-// Finger-column x (outer A -> inner G), and per-column vertical stagger (bowl,
-// middle finger highest). Coordinates are in key units, x growing toward center.
 const COL_X = { A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6 };
 const COL_STAG = { A: 0.5, B: 0.32, C: 0.12, D: 0.0, E: 0.12, F: 0.32, G: 0.55 };
 
-const GAP = 4.2; // center gap (module zone) in key units
+const FINGER_W = 8;      // finger block incl. the 2u inner column (x 0..8)
+const CENTER_GAP = 6;    // open middle (module zone)
+const TOTAL = FINGER_W * 2 + CENTER_GAP;
 
-// Left-half geometry for a (col,row), x growing toward the inner edge.
+// LED side zones (color mode): 7 bars per outer edge.
+const LEFT_LEDS = [81, 82, 83, 84, 85, 86, 87];   // outer-left
+const RIGHT_LEDS = [74, 75, 76, 77, 78, 79, 80];  // outer-right
+
 function geomFor(col, row) {
   if (col !== "H") {
     const x = COL_X[col];
     const y = row - 1 + COL_STAG[col];
-    // Wide bottom-row space at column E, row 5.
-    if (col === "E" && row === 5) return { x, y, w: 2.5, h: 1 };
+    if (col === "E" && row === 5) return { x, y, w: 2.3, h: 1 }; // wide space
     return { x, y, w: 1, h: 1 };
   }
-  // Thumb column H (row = 1..4).
-  if (row === 1) return { x: 7, y: 0.55, w: 1, h: 2 }; // 2u inner key (Enter/Bksp)
-  // Thumb cluster arc (H2/H3/H4), angled inward.
-  if (row === 2) return { x: 6.2, y: 5.05, w: 1.5, h: 1, rot: 16 }; // wide thumb (space)
-  if (row === 3) return { x: 7.85, y: 5.5, w: 1.1, h: 1, rot: 16 };
-  return { x: 9.0, y: 6.0, w: 1.1, h: 1, rot: 16 }; // H4 (hold)
+  if (row === 1) return { x: 7, y: 0.55, w: 1, h: 2 };            // 2u inner (Enter/Bksp)
+  if (row === 2) return { x: 6.9, y: 5.7, w: 1.4, h: 1, rot: 14 }; // thumb space
+  if (row === 3) return { x: 8.4, y: 6.15, w: 1.1, h: 1, rot: 14 };
+  return { x: 9.5, y: 6.6, w: 1.1, h: 1, rot: 14 };               // thumb hold
 }
 
 function parseLabel(label) {
@@ -49,45 +50,41 @@ function parseLabel(label) {
 }
 
 export function buildLayout() {
-  // Left half extent, to compute the mirror axis for the right half.
-  let leftW = 0;
-  for (const label of Object.values(POS_LABEL)) {
-    const { half, col, row } = parseLabel(label);
-    if (half !== "L") continue;
-    const g = geomFor(col, row);
-    leftW = Math.max(leftW, g.x + g.w);
-  }
-  const total = leftW * 2 + GAP;
-
   const keys = [];
   for (const [pid, label] of Object.entries(POS_LABEL)) {
     const { half, col, row } = parseLabel(label);
     const g = geomFor(col, row);
     const rot = g.rot || 0;
-    let x;
-    if (half === "L") x = g.x;
-    else x = total - (g.x + g.w); // mirror
+    const x = half === "L" ? g.x : TOTAL - (g.x + g.w);
     keys.push({
-      positionId: Number(pid),
-      label,
-      half,
-      col,
-      row,
-      x,
-      y: g.y,
-      w: g.w,
-      h: g.h,
-      rot: half === "R" ? -rot : rot,
+      positionId: Number(pid), label, half, col, row,
+      x, y: g.y, w: g.w, h: g.h, rot: half === "R" ? -rot : rot,
     });
   }
 
-  const height = Math.max(...keys.map((k) => k.y + k.h));
-  // Module slots in the center gap (clickable -> Modules page).
-  const centerX = total / 2;
+  // LED side bars (color mode). Positions carry color in keys.color_hex.
+  const ledZones = [];
+  const barW = 0.42, barH = 0.85, barGap = 0.95, barTop = 0.55;
+  LEFT_LEDS.forEach((pid, i) =>
+    ledZones.push({ positionId: pid, x: -1.1, y: barTop + i * barGap, w: barW, h: barH })
+  );
+  RIGHT_LEDS.forEach((pid, i) =>
+    ledZones.push({ positionId: pid, x: TOTAL + 0.7, y: barTop + i * barGap, w: barW, h: barH })
+  );
+
+  // Modules spread toward each half, leaving the center open.
   const modules = [
-    { id: "left", positionId: 88, x: centerX - 1.75, y: 1.1, w: 1.5, h: 1.5 },
-    { id: "right", positionId: 89, x: centerX + 0.25, y: 1.1, w: 1.5, h: 1.5 },
+    { id: "left", positionId: 88, x: FINGER_W + 0.4, y: 2.0, w: 1.8, h: 1.8 },
+    { id: "right", positionId: 89, x: TOTAL - FINGER_W - 2.2, y: 2.0, w: 1.8, h: 1.8 },
   ];
 
-  return { keys, modules, width: total, height, unit: 1 };
+  // Normalize so min x/y is 0 (LED bars sit at negative x).
+  const all = [...keys, ...ledZones, ...modules];
+  const minX = Math.min(...all.map((k) => k.x));
+  const minY = Math.min(...all.map((k) => k.y));
+  for (const k of all) { k.x -= minX; k.y -= minY; }
+
+  const width = Math.max(...all.map((k) => k.x + k.w));
+  const height = Math.max(...all.map((k) => k.y + k.h));
+  return { keys, ledZones, modules, width, height, unit: 1 };
 }

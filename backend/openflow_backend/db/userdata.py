@@ -198,6 +198,92 @@ def clear_key_binding(layer_id: str, position_id: int, behavior: str | None = No
         conn.close()
 
 
+def set_layer_animation(layer_id: str, animation: str | None) -> dict:
+    """Set a layer's LED animation (solid/swirl/breathe/spectrum, or None)."""
+    conn = connect()
+    try:
+        cur = conn.execute(
+            "UPDATE layers SET animation_id=?, updated_at=? WHERE id=?",
+            (animation, _now(), layer_id),
+        )
+        if cur.rowcount == 0:
+            raise ValueError(f"no layer {layer_id}")
+        conn.commit()
+        return {"ok": True, "animation": animation}
+    finally:
+        conn.close()
+
+
+def fill_layer_color(layer_id: str, color_hex: str | None) -> dict:
+    """Paint every key on a layer one color (the Fill tool)."""
+    conn = connect()
+    try:
+        value = color_hex if color_hex else UNSET_COLOR
+        conn.execute(
+            "UPDATE keys SET color_hex=?, updated_at=? WHERE layer_id=?",
+            (value, _now(), layer_id),
+        )
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+# Per-module-type settings schema (from NayaFlow's settings tabs). Editing stores
+# values in module_settings keyed by the field id.
+_COMMON_POINTER = [
+    {"id": "scroll_speed", "label": "Scroll Speed", "desc": "Adjust the scrolling speed",
+     "kind": "slider", "min": 1, "max": 100, "default": 50},
+    {"id": "pointer_speed", "label": "Pointer Speed", "desc": "Adjust the pointer movement speed",
+     "kind": "slider", "min": 1, "max": 100, "default": 10},
+    {"id": "pointer_accel", "label": "Pointer Acceleration", "desc": "Adjust the pointer acceleration curve",
+     "kind": "slider", "min": 1, "max": 100, "default": 50},
+    {"id": "pointer_accel_on", "label": "Pointer Acceleration ON/OFF",
+     "desc": "Enable or disable pointer acceleration", "kind": "toggle", "default": True},
+]
+SETTINGS_SCHEMA = {
+    "TOUCH": _COMMON_POINTER,
+    "TRACK": _COMMON_POINTER,
+    "TUNE": _COMMON_POINTER + [
+        {"id": "ticks_per_rotation", "label": "Ticks Per Rotation",
+         "desc": "Number of tactile feedback ticks per full rotation", "kind": "slider",
+         "min": 5, "max": 170, "default": 72},
+        {"id": "tick_strength", "label": "Set Tick Strength",
+         "desc": "Adjust the tactile feedback strength of crown ticks", "kind": "slider",
+         "min": 0, "max": 100, "default": 75},
+        {"id": "toggle_ticks", "label": "Toggle Ticks",
+         "desc": "Enable or disable tactile feedback ticks", "kind": "toggle", "default": True},
+    ],
+}
+
+
+def set_module_setting(config_id: str, field_id: str, value) -> dict:
+    """Upsert a module setting value (keyed by the schema field id)."""
+    conn = connect()
+    try:
+        now = _now()
+        val = "true" if value is True else "false" if value is False else str(value)
+        existing = conn.execute(
+            "SELECT 1 FROM module_settings WHERE module_config_id=? AND correlation_id=?",
+            (config_id, field_id),
+        ).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE module_settings SET value=?, updated_at=? WHERE module_config_id=? AND correlation_id=?",
+                (val, now, config_id, field_id),
+            )
+        else:
+            conn.execute(
+                "INSERT INTO module_settings (value, type, correlation_id, module_config_id, updated_at, created_at) "
+                "VALUES (?,?,?,?,?,?)",
+                (val, "openflow", field_id, config_id, now, now),
+            )
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
 def get_modules() -> dict:
     """Module configs grouped by type, each with its gesture bindings + settings.
 
@@ -231,14 +317,25 @@ def get_modules() -> dict:
                     "direction": b["direction"],
                     "mode": b["mode"],
                 })
-            settings = [
-                {"correlationId": s["correlation_id"], "value": s["value"], "type": s["type"]}
+            stored = {
+                s["correlation_id"]: s["value"]
                 for s in conn.execute(
-                    "SELECT correlation_id, value, type FROM module_settings "
-                    "WHERE module_config_id = ? ORDER BY correlation_id",
+                    "SELECT correlation_id, value FROM module_settings WHERE module_config_id = ?",
                     (m["id"],),
                 )
-            ]
+            }
+            schema = SETTINGS_SCHEMA.get(m["type"], _COMMON_POINTER)
+            settings_schema = []
+            for f in schema:
+                cur = stored.get(f["id"], f["default"])
+                if f["kind"] == "toggle":
+                    cur = (str(cur).lower() == "true") if not isinstance(cur, bool) else cur
+                else:
+                    try:
+                        cur = int(cur)
+                    except (TypeError, ValueError):
+                        cur = f["default"]
+                settings_schema.append({**f, "value": cur})
             configs.append({
                 "id": m["id"],
                 "name": m["name"],
@@ -246,7 +343,7 @@ def get_modules() -> dict:
                 "size": m["size"],
                 "orderId": m["order_id"],
                 "bindings": bindings,
-                "settings": settings,
+                "settingsSchema": settings_schema,
             })
         return {"modules": configs}
     finally:

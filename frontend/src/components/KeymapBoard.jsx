@@ -15,11 +15,11 @@ export default function KeymapBoard({
   onSelectKey = () => {},
   onSelectModule = null,
   moduleLabels = {},
-  unitPx = 46,
+  unitPx = 42,
 }) {
   const layout = useMemo(() => buildLayout(), []);
   const px = (u) => u * unitPx;
-  const pad = 3; // px inset between adjacent keys
+  const pad = 4; // px inset between adjacent keys
 
   return (
     <div
@@ -54,6 +54,28 @@ export default function KeymapBoard({
           </button>
         );
       })}
+
+      {mode === "color" &&
+        layout.ledZones.map((z) => {
+          const data = keysByPosition[z.positionId];
+          const color = data?.colorHex;
+          return (
+            <button
+              key={z.positionId}
+              className={"kb-led" + (selectedPosition === z.positionId ? " selected" : "")}
+              title={`LED ${z.positionId}`}
+              onClick={() => onSelectKey(z.positionId)}
+              style={{
+                position: "absolute",
+                left: px(z.x) + pad / 2,
+                top: px(z.y) + pad / 2,
+                width: px(z.w),
+                height: px(z.h),
+                background: color || "var(--neutral20)",
+              }}
+            />
+          );
+        })}
 
       {layout.modules.map((m) => (
         <button

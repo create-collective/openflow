@@ -36,6 +36,12 @@ export function keyLegend(binding) {
   if (!binding || !binding.actionCode) return { main: "", sub: "" };
   const code = binding.actionCode;
 
+  if (binding.actionType === "macro") return { main: "Macro", sub: "⚡" };
+  if (binding.actionType === "shortcut_alias" || code.includes(" + ")) {
+    const parts = code.split(" + ");
+    return { main: NAMED[parts.at(-1)] || parts.at(-1), sub: "↗" };
+  }
+
   // Layer switches: MO_LAYER_/TO_LAYER_/TOGGLE_LAYER_/STICKY_LAYER_ + layerId
   if (code.startsWith("MO_LAYER_")) return { main: "Hold", sub: "✦" };
   if (code.startsWith("TO_LAYER_")) return { main: "To", sub: "✦" };

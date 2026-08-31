@@ -69,6 +69,16 @@ async def modules() -> dict:
     return await run_in_threadpool(ud.get_modules)
 
 
+@router.post("/rpc/set-module-setting")
+async def set_module_setting(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(
+            ud.set_module_setting, body["configId"], body["fieldId"], body["value"]
+        )
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/api/actions")
 async def actions() -> dict:
     """The action palette: categorized action codes, behavior slots, layer types."""
@@ -110,6 +120,11 @@ async def delete_macro_step(body: dict = Body(...)) -> dict:
     return await run_in_threadpool(mac.delete_step, body["stepId"])
 
 
+@router.post("/rpc/reorder-macro-steps")
+async def reorder_macro_steps(body: dict = Body(...)) -> dict:
+    return await run_in_threadpool(mac.reorder_steps, body["macroId"], body["orderedIds"])
+
+
 @router.post("/rpc/set-key-binding")
 async def set_key_binding(body: dict = Body(...)) -> dict:
     try:
@@ -142,6 +157,22 @@ async def set_key_color(body: dict = Body(...)) -> dict:
         return await run_in_threadpool(
             ud.set_key_color, body["layerId"], int(body["positionId"]), body.get("colorHex")
         )
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/fill-layer-color")
+async def fill_layer_color(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(ud.fill_layer_color, body["layerId"], body.get("colorHex"))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/set-layer-animation")
+async def set_layer_animation(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(ud.set_layer_animation, body["layerId"], body.get("animation"))
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 

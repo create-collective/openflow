@@ -5,7 +5,7 @@ import { api } from "../lib/api";
 // ready, so we build a working editor: create macros, add ordered steps
 // (Key / Text / Wait), persisted offline to SQLite.
 
-function StepRow({ step, onDelete }) {
+function StepRow({ step, index, count, onDelete, onMove }) {
   let label;
   if (step.kind === "key") label = `Key: ${step.actionCode || "?"} (${step.state})`;
   else if (step.kind === "text") label = `Text: "${step.input}"`;
@@ -17,6 +17,8 @@ function StepRow({ step, onDelete }) {
       <span className="skp-arrow">→</span>
       <span className="skp-act">{label}</span>
       <span style={{ color: "var(--text-dim)", marginRight: 8 }}>{step.delay}ms</span>
+      <button className="skp-x" disabled={index === 0} onClick={() => onMove(index, -1)} title="Move up">↑</button>
+      <button className="skp-x" disabled={index === count - 1} onClick={() => onMove(index, 1)} title="Move down">↓</button>
       <button className="skp-x" onClick={() => onDelete(step.id)} title="Delete step">✕</button>
     </div>
   );
@@ -112,8 +114,22 @@ export default function Macros() {
 
               <div className="skp-head"><span>Step</span><span className="skp-arrow">→</span><span>Action</span></div>
               {macro.steps.length === 0 && <div className="empty">No steps yet. Add one below.</div>}
-              {macro.steps.map((s) => (
-                <StepRow key={s.id} step={s} onDelete={async (id) => { await api.deleteMacroStep(id); await load(); }} />
+              {macro.steps.map((s, i) => (
+                <StepRow
+                  key={s.id}
+                  step={s}
+                  index={i}
+                  count={macro.steps.length}
+                  onDelete={async (id) => { await api.deleteMacroStep(id); await load(); }}
+                  onMove={async (index, dir) => {
+                    const ids = macro.steps.map((x) => x.id);
+                    const j = index + dir;
+                    if (j < 0 || j >= ids.length) return;
+                    [ids[index], ids[j]] = [ids[j], ids[index]];
+                    await api.reorderMacroSteps(macro.id, ids);
+                    await load();
+                  }}
+                />
               ))}
 
               <div className="card" style={{ marginTop: 20, maxWidth: 620 }}>

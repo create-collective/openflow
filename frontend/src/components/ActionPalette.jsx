@@ -3,10 +3,10 @@ import { useState } from "react";
 // The keybind selector (bottom-right). Tabs come from the backend catalog:
 // B (basic), + (extended), ✦ (layers), ↗ (shortcuts). Picking an action calls
 // onPick with what set-key-binding needs.
-export default function ActionPalette({ catalog, layers, disabled, onPick }) {
+export default function ActionPalette({ catalog, layers, macros = [], disabled, onPick }) {
   const [tabId, setTabId] = useState("basic");
   if (!catalog) return null;
-  const tabs = catalog.tabs || [];
+  const tabs = [...(catalog.tabs || []), { id: "macros", label: "⚡", title: "Macros" }];
   const tab = tabs.find((t) => t.id === tabId) || tabs[0];
 
   return (
@@ -27,7 +27,28 @@ export default function ActionPalette({ catalog, layers, disabled, onPick }) {
       <div className="palette-body">
         {disabled && <div className="palette-disabled">Select a key on the map first.</div>}
 
-        {tab?.id === "layers"
+        {tab?.id === "macros" ? (
+          <div className="palette-cat">
+            <div className="palette-cat-title">Macros <span className="palette-count">{macros.length}</span></div>
+            {macros.length === 0 ? (
+              <div className="palette-disabled">No macros yet. Create them on the Macros page.</div>
+            ) : (
+              <div className="palette-grid wide">
+                {macros.map((m) => (
+                  <button
+                    key={m.id}
+                    className="palette-key"
+                    disabled={disabled}
+                    title={`Bind macro: ${m.name}`}
+                    onClick={() => onPick({ actionCode: m.id, actionType: "macro" })}
+                  >
+                    ⚡ {m.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : tab?.id === "layers"
           ? catalog.layerActionTypes.map((lt) => (
               <div key={lt.frontendType} className="palette-cat">
                 <div className="palette-cat-title">{lt.label}</div>
@@ -50,14 +71,14 @@ export default function ActionPalette({ catalog, layers, disabled, onPick }) {
             ))
           : tab?.categories.map((cat) => (
               <div key={cat.name} className="palette-cat">
-                <div className="palette-cat-title">{cat.name}</div>
-                <div className="palette-grid">
-                  {cat.actions.map((a) => (
+                <div className="palette-cat-title">{cat.name} <span className="palette-count">{cat.actions.length}</span></div>
+                <div className={"palette-grid" + (tab.id === "shortcuts" ? " wide" : "")}>
+                  {cat.actions.map((a, i) => (
                     <button
-                      key={a.code}
+                      key={a.code + "-" + i}
                       className={"palette-key" + (a.comingSoon ? " soon" : "")}
                       disabled={disabled || a.comingSoon}
-                      title={a.comingSoon ? `${a.label} (coming soon)` : a.label}
+                      title={a.comingSoon ? `${a.label} (coming soon)` : `${a.label} (${a.code})`}
                       onClick={() => onPick({ actionCode: a.code, actionType: a.actionType })}
                     >
                       {a.label}

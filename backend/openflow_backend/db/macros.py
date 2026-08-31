@@ -134,13 +134,52 @@ def add_step(macro_id: str, kind: str, *, action_code: str | None = None,
         conn.close()
 
 
+_STEP_TABLES = (
+    "standard_action_macro_steps", "text_action_macro_steps",
+    "wait_for_release_macro_steps", "mouse_action_macro_steps",
+    "loop_action_macro_steps",
+)
+
+
+def _macro_id_for_step(conn, step_id: str) -> str | None:
+    for tbl in _STEP_TABLES:
+        r = conn.execute(f"SELECT macro_id FROM {tbl} WHERE id=?", (step_id,)).fetchone()
+        if r:
+            return r["macro_id"]
+    return None
+
+
+def _reindex(conn, macro_id: str) -> None:
+    """Renumber a macro's steps 0..n-1 by current order across all step tables."""
+    steps = _steps_for(conn, macro_id)  # sorted by order_id
+    for new_order, s in enumerate(steps):
+        if s["orderId"] != new_order:
+            for tbl in _STEP_TABLES:
+                conn.execute(f"UPDATE {tbl} SET order_id=? WHERE id=?", (new_order, s["id"]))
+
+
 def delete_step(step_id: str) -> dict:
     conn = connect()
     try:
-        for tbl in ("standard_action_macro_steps", "text_action_macro_steps",
-                    "wait_for_release_macro_steps", "mouse_action_macro_steps",
-                    "loop_action_macro_steps"):
+        macro_id = _macro_id_for_step(conn, step_id)
+        for tbl in _STEP_TABLES:
             conn.execute(f"DELETE FROM {tbl} WHERE id=?", (step_id,))
+        if macro_id:
+            _reindex(conn, macro_id)
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+def reorder_steps(macro_id: str, ordered_ids: list[str]) -> dict:
+    """Set step order to match ordered_ids (for drag-to-reorder)."""
+    conn = connect()
+    try:
+        for new_order, sid in enumerate(ordered_ids):
+            for tbl in _STEP_TABLES:
+                conn.execute(f"UPDATE {tbl} SET order_id=? WHERE id=? AND macro_id=?",
+                             (new_order, sid, macro_id))
         conn.commit()
         return {"ok": True}
     finally:

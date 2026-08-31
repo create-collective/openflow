@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 
-// Module configuration (Touch / Track / Tune). Mirrors NayaFlow: a grouped list
-// on the left, and the selected config's bindings + settings tabs in the center.
-// Reads the real module_configs/module_bindings/module_settings; editing gesture
-// bindings is the next iteration (settings sliders are display for now).
+// Module configuration (Touch / Track / Tune). Grouped list on the left; the
+// selected config's bindings (module visual + always-on gestures + per-target
+// tabs) and editable settings tabs in the center.
 
 const TYPE_ORDER = ["TOUCH", "TRACK", "TUNE"];
 
@@ -12,37 +11,40 @@ function cleanCode(code) {
   if (!code) return "—";
   return code.replaceAll(" - ", " / ").replaceAll("_", " ");
 }
-
 function targetLabel(t) {
-  if (!t) return "Axes & Gestures";
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function SettingSlider({ s }) {
-  return (
-    <div className="card" style={{ maxWidth: 560 }}>
-      <div className="kv">
-        <span className="k">{s.correlationId}</span>
-        <span className="v">{s.value}</span>
+function ModuleVisual({ type }) {
+  // Simple recognizable glyphs per module type.
+  if (type === "TRACK")
+    return (
+      <div className="mod-visual">
+        <div className="mod-ring"><span className="mod-ball" /></div>
       </div>
-      <input type="range" min="1" max="100" defaultValue={Number(s.value) || 1} disabled style={{ width: "100%" }} />
-    </div>
-  );
+    );
+  if (type === "TUNE")
+    return <div className="mod-visual"><div className="mod-dial" /></div>;
+  return <div className="mod-visual"><div className="mod-pad" /></div>;
 }
 
 export default function Modules() {
   const [modules, setModules] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [tab, setTab] = useState("bindings");
-  const [activeButton, setActiveButton] = useState("button_1");
+  const [activeTarget, setActiveTarget] = useState(null);
   const [err, setErr] = useState(null);
 
-  useEffect(() => {
-    api.modules().then((r) => {
+  async function load() {
+    try {
+      const r = await api.modules();
       setModules(r.modules || []);
-      if (r.modules?.[0]) setSelectedId(r.modules[0].id);
-    }).catch((e) => setErr(e.message));
-  }, []);
+      if (!selectedId && r.modules?.[0]) setSelectedId(r.modules[0].id);
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   const grouped = useMemo(() => {
     const g = {};
@@ -52,19 +54,24 @@ export default function Modules() {
 
   const config = modules.find((m) => m.id === selectedId) || null;
 
-  // Group bindings by their target (null target = the axis/gesture group), which
-  // handles all module types: Track (axes + button_1..4), Touch (2/3/4 fingers),
-  // Tune (1/2/3 fingers + dial).
-  const groups = useMemo(() => {
-    const g = new Map();
-    for (const b of config?.bindings || []) {
-      const key = b.target || "";
-      if (!g.has(key)) g.set(key, []);
-      g.get(key).push(b);
-    }
-    // null-target group first, then the rest sorted.
-    return [...g.entries()].sort((a, b) => (a[0] === "" ? -1 : b[0] === "" ? 1 : a[0].localeCompare(b[0])));
+  const axes = useMemo(() => (config?.bindings || []).filter((b) => !b.target), [config]);
+  const targets = useMemo(() => {
+    const t = [];
+    for (const b of config?.bindings || []) if (b.target && !t.includes(b.target)) t.push(b.target);
+    return t.sort();
   }, [config]);
+  const curTarget = activeTarget && targets.includes(activeTarget) ? activeTarget : targets[0];
+  const targetBindings = (config?.bindings || []).filter((b) => b.target === curTarget);
+
+  async function setSetting(fieldId, value) {
+    if (!config) return;
+    try {
+      await api.setModuleSetting({ configId: config.id, fieldId, value });
+      await load();
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
 
   return (
     <div>
@@ -82,7 +89,7 @@ export default function Modules() {
                   <button
                     key={m.id}
                     className={"module-item" + (m.id === selectedId ? " active" : "")}
-                    onClick={() => setSelectedId(m.id)}
+                    onClick={() => { setSelectedId(m.id); setActiveTarget(null); }}
                   >
                     ◉ {m.name}
                   </button>
@@ -104,40 +111,74 @@ export default function Modules() {
               </div>
 
               {tab === "bindings" && (
-                <div>
-                  {groups.length === 0 && <div className="empty">No gesture bindings.</div>}
-                  {groups.map(([target, binds]) => (
-                    <div key={target || "axes"} style={{ marginBottom: 20 }}>
-                      <div className="module-group-title" style={{ marginLeft: 0 }}>
-                        {targetLabel(target)}
-                      </div>
-                      <div className="skp-head">
-                        <span>Gesture</span><span className="skp-arrow">→</span><span>Action</span>
-                      </div>
-                      {binds.map((b) => (
+                <div style={{ maxWidth: 620 }}>
+                  <ModuleVisual type={config.type} />
+
+                  {axes.length > 0 && (
+                    <>
+                      <div className="skp-head"><span>Gesture</span><span className="skp-arrow">→</span><span>Action</span></div>
+                      {axes.map((b) => (
                         <div className="skp-row" key={b.id} style={{ cursor: "default" }}>
-                          <span className="skp-beh" style={{ textTransform: "capitalize" }}>
-                            {(b.gesture || "").replace(/_/g, " ")}
-                          </span>
+                          <span className="skp-beh" style={{ textTransform: "capitalize" }}>{(b.gesture || "").replace(/_/g, " ")}</span>
                           <span className="skp-arrow">→</span>
                           <span className="skp-act">{cleanCode(b.actionCode)}</span>
                         </div>
                       ))}
-                    </div>
-                  ))}
+                    </>
+                  )}
+
+                  {targets.length > 0 && (
+                    <>
+                      <div className="module-btn-tabs">
+                        {targets.map((t) => (
+                          <button key={t} className={"tab" + (curTarget === t ? " active" : "")} onClick={() => setActiveTarget(t)}>
+                            {targetLabel(t)}
+                          </button>
+                        ))}
+                      </div>
+                      {targetBindings.map((b) => (
+                        <div className="skp-row" key={b.id} style={{ cursor: "default" }}>
+                          <span className="skp-beh" style={{ textTransform: "capitalize" }}>{(b.gesture || "").replace(/_/g, " ")}</span>
+                          <span className="skp-arrow">→</span>
+                          <span className="skp-act">{cleanCode(b.actionCode)}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
 
               {tab === "settings" && (
-                <div style={{ marginTop: 16 }}>
-                  {config.settings.length === 0 ? (
-                    <div className="phase-note">
-                      No stored settings for this module. Speed/acceleration sliders will
-                      appear here once configured (settings editing lands with device sync).
+                <div style={{ marginTop: 16, maxWidth: 640 }}>
+                  {config.settingsSchema.map((f) => (
+                    <div className="setting" key={f.id}>
+                      <div className="setting-head">
+                        <strong>{f.label}</strong>
+                        {f.kind === "toggle" ? (
+                          <button
+                            className={"toggle" + (f.value ? " on" : "")}
+                            onClick={() => setSetting(f.id, !f.value)}
+                            aria-label={f.label}
+                          >
+                            <span className="toggle-knob" />
+                          </button>
+                        ) : (
+                          <span className="setting-val">{f.value}</span>
+                        )}
+                      </div>
+                      <div className="setting-desc">{f.desc}</div>
+                      {f.kind === "slider" && (
+                        <input
+                          type="range"
+                          min={f.min}
+                          max={f.max}
+                          value={f.value}
+                          onChange={(e) => setSetting(f.id, Number(e.target.value))}
+                          style={{ width: "100%" }}
+                        />
+                      )}
                     </div>
-                  ) : (
-                    config.settings.map((s) => <SettingSlider key={s.correlationId} s={s} />)
-                  )}
+                  ))}
                 </div>
               )}
             </>

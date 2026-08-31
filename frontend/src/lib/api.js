@@ -29,14 +29,18 @@ export const api = {
   userdata: () => req("GET", "/api/userdata"),
   actions: () => req("GET", "/api/actions"),
   modules: () => req("GET", "/api/modules"),
+  setModuleSetting: (body) => req("POST", "/rpc/set-module-setting", body),
   macros: () => req("GET", "/api/macros"),
   createMacro: (name) => req("POST", "/rpc/create-macro", { name }),
   deleteMacro: (id) => req("POST", "/rpc/delete-macro", { id }),
   addMacroStep: (body) => req("POST", "/rpc/add-macro-step", body),
   deleteMacroStep: (stepId) => req("POST", "/rpc/delete-macro-step", { stepId }),
+  reorderMacroSteps: (macroId, orderedIds) => req("POST", "/rpc/reorder-macro-steps", { macroId, orderedIds }),
   setKeyBinding: (body) => req("POST", "/rpc/set-key-binding", body),
   clearKeyBinding: (body) => req("POST", "/rpc/clear-key-binding", body),
   setKeyColor: (body) => req("POST", "/rpc/set-key-color", body),
+  fillLayerColor: (body) => req("POST", "/rpc/fill-layer-color", body),
+  setLayerAnimation: (body) => req("POST", "/rpc/set-layer-animation", body),
 
   led: (side, action, value) => req("POST", "/rpc/led", { side, action, value }),
   textCommand: (side, command, force = false) =>

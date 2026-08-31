@@ -67,6 +67,13 @@ def _modifiers():
     ]
 
 
+def _control():
+    return [
+        _a("RETURN", "Enter"), _a("ESC", "Esc"), _a("BACKSPACE", "Bksp"),
+        _a("DELETE", "Del"), _a("TAB", "Tab"), _a("SPACE", "Space"), _a("INSERT", "Ins"),
+    ]
+
+
 def _symbols():
     syms = {
         "GRAVE": "` ~", "MINUS": "- _", "EQUAL": "= +", "LEFT_BRACKET": "[ {",
@@ -158,37 +165,81 @@ def _recovery():
     return [_a("MODULE_FORCE_CHARGING", "Recover Module", "naya", coming_soon=True)]
 
 
-# Common OS/editor shortcuts as shortcut_alias combos. Representative set; the full
-# NayaFlow catalog (from ZMK/OS presets) can be expanded from flow-strings.txt.
-def _mac_shortcuts():
-    combos = {
-        "LGUI + C": "Copy", "LGUI + V": "Paste", "LGUI + X": "Cut",
-        "LGUI + Z": "Undo", "LGUI + LSHIFT + Z": "Redo", "LGUI + A": "Select All",
-        "LGUI + S": "Save", "LGUI + F": "Find", "LGUI + TAB": "App Switch",
-        "LGUI + SPACE": "Spotlight", "LGUI + LCTRL + F": "Fullscreen",
-    }
-    return [_a(c, l, "shortcut_alias") for c, l in combos.items()]
+# Full OS/editor shortcut presets, extracted verbatim from NayaFlow's recovered
+# catalog (flow-strings.txt). action_code is the literal combo NayaFlow stored
+# (shortcut_alias). Lists (not dicts) so duplicate combos are preserved.
+_MAC = [
+    ("LGUI + X", "Cut"), ("LGUI + C", "Copy"), ("LGUI + V", "Paste"), ("LGUI + Z", "Undo"),
+    ("LSHIFT + LGUI + Z", "Redo"), ("LGUI + A", "Select All"), ("LGUI + F", "Find"),
+    ("LSHIFT + LGUI + G", "Find Previous"), ("LGUI + G", "Find Next"), ("LGUI + SPACE", "Spotlight"),
+    ("LALT + LGUI + SPACE", "Spotlight From Finder"), ("LGUI + H", "Hide"),
+    ("LALT + LGUI + H", "Hide Other Apps"), ("LGUI + M", "Minimize Front Window"),
+    ("LALT + LGUI + M", "Minimize All Windows of App"), ("LCTRL + LGUI + F", "Fullscreen"),
+    ("LGUI + O", "Open"), ("LGUI + P", "Print"), ("LGUI + S", "Save"),
+    ("LCTRL + LGUI + SPACE", "Character Viewer"), ("LGUI + T", "New Tab"),
+    ("LCTRL + TAB", "Next Tab"), ("LCTRL + LSHIFT + TAB", "Prev Tab"), ("LGUI + W", "Close Window"),
+    ("LALT + LGUI + W", "Close All Windows of Application"),
+    ("LGUI + GRAVE", "Switch to Previous Window"), ("LSHIFT + LGUI + GRAVE", "Switch to Next Window"),
+    ("LGUI + Q", "Quit Application"), ("LALT + LGUI + ESC", "Force Quit Application"),
+    ("LGUI + TAB", "Switch to Previous App"), ("LSHIFT + LGUI + TAB", "Switch to Next App"),
+    ("LCTRL + LEFT", "Switch to Previous Screen"), ("LCTRL + RIGHT", "Switch to Next Screen"),
+    ("LSHIFT + LGUI + NUMBER_3", "Screenshot"), ("LSHIFT + LGUI + NUMBER_5", "Open Screenshot Dialog"),
+    ("LSHIFT + LGUI + NUMBER_4", "Screenshot Cursor"),
+    ("LALT + LSHIFT + LGUI + NUMBER_4", "Screenshot Cursor Clipboard"),
+    ("LSHIFT + LGUI + N", "New Folder"), ("LCTRL + LGUI + N", "New Folder with Selection"),
+    ("LGUI + COMMA", "Open Preferences"), ("LALT + LSHIFT + LGUI + Q", "Log Out Mac"),
+    ("LCTRL + LSHIFT + C_POWER", "Display Sleep"), ("LCTRL + UP", "Mission Control"),
+    ("LCTRL + DOWN", "App Expose"),
+]
+_WIN = [
+    ("LCTRL + X", "Cut to clipboard"), ("LCTRL + C", "Copy to clipboard"),
+    ("LCTRL + V", "Paste from clipboard"), ("LCTRL + LSHIFT + V", "Paste as plain text"),
+    ("LCTRL + B", "Apply bold format"), ("LCTRL + I", "Apply italic format"),
+    ("LCTRL + U", "Apply underline format"), ("LCTRL + BACKSPACE", "Delete words to the left"),
+    ("LCTRL + DELETE", "Delete words to the right"), ("LCTRL + LEFT", "Move to previous word"),
+    ("LCTRL + RIGHT", "Move to next word"), ("LCTRL + UP", "Move to previous paragraph"),
+    ("LCTRL + DOWN", "Move to next paragraph"), ("LCTRL + HOME", "Move to beginning of document"),
+    ("LCTRL + END", "Move to end of document"), ("LCTRL + F", "Find text"),
+    ("LCTRL + H", "Find and replace text"), ("LCTRL + A", "Select all"),
+    ("LSHIFT + LEFT", "Select characters backward"), ("LSHIFT + RIGHT", "Select characters forward"),
+    ("LSHIFT + LCTRL + LEFT", "Select words backward"), ("LSHIFT + LCTRL + RIGHT", "Select words forward"),
+    ("LSHIFT + HOME", "Select to beginning of line"), ("LSHIFT + END", "Select to end of line"),
+    ("LSHIFT + UP", "Select lines backward"), ("LSHIFT + DOWN", "Select lines forward"),
+    ("LSHIFT + LCTRL + UP", "Select paragraphs backward"),
+    ("LSHIFT + LCTRL + DOWN", "Select paragraphs forward"), ("LSHIFT + PG_UP", "Select one page backward"),
+    ("LSHIFT + PG_DN", "Select one page forward"), ("LSHIFT + LCTRL + HOME", "Select to beginning of document"),
+    ("LSHIFT + LCTRL + END", "Select to end of document"), ("LALT + A", "Set focus to Suggested actions"),
+    ("LALT + TAB", "Switch to previous app"), ("LALT + LSHIFT + TAB", "Switch to next app"),
+    ("LALT + F4", "Close active item"), ("LALT + LSHIFT + ESC", "Previous window"),
+    ("LALT + ESC", "Next window"), ("LCTRL + LSHIFT + TAB", "Previous tab"), ("LCTRL + TAB", "Next tab"),
+    ("LCTRL + T", "New tab"), ("LCTRL + F4", "Close active document"),
+    ("LGUI + LCTRL + D", "Add a virtual desktop"), ("LGUI + LCTRL + LEFT", "Switch to left virtual desktop"),
+    ("LGUI + LCTRL + RIGHT", "Switch to right virtual desktop"), ("LALT + PG_DN", "Move down one screen"),
+    ("LALT + PG_UP", "Move up one screen"), ("LGUI + LCTRL + F4", "Close virtual desktop"),
+    ("LCTRL + Z", "Undo an action"), ("LCTRL + Y", "Redo an action"), ("LALT + F8", "Show password"),
+    ("LALT + SPACE", "Open context menu"), ("LALT + LEFT", "Go back"), ("LALT + RIGHT", "Go forward"),
+    ("LCTRL + LSHIFT + ESC", "Open Task Manager"), ("LGUI + TAB", "Open Task view"),
+    ("LALT + ENTER", "Display properties"), ("LGUI + I", "Open Settings"),
+]
+_VSCODE = [
+    ("LALT + UP", "Move Line Up"), ("LALT + DOWN", "Move Line Down"),
+    ("LSHIFT + LALT + UP", "Copy Line Up"), ("HOME", "Go to Line Start"), ("END", "Go to Line End"),
+    ("LCTRL + DOWN", "Scroll Line Down"), ("LCTRL + UP", "Scroll Line Up"),
+    ("LALT + PG_DN", "Scroll Page Down"), ("LALT + PG_UP", "Scroll Page Up"),
+    ("LALT + Z", "Toggle Word Wrap"), ("F12", "Go to Definition"), ("LSHIFT + F12", "Show References"),
+    ("F2", "Rename Symbol"), ("LSHIFT + LALT + I", "Insert Cursor at End of Line"),
+    ("LCTRL + L", "Select Current Line"), ("LSHIFT + LALT + LEFT", "Shrink Selection"),
+    ("LSHIFT + LALT + RIGHT", "Expand Selection"), ("LALT + ENTER", "Select All Find Matches"),
+    ("LSHIFT + F8", "Go to Previous Error"), ("F8", "Go to Next Error"),
+    ("LCTRL + LSHIFT + TAB", "Open Previous"), ("LCTRL + TAB", "Open Next"), ("F9", "Toggle Breakpoint"),
+    ("F5", "Start / Continue"), ("LSHIFT + F5", "Stop"), ("F11", "Step Into"),
+    ("LSHIFT + F11", "Step Out"), ("F10", "Step Over"), ("LCTRL + GRAVE", "Open Terminal"),
+    ("LCTRL + LSHIFT + GRAVE", "Create Terminal"),
+]
 
 
-def _win_shortcuts():
-    combos = {
-        "LCTRL + C": "Copy", "LCTRL + V": "Paste", "LCTRL + X": "Cut",
-        "LCTRL + Z": "Undo", "LCTRL + Y": "Redo", "LCTRL + A": "Select All",
-        "LCTRL + S": "Save", "LCTRL + F": "Find", "LALT + TAB": "App Switch",
-        "LGUI + D": "Show Desktop", "LGUI + LSHIFT + S": "Screenshot",
-    }
-    return [_a(c, l, "shortcut_alias") for c, l in combos.items()]
-
-
-def _vscode_shortcuts():
-    combos = {
-        "LCTRL + LSHIFT + P": "Command Palette", "LCTRL + P": "Quick Open",
-        "LCTRL + B": "Toggle Sidebar", "LCTRL + GRAVE": "Terminal",
-        "LCTRL + SLASH": "Comment", "LALT + UP": "Move Line Up",
-        "LALT + DOWN": "Move Line Down", "LCTRL + D": "Add Selection",
-        "LCTRL + LSHIFT + K": "Delete Line", "F2": "Rename",
-    }
-    return [_a(c, l, "shortcut_alias") for c, l in combos.items()]
+def _shortcuts(pairs):
+    return [_a(code, label, "shortcut_alias") for code, label in pairs]
 
 
 def _tabs():
@@ -197,6 +248,7 @@ def _tabs():
             {"name": "Letters", "actions": _letters()},
             {"name": "Numbers", "actions": _numbers()},
             {"name": "Modifiers", "actions": _modifiers()},
+            {"name": "Control", "actions": _control()},
             {"name": "Symbols", "actions": _symbols()},
         ]},
         {"id": "extended", "label": "+", "title": "Extended", "categories": [
@@ -213,9 +265,9 @@ def _tabs():
         ]},
         {"id": "layers", "label": "✦", "title": "Layers", "categories": []},
         {"id": "shortcuts", "label": "↗", "title": "Shortcuts", "categories": [
-            {"name": "MacOS", "actions": _mac_shortcuts()},
-            {"name": "Windows", "actions": _win_shortcuts()},
-            {"name": "VS Code Presets", "actions": _vscode_shortcuts()},
+            {"name": "MacOS", "actions": _shortcuts(_MAC)},
+            {"name": "Windows", "actions": _shortcuts(_WIN)},
+            {"name": "VS Code Presets", "actions": _shortcuts(_VSCODE)},
         ]},
     ]
 

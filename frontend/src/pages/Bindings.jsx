@@ -10,6 +10,7 @@ import ActionPalette from "../components/ActionPalette";
 export default function Bindings() {
   const [profile, setProfile] = useState(null);
   const [catalog, setCatalog] = useState(null);
+  const [macros, setMacros] = useState([]);
   const [activeLayerId, setActiveLayerId] = useState(null);
   const [selectedPos, setSelectedPos] = useState(null);
   const [activeSlot, setActiveSlot] = useState("tap");
@@ -18,10 +19,11 @@ export default function Bindings() {
 
   const load = useCallback(async () => {
     try {
-      const [ud, acts] = await Promise.all([api.userdata(), api.actions()]);
+      const [ud, acts, mac] = await Promise.all([api.userdata(), api.actions(), api.macros()]);
       const p = ud.profiles[0] || null;
       setProfile(p);
       setCatalog(acts);
+      setMacros(mac.macros || []);
       if (p && p.layers[0]) setActiveLayerId((cur) => cur || p.layers[0].id);
     } catch (e) {
       setErr(e.message);
@@ -136,6 +138,7 @@ export default function Bindings() {
         <ActionPalette
           catalog={catalog}
           layers={profile.layers}
+          macros={macros}
           disabled={selectedPos == null}
           onPick={bind}
         />
