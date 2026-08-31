@@ -16,3 +16,7 @@ electron/node_modules/
 *.db-journal
 *.db-wal
 data/
+
+# Naya-proprietary UI reference (kept locally as design reference, not shipped).
+# See docs/asset-provenance.md — the OSS product must be a clean reskin.
+ScreenshotsOfNayaFlow/

@@ -1,0 +1,293 @@
+/* Keymap editor (Bindings + Color) — approximates NayaFlow's layout. */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editor-top {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Layer list (top-left) */
+.layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.layer-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  padding: 6px 8px 12px;
+  font-size: 13px;
+}
+
+.layer-profile-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.layer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.layer-item:hover {
+  background: var(--neutral12);
+}
+
+.layer-item.active {
+  background: color-mix(in srgb, var(--accent) 22%, var(--neutral12));
+  color: var(--text);
+}
+
+.layer-index {
+  width: 18px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.layer-name {
+  font-weight: 600;
+}
+
+/* Board */
+.board-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.board-header {
+  font-size: 18px;
+  color: var(--text);
+}
+
+.keymap-board {
+  margin: 0 auto;
+}
+
+.kb-key {
+  border: 1px solid var(--border-strong);
+  background: var(--neutral6);
+  color: var(--text);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.05;
+  padding: 2px;
+  overflow: hidden;
+}
+
+.kb-key:hover {
+  border-color: var(--accent);
+}
+
+.kb-key.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.kb-sub {
+  font-size: 9px;
+  color: var(--text-dim);
+  align-self: flex-end;
+  margin-right: 2px;
+}
+
+.kb-key.selected .kb-sub {
+  color: inherit;
+}
+
+.kb-main {
+  font-size: 12px;
+}
+
+/* Bottom row: selected key + palette */
+.editor-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+/* Selected key panel */
+.skp-title {
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.skp-head {
+  display: flex;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 0 12px 8px;
+}
+
+.skp-arrow {
+  color: var(--text-dim);
+}
+
+.skp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--neutral10);
+}
+
+.skp-row.selected {
+  background: color-mix(in srgb, var(--accent) 24%, var(--neutral12));
+}
+
+.skp-beh {
+  min-width: 90px;
+}
+
+.skp-act {
+  font-weight: 600;
+}
+
+.skp-clear {
+  margin-top: 16px;
+}
+
+.skp-hint {
+  color: var(--text-muted);
+  margin-top: 14px;
+}
+
+/* Action palette */
+.palette {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  max-height: 440px;
+}
+
+.palette-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.palette-tab {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--neutral10);
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.palette-tab.active {
+  background: color-mix(in srgb, var(--accent) 24%, var(--neutral12));
+  color: var(--text);
+  border-color: transparent;
+}
+
+.palette-body {
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.palette-cat-title {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: 10px 0 8px;
+}
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+
+.palette-key {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  background: var(--neutral6);
+  color: var(--text);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.palette-key:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.palette-key:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.palette-disabled {
+  color: var(--text-muted);
+  padding: 8px 0 12px;
+}
+
+/* Color swatches */
+.swatches {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 2px solid var(--border-strong);
+  cursor: pointer;
+}
+
+.swatch.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.swatch.off {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--neutral20),
+    var(--neutral20) 4px,
+    var(--neutral10) 4px,
+    var(--neutral10) 8px
+  );
+}

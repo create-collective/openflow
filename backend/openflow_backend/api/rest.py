@@ -15,6 +15,8 @@ from fastapi import APIRouter, Body, HTTPException
 from fastapi.concurrency import run_in_threadpool
 
 from .. import __version__
+from ..db import userdata as ud
+from ..device import actions_catalog
 from ..device.commands import CommandError, dispatch
 from ..device.service import DangerousCommandError, TransportError
 from .state import get_service
@@ -52,6 +54,54 @@ async def devices() -> dict:
 async def status(verbose: bool = False) -> dict:
     svc = get_service()
     return {"halves": await run_in_threadpool(svc.status_all, verbose)}
+
+
+@router.get("/api/userdata")
+async def userdata() -> dict:
+    """Profiles -> layers -> keys -> bindings, from the offline SQLite store."""
+    return await run_in_threadpool(ud.get_userdata)
+
+
+@router.get("/api/actions")
+async def actions() -> dict:
+    """The action palette: categorized action codes, behavior slots, layer types."""
+    return actions_catalog.get_catalog()
+
+
+@router.post("/rpc/set-key-binding")
+async def set_key_binding(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(
+            ud.set_key_binding,
+            body["layerId"],
+            int(body["positionId"]),
+            body["actionCode"],
+            body["actionType"],
+            body.get("behavior", "press"),
+            body.get("context"),
+        )
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/clear-key-binding")
+async def clear_key_binding(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(
+            ud.clear_key_binding, body["layerId"], int(body["positionId"])
+        )
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/set-key-color")
+async def set_key_color(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(
+            ud.set_key_color, body["layerId"], int(body["positionId"]), body.get("colorHex")
+        )
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/api/diagnostics/report")

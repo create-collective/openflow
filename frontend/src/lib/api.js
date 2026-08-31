@@ -25,6 +25,12 @@ export const api = {
   status: () => req("GET", "/api/status"),
   diagnostics: () => req("GET", "/api/diagnostics/report"),
 
+  userdata: () => req("GET", "/api/userdata"),
+  actions: () => req("GET", "/api/actions"),
+  setKeyBinding: (body) => req("POST", "/rpc/set-key-binding", body),
+  clearKeyBinding: (body) => req("POST", "/rpc/clear-key-binding", body),
+  setKeyColor: (body) => req("POST", "/rpc/set-key-color", body),
+
   led: (side, action, value) => req("POST", "/rpc/led", { side, action, value }),
   textCommand: (side, command, force = false) =>
     req("POST", "/rpc/text-command", { side, command, force }),

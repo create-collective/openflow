@@ -5,12 +5,14 @@ import DeviceManagement from "./pages/DeviceManagement.jsx";
 import Troubleshooting from "./pages/Troubleshooting.jsx";
 import Settings from "./pages/Settings.jsx";
 import Placeholder from "./pages/Placeholder.jsx";
+import Bindings from "./pages/Bindings.jsx";
+import Color from "./pages/Color.jsx";
 
 // Routes mirror the recovered NayaFlow renderer.
 const NAV = [
   { to: "/", label: "Hub", end: true },
-  { to: "/layer-management", label: "Bindings", phase: 2 },
-  { to: "/colormapping", label: "Color", phase: 2 },
+  { to: "/layer-management", label: "Bindings" },
+  { to: "/colormapping", label: "Color" },
   { to: "/macro", label: "Macros", phase: 2 },
   { to: "/module-configuration", label: "Modules", phase: 2 },
   { to: "/device-management", label: "Device Manager" },
@@ -59,26 +61,8 @@ export default function App() {
           <Route path="/" element={<Hub />} />
           <Route path="/device-management" element={<DeviceManagement />} />
           <Route path="/settings" element={<Settings />} />
-          <Route
-            path="/layer-management"
-            element={
-              <Placeholder
-                title="Bindings"
-                phase="Phase 2"
-                note="The keymap / layer editor. Requires the REMAP protocol (category 0x30) to be implemented — the opcodes are documented but the payload format is not yet reverse-engineered. This is the core product and the main Phase 2 deliverable."
-              />
-            }
-          />
-          <Route
-            path="/colormapping"
-            element={
-              <Placeholder
-                title="Color"
-                phase="Phase 2"
-                note="Per-key LED color mapping (brush/fill/pipette/palette). Depends on REMAP LED MAP DATA (0x30/0x100D-0x100E)."
-              />
-            }
-          />
+          <Route path="/layer-management" element={<Bindings />} />
+          <Route path="/colormapping" element={<Color />} />
           <Route
             path="/macro"
             element={
