@@ -28,6 +28,7 @@ export const api = {
 
   userdata: () => req("GET", "/api/userdata"),
   actions: () => req("GET", "/api/actions"),
+  modules: () => req("GET", "/api/modules"),
   setKeyBinding: (body) => req("POST", "/rpc/set-key-binding", body),
   clearKeyBinding: (body) => req("POST", "/rpc/clear-key-binding", body),
   setKeyColor: (body) => req("POST", "/rpc/set-key-color", body),

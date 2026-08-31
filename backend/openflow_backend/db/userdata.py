@@ -198,6 +198,61 @@ def clear_key_binding(layer_id: str, position_id: int, behavior: str | None = No
         conn.close()
 
 
+def get_modules() -> dict:
+    """Module configs grouped by type, each with its gesture bindings + settings.
+
+    behavior encodes 'gesture:module[:target]' (e.g. 'vertical:track',
+    'tap:track:button_1'); action_code for axes uses ' - ' separators
+    (e.g. 'mouse - SCROLL_UP - SCROLL_DOWN'). We return the raw values and a
+    parsed gesture/target so the UI can group axes vs buttons.
+    """
+    conn = connect()
+    try:
+        configs = []
+        for m in conn.execute(
+            "SELECT id, name, type, size, order_id, icon_id FROM module_configs ORDER BY type, order_id"
+        ):
+            bindings = []
+            for b in conn.execute(
+                "SELECT id, behavior, action_type, action_code, invert, threshold, "
+                "direction, mode FROM module_bindings WHERE module_config_id = ?",
+                (m["id"],),
+            ):
+                parts = (b["behavior"] or "").split(":")
+                bindings.append({
+                    "id": b["id"],
+                    "behavior": b["behavior"],
+                    "gesture": parts[0] if parts else None,
+                    "target": parts[2] if len(parts) > 2 else None,
+                    "actionType": b["action_type"],
+                    "actionCode": b["action_code"],
+                    "invert": bool(b["invert"]),
+                    "threshold": b["threshold"],
+                    "direction": b["direction"],
+                    "mode": b["mode"],
+                })
+            settings = [
+                {"correlationId": s["correlation_id"], "value": s["value"], "type": s["type"]}
+                for s in conn.execute(
+                    "SELECT correlation_id, value, type FROM module_settings "
+                    "WHERE module_config_id = ? ORDER BY correlation_id",
+                    (m["id"],),
+                )
+            ]
+            configs.append({
+                "id": m["id"],
+                "name": m["name"],
+                "type": m["type"],
+                "size": m["size"],
+                "orderId": m["order_id"],
+                "bindings": bindings,
+                "settings": settings,
+            })
+        return {"modules": configs}
+    finally:
+        conn.close()
+
+
 def set_key_color(layer_id: str, position_id: int, color_hex: str | None) -> dict:
     """Set a key's LED color (used by the Color page). None clears to sentinel."""
     conn = connect()

@@ -7,6 +7,7 @@ import Settings from "./pages/Settings.jsx";
 import Placeholder from "./pages/Placeholder.jsx";
 import Bindings from "./pages/Bindings.jsx";
 import Color from "./pages/Color.jsx";
+import Modules from "./pages/Modules.jsx";
 
 // Routes mirror the recovered NayaFlow renderer.
 const NAV = [
@@ -14,7 +15,7 @@ const NAV = [
   { to: "/layer-management", label: "Bindings" },
   { to: "/colormapping", label: "Color" },
   { to: "/macro", label: "Macros", phase: 2 },
-  { to: "/module-configuration", label: "Modules", phase: 2 },
+  { to: "/module-configuration", label: "Modules" },
   { to: "/device-management", label: "Device Manager" },
   { to: "/information", label: "Information" },
   { to: "/settings", label: "Settings" },
@@ -73,16 +74,7 @@ export default function App() {
               />
             }
           />
-          <Route
-            path="/module-configuration"
-            element={
-              <Placeholder
-                title="Modules"
-                phase="Phase 2"
-                note="Touch / Track / Tune / Float module configuration. Depends on REMAP MODULE CONFIG (0x30/0x1009-0x100C)."
-              />
-            }
-          />
+          <Route path="/module-configuration" element={<Modules />} />
           <Route path="/information" element={<Troubleshooting />} />
           <Route path="/bug-report" element={<Placeholder title="Bug Report" phase="Phase 1" note="Diagnostics report export." />} />
           <Route path="*" element={<Navigate to="/" replace />} />

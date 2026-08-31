@@ -62,6 +62,12 @@ async def userdata() -> dict:
     return await run_in_threadpool(ud.get_userdata)
 
 
+@router.get("/api/modules")
+async def modules() -> dict:
+    """Module configs (Touch/Track/Tune) with gesture bindings + settings."""
+    return await run_in_threadpool(ud.get_modules)
+
+
 @router.get("/api/actions")
 async def actions() -> dict:
     """The action palette: categorized action codes, behavior slots, layer types."""
