@@ -83,6 +83,29 @@ export default function KeymapBoard({
         })}
 
       {layout.modules.map((m) => {
+        // In color mode the module slots are RGB-addressable like keys.
+        if (mode === "color") {
+          const data = keysByPosition[m.positionId];
+          const color = data?.colorHex;
+          return (
+            <button
+              key={m.id}
+              className={"kb-module color" + (selectedPosition === m.positionId ? " selected" : "")}
+              title={`${m.id} module LED`}
+              onClick={() => onSelectKey(m.positionId)}
+              style={{
+                position: "absolute",
+                left: px(m.x) + pad / 2,
+                top: px(m.y) + pad / 2,
+                width: px(m.w) - pad,
+                height: px(m.h) - pad,
+                background: color || undefined,
+              }}
+            >
+              {!color && <span className="kb-module-label">{m.id}</span>}
+            </button>
+          );
+        }
         const assigned = moduleAssign[m.id];
         return (
           <button

@@ -150,7 +150,91 @@ def _profile_payload(conn, profile_id: str) -> dict:
         "profile": {"name": p["name"], "iconId": p["icon_id"]},
         "layers": layers,
         "macros": _macros_payload(conn, macro_ids),
+        "modules": _modules_payload(conn, profile_id),
     }
+
+
+def _modules_payload(conn, profile_id: str) -> dict:
+    """Module config bindings for the profile + the referenced module configs
+    (full: gesture bindings + settings). Per-key RGB + layer animations already
+    travel inside the layer payload."""
+    mcbs, config_ids = [], set()
+    for r in conn.execute(
+        "SELECT layer_id, module_config_id, binding_location, state FROM module_config_bindings WHERE profile_id=?",
+        (profile_id,),
+    ):
+        mcbs.append({"srcLayerId": r["layer_id"], "srcConfigId": r["module_config_id"],
+                     "bindingLocation": r["binding_location"], "state": r["state"]})
+        if r["module_config_id"]:
+            config_ids.add(r["module_config_id"])
+    configs = []
+    for cid in config_ids:
+        m = conn.execute(
+            "SELECT id, name, type, size, order_id, icon_id, description FROM module_configs WHERE id=?",
+            (cid,),
+        ).fetchone()
+        if m is None:
+            continue
+        binds = [dict(b) for b in conn.execute(
+            "SELECT action_id, action_code, action_type, behavior, invert, threshold, direction, mode "
+            "FROM module_bindings WHERE module_config_id=?", (cid,))]
+        setts = [dict(s) for s in conn.execute(
+            "SELECT value, type, correlation_id FROM module_settings WHERE module_config_id=?", (cid,))]
+        configs.append({
+            "srcId": m["id"], "name": m["name"], "type": m["type"], "size": m["size"],
+            "orderId": m["order_id"], "iconId": m["icon_id"], "description": m["description"],
+            "bindings": binds, "settings": setts,
+        })
+    return {"configBindings": mcbs, "configs": configs}
+
+
+def _create_module_configs(conn, configs, now) -> dict:
+    """Create module configs from a payload; return src->new id map."""
+    cmap = {}
+    for c in configs:
+        nid = _uid()
+        cmap[c["srcId"]] = nid
+        conn.execute(
+            "INSERT INTO module_configs (name, order_id, icon_id, description, size, type, id, updated_at, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (c["name"], c.get("orderId", 0), c.get("iconId"), c.get("description"),
+             c.get("size", 0), c["type"], nid, now, now),
+        )
+        for b in c.get("bindings", []):
+            conn.execute(
+                "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, invert, threshold, direction, mode, module_config_id, id, updated_at, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (b.get("action_id"), b.get("action_code"), b.get("action_type"), b["behavior"],
+                 b.get("invert", 0), b.get("threshold", 0), b.get("direction", "+"), b.get("mode", 0),
+                 nid, _uid(), now, now),
+            )
+        for s in c.get("settings", []):
+            conn.execute(
+                "INSERT INTO module_settings (value, type, correlation_id, module_config_id, updated_at, created_at) "
+                "VALUES (?,?,?,?,?,?)",
+                (s["value"], s.get("type", "string"), s["correlation_id"], nid, now, now),
+            )
+    return cmap
+
+
+def _import_modules(conn, profile_id, modules, now, layer_map, create_configs: bool):
+    if not modules:
+        return
+    if create_configs:
+        cmap = _create_module_configs(conn, modules.get("configs", []), now)
+    else:
+        # duplicate within same DB: module configs are global, keep the existing ones
+        cmap = {c["srcId"]: c["srcId"] for c in modules.get("configs", [])}
+    for mcb in modules.get("configBindings", []):
+        lid = layer_map.get(mcb["srcLayerId"])
+        if lid is None:
+            continue
+        cid = cmap.get(mcb["srcConfigId"], mcb["srcConfigId"])
+        conn.execute(
+            "INSERT INTO module_config_bindings (profile_id, layer_id, module_config_id, binding_location, state, updated_at, created_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (profile_id, lid, cid, mcb["bindingLocation"], mcb.get("state"), now, now),
+        )
 
 
 def _layer_payload(conn, layer_row, macro_ids: set) -> dict:
@@ -299,7 +383,8 @@ def import_profile(data: dict, name: str | None = None) -> dict:
             (pname, max_order + 1, "FLOW", data["profile"].get("iconId"), pid, now, now),
         )
         macro_map = _create_macros(conn, data.get("macros", []), now)
-        _import_layers(conn, pid, data.get("layers", []), now, macro_map)
+        layer_map = _import_layers(conn, pid, data.get("layers", []), now, macro_map)
+        _import_modules(conn, pid, data.get("modules"), now, layer_map, create_configs=True)
         conn.commit()
         return {"ok": True, "id": pid, "name": pname}
     finally:
@@ -337,7 +422,8 @@ def duplicate_profile(profile_id: str) -> dict:
             (payload["profile"]["name"] + " copy", max_order + 1, "FLOW",
              payload["profile"].get("iconId"), pid, now, now),
         )
-        _import_layers(conn, pid, payload["layers"], now, macro_map={})
+        layer_map = _import_layers(conn, pid, payload["layers"], now, macro_map={})
+        _import_modules(conn, pid, payload.get("modules"), now, layer_map, create_configs=False)
         conn.commit()
         return {"ok": True, "id": pid}
     finally:

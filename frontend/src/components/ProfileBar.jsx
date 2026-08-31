@@ -83,6 +83,7 @@ export default function ProfileBar({
           ))}
           <div className="profile-menu-sep" />
           <button onClick={() => { onNew(); setSwitchOpen(false); }}>+ New profile</button>
+          <button onClick={() => { onExport(active.id); setSwitchOpen(false); }}>Export this profile…</button>
           <button onClick={() => { onImport(); setSwitchOpen(false); }}>Load profile from file…</button>
         </div>
       )}

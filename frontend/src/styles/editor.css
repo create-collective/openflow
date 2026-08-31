@@ -390,6 +390,15 @@
   background: transparent;
 }
 
+.kb-module.color {
+  border-style: solid;
+  cursor: pointer;
+}
+
+.kb-module.color.selected {
+  outline: 2px solid var(--accent);
+}
+
 .kb-module-icon {
   font-size: 20px;
 }
