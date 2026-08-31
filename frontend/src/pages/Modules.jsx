@@ -15,17 +15,40 @@ function targetLabel(t) {
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// The Naya module outline: rounded shape with one squared (right-angle) top-left
+// corner, matching the physical module footprint.
+const OUTLINE = "M2,2 L74,2 Q98,2 98,26 L98,74 Q98,98 74,98 L26,98 Q2,98 2,74 Z";
+const STROKE = "var(--neutral40)";
+
 function ModuleVisual({ type }) {
-  // Simple recognizable glyphs per module type.
-  if (type === "TRACK")
-    return (
-      <div className="mod-visual">
-        <div className="mod-ring"><span className="mod-ball" /></div>
-      </div>
-    );
-  if (type === "TUNE")
-    return <div className="mod-visual"><div className="mod-dial" /></div>;
-  return <div className="mod-visual"><div className="mod-pad" /></div>;
+  return (
+    <div className="mod-visual">
+      <svg viewBox="0 0 100 100" width="150" height="150" fill="none"
+        stroke={STROKE} strokeWidth="2.5">
+        <path d={OUTLINE} />
+        {type === "TRACK" && (
+          <>
+            <circle cx="50" cy="52" r="30" />
+            <circle cx="50" cy="52" r="13" />
+            {/* 4 segment dividers */}
+            <line x1="50" y1="22" x2="50" y2="39" />
+            <line x1="50" y1="65" x2="50" y2="82" />
+            <line x1="20" y1="52" x2="37" y2="52" />
+            <line x1="63" y1="52" x2="80" y2="52" />
+            {/* trackball */}
+            <circle cx="74" cy="30" r="7" fill="var(--accent)" stroke="none" opacity="0.85" />
+          </>
+        )}
+        {type === "TUNE" && (
+          <>
+            <circle cx="50" cy="50" r="30" strokeWidth="9" />
+            <circle cx="50" cy="50" r="15" />
+          </>
+        )}
+        {type === "TOUCH" && <circle cx="50" cy="50" r="30" />}
+      </svg>
+    </div>
+  );
 }
 
 export default function Modules() {

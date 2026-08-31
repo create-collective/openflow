@@ -483,6 +483,16 @@
   padding: 6px 8px;
 }
 
+/* Shortcut combos: compact glyph buttons, description in tooltip */
+.palette-grid.combo {
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+}
+
+.palette-grid.combo .palette-key {
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
 .palette-count {
   color: var(--text-dim);
   font-size: 10px;

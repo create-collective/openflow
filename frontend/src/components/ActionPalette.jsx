@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatCombo } from "../lib/combo";
 
 // The keybind selector (bottom-right). Tabs come from the backend catalog:
 // B (basic), + (extended), ✦ (layers), ↗ (shortcuts). Picking an action calls
@@ -72,16 +73,16 @@ export default function ActionPalette({ catalog, layers, macros = [], disabled, 
           : tab?.categories.map((cat) => (
               <div key={cat.name} className="palette-cat">
                 <div className="palette-cat-title">{cat.name} <span className="palette-count">{cat.actions.length}</span></div>
-                <div className={"palette-grid" + (tab.id === "shortcuts" ? " wide" : "")}>
+                <div className={"palette-grid" + (tab.id === "shortcuts" ? " combo" : "")}>
                   {cat.actions.map((a, i) => (
                     <button
                       key={a.code + "-" + i}
                       className={"palette-key" + (a.comingSoon ? " soon" : "")}
                       disabled={disabled || a.comingSoon}
-                      title={a.comingSoon ? `${a.label} (coming soon)` : `${a.label} (${a.code})`}
+                      title={tab.id === "shortcuts" ? `${a.label}  (${a.code})` : (a.comingSoon ? `${a.label} (coming soon)` : `${a.label} (${a.code})`)}
                       onClick={() => onPick({ actionCode: a.code, actionType: a.actionType })}
                     >
-                      {a.label}
+                      {tab.id === "shortcuts" ? formatCombo(a.code) : a.label}
                     </button>
                   ))}
                 </div>

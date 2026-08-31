@@ -19,7 +19,7 @@ export default function KeymapBoard({
 }) {
   const layout = useMemo(() => buildLayout(), []);
   const px = (u) => u * unitPx;
-  const pad = 4; // px inset between adjacent keys
+  const pad = 7; // px inset -> gap between adjacent keys (breathing room)
 
   return (
     <div

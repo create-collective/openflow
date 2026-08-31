@@ -36,7 +36,8 @@ function geomFor(col, row) {
   if (col !== "H") {
     const x = COL_X[col];
     const y = row - 1 + COL_STAG[col];
-    if (col === "E" && row === 5) return { x, y, w: 2.3, h: 1 }; // wide space
+    // Wide bottom-row space: nudge down so it clears the row-4 keys (V/B, N/M).
+    if (col === "E" && row === 5) return { x, y: y + 0.32, w: 2.2, h: 1 };
     return { x, y, w: 1, h: 1 };
   }
   if (row === 1) return { x: 7, y: 0.55, w: 1, h: 2 };            // 2u inner (Enter/Bksp)
@@ -62,14 +63,15 @@ export function buildLayout() {
     });
   }
 
-  // LED side bars (color mode). Positions carry color in keys.color_hex.
+  // LED side bars (color mode), aligned to the outer key column (Esc..Hold /
+  // =..Hold) so they line up with the keyboard like the reference (uipolish2).
   const ledZones = [];
-  const barW = 0.42, barH = 0.85, barGap = 0.95, barTop = 0.55;
+  const barW = 0.42, barH = 0.62, barGap = 0.72, barTop = 0.55;
   LEFT_LEDS.forEach((pid, i) =>
-    ledZones.push({ positionId: pid, x: -1.1, y: barTop + i * barGap, w: barW, h: barH })
+    ledZones.push({ positionId: pid, x: -1.15, y: barTop + i * barGap, w: barW, h: barH })
   );
   RIGHT_LEDS.forEach((pid, i) =>
-    ledZones.push({ positionId: pid, x: TOTAL + 0.7, y: barTop + i * barGap, w: barW, h: barH })
+    ledZones.push({ positionId: pid, x: TOTAL + 0.75, y: barTop + i * barGap, w: barW, h: barH })
   );
 
   // Modules spread toward each half, leaving the center open.
