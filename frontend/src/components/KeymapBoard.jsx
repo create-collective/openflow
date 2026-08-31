@@ -93,7 +93,7 @@ function LedCol({ positions, keysByPosition, selectedPosition, onSelectKey }) {
   // Side (underglow) LEDs — narrow indicators like NayaFlow's LED view; the
   // 7-tall column is spaced to span the full height of the end key column.
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0.33 * REM, marginTop: 1.7 * REM, padding: "0 7px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 0.28 * REM, marginTop: 1.92 * REM, padding: "0 7px" }}>
       {positions.map((pos) => {
         const color = keysByPosition[pos]?.colorHex;
         return (
