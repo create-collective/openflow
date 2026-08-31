@@ -32,7 +32,11 @@ export default function SelectedKeyPanel({
           >
             <span className="skp-beh">
               {slot.label}
-              {!slot.enabled && <span className="pill" style={{ marginLeft: 8 }}>soon</span>}
+              {!slot.enabled && (
+                <span className="pill" style={{ marginLeft: 8 }}>
+                  {slot.experimental ? "experimental" : "soon"}
+                </span>
+              )}
             </span>
             <span className="skp-arrow">→</span>
             <span className="skp-act">{b ? b.actionCode : "Unassigned"}</span>

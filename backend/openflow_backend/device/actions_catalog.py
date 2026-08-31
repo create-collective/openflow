@@ -29,15 +29,17 @@ LAYER_ACTION_TYPES = {
     "layer_polite_oneshot": {"prefix": "STICKY_LAYER_", "label": "Sticky Layer"},
 }
 
-# Behavior slots. "Tap" is the primary (stored as 'tap'; legacy 'press' reads as
-# 'tap'). Tap + Hold are wired now; the richer Dygma-style "superkey" slots are
-# legitimate ZMK behaviours we can build out later.
+# Behavior slots (the "OneKey" multi-behavior-per-key feature). "Tap" is the
+# primary (stored as 'tap'; legacy 'press' reads as 'tap'). Tap/Hold/Double Tap/
+# Tap+Hold are editable and stored offline in the DB; flashing them to the device
+# waits on the REMAP layer-data codec. Double Tap+Hold stays experimental — it may
+# exceed Naya's firmware and belongs to the fully-open OneKey firmware track.
 BEHAVIOR_SLOTS = [
     {"id": "tap", "label": "Tap", "enabled": True},
     {"id": "hold", "label": "Hold", "enabled": True},
-    {"id": "double_tap", "label": "Double Tap", "enabled": False},
-    {"id": "tap+hold", "label": "Tap + Hold", "enabled": False},
-    {"id": "double_tap+hold", "label": "Double Tap + Hold", "enabled": False},
+    {"id": "double_tap", "label": "Double Tap", "enabled": True},
+    {"id": "tap+hold", "label": "Tap + Hold", "enabled": True},
+    {"id": "double_tap+hold", "label": "Double Tap + Hold", "enabled": False, "experimental": True},
 ]
 
 

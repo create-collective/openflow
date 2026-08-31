@@ -49,7 +49,7 @@ class LayerBinding:
     """One key binding within a layer (maps to the key_bindings table)."""
 
     position_id: int
-    behavior: str           # tap / double_tap / hold / tap_hold / press
+    behavior: str           # tap / hold / double_tap / tap+hold / double_tap+hold
     action_type: str
     action_code: str
     context: str | None = None
