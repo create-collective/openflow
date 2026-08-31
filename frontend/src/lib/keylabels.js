@@ -32,21 +32,50 @@ const NAMED = {
   C_NEXT: "⏭", C_PREVIOUS: "⏮", DISABLE: "",
 };
 
-export function keyLegend(binding) {
+// Layer-switch action_code prefixes -> a short type tag.
+const LAYER_KINDS = [
+  ["MO_LAYER_", "MO"], ["TOGGLE_LAYER_", "TOG"],
+  ["TO_LAYER_", "TO"], ["STICKY_LAYER_", "SL"],
+];
+
+function layerLegend(code, layerMap) {
+  for (const [prefix, type] of LAYER_KINDS) {
+    if (code.startsWith(prefix)) {
+      const id = code.slice(prefix.length);
+      const num = layerMap && layerMap[id] != null ? layerMap[id] : "?";
+      return { layer: { type, num } };
+    }
+  }
+  return null;
+}
+
+// Human label for the selected-key panel (resolves layer ids to "Hold Layer N").
+const LAYER_TEXT = { MO: "Hold Layer", TOG: "Toggle Layer", TO: "Force Layer", SL: "Sticky Layer" };
+export function actionText(binding, layerMap) {
+  if (!binding || !binding.actionCode) return "Unassigned";
+  const code = binding.actionCode;
+  for (const [prefix, type] of LAYER_KINDS) {
+    if (code.startsWith(prefix)) {
+      const num = layerMap && layerMap[code.slice(prefix.length)];
+      return `${LAYER_TEXT[type]} ${num != null ? num : "?"}`;
+    }
+  }
+  if (binding.actionType === "macro") return "Macro";
+  return code;
+}
+
+export function keyLegend(binding, layerMap) {
   if (!binding || !binding.actionCode) return { main: "", sub: "" };
   const code = binding.actionCode;
+
+  const layer = layerLegend(code, layerMap);
+  if (layer) return layer;
 
   if (binding.actionType === "macro") return { main: "Macro", sub: "⚡" };
   if (binding.actionType === "shortcut_alias" || code.includes(" + ")) {
     const parts = code.split(" + ");
     return { main: NAMED[parts.at(-1)] || parts.at(-1), sub: "↗" };
   }
-
-  // Layer switches: MO_LAYER_/TO_LAYER_/TOGGLE_LAYER_/STICKY_LAYER_ + layerId
-  if (code.startsWith("MO_LAYER_")) return { main: "Hold", sub: "✦" };
-  if (code.startsWith("TO_LAYER_")) return { main: "To", sub: "✦" };
-  if (code.startsWith("TOGGLE_LAYER_")) return { main: "Tgl", sub: "✦" };
-  if (code.startsWith("STICKY_LAYER_")) return { main: "Sticky", sub: "✦" };
 
   if (/^[A-Z]$/.test(code)) return { main: code, sub: "" };
   if (code in NUMBER_GLYPH) return { main: NUMBER_GLYPH[code], sub: NUMBER_SHIFT[code] || "" };

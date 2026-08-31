@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatCombo } from "../lib/combo";
+import LayersIcon from "./LayersIcon";
 
 // The keybind selector (bottom-right). Tabs come from the backend catalog:
 // B (basic), + (extended), ✦ (layers), ↗ (shortcuts). Picking an action calls
@@ -64,7 +65,7 @@ export default function ActionPalette({ catalog, layers, macros = [], disabled, 
                         onPick({ actionCode: lt.prefix + l.id, actionType: lt.frontendType })
                       }
                     >
-                      ✦ {i}
+                      <LayersIcon size={13} /> {i}
                     </button>
                   ))}
                 </div>

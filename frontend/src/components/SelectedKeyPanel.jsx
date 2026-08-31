@@ -1,5 +1,7 @@
+import { actionText } from "../lib/keylabels";
+
 // The bottom-left binding editor: the selected key's Behavior -> Action rows.
-// Pick a behavior slot (Tap/Hold enabled; richer superkey slots coming soon),
+// Pick a behavior slot (Tap/Hold enabled; richer OneKey slots coming soon),
 // then choose an action in the palette to fill that slot.
 export default function SelectedKeyPanel({
   label,
@@ -8,6 +10,7 @@ export default function SelectedKeyPanel({
   activeSlot,
   onSelectSlot,
   onClearSlot,
+  layerMap = {},
 }) {
   return (
     <div className="skp">
@@ -39,7 +42,7 @@ export default function SelectedKeyPanel({
               )}
             </span>
             <span className="skp-arrow">→</span>
-            <span className="skp-act">{b ? b.actionCode : "Unassigned"}</span>
+            <span className="skp-act">{b ? actionText(b, layerMap) : "Unassigned"}</span>
             {b && slot.enabled && (
               <button
                 className="skp-x"

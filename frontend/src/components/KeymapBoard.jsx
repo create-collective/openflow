@@ -1,4 +1,5 @@
 import { keyLegend } from "../lib/keylabels";
+import LayersIcon from "./LayersIcon";
 import { SHAPES, POS_SHAPE } from "../lib/keyshapes";
 import {
   LEFT_COLS, RIGHT_COLS, KEY_WRAPPERS, LEFT_THUMBS, RIGHT_THUMBS,
@@ -11,11 +12,11 @@ const NORMAL_W = 44 * KEY_UNIT; // a plain keycap's width; columns are fixed to 
 
 // One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked,
 // with the resolved legend centered per-shape.
-function KeyCap({ pos, data, mode, selected, onSelectKey }) {
+function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
   const shape = SHAPES[POS_SHAPE[pos]] || SHAPES.Ve;
   const [, , vbw, vbh] = shape.viewBox.split(" ").map(Number);
   const w = vbw * KEY_UNIT, h = vbh * KEY_UNIT;
-  const legend = keyLegend(data?.binding);
+  const legend = keyLegend(data?.binding, layerMap);
   const color = data?.colorHex;
   const showColor = mode === "color" && color;
   const fill = showColor ? color : "var(--neutral6)";
@@ -42,7 +43,13 @@ function KeyCap({ pos, data, mode, selected, onSelectKey }) {
           <path d={shape.d} fill={fill} stroke={stroke} strokeWidth="2" />
         )}
       </svg>
-      {mode !== "color" && (legend.main || legend.sub) && (
+      {mode !== "color" && legend.layer && (
+        <span className="kc-legend kc-layer" style={{ top: shape.legend.top, left: shape.legend.left }}>
+          <LayersIcon size={14} />
+          <span className="kc-layernum">{legend.layer.num}</span>
+        </span>
+      )}
+      {mode !== "color" && !legend.layer && (legend.main || legend.sub) && (
         <span className="kc-legend" style={{ top: shape.legend.top, left: shape.legend.left }}>
           {legend.sub && <span className="kc-sub">{legend.sub}</span>}
           <span className="kc-main">{legend.main}</span>
@@ -65,7 +72,7 @@ function Column({ col, align, ...kp }) {
     }}>
       {col.keys.map((pos) => (
         <KeyCap key={pos} pos={pos} data={kp.keysByPosition[pos]} mode={kp.mode}
-          selected={kp.selectedPosition === pos} onSelectKey={kp.onSelectKey} />
+          selected={kp.selectedPosition === pos} onSelectKey={kp.onSelectKey} layerMap={kp.layerMap} />
       ))}
     </div>
   );
@@ -113,9 +120,9 @@ export default function KeymapBoard(props) {
   const {
     keysByPosition = {}, mode = "bindings", selectedPosition = null, onSelectKey = () => {},
     onSelectModule = null, moduleAssign = {}, showModulePalette = false, onAssignModule = null,
-    pickedModule = null, onPickModule = null,
+    pickedModule = null, onPickModule = null, layerMap = {},
   } = props;
-  const kp = { keysByPosition, mode, selectedPosition, onSelectKey };
+  const kp = { keysByPosition, mode, selectedPosition, onSelectKey, layerMap };
 
   return (
     <div className="keymap-board2">
@@ -144,8 +151,8 @@ export default function KeymapBoard(props) {
           </div>
         </div>
         <div className="kb-thumbs">
-          <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} />)}</div>
-          <div className="kb-thumb-group">{RIGHT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} />)}</div>
+          <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} />)}</div>
+          <div className="kb-thumb-group">{RIGHT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} />)}</div>
         </div>
       </div>
 

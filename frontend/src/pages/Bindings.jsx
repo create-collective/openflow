@@ -76,6 +76,13 @@ export default function Bindings() {
     return map;
   }, [layer]);
 
+  // layerId -> its index, so layer-switch keys can show "layers icon + number".
+  const layerMap = useMemo(() => {
+    const m = {};
+    profile?.layers.forEach((l, i) => (m[l.id] = i));
+    return m;
+  }, [profile]);
+
   const selectedKey = selectedPos != null ? keysByPosition[selectedPos] : null;
 
   function persistProfile(id) {
@@ -182,6 +189,7 @@ export default function Bindings() {
             mode="bindings"
             selectedPosition={selectedPos}
             onSelectKey={(pos) => { setSelectedPos(pos); setActiveSlot("tap"); }}
+            layerMap={layerMap}
             moduleAssign={moduleAssign}
             showModulePalette
             onAssignModule={assignModule}
@@ -202,6 +210,7 @@ export default function Bindings() {
           activeSlot={activeSlot}
           onSelectSlot={setActiveSlot}
           onClearSlot={clearSlot}
+          layerMap={layerMap}
         />
         <ActionPalette
           catalog={catalog}
