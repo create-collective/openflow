@@ -1,168 +1,155 @@
-import { useMemo } from "react";
-import { buildLayout } from "../lib/layout";
 import { keyLegend } from "../lib/keylabels";
+import { SHAPES, POS_SHAPE } from "../lib/keyshapes";
+import {
+  LEFT_COLS, RIGHT_COLS, KEY_WRAPPERS, LEFT_THUMBS, RIGHT_THUMBS,
+  LEFT_LEDS, RIGHT_LEDS, KEY_UNIT, REM,
+} from "../lib/boardgeom";
 
-// Shared split-columnar board. Renders one layer's keys at their real physical
-// positions (variable widths, 2u inner keys, thumb arc). Used by Bindings + Color.
-//   keysByPosition: { [positionId]: { colorHex, binding } }
-//   mode: "bindings" | "color"
-//   moduleLabels: { left, right } optional labels for the center module slots
-//   onSelectKey(positionId), onSelectModule(side)
-export default function KeymapBoard({
-  keysByPosition = {},
-  mode = "bindings",
-  selectedPosition = null,
-  onSelectKey = () => {},
-  onSelectModule = null,
-  moduleAssign = {},
-  showModulePalette = false,
-  onAssignModule = null,
-  pickedModule = null,
-  onPickModule = null,
-  unitPx = 42,
-}) {
-  const layout = useMemo(() => buildLayout(), []);
-  const px = (u) => u * unitPx;
-  const pad = 7; // px inset -> gap between adjacent keys
-  const MODULE_IMG = { track: "/modules/track-plain.png", touch: "/modules/touch.png", tune: "/modules/tune.png" };
+const MODULE_IMG = { track: "/modules/track-plain.png", touch: "/modules/touch.png", tune: "/modules/tune.png" };
+
+// One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked,
+// with the resolved legend centered per-shape.
+function KeyCap({ pos, data, mode, selected, onSelectKey }) {
+  const shape = SHAPES[POS_SHAPE[pos]] || SHAPES.Ve;
+  const [, , vbw, vbh] = shape.viewBox.split(" ").map(Number);
+  const w = vbw * KEY_UNIT, h = vbh * KEY_UNIT;
+  const legend = keyLegend(data?.binding);
+  const color = data?.colorHex;
+  const showColor = mode === "color" && color;
+  const fill = showColor ? color : "var(--neutral6)";
+  const stroke = selected ? "var(--accent)" : "var(--border-strong)";
+  const wrap = KEY_WRAPPERS[pos] || {};
+  return (
+    <button
+      className="kc"
+      title={`pos ${pos}`}
+      onClick={() => onSelectKey(pos)}
+      style={{
+        width: w, height: h, position: "relative", padding: 0, border: "none",
+        background: "none", cursor: "pointer",
+        marginTop: (wrap.pt || 0) * REM,
+        // horizontal wrapper offsets as transform so they don't widen the column
+        transform: (wrap.ml || wrap.mr)
+          ? `translateX(${((wrap.ml || 0) - (wrap.mr || 0)) * REM}px)` : undefined,
+        filter: selected ? "drop-shadow(0 0 3px var(--accent))" : undefined,
+      }}
+    >
+      <svg width={w} height={h} viewBox={shape.viewBox} fill="none"
+        style={{ position: "absolute", inset: 0, display: "block", overflow: "visible" }}>
+        {shape.rect ? (
+          <rect x={shape.rect.x} y={shape.rect.y} width={shape.rect.w} height={shape.rect.h}
+            rx={shape.rect.rx} fill={fill} stroke={stroke} strokeWidth="2" />
+        ) : (
+          <path d={shape.d} fill={fill} stroke={stroke} strokeWidth="2" />
+        )}
+      </svg>
+      {mode !== "color" && (legend.main || legend.sub) && (
+        <span className="kc-legend" style={{ top: shape.legend.top, left: shape.legend.left }}>
+          {legend.sub && <span className="kc-sub">{legend.sub}</span>}
+          <span className="kc-main">{legend.main}</span>
+        </span>
+      )}
+    </button>
+  );
+}
+
+function Column({ col, ...kp }) {
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", gap: 0.1 * REM, alignItems: "center",
+      marginTop: (col.mt || 0) * REM, marginRight: (col.mr || 0) * REM, marginLeft: (col.ml || 0) * REM,
+    }}>
+      {col.keys.map((pos) => (
+        <KeyCap key={pos} pos={pos} data={kp.keysByPosition[pos]} mode={kp.mode}
+          selected={kp.selectedPosition === pos} onSelectKey={kp.onSelectKey} />
+      ))}
+    </div>
+  );
+}
+
+function LedCol({ positions, keysByPosition, selectedPosition, onSelectKey }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 0.3 * REM, marginTop: 2.2 * REM, padding: "0 6px" }}>
+      {positions.map((pos) => {
+        const color = keysByPosition[pos]?.colorHex;
+        return (
+          <button key={pos} className={"kb-led" + (selectedPosition === pos ? " selected" : "")}
+            title={`LED ${pos}`} onClick={() => onSelectKey(pos)}
+            style={{ width: 1 * REM, height: 1.8 * REM, background: color || "var(--neutral20)" }} />
+        );
+      })}
+    </div>
+  );
+}
+
+function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosition, pickedModule, onAssignModule, onSelectModule, onSelectKey }) {
+  if (mode === "color") {
+    const color = keysByPosition[pos]?.colorHex;
+    return (
+      <button className={"kb-module color" + (selectedPosition === pos ? " selected" : "")}
+        title={`${id} module LED`} onClick={() => onSelectKey(pos)} style={{ background: color || undefined }} />
+    );
+  }
+  const assigned = moduleAssign[id];
+  return (
+    <button
+      className={"kb-module" + (assigned ? " filled" : "") + ((assigned || onAssignModule) ? " clickable" : "") + (pickedModule ? " droptarget" : "")}
+      title={assigned ? `${assigned} module — configure` : `${id} slot — drag or click-place a module`}
+      onClick={() => { if (pickedModule && onAssignModule) onAssignModule(id, pickedModule); else if (assigned && onSelectModule) onSelectModule(assigned); }}
+      onDragOver={(e) => { if (onAssignModule) e.preventDefault(); }}
+      onDrop={(e) => { if (!onAssignModule) return; e.preventDefault(); const t = e.dataTransfer.getData("text/plain"); if (t) onAssignModule(id, t); }}
+    >
+      {assigned ? <img src={MODULE_IMG[assigned]} alt={assigned} className="kb-module-img" />
+        : <><span className="kb-module-icon">◉</span><span className="kb-module-label">{id}</span></>}
+    </button>
+  );
+}
+
+export default function KeymapBoard(props) {
+  const {
+    keysByPosition = {}, mode = "bindings", selectedPosition = null, onSelectKey = () => {},
+    onSelectModule = null, moduleAssign = {}, showModulePalette = false, onAssignModule = null,
+    pickedModule = null, onPickModule = null,
+  } = props;
+  const kp = { keysByPosition, mode, selectedPosition, onSelectKey };
 
   return (
-    <div
-      className="keymap-board"
-      style={{ position: "relative", width: px(layout.width), height: px(layout.height) }}
-    >
-      {layout.keys.map((k) => {
-        const data = keysByPosition[k.positionId];
-        const legend = keyLegend(data?.binding);
-        const selected = selectedPosition === k.positionId;
-        const color = data?.colorHex;
-        const showColor = mode === "color" && color;
-        return (
-          <button
-            key={k.positionId}
-            className={"kb-key" + (selected ? " selected" : "")}
-            title={`${k.label} (pos ${k.positionId})`}
-            onClick={() => onSelectKey(k.positionId)}
-            style={{
-              position: "absolute",
-              left: px(k.x) + pad / 2,
-              top: px(k.y) + pad / 2,
-              width: px(k.w) - pad,
-              height: px(k.h) - pad,
-              transform: k.rot ? `rotate(${k.rot}deg)` : undefined,
-              background: showColor ? color : undefined,
-              color: showColor ? "#04121a" : undefined,
-            }}
-          >
-            {legend.sub && <span className="kb-sub">{legend.sub}</span>}
-            <span className="kb-main">{legend.main}</span>
-          </button>
-        );
-      })}
+    <div className="keymap-board2">
+      {mode === "color" && <LedCol positions={LEFT_LEDS} keysByPosition={keysByPosition} selectedPosition={selectedPosition} onSelectKey={onSelectKey} />}
 
-      {mode === "color" &&
-        layout.ledZones.map((z) => {
-          const data = keysByPosition[z.positionId];
-          const color = data?.colorHex;
-          return (
-            <button
-              key={z.positionId}
-              className={"kb-led" + (selectedPosition === z.positionId ? " selected" : "")}
-              title={`LED ${z.positionId}`}
-              onClick={() => onSelectKey(z.positionId)}
-              style={{
-                position: "absolute",
-                left: px(z.x) + pad / 2,
-                top: px(z.y) + pad / 2,
-                width: px(z.w),
-                height: px(z.h),
-                background: color || "var(--neutral20)",
-              }}
-            />
-          );
-        })}
+      <div className="kb-half">
+        {LEFT_COLS.map((col, i) => <Column key={i} col={col} {...kp} />)}
+      </div>
 
-      {layout.modules.map((m) => {
-        // In color mode the module slots are RGB-addressable like keys.
-        if (mode === "color") {
-          const data = keysByPosition[m.positionId];
-          const color = data?.colorHex;
-          return (
-            <button
-              key={m.id}
-              className={"kb-module color" + (selectedPosition === m.positionId ? " selected" : "")}
-              title={`${m.id} module LED`}
-              onClick={() => onSelectKey(m.positionId)}
-              style={{
-                position: "absolute",
-                left: px(m.x) + pad / 2,
-                top: px(m.y) + pad / 2,
-                width: px(m.w) - pad,
-                height: px(m.h) - pad,
-                background: color || undefined,
-              }}
-            >
-              {!color && <span className="kb-module-label">{m.id}</span>}
-            </button>
-          );
-        }
-        const assigned = moduleAssign[m.id];
-        return (
-          <button
-            key={m.id}
-            className={"kb-module" + (assigned ? " filled" : "") + ((assigned || onAssignModule) ? " clickable" : "") + (pickedModule ? " droptarget" : "")}
-            title={assigned ? `${assigned} module — click to configure` : `${m.id} slot — drag or click-place a module`}
-            onClick={() => {
-              if (pickedModule && onAssignModule) onAssignModule(m.id, pickedModule);
-              else if (assigned && onSelectModule) onSelectModule(assigned);
-            }}
-            onDragOver={(e) => { if (onAssignModule) { e.preventDefault(); } }}
-            onDrop={(e) => {
-              if (!onAssignModule) return;
-              e.preventDefault();
-              const type = e.dataTransfer.getData("text/plain");
-              if (type) onAssignModule(m.id, type);
-            }}
-            style={{
-              position: "absolute",
-              left: px(m.x) + pad / 2,
-              top: px(m.y) + pad / 2,
-              width: px(m.w) - pad,
-              height: px(m.h) - pad,
-            }}
-          >
-            {assigned ? (
-              <img src={MODULE_IMG[assigned]} alt={assigned} className="kb-module-img" />
-            ) : (
-              <>
-                <span className="kb-module-icon">◉</span>
-                <span className="kb-module-label">{m.id}</span>
-              </>
-            )}
-          </button>
-        );
-      })}
+      <div className="kb-center">
+        <div className="kb-center-modules">
+          {showModulePalette && (
+            <div className="kb-palette-row">
+              {["track", "touch", "tune"].map((t) => (
+                <img key={t} src={MODULE_IMG[t]} alt={t} draggable
+                  title={`Drag ${t} to a slot, or click then click a slot`}
+                  onDragStart={(e) => e.dataTransfer.setData("text/plain", t)}
+                  onClick={() => onPickModule && onPickModule(pickedModule === t ? null : t)}
+                  className={"kb-palette-mod" + (pickedModule === t ? " picked" : "")} />
+              ))}
+            </div>
+          )}
+          <div className="kb-slots">
+            <ModuleSlot id="left" pos={88} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
+            <ModuleSlot id="right" pos={89} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
+          </div>
+        </div>
+        <div className="kb-thumbs">
+          <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} />)}</div>
+          <div className="kb-thumb-group">{RIGHT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} />)}</div>
+        </div>
+      </div>
 
-      {showModulePalette &&
-        layout.palette.map((p) => (
-          <img
-            key={p.type}
-            src={MODULE_IMG[p.type]}
-            alt={p.type}
-            title={`Drag ${p.type} onto a slot, or click then click a slot`}
-            draggable
-            onDragStart={(e) => e.dataTransfer.setData("text/plain", p.type)}
-            onClick={() => onPickModule && onPickModule(pickedModule === p.type ? null : p.type)}
-            className={"kb-palette-mod" + (pickedModule === p.type ? " picked" : "")}
-            style={{
-              position: "absolute",
-              left: px(p.x) + pad / 2,
-              top: px(p.y) + pad / 2,
-              width: px(p.w) - pad,
-              height: px(p.h) - pad,
-            }}
-          />
-        ))}
+      <div className="kb-half">
+        {RIGHT_COLS.map((col, i) => <Column key={i} col={col} {...kp} />)}
+      </div>
+
+      {mode === "color" && <LedCol positions={RIGHT_LEDS} keysByPosition={keysByPosition} selectedPosition={selectedPosition} onSelectKey={onSelectKey} />}
     </div>
   );
 }
