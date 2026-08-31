@@ -31,7 +31,6 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
         width: w, height: h, position: "relative", padding: 0, border: "none",
         background: "none", cursor: "pointer",
         marginTop: (wrap.pt || 0) * REM,
-        transform: wrap.dx ? `translateX(${wrap.dx * REM}px)` : undefined,
         filter: selected ? "drop-shadow(0 0 3px var(--accent))" : undefined,
       }}
     >

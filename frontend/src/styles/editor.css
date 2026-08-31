@@ -372,15 +372,23 @@
 
 .kb-slots {
   display: flex;
-  gap: 190px; /* spread the two active slots out to each half's inner edge */
+  gap: 0;
   align-items: center;
+  margin-top: 46px; /* drop into the pocket, level with the G/B row */
 }
+/* Push each active slot into its own half's inner-curve pocket (transform =
+   no reflow, so the center zone doesn't widen and shove the halves apart). */
+.kb-slots > .kb-module:first-child { transform: translateX(-82px); }
+.kb-slots > .kb-module:last-child  { transform: translateX(82px); }
 
 .kb-thumbs {
   display: flex;
-  gap: 120px; /* pull each thumb group toward its own half */
+  gap: 0;
   padding-bottom: 6px;
 }
+/* Slide each thumb group under its half so the 1u space lands below B. */
+.kb-thumbs > .kb-thumb-group:first-child { transform: translateX(-92px); }
+.kb-thumbs > .kb-thumb-group:last-child  { transform: translateX(92px); }
 
 .kb-thumb-group {
   display: flex;
@@ -448,8 +456,8 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  width: 74px;
-  height: 74px;
+  width: 90px;
+  height: 90px;
   border: 1px dashed var(--border-strong);
   background: radial-gradient(circle at 50% 40%, var(--neutral17), var(--neutral6));
   border-radius: 999px;
