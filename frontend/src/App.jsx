@@ -8,13 +8,14 @@ import Placeholder from "./pages/Placeholder.jsx";
 import Bindings from "./pages/Bindings.jsx";
 import Color from "./pages/Color.jsx";
 import Modules from "./pages/Modules.jsx";
+import Macros from "./pages/Macros.jsx";
 
 // Routes mirror the recovered NayaFlow renderer.
 const NAV = [
   { to: "/", label: "Hub", end: true },
   { to: "/layer-management", label: "Bindings" },
   { to: "/colormapping", label: "Color" },
-  { to: "/macro", label: "Macros", phase: 2 },
+  { to: "/macro", label: "Macros" },
   { to: "/module-configuration", label: "Modules" },
   { to: "/device-management", label: "Device Manager" },
   { to: "/information", label: "Information" },
@@ -64,16 +65,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/layer-management" element={<Bindings />} />
           <Route path="/colormapping" element={<Color />} />
-          <Route
-            path="/macro"
-            element={
-              <Placeholder
-                title="Macros"
-                phase="Phase 2"
-                note="Macro editor (standard/mouse/text/wait/loop steps). Depends on REMAP MACRO LIST/DATA (0x30/0x1005-0x1008)."
-              />
-            }
-          />
+          <Route path="/macro" element={<Macros />} />
           <Route path="/module-configuration" element={<Modules />} />
           <Route path="/information" element={<Troubleshooting />} />
           <Route path="/bug-report" element={<Placeholder title="Bug Report" phase="Phase 1" note="Diagnostics report export." />} />

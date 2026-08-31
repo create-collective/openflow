@@ -15,6 +15,7 @@ from fastapi import APIRouter, Body, HTTPException
 from fastapi.concurrency import run_in_threadpool
 
 from .. import __version__
+from ..db import macros as mac
 from ..db import userdata as ud
 from ..device import actions_catalog
 from ..device.commands import CommandError, dispatch
@@ -72,6 +73,41 @@ async def modules() -> dict:
 async def actions() -> dict:
     """The action palette: categorized action codes, behavior slots, layer types."""
     return actions_catalog.get_catalog()
+
+
+@router.get("/api/macros")
+async def macros() -> dict:
+    return await run_in_threadpool(mac.get_macros)
+
+
+@router.post("/rpc/create-macro")
+async def create_macro(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(mac.create_macro, body["name"])
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/delete-macro")
+async def delete_macro(body: dict = Body(...)) -> dict:
+    return await run_in_threadpool(mac.delete_macro, body["id"])
+
+
+@router.post("/rpc/add-macro-step")
+async def add_macro_step(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(
+            mac.add_step, body["macroId"], body["kind"],
+            action_code=body.get("actionCode"), state=body.get("state", "tap"),
+            input=body.get("input", ""), delay=int(body.get("delay", 30)),
+        )
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/delete-macro-step")
+async def delete_macro_step(body: dict = Body(...)) -> dict:
+    return await run_in_threadpool(mac.delete_step, body["stepId"])
 
 
 @router.post("/rpc/set-key-binding")
