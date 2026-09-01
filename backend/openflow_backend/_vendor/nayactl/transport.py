@@ -76,7 +76,12 @@ class SerialTransport(Transport):
         parity=serial.PARITY_NONE,
         stopbits=serial.STOPBITS_ONE,
         timeout=0.1,
-        dsrdtr=True,
+        # dsrdtr=True makes Windows gate output on the device asserting DSR
+        # (fOutxDsrFlow); with no write_timeout the first write hangs forever
+        # if the CDC device never raises DSR. Disable DSR flow control and
+        # bound writes so a stuck device errors instead of hanging.
+        dsrdtr=False,
+        write_timeout=2.0,
       )
     except serial.SerialException as e:
       raise TransportError(f"Cannot open {self.port}: {e}") from e
@@ -128,18 +133,20 @@ class SerialTransport(Transport):
     self._ser.reset_input_buffer()
     self._ser.write(build_text_command(command))
     self._ser.flush()
-    # Read eagerly — return as soon as we get a complete response
+    # Read until the device goes quiet. Some commands (e.g. dump_settings)
+    # reply with many CRLF-separated lines, so we must NOT stop at the first
+    # newline; accumulate until a quiet gap after receiving some data.
     buf = bytearray()
     start = time.time()
+    last_data = 0.0
+    quiet_gap = 0.4
     while time.time() - start < timeout:
       chunk = self._ser.read(256)
       if chunk:
         buf.extend(chunk)
-        # Text responses end with \r\n — if we have one, we're done
-        if b"\r\n" in buf or b"\n" in buf:
-          break
-      elif buf:
-        break  # got data, no more coming
+        last_data = time.time()
+      elif buf and (time.time() - last_data) >= quiet_gap:
+        break  # response complete: got data, then silence
     if buf:
       try:
         return buf.decode("ascii", errors="replace")
