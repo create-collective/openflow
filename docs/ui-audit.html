@@ -1,0 +1,478 @@
+<title>OpenFlow Parity Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#f5f7f8; --surface:#ffffff; --surface-2:#eef1f3; --border:#e0e5e9;
+    --text:#12171c; --text-dim:#586470; --text-faint:#8a95a0;
+    --accent:#0d9488; --naya:#5b60e6;
+    --high:#d3372b; --med:#c07708; --low:#2563c9; --plus:#0a8a5f; --div:#6b7684;
+    --high-bg:#fbecea; --med-bg:#fbf1e2; --low-bg:#e9f0fc; --plus-bg:#e4f4ee; --div-bg:#eef1f4;
+    --shadow:0 1px 2px rgba(16,24,32,.05), 0 6px 20px -12px rgba(16,24,32,.18);
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+    --display:"Archivo",var(--sans);
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0b0e12; --surface:#12171d; --surface-2:#171e26; --border:#242e39;
+    --text:#e9eef3; --text-dim:#95a2af; --text-faint:#657280;
+    --accent:#2dd4bf; --naya:#a5b0ff;
+    --high:#f2776b; --med:#f0b64c; --low:#6ea8fb; --plus:#43cf98; --div:#93a1b0;
+    --high-bg:#241615; --med-bg:#241d10; --low-bg:#131e2e; --plus-bg:#0f2119; --div-bg:#1a212a;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.7);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0b0e12; --surface:#12171d; --surface-2:#171e26; --border:#242e39;
+    --text:#e9eef3; --text-dim:#95a2af; --text-faint:#657280;
+    --accent:#2dd4bf; --naya:#a5b0ff;
+    --high:#f2776b; --med:#f0b64c; --low:#6ea8fb; --plus:#43cf98; --div:#93a1b0;
+    --high-bg:#241615; --med-bg:#241d10; --low-bg:#131e2e; --plus-bg:#0f2119; --div-bg:#1a212a;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.55;
+    -webkit-font-smoothing:antialiased;font-size:15px}
+  .wrap{max-width:1020px;margin:0 auto;padding:clamp(20px,4vw,56px) clamp(16px,4vw,40px) 80px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.02em}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--text-faint);font-weight:500}
+
+  /* ---- header ---- */
+  header{border-bottom:1px solid var(--border);padding-bottom:28px;margin-bottom:32px}
+  .titlerow{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin:10px 0 6px}
+  h1{font-size:clamp(30px,5vw,46px);font-weight:800;line-height:1.02}
+  h1 .vs{color:var(--text-faint);font-weight:600}
+  h1 .naya{color:var(--naya)}
+  .sub{color:var(--text-dim);max-width:64ch;margin-top:12px}
+  .verdict{margin-top:22px;display:flex;gap:14px;align-items:flex-start;background:var(--surface);
+    border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;
+    padding:16px 18px;box-shadow:var(--shadow)}
+  .verdict .k{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;white-space:nowrap;padding-top:2px}
+  .verdict p{margin:0;color:var(--text)}
+
+  /* ---- stat band ---- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:26px 0 8px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;
+    box-shadow:var(--shadow)}
+  .stat .n{font-family:var(--display);font-size:30px;font-weight:800;line-height:1;
+    font-variant-numeric:tabular-nums}
+  .stat .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--text-dim);margin-top:7px}
+  .stat.high .n{color:var(--high)} .stat.med .n{color:var(--med)}
+  .stat.low .n{color:var(--low)} .stat.plus .n{color:var(--plus)}
+
+  /* ---- legend ---- */
+  .legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:22px 0 6px;padding:14px 16px;
+    background:var(--surface-2);border-radius:10px;font-size:13px}
+  .legend b{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--text-faint);font-weight:600;margin-right:4px;align-self:center}
+  .lg{display:inline-flex;align-items:center;gap:7px;color:var(--text-dim)}
+  .dot{width:9px;height:9px;border-radius:2px;flex:none}
+  .dot.high{background:var(--high)} .dot.med{background:var(--med)}
+  .dot.low{background:var(--low)} .dot.plus{background:var(--plus)} .dot.div{background:var(--div)}
+
+  /* ---- sections ---- */
+  section{margin-top:40px}
+  .shead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  .shead h2{font-size:22px;font-weight:700}
+  .shead .tag{font-family:var(--mono);font-size:11px;color:var(--text-faint);letter-spacing:.04em}
+  .snote{color:var(--text-dim);font-size:13.5px;margin:6px 0 18px;max-width:70ch}
+  .snote .ok{color:var(--plus);font-weight:600}
+
+  /* ---- gap cards ---- */
+  .cards{display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:11px;
+    box-shadow:var(--shadow);overflow:hidden;border-left:3px solid var(--sevc,var(--border))}
+  .card.high{--sevc:var(--high)} .card.med{--sevc:var(--med)}
+  .card.low{--sevc:var(--low)} .card.plus{--sevc:var(--plus)} .card.div{--sevc:var(--div)}
+  .card-top{display:flex;align-items:center;gap:12px;padding:13px 16px 11px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;white-space:nowrap}
+  .chip.high{color:var(--high);background:var(--high-bg)}
+  .chip.med{color:var(--med);background:var(--med-bg)}
+  .chip.low{color:var(--low);background:var(--low-bg)}
+  .chip.plus{color:var(--plus);background:var(--plus-bg)}
+  .chip.div{color:var(--div);background:var(--div-bg)}
+  .chip.done{color:var(--plus);background:var(--plus-bg)}
+  /* a fixed card keeps its severity stripe but goes green + gets a Resolved badge */
+  .card.resolved{--sevc:var(--plus);opacity:.92}
+  .card.resolved .card-top h3{text-decoration:line-through;text-decoration-color:var(--text-faint);
+    text-decoration-thickness:1px}
+  .card.resolved .rec{background:var(--plus-bg)}
+  .card.resolved .rec .rk{color:var(--plus)}
+  .card-top h3{font-size:15.5px;font-weight:600;font-family:var(--sans);flex:1;min-width:200px}
+  .card-top .loc{font-family:var(--mono);font-size:11px;color:var(--text-faint)}
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);
+    border-top:1px solid var(--border)}
+  .cmp>div{background:var(--surface);padding:11px 16px 13px}
+  .cmp .h{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    font-weight:600;margin-bottom:4px}
+  .cmp .naya .h{color:var(--naya)} .cmp .of .h{color:var(--accent)}
+  .cmp p{margin:0;font-size:13.5px;color:var(--text-dim)}
+  .rec{padding:11px 16px 13px;font-size:13px;color:var(--text);background:var(--surface-2);
+    display:flex;gap:9px}
+  .rec .rk{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--text-faint);font-weight:600;flex:none;padding-top:2px}
+  code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);padding:1px 5px;border-radius:4px;
+    border:1px solid var(--border)}
+  .cmp code,.rec code{background:transparent;border:none;padding:0;color:var(--text)}
+
+  /* ---- parity checklist ---- */
+  .parity{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px 22px;
+    background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px 20px;
+    box-shadow:var(--shadow)}
+  .parity div{display:flex;gap:9px;font-size:13.5px;color:var(--text-dim);align-items:flex-start}
+  .parity .ck{color:var(--plus);font-weight:700;flex:none}
+  .parity b{color:var(--text);font-weight:600}
+
+  footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--border);
+    font-size:12.5px;color:var(--text-faint)}
+  footer p{max-width:78ch}
+  footer .mono{font-family:var(--mono)}
+  @media (max-width:620px){.cmp{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">UI Parity Audit · v2 (fixes applied) · 2026-08-31</div>
+    <div class="titlerow">
+      <h1>OpenFlow <span class="vs">vs</span> <span class="naya">NayaFlow</span></h1>
+    </div>
+    <p class="sub">A page-by-page comparison of the open-source OpenFlow client against NayaFlow
+      v1.25.1 — run before calling the UI &ldquo;close enough for now.&rdquo; Every gap below is
+      something NayaFlow does that OpenFlow doesn&rsquo;t yet, ranked by how much it matters.</p>
+    <div class="verdict">
+      <span class="k">Verdict</span>
+      <p>The core editor is <strong>at or above parity</strong> — Bindings, Color, Layers, Profiles
+        and all eight Settings tabs match or exceed NayaFlow. <strong>Both High-priority items are now
+        fixed</strong> (Modules is editable and the 1-finger Touch gestures are back), along with two
+        Low ones. What remains is the <strong>Hardware Manager</strong> (firmware / pairing) — the
+        Phase-3 work blocked on a firmware image — plus device-gated and polish items. Nothing here
+        blocks day-to-day keymapping.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat plus"><div class="n">4</div><div class="l">Resolved</div></div>
+      <div class="stat high"><div class="n">0</div><div class="l">High priority</div></div>
+      <div class="stat med"><div class="n">5</div><div class="l">Medium</div></div>
+      <div class="stat low"><div class="n">4</div><div class="l">Low / polish</div></div>
+      <div class="stat plus"><div class="n">6</div><div class="l">Beyond NayaFlow</div></div>
+    </div>
+
+    <div class="legend">
+      <b>Severity</b>
+      <span class="lg"><span class="dot plus"></span>Resolved — fixed in this pass</span>
+      <span class="lg"><span class="dot high"></span>High — core capability missing</span>
+      <span class="lg"><span class="dot med"></span>Medium — notable, has workaround / device-gated</span>
+      <span class="lg"><span class="dot low"></span>Low — polish &amp; nicety</span>
+      <span class="lg"><span class="dot plus"></span>Beyond — OpenFlow does more</span>
+      <span class="lg"><span class="dot div"></span>Divergence — deliberate</span>
+    </div>
+  </header>
+
+  <!-- ============ MODULES ============ -->
+  <section>
+    <div class="shead"><h2>Modules</h2><span class="tag">/module-configuration</span></div>
+    <p class="snote">Config list, grouping (Touch / Track&nbsp;L / Track&nbsp;R / Tune),
+      bindings&nbsp;/&nbsp;settings tabs, module visual, finger-count tabs and the settings schema all
+      <span class="ok">match</span> — and gesture bindings are now <span class="ok">editable</span>
+      (both High items below are fixed). Remaining items are lower-priority niceties.</p>
+    <div class="cards">
+
+      <div class="card high resolved">
+        <div class="card-top"><span class="chip done">✓ Resolved</span>
+          <h3>Module gesture bindings are read-only</h3><span class="loc">Modules.jsx</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>An <b>edit</b> button and a per-row
+            <code>&hellip;</code> menu let you remap each gesture (e.g. Tap&nbsp;&rarr;&nbsp;Left&nbsp;Click).</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>Rows render with <code>cursor:default</code> —
+            you can view a Touch/Track/Tune mapping but not change it.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Done</span><span>Every gesture row is now an editable dropdown
+          backed by a grouped action catalog (<code>MODULE_ACTIONS</code>) + a <code>set-module-binding</code>
+          endpoint. The catalog holds every imported default so anything is resettable; unknown imported
+          values are preserved. Catalog is expandable once firmware mapping is known.</span></div>
+      </div>
+
+      <div class="card high resolved">
+        <div class="card-top"><span class="chip done">✓ Resolved</span>
+          <h3>&ldquo;1&nbsp;Finger&rdquo; gesture tab is missing</h3><span class="loc">Touch config</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>Touch shows <b>1&nbsp;finger</b> first:
+            Vertical&nbsp;&rarr;&nbsp;Cursor, Horizontal&nbsp;&rarr;&nbsp;Cursor, Tap&nbsp;&rarr;&nbsp;Left&nbsp;Click.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>Finger tabs start at <b>2&nbsp;Fingers</b>;
+            the 1-finger cursor/tap row isn&rsquo;t rendered (mapped to &ldquo;axes&rdquo; that don&rsquo;t show).</p></div>
+        </div>
+        <div class="rec"><span class="rk">Done</span><span>Backfilled the 1-finger Touch gestures
+          (Vertical / Horizontal Cursor Control + Tap = Left Click); the &ldquo;1&nbsp;Finger&rdquo; tab now
+          leads. Also fixed Track Left/Right listing their axes in mirrored order — both are now
+          Vertical, Horizontal, Rotate.</span></div>
+      </div>
+
+      <div class="card med">
+        <div class="card-top"><span class="chip med">Medium</span>
+          <h3>Can&rsquo;t create new module configs</h3><span class="loc">Modules.jsx</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>A <code>+</code> under each type (Touch /
+            Track / Tune) adds a new named config.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>Lists imported configs; no add button, so you
+            can&rsquo;t author a fresh named config.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Fix</span><span>Add a &ldquo;+ New config&rdquo; per group
+          (create + name + default bindings).</span></div>
+      </div>
+
+      <div class="card low">
+        <div class="card-top"><span class="chip low">Low</span>
+          <h3>No &ldquo;layers using this&rdquo; panel</h3><span class="loc">Modules.jsx</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>A right rail lists which profiles/layers
+            reference the selected module config.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>No reverse-reference view.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Fix</span><span>Nice-to-have; add once module configs are
+          editable and reused across layers.</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ HARDWARE / FIRMWARE ============ -->
+  <section>
+    <div class="shead"><h2>Hardware &amp; Firmware</h2><span class="tag">NayaFlow: &ldquo;Hardware Manager&rdquo;</span></div>
+    <p class="snote">NayaFlow&rsquo;s clock-icon page bundles firmware + pairing. OpenFlow has a live
+      <b>Device Manager</b> (status + LED on/off) but no firmware/pairing surface — most of this is the
+      Phase-3 track already blocked on obtaining a firmware image.</p>
+    <div class="cards">
+
+      <div class="card med">
+        <div class="card-top"><span class="chip med">Medium</span>
+          <h3>No firmware-update surface (Create&nbsp;L/R + modules)</h3><span class="loc">Phase 3</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>Create Firmware Update, Module Firmware
+            Update, and a &ldquo;Danger Zone — Force Update.&rdquo;</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>None — flashing is Phase 3, gated on a firmware
+            image. Info tab notes this.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Note</span><span>Expected. Track it as the Phase-3 page rather
+          than a UI regression.</span></div>
+      </div>
+
+      <div class="card med">
+        <div class="card-top"><span class="chip med">Medium</span>
+          <h3>No Create&nbsp;L&nbsp;&harr;&nbsp;R pairing flow</h3><span class="loc">Phase 3</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>&ldquo;Create Pairing&rdquo; pairs the left
+            and right halves with one another.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>Not present.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Note</span><span>Device-dependent; belongs with the Hardware
+          Manager build-out.</span></div>
+      </div>
+
+      <div class="card med">
+        <div class="card-top"><span class="chip med">Medium</span>
+          <h3>BLE profile slots (1&ndash;4) not rendered</h3><span class="loc">Settings › Connection</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>Connection lists <b>NayaCreate BLE 1&ndash;4</b>
+            with paired/unpaired state + pair action.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>A device-gated placeholder note stands in for the
+            four-slot list.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Fix</span><span>Render the 4-slot list (read/pair wiring lands
+          with device testing).</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ BINDINGS ============ -->
+  <section>
+    <div class="shead"><h2>Bindings</h2><span class="tag">/layer-management</span></div>
+    <p class="snote">Board geometry, keycap silhouettes, the module pocket, layers, profiles and the whole
+      keybind selector (Letters / Numbers / Modifiers&nbsp;incl.&nbsp;L&amp;R / Control / Symbols / Layers /
+      Shortcuts) are <span class="ok">pixel- and feature-matched</span>. One small gap:</p>
+    <div class="cards">
+      <div class="card low">
+        <div class="card-top"><span class="chip low">Low</span>
+          <h3>No per-key copy / paste (&ldquo;&hellip;&rdquo; menu)</h3><span class="loc">SelectedKeyPanel</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>A <code>&hellip;</code> on Behavior&nbsp;&rarr;&nbsp;Action
+            offers copy / paste / clear of a key&rsquo;s bindings.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>Per-slot clear exists; no copy/paste of a whole
+            key&rsquo;s binding set.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Fix</span><span>Add copy/paste-key to speed up repetitive layers.
+          (OpenFlow already <b>exceeds</b> NayaFlow here by exposing Double&nbsp;Tap / Tap&nbsp;+&nbsp;Hold slots.)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section>
+    <div class="shead"><h2>Settings</h2><span class="tag">8 tabs · all present</span></div>
+    <p class="snote">All eight NayaFlow tabs exist with the right fields (Behavior, Interface/UI, Connection,
+      Software Update, Backup, Troubleshooting, Logging, Software Info). Update &amp; Backup are
+      <span class="ok">richer</span> in OpenFlow. Remaining nits:</p>
+    <div class="cards">
+
+      <div class="card low resolved">
+        <div class="card-top"><span class="chip done">✓ Resolved</span>
+          <h3>Sliders have no &ldquo;Reset to default&rdquo;</h3><span class="loc">Behavior · UI</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>Each slider (Tapping Term, timeouts,
+            brightness, scaling) has a <b>Reset</b> control.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>Sliders adjust and persist but offer no
+            one-click reset.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Done</span><span>A &ldquo;↺&nbsp;Reset&rdquo; control appears on
+          any slider/dropdown whose value differs from its schema default and writes the default back.</span></div>
+      </div>
+
+      <div class="card low">
+        <div class="card-top"><span class="chip low">Low</span>
+          <h3>Firmware-file versions not shown</h3><span class="loc">Software Info</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>Lists Create / Touch / Track / Tune firmware
+            <i>file</i> versions even when disconnected.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>Shows device firmware only when connected, plus
+            repo links.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Note</span><span>Expected — OpenFlow doesn&rsquo;t bundle firmware
+          images yet.</span></div>
+      </div>
+
+      <div class="card low resolved">
+        <div class="card-top"><span class="chip done">✓ Resolved</span>
+          <h3>No &ldquo;Open backup folder&rdquo; button</h3><span class="loc">Backup</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>An <b>OPEN</b> button reveals the backup folder
+            in the OS file manager.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>Shows the folder path as text (web build can&rsquo;t
+            open it).</p></div>
+        </div>
+        <div class="rec"><span class="rk">Done</span><span>Added an <b>Open backup folder</b> button — a new
+          backend endpoint opens the folder in the OS file manager. (OpenFlow also <b>adds</b> backup
+          <i>import</i> for cross-app migration.)</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ APP CHROME ============ -->
+  <section>
+    <div class="shead"><h2>App chrome &amp; misc</h2></div>
+    <div class="cards">
+      <div class="card low">
+        <div class="card-top"><span class="chip low">Low</span>
+          <h3>No Help / About / Support entry</h3><span class="loc">nav rail</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>A <code>?</code> icon in the rail opens
+            help/support.</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>No help affordance in the sidebar.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Fix</span><span>Add a small About/Help link (repo, version,
+          shortcuts).</span></div>
+      </div>
+      <div class="card low">
+        <div class="card-top"><span class="chip low">Low</span>
+          <h3>Macro key-steps use a raw text field</h3><span class="loc">Macros.jsx</span></div>
+        <div class="cmp">
+          <div class="naya"><div class="h">NayaFlow</div><p>&mdash; (NayaFlow ships no macro editor).</p></div>
+          <div class="of"><div class="h">OpenFlow</div><p>Key steps are typed as an action code
+            (<code>A</code>) rather than picked from the key palette.</p></div>
+        </div>
+        <div class="rec"><span class="rk">Polish</span><span>Reuse the action palette for key-steps. This is
+          a <b>bonus</b> feature — NayaFlow has no macros at all.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DIVERGENCES ============ -->
+  <section>
+    <div class="shead"><h2>Intentional divergences</h2><span class="tag">not gaps</span></div>
+    <p class="snote">Places OpenFlow deliberately differs — call these out so they don&rsquo;t get
+      &ldquo;fixed&rdquo; back toward NayaFlow by mistake.</p>
+    <div class="cards">
+      <div class="card div"><div class="card-top"><span class="chip div">Divergence</span>
+        <h3>Color is its own page</h3></div>
+        <div class="rec"><span class="rk">Why</span><span>NayaFlow toggles LED mode inside the keymap view
+          via the 💡 tab; OpenFlow promotes Color to a top-level page (your call). Tools —
+          brush/fill/pipette, palette + hue/sat/hex creator, solid/swirl/breathe/spectrum — are at parity.</span></div>
+      </div>
+      <div class="card div"><div class="card-top"><span class="chip div">Divergence</span>
+        <h3>Flat text sidebar (8 items) vs icon rail (5)</h3></div>
+        <div class="rec"><span class="rk">Why</span><span>NayaFlow nests Color &amp; Macros inside the
+          keymap and uses a 5-icon rail; OpenFlow&rsquo;s labelled sidebar is flatter and more discoverable.</span></div>
+      </div>
+      <div class="card div"><div class="card-top"><span class="chip div">Divergence</span>
+        <h3>Hub landing / status page</h3></div>
+        <div class="rec"><span class="rk">Why</span><span>OpenFlow opens on a Hub (backend + device status);
+          NayaFlow opens straight into the keymap.</span></div>
+      </div>
+      <div class="card div"><div class="card-top"><span class="chip div">Divergence</span>
+        <h3>No Save / &ldquo;Unsaved changes&rdquo; / flash button</h3></div>
+        <div class="rec"><span class="rk">Why</span><span>OpenFlow auto-saves to a local SQLite DB and works
+          fully offline; NayaFlow&rsquo;s Save flashes the device (that&rsquo;s Phase 3 here).</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BEYOND ============ -->
+  <section>
+    <div class="shead"><h2>Where OpenFlow already exceeds NayaFlow</h2></div>
+    <div class="cards">
+      <div class="card plus"><div class="card-top"><span class="chip plus">Beyond</span>
+        <h3>Working macro editor</h3></div>
+        <div class="rec"><span class="rk">+</span><span>Create macros with ordered Key / Text / Wait steps,
+          reorder &amp; delete — NayaFlow never shipped one.</span></div></div>
+      <div class="card plus"><div class="card-top"><span class="chip plus">Beyond</span>
+        <h3>Backup <i>import</i> &amp; profile/layer files</h3></div>
+        <div class="rec"><span class="rk">+</span><span>Import a NayaFlow <code>.zip</code>/<code>.db</code>
+          straight in, and export/import individual profiles &amp; layers as files — cross-keyboard migration
+          NayaFlow can&rsquo;t do.</span></div></div>
+      <div class="card plus"><div class="card-top"><span class="chip plus">Beyond</span>
+        <h3>OneKey behaviors exposed</h3></div>
+        <div class="rec"><span class="rk">+</span><span>Double&nbsp;Tap and Tap&nbsp;+&nbsp;Hold slots are
+          editable per key; NayaFlow&rsquo;s default panel only shows Tap + Hold.</span></div></div>
+      <div class="card plus"><div class="card-top"><span class="chip plus">Beyond</span>
+        <h3>Open, opt-in Software Update</h3></div>
+        <div class="rec"><span class="rk">+</span><span>Version, an opt-in GitHub-releases check and repo
+          links — no forced cloud updater.</span></div></div>
+    </div>
+  </section>
+
+  <!-- ============ VERIFIED PARITY ============ -->
+  <section>
+    <div class="shead"><h2>Verified at parity</h2><span class="tag">no action needed</span></div>
+    <div class="parity">
+      <div><span class="ck">✓</span><span><b>Board geometry</b> — exact physical layout, keycap silhouettes, module pocket</span></div>
+      <div><span class="ck">✓</span><span><b>Keybind selector</b> — Letters / Numbers / Modifiers (L&amp;R) / Control / Symbols</span></div>
+      <div><span class="ck">✓</span><span><b>Layer actions</b> — Hold / Toggle / Force / Sticky, icon + number</span></div>
+      <div><span class="ck">✓</span><span><b>Shortcuts</b> — icon glyphs with tooltips</span></div>
+      <div><span class="ck">✓</span><span><b>Layers</b> — add / rename / duplicate / delete / set-base</span></div>
+      <div><span class="ck">✓</span><span><b>Profiles</b> — switch / rename / duplicate / export / import / delete</span></div>
+      <div><span class="ck">✓</span><span><b>Color tools</b> — brush / fill / pipette, palette + creator, animations</span></div>
+      <div><span class="ck">✓</span><span><b>LED view</b> — key labels + adaptive contrast, side-LED strips</span></div>
+      <div><span class="ck">✓</span><span><b>Behavior settings</b> — interrupt flavor, tapping term, idle/sleep, LED override/brightness/scan</span></div>
+      <div><span class="ck">✓</span><span><b>Interface settings</b> — language, input source, tray battery, scaling</span></div>
+      <div><span class="ck">✓</span><span><b>Backup list &amp; restore</b> — auto-backup every 30&nbsp;min, snapshot restore</span></div>
+      <div><span class="ck">✓</span><span><b>Module config list</b> — Touch / Track&nbsp;L / Track&nbsp;R / Tune, bindings/settings tabs</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Method.</b> Compared live OpenFlow (localhost) against live NayaFlow&nbsp;v1.25.1 for Bindings,
+      Module Configuration and Hardware Manager, plus the full NayaFlow screenshot library
+      (all 8 Settings tabs, Color / RGB selector, module bind &amp; settings screens, keybind-selector tabs)
+      and the recovered NayaFlow routes.</p>
+    <p style="margin-top:8px"><b>Caveats.</b> NayaFlow&rsquo;s Macros page doesn&rsquo;t exist to compare
+      against, and a couple of NayaFlow sub-views weren&rsquo;t driven live — those gaps are inferred from the
+      route map + screenshots and are flagged as such. Severities are one reviewer&rsquo;s call; re-weigh against
+      your Phase priorities. <span class="mono">Source: openflow/docs/ui-audit.html</span></p>
+  </footer>
+</div>
