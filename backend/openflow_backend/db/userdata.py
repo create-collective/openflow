@@ -417,31 +417,61 @@ def set_module_setting(config_id: str, field_id: str, value) -> dict:
         conn.close()
 
 
-# Curated dropdown options for module gesture bindings. Deliberately small for
-# now — expand once firmware reverse-engineering shows what the modules can
-# actually be made to do. `code` is stored in module_bindings.action_code; the
-# UI shows `label`. Imported values not in this list still render (as a synthetic
-# option) so nothing is lost.
+# Dropdown options for module gesture bindings. This holds every action our
+# imported defaults use (so you can always reset to a default) plus the obvious
+# extras, grouped for the <optgroup> UI. It's intentionally a working set — once
+# firmware reverse-engineering shows what the modules can really do, revisit the
+# codes/labels. `code` is stored in module_bindings.action_code; the UI shows
+# `label`. Any imported value not listed here still renders as a synthetic option.
+_CURSOR_V = "mouse - MOUSE_DOWN - MOUSE_UP"
+_CURSOR_H = "mouse - MOUSE_LEFT - MOUSE_RIGHT"
 MODULE_ACTIONS = [
-    {"code": "", "label": "None", "actionType": "none"},
-    {"code": "CURSOR_VERTICAL", "label": "Vertical Cursor Control", "actionType": "module"},
-    {"code": "CURSOR_HORIZONTAL", "label": "Horizontal Cursor Control", "actionType": "module"},
-    {"code": "M1", "label": "Left Click", "actionType": "mouse"},
-    {"code": "M2", "label": "Right Click", "actionType": "mouse"},
-    {"code": "M3", "label": "Middle Click", "actionType": "mouse"},
-    {"code": "mouse - SCROLL_UP - SCROLL_DOWN", "label": "Vertical Scroll", "actionType": "mouse"},
-    {"code": "mouse - SCROLL_LEFT - SCROLL_RIGHT", "label": "Horizontal Scroll", "actionType": "mouse"},
-    {"code": "VOLUME", "label": "Volume", "actionType": "module"},
-    {"code": "RECORD", "label": "Record Macro", "actionType": "module"},
+    {"code": "", "label": "None", "actionType": "none", "group": ""},
+    # Cursor / pointer (Touch 1-finger + Track vertical/horizontal)
+    {"code": _CURSOR_V, "label": "Vertical Cursor Control", "actionType": "value", "group": "Cursor"},
+    {"code": _CURSOR_H, "label": "Horizontal Cursor Control", "actionType": "value", "group": "Cursor"},
+    # Scroll
+    {"code": "mouse - SCROLL_UP - SCROLL_DOWN", "label": "Vertical Scroll", "actionType": "value", "group": "Scroll"},
+    {"code": "mouse - SCROLL_LEFT - SCROLL_RIGHT", "label": "Horizontal Scroll", "actionType": "value", "group": "Scroll"},
+    # Mouse buttons
+    {"code": "M1", "label": "Left Click", "actionType": "mouse", "group": "Clicks"},
+    {"code": "M2", "label": "Right Click", "actionType": "mouse", "group": "Clicks"},
+    {"code": "M3", "label": "Middle Click", "actionType": "mouse", "group": "Clicks"},
+    {"code": "M4", "label": "Mouse Button 4", "actionType": "mouse", "group": "Clicks"},
+    # Media (Tune)
+    {"code": "C_VOL_DOWN - C_VOL_UP", "label": "Volume", "actionType": "value", "group": "Media"},
+    {"code": "C_PLAY_PAUSE", "label": "Play / Pause", "actionType": "key", "group": "Media"},
+    {"code": "C_NEXT", "label": "Next Track", "actionType": "key", "group": "Media"},
+    {"code": "C_PREVIOUS", "label": "Previous Track", "actionType": "key", "group": "Media"},
+    {"code": "C_FAST_FORWARD", "label": "Fast Forward", "actionType": "key", "group": "Media"},
+    {"code": "C_REWIND", "label": "Rewind", "actionType": "key", "group": "Media"},
+    {"code": "C_MUTE", "label": "Mute", "actionType": "key", "group": "Media"},
+    # Display & LED (Tune)
+    {"code": "C_BRIGHTNESS_INC", "label": "Screen Brightness Up", "actionType": "key", "group": "Display & LED"},
+    {"code": "C_BRIGHTNESS_DEC", "label": "Screen Brightness Down", "actionType": "key", "group": "Display & LED"},
+    {"code": "LED_BRIGHTNESS_UP", "label": "Keyboard LED Brightness Up", "actionType": "LED", "group": "Display & LED"},
+    {"code": "LED_BRIGHTNESS_DOWN", "label": "Keyboard LED Brightness Down", "actionType": "LED", "group": "Display & LED"},
+    # Shortcuts (Touch swipe defaults)
+    {"code": "LCTRL + TAB", "label": "Ctrl + Tab", "actionType": "shortcut_alias", "group": "Shortcuts"},
+    {"code": "LCTRL + LSHIFT + TAB", "label": "Ctrl + Shift + Tab", "actionType": "shortcut_alias", "group": "Shortcuts"},
+    {"code": "LALT + ESC", "label": "Alt + Esc", "actionType": "shortcut_alias", "group": "Shortcuts"},
+    {"code": "LALT + LSHIFT + ESC", "label": "Alt + Shift + Esc", "actionType": "shortcut_alias", "group": "Shortcuts"},
+    {"code": "LGUI + TAB", "label": "Win + Tab", "actionType": "shortcut_alias", "group": "Shortcuts"},
+    {"code": "LGUI + LCTRL + LEFT", "label": "Win + Ctrl + Left", "actionType": "shortcut_alias", "group": "Shortcuts"},
+    {"code": "LGUI + LCTRL + RIGHT", "label": "Win + Ctrl + Right", "actionType": "shortcut_alias", "group": "Shortcuts"},
+    {"code": "LALT + PG_UP", "label": "Alt + Page Up", "actionType": "shortcut_alias", "group": "Shortcuts"},
+    {"code": "LALT + PG_DN", "label": "Alt + Page Down", "actionType": "shortcut_alias", "group": "Shortcuts"},
 ]
 
 
 def _ensure_touch_defaults(conn) -> None:
     """Backfill the 1-finger cursor gestures NayaFlow renders implicitly for Touch
-    (Vertical/Horizontal cursor control + tap = left click). Idempotent: only
-    inserts for a Touch config that has no 1_finger bindings yet."""
+    (Vertical/Horizontal cursor control + tap = left click), and unify the earlier
+    placeholder cursor codes with the real axis codes Track uses. Idempotent."""
     now = _now()
-    inserted = False
+    # migrate the first-pass placeholder codes -> the shared cursor axis codes
+    conn.execute("UPDATE module_bindings SET action_code=?, action_type='value' WHERE action_code='CURSOR_VERTICAL'", (_CURSOR_V,))
+    conn.execute("UPDATE module_bindings SET action_code=?, action_type='value' WHERE action_code='CURSOR_HORIZONTAL'", (_CURSOR_H,))
     for m in conn.execute("SELECT id FROM module_configs WHERE type='TOUCH'").fetchall():
         cid = m["id"]
         has_one = conn.execute(
@@ -451,8 +481,8 @@ def _ensure_touch_defaults(conn) -> None:
         if has_one:
             continue
         for behavior, atype, code in (
-            ("vertical:touch:1_finger", "module", "CURSOR_VERTICAL"),
-            ("horizontal:touch:1_finger", "module", "CURSOR_HORIZONTAL"),
+            ("vertical:touch:1_finger", "value", _CURSOR_V),
+            ("horizontal:touch:1_finger", "value", _CURSOR_H),
             ("tap:touch:1_finger", "mouse", "M1"),
         ):
             conn.execute(
@@ -461,9 +491,7 @@ def _ensure_touch_defaults(conn) -> None:
                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 (None, code, atype, behavior, 0, 0, "+", 0, cid, str(uuid.uuid4()), now, now),
             )
-            inserted = True
-    if inserted:
-        conn.commit()
+    conn.commit()
 
 
 def set_module_binding(binding_id: str, action_code: str, action_type: str) -> dict:

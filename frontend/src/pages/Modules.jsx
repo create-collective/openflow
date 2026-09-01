@@ -8,6 +8,16 @@ import { api } from "../lib/api";
 
 const TYPE_ORDER = ["TOUCH", "TRACK", "TUNE"];
 
+// Canonical gesture order so Track Left / Right (and every config) list the same
+// way — the DB returns them in inconsistent orders.
+const GESTURE_ORDER = ["vertical", "horizontal", "rotate", "tap",
+  "swipe_up", "swipe_down", "swipe_left", "swipe_right"];
+const gi = (g) => {
+  const i = GESTURE_ORDER.indexOf(g);
+  return i === -1 ? 99 : i;
+};
+const byGesture = (a, b) => gi(a.gesture) - gi(b.gesture);
+
 function cleanCode(code) {
   if (!code) return "—";
   return code.replaceAll(" - ", " / ").replaceAll("_", " ");
@@ -23,7 +33,15 @@ function GestureRow({ b, actions, onPick }) {
   const known = actions.some((a) => a.code === (b.actionCode || ""));
   const opts = known
     ? actions
-    : [{ code: b.actionCode || "", label: cleanCode(b.actionCode), actionType: b.actionType }, ...actions];
+    : [{ code: b.actionCode || "", label: cleanCode(b.actionCode), actionType: b.actionType, group: "Imported" }, ...actions];
+  // Group into <optgroup>s (blank group renders ungrouped at the top).
+  const order = [];
+  const groups = {};
+  for (const o of opts) {
+    const g = o.group || "";
+    if (!(g in groups)) { groups[g] = []; order.push(g); }
+    groups[g].push(o);
+  }
   return (
     <div className="skp-row" style={{ cursor: "default" }}>
       <span className="skp-beh" style={{ textTransform: "capitalize" }}>
@@ -35,9 +53,15 @@ function GestureRow({ b, actions, onPick }) {
         value={b.actionCode || ""}
         onChange={(e) => onPick(b.id, opts.find((o) => o.code === e.target.value))}
       >
-        {opts.map((o) => (
-          <option key={o.code || "none"} value={o.code}>{o.label}</option>
-        ))}
+        {order.map((g) =>
+          g ? (
+            <optgroup key={g} label={g}>
+              {groups[g].map((o) => <option key={o.code || "none"} value={o.code}>{o.label}</option>)}
+            </optgroup>
+          ) : (
+            groups[g].map((o) => <option key={o.code || "none"} value={o.code}>{o.label}</option>)
+          )
+        )}
       </select>
     </div>
   );
@@ -97,14 +121,19 @@ export default function Modules() {
 
   const config = modules.find((m) => m.id === selectedId) || null;
 
-  const axes = useMemo(() => (config?.bindings || []).filter((b) => !b.target), [config]);
+  const axes = useMemo(
+    () => (config?.bindings || []).filter((b) => !b.target).sort(byGesture),
+    [config]
+  );
   const targets = useMemo(() => {
     const t = [];
     for (const b of config?.bindings || []) if (b.target && !t.includes(b.target)) t.push(b.target);
     return t.sort();
   }, [config]);
   const curTarget = activeTarget && targets.includes(activeTarget) ? activeTarget : targets[0];
-  const targetBindings = (config?.bindings || []).filter((b) => b.target === curTarget);
+  const targetBindings = (config?.bindings || [])
+    .filter((b) => b.target === curTarget)
+    .sort(byGesture);
 
   async function setSetting(fieldId, value) {
     if (!config) return;
