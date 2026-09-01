@@ -82,6 +82,16 @@ async def set_module_setting(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/rpc/set-module-binding")
+async def set_module_binding(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(
+            ud.set_module_binding, body["bindingId"], body.get("actionCode", ""), body.get("actionType", "none")
+        )
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/api/settings")
 async def get_settings() -> dict:
     return await run_in_threadpool(settings_db.get_settings)
@@ -98,6 +108,14 @@ async def set_setting(body: dict = Body(...)) -> dict:
 @router.get("/api/backups")
 async def backups() -> dict:
     return await run_in_threadpool(bak.list_backups)
+
+
+@router.post("/rpc/open-backup-folder")
+async def open_backup_folder(body: dict = Body(default={})) -> dict:
+    try:
+        return await run_in_threadpool(bak.open_dir)
+    except Exception as e:  # noqa: BLE001 - surface any OS error to the UI
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/rpc/create-backup")

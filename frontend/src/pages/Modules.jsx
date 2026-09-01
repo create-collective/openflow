@@ -16,6 +16,33 @@ function targetLabel(t) {
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// One editable gesture row: gesture label -> action dropdown. Options come from
+// the backend catalog; an imported value that isn't in the catalog is kept as a
+// synthetic first option so nothing is silently dropped.
+function GestureRow({ b, actions, onPick }) {
+  const known = actions.some((a) => a.code === (b.actionCode || ""));
+  const opts = known
+    ? actions
+    : [{ code: b.actionCode || "", label: cleanCode(b.actionCode), actionType: b.actionType }, ...actions];
+  return (
+    <div className="skp-row" style={{ cursor: "default" }}>
+      <span className="skp-beh" style={{ textTransform: "capitalize" }}>
+        {(b.gesture || "").replace(/_/g, " ")}
+      </span>
+      <span className="skp-arrow">→</span>
+      <select
+        className="mac-input mod-action"
+        value={b.actionCode || ""}
+        onChange={(e) => onPick(b.id, opts.find((o) => o.code === e.target.value))}
+      >
+        {opts.map((o) => (
+          <option key={o.code || "none"} value={o.code}>{o.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 // Module display images (from ScreenshotsOfNayaFlow/pngs, centers made
 // transparent). Track swaps image by the active button to highlight it.
 function ModuleVisual({ type, activeButton }) {
@@ -37,6 +64,7 @@ function ModuleVisual({ type, activeButton }) {
 
 export default function Modules() {
   const [modules, setModules] = useState([]);
+  const [actions, setActions] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [tab, setTab] = useState("bindings");
   const [activeTarget, setActiveTarget] = useState(null);
@@ -49,6 +77,7 @@ export default function Modules() {
       const r = await api.modules();
       const mods = r.modules || [];
       setModules(mods);
+      setActions(r.actions || []);
       if (!selectedId && mods.length) {
         // Prefer a config matching ?type= (from a Bindings module click).
         const match = wantType && mods.find((m) => m.type === wantType);
@@ -81,6 +110,16 @@ export default function Modules() {
     if (!config) return;
     try {
       await api.setModuleSetting({ configId: config.id, fieldId, value });
+      await load();
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
+  async function pickBinding(bindingId, opt) {
+    if (!opt) return;
+    try {
+      await api.setModuleBinding({ bindingId, actionCode: opt.code, actionType: opt.actionType });
       await load();
     } catch (e) {
       setErr(e.message);
@@ -132,11 +171,7 @@ export default function Modules() {
                     <>
                       <div className="skp-head"><span>Gesture</span><span className="skp-arrow">→</span><span>Action</span></div>
                       {axes.map((b) => (
-                        <div className="skp-row" key={b.id} style={{ cursor: "default" }}>
-                          <span className="skp-beh" style={{ textTransform: "capitalize" }}>{(b.gesture || "").replace(/_/g, " ")}</span>
-                          <span className="skp-arrow">→</span>
-                          <span className="skp-act">{cleanCode(b.actionCode)}</span>
-                        </div>
+                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding} />
                       ))}
                     </>
                   )}
@@ -151,11 +186,7 @@ export default function Modules() {
                         ))}
                       </div>
                       {targetBindings.map((b) => (
-                        <div className="skp-row" key={b.id} style={{ cursor: "default" }}>
-                          <span className="skp-beh" style={{ textTransform: "capitalize" }}>{(b.gesture || "").replace(/_/g, " ")}</span>
-                          <span className="skp-arrow">→</span>
-                          <span className="skp-act">{cleanCode(b.actionCode)}</span>
-                        </div>
+                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding} />
                       ))}
                     </>
                   )}

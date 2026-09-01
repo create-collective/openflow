@@ -417,6 +417,71 @@ def set_module_setting(config_id: str, field_id: str, value) -> dict:
         conn.close()
 
 
+# Curated dropdown options for module gesture bindings. Deliberately small for
+# now — expand once firmware reverse-engineering shows what the modules can
+# actually be made to do. `code` is stored in module_bindings.action_code; the
+# UI shows `label`. Imported values not in this list still render (as a synthetic
+# option) so nothing is lost.
+MODULE_ACTIONS = [
+    {"code": "", "label": "None", "actionType": "none"},
+    {"code": "CURSOR_VERTICAL", "label": "Vertical Cursor Control", "actionType": "module"},
+    {"code": "CURSOR_HORIZONTAL", "label": "Horizontal Cursor Control", "actionType": "module"},
+    {"code": "M1", "label": "Left Click", "actionType": "mouse"},
+    {"code": "M2", "label": "Right Click", "actionType": "mouse"},
+    {"code": "M3", "label": "Middle Click", "actionType": "mouse"},
+    {"code": "mouse - SCROLL_UP - SCROLL_DOWN", "label": "Vertical Scroll", "actionType": "mouse"},
+    {"code": "mouse - SCROLL_LEFT - SCROLL_RIGHT", "label": "Horizontal Scroll", "actionType": "mouse"},
+    {"code": "VOLUME", "label": "Volume", "actionType": "module"},
+    {"code": "RECORD", "label": "Record Macro", "actionType": "module"},
+]
+
+
+def _ensure_touch_defaults(conn) -> None:
+    """Backfill the 1-finger cursor gestures NayaFlow renders implicitly for Touch
+    (Vertical/Horizontal cursor control + tap = left click). Idempotent: only
+    inserts for a Touch config that has no 1_finger bindings yet."""
+    now = _now()
+    inserted = False
+    for m in conn.execute("SELECT id FROM module_configs WHERE type='TOUCH'").fetchall():
+        cid = m["id"]
+        has_one = conn.execute(
+            "SELECT 1 FROM module_bindings WHERE module_config_id=? AND behavior LIKE '%:1_finger'",
+            (cid,),
+        ).fetchone()
+        if has_one:
+            continue
+        for behavior, atype, code in (
+            ("vertical:touch:1_finger", "module", "CURSOR_VERTICAL"),
+            ("horizontal:touch:1_finger", "module", "CURSOR_HORIZONTAL"),
+            ("tap:touch:1_finger", "mouse", "M1"),
+        ):
+            conn.execute(
+                "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
+                "invert, threshold, direction, mode, module_config_id, id, updated_at, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (None, code, atype, behavior, 0, 0, "+", 0, cid, str(uuid.uuid4()), now, now),
+            )
+            inserted = True
+    if inserted:
+        conn.commit()
+
+
+def set_module_binding(binding_id: str, action_code: str, action_type: str) -> dict:
+    """Update a module gesture's assigned action (from the Modules dropdown)."""
+    conn = connect()
+    try:
+        cur = conn.execute(
+            "UPDATE module_bindings SET action_code=?, action_type=?, updated_at=? WHERE id=?",
+            (action_code or "", action_type or "none", _now(), binding_id),
+        )
+        if cur.rowcount == 0:
+            raise ValueError(f"no module binding {binding_id}")
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
 def get_modules() -> dict:
     """Module configs grouped by type, each with its gesture bindings + settings.
 
@@ -427,6 +492,7 @@ def get_modules() -> dict:
     """
     conn = connect()
     try:
+        _ensure_touch_defaults(conn)
         configs = []
         for m in conn.execute(
             "SELECT id, name, type, size, order_id, icon_id FROM module_configs ORDER BY type, order_id"
@@ -478,7 +544,7 @@ def get_modules() -> dict:
                 "bindings": bindings,
                 "settingsSchema": settings_schema,
             })
-        return {"modules": configs}
+        return {"modules": configs, "actions": MODULE_ACTIONS}
     finally:
         conn.close()
 

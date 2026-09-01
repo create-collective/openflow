@@ -36,6 +36,23 @@ def create_backup(kind: str = "manual") -> dict:
     return {"ok": True, "name": name}
 
 
+def open_dir() -> dict:
+    """Open the backups folder in the OS file manager (the button NayaFlow lacked)."""
+    import os
+    import subprocess
+    import sys
+
+    d = backups_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    if sys.platform == "win32":
+        os.startfile(str(d))  # type: ignore[attr-defined]  # noqa: S606
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", str(d)])
+    else:
+        subprocess.Popen(["xdg-open", str(d)])
+    return {"ok": True, "dir": str(d)}
+
+
 def _prune_auto():
     autos = sorted(backups_dir().glob("openflow-auto-*.db"), key=lambda p: p.stat().st_mtime)
     for old in autos[:-MAX_AUTO_BACKUPS]:

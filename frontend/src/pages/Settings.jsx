@@ -20,21 +20,28 @@ const TABS = [
 ];
 
 function SettingField({ f, onChange }) {
+  const changed = f.kind !== "toggle" && f.default !== undefined && f.value !== f.default;
   return (
     <div className="setting">
       <div className="setting-head">
         <strong>{f.label}</strong>
-        {f.kind === "toggle" ? (
-          <button className={"toggle" + (f.value ? " on" : "")} onClick={() => onChange(f.id, !f.value)}>
-            <span className="toggle-knob" />
-          </button>
-        ) : f.kind === "select" ? (
-          <select className="mac-input" value={f.value} onChange={(e) => onChange(f.id, e.target.value)}>
-            {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
-        ) : (
-          <span className="setting-val">{f.value}{f.unit}</span>
-        )}
+        <div className="setting-ctl">
+          {changed && (
+            <button className="setting-reset" title={`Reset to ${f.default}${f.unit || ""}`}
+              onClick={() => onChange(f.id, f.default)}>↺ Reset</button>
+          )}
+          {f.kind === "toggle" ? (
+            <button className={"toggle" + (f.value ? " on" : "")} onClick={() => onChange(f.id, !f.value)}>
+              <span className="toggle-knob" />
+            </button>
+          ) : f.kind === "select" ? (
+            <select className="mac-input" value={f.value} onChange={(e) => onChange(f.id, e.target.value)}>
+              {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          ) : (
+            <span className="setting-val">{f.value}{f.unit}</span>
+          )}
+        </div>
       </div>
       <div className="setting-desc">{f.desc}</div>
       {f.kind === "slider" && (
@@ -188,6 +195,9 @@ export default function Settings() {
                   <p className="page-sub">OpenFlow auto-backs up your data every 30 minutes. Restore any snapshot below.</p>
                   <div className="btn-row" style={{ marginBottom: 8 }}>
                     <button className="btn primary" disabled={busy} onClick={() => run("Backup now", async () => { const r = await api.createBackup(); setBackups(await api.backups()); return r; })}>Backup now</button>
+                    {backups.dir && (
+                      <button className="btn" disabled={busy} onClick={() => run("Open backup folder", api.openBackupFolder)}>Open backup folder</button>
+                    )}
                     <button className="btn" disabled={busy} onClick={async () => {
                       const f = await pickFile(".db,.zip");
                       if (!f) return;
