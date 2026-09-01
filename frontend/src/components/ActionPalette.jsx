@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { formatCombo } from "../lib/combo";
 import LayersIcon from "./LayersIcon";
+import VirtualKeyboard from "./VirtualKeyboard";
 
 // The keybind selector (bottom-right). Tabs come from the backend catalog:
-// B (basic), + (extended), ✦ (layers), ↗ (shortcuts). Picking an action calls
-// onPick with what set-key-binding needs.
+// B (basic), + (extended), ✦ (layers), ↗ (shortcuts), plus a virtual keyboard and
+// macros. Picking an action calls onPick with what set-key-binding needs.
 export default function ActionPalette({ catalog, layers, macros = [], disabled, onPick }) {
-  const [tabId, setTabId] = useState("basic");
+  const [tabId, setTabId] = useState("keyboard");
   if (!catalog) return null;
-  const tabs = [...(catalog.tabs || []), { id: "macros", label: "⚡", title: "Macros" }];
+  const tabs = [
+    { id: "keyboard", label: "⌨", title: "Virtual keyboard" },
+    ...(catalog.tabs || []),
+    { id: "macros", label: "⚡", title: "Macros" },
+  ];
   const tab = tabs.find((t) => t.id === tabId) || tabs[0];
 
   return (
@@ -27,9 +32,13 @@ export default function ActionPalette({ catalog, layers, macros = [], disabled, 
       </div>
 
       <div className="palette-body">
-        {disabled && <div className="palette-disabled">Select a key on the map first.</div>}
+        {disabled && tab?.id !== "keyboard" && (
+          <div className="palette-disabled">Select a key on the map first.</div>
+        )}
 
-        {tab?.id === "macros" ? (
+        {tab?.id === "keyboard" ? (
+          <VirtualKeyboard disabled={disabled} onPick={onPick} />
+        ) : tab?.id === "macros" ? (
           <div className="palette-cat">
             <div className="palette-cat-title">Macros <span className="palette-count">{macros.length}</span></div>
             {macros.length === 0 ? (

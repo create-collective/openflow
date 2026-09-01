@@ -221,6 +221,21 @@ class DeviceService:
     def dump_settings(self, side: str) -> dict:
         return self.text_command(side, "dump_settings")
 
+    # --- keymap read (REMAP) ---------------------------------------------------
+
+    def read_keymap(self, side: str = "left") -> dict:
+        """Read the full board keymap (bindings + LED colours) off a connected half.
+
+        The central/left half holds the whole-board map, so default to it. Returns
+        the raw read for db.keymap_import to translate + persist. Read-only."""
+        from . import keymap_read
+
+        with self._lock:
+            dev = self._require_side(side)
+            dest = self._dest_for_side(dev.side)
+            t = self._transport_for(dev.port, dest)
+            return keymap_read.read_keymap(t, dest)
+
     # --- troubleshooting -------------------------------------------------------
 
     def spi_flash_test(self, side: str) -> dict:

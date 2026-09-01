@@ -43,5 +43,5 @@ export const RIGHT_LEDS = [74, 75, 76, 77, 78, 79, 80];
 
 // Sizing: px per viewBox unit (keys) and px per rem (margins), tuned to preserve
 // NayaFlow's proportions while fitting our layout area.
-export const KEY_UNIT = 0.82;
-export const REM = 14.4;
+export const KEY_UNIT = 1.4;
+export const REM = 24.6;

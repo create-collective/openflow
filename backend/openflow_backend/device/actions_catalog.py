@@ -34,11 +34,15 @@ LAYER_ACTION_TYPES = {
 # Tap+Hold are editable and stored offline in the DB; flashing them to the device
 # waits on the REMAP layer-data codec. Double Tap+Hold stays experimental — it may
 # exceed Naya's firmware and belongs to the fully-open OneKey firmware track.
+# Tap and Hold are the only slots Naya's firmware actually stores + honors. A live
+# read + reflash test (2026-09-01) proved NayaFlow drops Double Tap and Tap + Hold on
+# flash — they're half-finished firmware slots — so they're disabled + flagged
+# experimental like Double Tap + Hold until the open OneKey firmware lands.
 BEHAVIOR_SLOTS = [
     {"id": "tap", "label": "Tap", "enabled": True},
     {"id": "hold", "label": "Hold", "enabled": True},
-    {"id": "double_tap", "label": "Double Tap", "enabled": True},
-    {"id": "tap+hold", "label": "Tap + Hold", "enabled": True},
+    {"id": "double_tap", "label": "Double Tap", "enabled": False, "experimental": True},
+    {"id": "tap+hold", "label": "Tap + Hold", "enabled": False, "experimental": True},
     {"id": "double_tap+hold", "label": "Double Tap + Hold", "enabled": False, "experimental": True},
 ]
 
@@ -238,6 +242,21 @@ _VSCODE = [
     ("LSHIFT + F11", "Step Out"), ("F10", "Step Over"), ("LCTRL + GRAVE", "Open Terminal"),
     ("LCTRL + LSHIFT + GRAVE", "Create Terminal"),
 ]
+
+
+# NayaFlow spellings that differ from the entries above. Verified 2026-09-01 by pairing
+# a NayaFlow user-data.db with the WRITE_LAYER_DATA frames NayaCore actually flashed
+# (device/out/flash2-shortcut-dictionary.md): NayaFlow's own encoder drops a bracketed
+# modifier entirely ("[LALT] + TAB" reaches the device as a plain Tab) and cannot
+# encode CLICK or ENTER (both flash as HID usage 0 with only the modifier bits set).
+# Importers should map these to the canonical code; None = no keyboard equivalent.
+NAYAFLOW_CODE_ALIASES = {
+    "[LALT] + TAB": "LALT + TAB",
+    "[LALT] + LSHIFT + TAB": "LALT + LSHIFT + TAB",
+    "LALT + CLICK": None,  # VS Code "Insert Cursor" is a mouse action, not a key press
+}
+# "LALT + ENTER" stays verbatim in the lists above; the frontend dictionary aliases
+# ENTER -> RETURN (keydict.js CODE_ALIASES) and the device encoder must emit usage 0x28.
 
 
 def _shortcuts(pairs):

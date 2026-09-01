@@ -16,6 +16,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from .. import __version__
 from ..db import backup as bak
+from ..db import keymap_import as kmi
 from ..db import macros as mac
 from ..db import profiles as prof
 from ..db import settings as settings_db
@@ -58,6 +59,18 @@ async def devices() -> dict:
 async def status(verbose: bool = False) -> dict:
     svc = get_service()
     return {"halves": await run_in_threadpool(svc.status_all, verbose)}
+
+
+@router.post("/rpc/read-keyboard")
+async def read_keyboard(body: dict = Body(default={})) -> dict:
+    """Read the map currently on the keyboard and import it as a new profile."""
+    svc = get_service()
+    side = body.get("side", "left")
+    try:
+        read = await run_in_threadpool(svc.read_keymap, side)
+    except TransportError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    return await run_in_threadpool(kmi.import_read, read, body.get("name"))
 
 
 @router.get("/api/userdata")

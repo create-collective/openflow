@@ -20,6 +20,8 @@ export default function Bindings() {
   const [selectedPos, setSelectedPos] = useState(null);
   const [activeSlot, setActiveSlot] = useState("tap");
   const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [saved, setSaved] = useState(null);
   const [pickedModule, setPickedModule] = useState(null);
   const [moduleAssign, setModuleAssign] = useState(() => {
     try {
@@ -141,6 +143,7 @@ export default function Bindings() {
         layerId: layer.id, positionId: selectedPos,
         actionCode: pick.actionCode, actionType: pick.actionType, behavior: activeSlot,
       });
+      setSaved(null); // an edit means the map is no longer "saved" until Save is pressed
       await load();
     } catch (e) { setErr(e.message); }
   }
@@ -149,8 +152,40 @@ export default function Bindings() {
     if (selectedPos == null || !layer) return;
     try {
       await api.clearKeyBinding({ layerId: layer.id, positionId: selectedPos, behavior: slot });
+      setSaved(null);
       await load();
     } catch (e) { setErr(e.message); }
+  }
+
+  async function readFromKeyboard() {
+    setBusy("read");
+    setErr(null);
+    try {
+      const r = await api.readKeyboard();
+      await load();
+      switchProfile(r.profileId);
+      if (r.warnings?.length) {
+        setErr(`Read ${r.bindings} bindings across ${r.layers} layers — ${r.warnings.length} key(s) need review (BT/LED/other).`);
+      }
+    } catch (e) {
+      const noDev = /device|found|503|connect/i.test(e.message);
+      setErr(noDev ? "No keyboard found. Connect the Create over USB and close NayaFlow." : e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function saveMap() {
+    setBusy("save");
+    setErr(null);
+    try {
+      await api.createBackup();
+      setSaved(new Date());
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(null);
+    }
   }
 
   if (!profile) {
@@ -181,8 +216,25 @@ export default function Bindings() {
         </div>
         <div className="board-wrap">
           <div className="board-header">
-            {profile.layers.findIndex((l) => l.id === layer?.id)}{"  "}
-            <strong>{layer?.name}</strong>
+            <div>
+              <strong>{layer?.name}</strong>
+            </div>
+            <div className="board-actions">
+              <button className="board-btn primary" onClick={readFromKeyboard} disabled={!!busy}
+                title="Read the map currently on the connected keyboard into a new profile">
+                {busy === "read" ? "Reading…" : "⌨  Read from keyboard"}
+              </button>
+              <button className="board-btn" onClick={saveMap} disabled={!!busy}
+                title="Snapshot the current map to a backup">
+                {busy === "save" ? "Saving…" : "Save"}
+              </button>
+              <button className="board-btn" disabled={!saved || !!busy}
+                onClick={() => setErr("Flashing to the keyboard isn't wired up yet — coming soon.")}
+                title={saved ? "Flash the current map to the keyboard" : "Save the map first to enable flashing"}>
+                ⚡ Flash to keyboard
+              </button>
+              {saved && <span className="saved-note">Saved {saved.toLocaleTimeString()}</span>}
+            </div>
           </div>
           <KeymapBoard
             keysByPosition={keysByPosition}
@@ -202,7 +254,7 @@ export default function Bindings() {
 
       {err && <div className="phase-note" style={{ margin: "8px 0" }}>{err}</div>}
 
-      <div className="editor-bottom">
+      <div className="editor-bottom bindings-bottom">
         <SelectedKeyPanel
           label={selectedPos != null ? POS_LABEL[selectedPos] : null}
           bindings={selectedKey?.bindings || {}}
