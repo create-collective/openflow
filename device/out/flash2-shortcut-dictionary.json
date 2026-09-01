@@ -1,0 +1,795 @@
+{
+ "pairs": [
+  {
+   "layer": 3,
+   "pos": 0,
+   "action_code": "LCTRL + X",
+   "behavior": 1,
+   "params_hex": "1b000701"
+  },
+  {
+   "layer": 3,
+   "pos": 1,
+   "action_code": "LCTRL + B",
+   "behavior": 1,
+   "params_hex": "05000701"
+  },
+  {
+   "layer": 3,
+   "pos": 2,
+   "action_code": "LCTRL + BACKSPACE",
+   "behavior": 1,
+   "params_hex": "2a000701"
+  },
+  {
+   "layer": 3,
+   "pos": 3,
+   "action_code": "LCTRL + LEFT",
+   "behavior": 1,
+   "params_hex": "50000701"
+  },
+  {
+   "layer": 3,
+   "pos": 4,
+   "action_code": "LCTRL + F",
+   "behavior": 1,
+   "params_hex": "09000701"
+  },
+  {
+   "layer": 3,
+   "pos": 5,
+   "action_code": "LCTRL + A",
+   "behavior": 1,
+   "params_hex": "04000701"
+  },
+  {
+   "layer": 3,
+   "pos": 6,
+   "action_code": "LALT + A",
+   "behavior": 1,
+   "params_hex": "04000704"
+  },
+  {
+   "layer": 3,
+   "pos": 7,
+   "action_code": "LALT + F8",
+   "behavior": 1,
+   "params_hex": "41000704"
+  },
+  {
+   "layer": 3,
+   "pos": 16,
+   "action_code": "LCTRL + LSHIFT + ESC",
+   "behavior": 1,
+   "params_hex": "29000703"
+  },
+  {
+   "layer": 3,
+   "pos": 17,
+   "action_code": "LGUI + TAB",
+   "behavior": 1,
+   "params_hex": "2b000708"
+  },
+  {
+   "layer": 3,
+   "pos": 18,
+   "action_code": "LALT + ENTER",
+   "behavior": 1,
+   "params_hex": "00000004"
+  },
+  {
+   "layer": 3,
+   "pos": 19,
+   "action_code": "LGUI + I",
+   "behavior": 1,
+   "params_hex": "0c000708"
+  },
+  {
+   "layer": 3,
+   "pos": 20,
+   "action_code": "LGUI + LCTRL + D",
+   "behavior": 1,
+   "params_hex": "07000709"
+  },
+  {
+   "layer": 3,
+   "pos": 21,
+   "action_code": "LCTRL + I",
+   "behavior": 1,
+   "params_hex": "0c000701"
+  },
+  {
+   "layer": 3,
+   "pos": 22,
+   "action_code": "LCTRL + U",
+   "behavior": 1,
+   "params_hex": "18000701"
+  },
+  {
+   "layer": 3,
+   "pos": 29,
+   "action_code": "LCTRL + Z",
+   "behavior": 1,
+   "params_hex": "1d000701"
+  },
+  {
+   "layer": 3,
+   "pos": 30,
+   "action_code": "LCTRL + F4",
+   "behavior": 1,
+   "params_hex": "3d000701"
+  },
+  {
+   "layer": 3,
+   "pos": 31,
+   "action_code": "LGUI + LCTRL + F4",
+   "behavior": 1,
+   "params_hex": "3d000709"
+  },
+  {
+   "layer": 3,
+   "pos": 32,
+   "action_code": "LCTRL + C",
+   "behavior": 1,
+   "params_hex": "06000701"
+  },
+  {
+   "layer": 3,
+   "pos": 33,
+   "action_code": "LCTRL + DELETE",
+   "behavior": 1,
+   "params_hex": "4c000701"
+  },
+  {
+   "layer": 3,
+   "pos": 34,
+   "action_code": "LCTRL + H",
+   "behavior": 1,
+   "params_hex": "0b000701"
+  },
+  {
+   "layer": 3,
+   "pos": 35,
+   "action_code": "LALT + LEFT",
+   "behavior": 1,
+   "params_hex": "50000704"
+  },
+  {
+   "layer": 3,
+   "pos": 36,
+   "action_code": "LALT + RIGHT",
+   "behavior": 1,
+   "params_hex": "4f000704"
+  },
+  {
+   "layer": 3,
+   "pos": 37,
+   "action_code": "LALT + SPACE",
+   "behavior": 1,
+   "params_hex": "2c000704"
+  },
+  {
+   "layer": 3,
+   "pos": 38,
+   "action_code": "LALT + LSHIFT + ESC",
+   "behavior": 1,
+   "params_hex": "29000706"
+  },
+  {
+   "layer": 3,
+   "pos": 39,
+   "action_code": "LSHIFT + LCTRL + END",
+   "behavior": 1,
+   "params_hex": "4d000703"
+  },
+  {
+   "layer": 3,
+   "pos": 40,
+   "action_code": "LSHIFT + END",
+   "behavior": 1,
+   "params_hex": "4d000702"
+  },
+  {
+   "layer": 3,
+   "pos": 41,
+   "action_code": "LSHIFT + LCTRL + RIGHT",
+   "behavior": 1,
+   "params_hex": "4f000703"
+  },
+  {
+   "layer": 3,
+   "pos": 42,
+   "action_code": "LGUI + LCTRL + LEFT",
+   "behavior": 1,
+   "params_hex": "50000709"
+  },
+  {
+   "layer": 3,
+   "pos": 43,
+   "action_code": "[LALT] + LSHIFT + TAB",
+   "behavior": 1,
+   "params_hex": "2b000702"
+  },
+  {
+   "layer": 3,
+   "pos": 44,
+   "action_code": "[LALT] + TAB",
+   "behavior": 1,
+   "params_hex": "2b000700"
+  },
+  {
+   "layer": 3,
+   "pos": 45,
+   "action_code": "LGUI + LCTRL + RIGHT",
+   "behavior": 1,
+   "params_hex": "4f000709"
+  },
+  {
+   "layer": 3,
+   "pos": 46,
+   "action_code": "LALT + PG_DN",
+   "behavior": 1,
+   "params_hex": "4e000704"
+  },
+  {
+   "layer": 3,
+   "pos": 47,
+   "action_code": "LCTRL + HOME",
+   "behavior": 1,
+   "params_hex": "4a000701"
+  },
+  {
+   "layer": 3,
+   "pos": 48,
+   "action_code": "LCTRL + END",
+   "behavior": 1,
+   "params_hex": "4d000701"
+  },
+  {
+   "layer": 3,
+   "pos": 49,
+   "action_code": "LCTRL + DOWN",
+   "behavior": 1,
+   "params_hex": "51000701"
+  },
+  {
+   "layer": 3,
+   "pos": 50,
+   "action_code": "LCTRL + RIGHT",
+   "behavior": 1,
+   "params_hex": "4f000701"
+  },
+  {
+   "layer": 3,
+   "pos": 51,
+   "action_code": "LCTRL + UP",
+   "behavior": 1,
+   "params_hex": "52000701"
+  },
+  {
+   "layer": 3,
+   "pos": 52,
+   "action_code": "LCTRL + LEFT",
+   "behavior": 1,
+   "params_hex": "50000701"
+  },
+  {
+   "layer": 3,
+   "pos": 53,
+   "action_code": "LCTRL + LSHIFT + V",
+   "behavior": 1,
+   "params_hex": "19000703"
+  },
+  {
+   "layer": 3,
+   "pos": 54,
+   "action_code": "LALT + LSHIFT + ESC",
+   "behavior": 1,
+   "params_hex": "29000706"
+  },
+  {
+   "layer": 3,
+   "pos": 55,
+   "action_code": "LSHIFT + HOME",
+   "behavior": 1,
+   "params_hex": "4a000702"
+  },
+  {
+   "layer": 3,
+   "pos": 56,
+   "action_code": "LSHIFT + LCTRL + HOME",
+   "behavior": 1,
+   "params_hex": "4a000703"
+  },
+  {
+   "layer": 3,
+   "pos": 57,
+   "action_code": "LSHIFT + LCTRL + DOWN",
+   "behavior": 1,
+   "params_hex": "51000703"
+  },
+  {
+   "layer": 3,
+   "pos": 58,
+   "action_code": "LSHIFT + LCTRL + UP",
+   "behavior": 1,
+   "params_hex": "52000703"
+  },
+  {
+   "layer": 3,
+   "pos": 59,
+   "action_code": "LSHIFT + PG_DN",
+   "behavior": 1,
+   "params_hex": "4e000702"
+  },
+  {
+   "layer": 3,
+   "pos": 60,
+   "action_code": "LSHIFT + PG_UP",
+   "behavior": 1,
+   "params_hex": "4b000702"
+  },
+  {
+   "layer": 3,
+   "pos": 61,
+   "action_code": "LSHIFT + DOWN",
+   "behavior": 1,
+   "params_hex": "51000702"
+  },
+  {
+   "layer": 3,
+   "pos": 62,
+   "action_code": "LALT + PG_UP",
+   "behavior": 1,
+   "params_hex": "4b000704"
+  },
+  {
+   "layer": 3,
+   "pos": 63,
+   "action_code": "LCTRL + T",
+   "behavior": 1,
+   "params_hex": "17000701"
+  },
+  {
+   "layer": 3,
+   "pos": 64,
+   "action_code": "LCTRL + TAB",
+   "behavior": 1,
+   "params_hex": "2b000701"
+  },
+  {
+   "layer": 3,
+   "pos": 65,
+   "action_code": "LALT + ESC",
+   "behavior": 1,
+   "params_hex": "29000704"
+  },
+  {
+   "layer": 3,
+   "pos": 66,
+   "action_code": "LALT + LSHIFT + ESC",
+   "behavior": 1,
+   "params_hex": "29000706"
+  },
+  {
+   "layer": 3,
+   "pos": 67,
+   "action_code": "LCTRL + V",
+   "behavior": 1,
+   "params_hex": "19000701"
+  },
+  {
+   "layer": 3,
+   "pos": 68,
+   "action_code": "LCTRL + LSHIFT + TAB",
+   "behavior": 1,
+   "params_hex": "2b000703"
+  },
+  {
+   "layer": 3,
+   "pos": 69,
+   "action_code": "LALT + ESC",
+   "behavior": 1,
+   "params_hex": "29000704"
+  },
+  {
+   "layer": 3,
+   "pos": 70,
+   "action_code": "LCTRL + Y",
+   "behavior": 1,
+   "params_hex": "1c000701"
+  },
+  {
+   "layer": 3,
+   "pos": 71,
+   "action_code": "LSHIFT + LEFT",
+   "behavior": 1,
+   "params_hex": "50000702"
+  },
+  {
+   "layer": 3,
+   "pos": 72,
+   "action_code": "LSHIFT + RIGHT",
+   "behavior": 1,
+   "params_hex": "4f000702"
+  },
+  {
+   "layer": 3,
+   "pos": 73,
+   "action_code": "LSHIFT + UP",
+   "behavior": 1,
+   "params_hex": "52000702"
+  },
+  {
+   "layer": 4,
+   "pos": 0,
+   "action_code": "LALT + Z",
+   "behavior": 1,
+   "params_hex": "1d000704"
+  },
+  {
+   "layer": 4,
+   "pos": 1,
+   "action_code": "F12",
+   "behavior": 1,
+   "params_hex": "45000700"
+  },
+  {
+   "layer": 4,
+   "pos": 2,
+   "action_code": "LSHIFT + F12",
+   "behavior": 1,
+   "params_hex": "45000702"
+  },
+  {
+   "layer": 4,
+   "pos": 3,
+   "action_code": "F2",
+   "behavior": 1,
+   "params_hex": "3b000700"
+  },
+  {
+   "layer": 4,
+   "pos": 4,
+   "action_code": "LALT + CLICK",
+   "behavior": 1,
+   "params_hex": "00000004"
+  },
+  {
+   "layer": 4,
+   "pos": 5,
+   "action_code": "LSHIFT + LALT + I",
+   "behavior": 1,
+   "params_hex": "0c000706"
+  },
+  {
+   "layer": 4,
+   "pos": 6,
+   "action_code": "LCTRL + L",
+   "behavior": 1,
+   "params_hex": "0f000701"
+  },
+  {
+   "layer": 4,
+   "pos": 16,
+   "action_code": "LSHIFT + LALT + LEFT",
+   "behavior": 1,
+   "params_hex": "50000706"
+  },
+  {
+   "layer": 4,
+   "pos": 17,
+   "action_code": "LALT + ENTER",
+   "behavior": 1,
+   "params_hex": "00000004"
+  },
+  {
+   "layer": 4,
+   "pos": 18,
+   "action_code": "LSHIFT + F8",
+   "behavior": 1,
+   "params_hex": "41000702"
+  },
+  {
+   "layer": 4,
+   "pos": 19,
+   "action_code": "LCTRL + LSHIFT + TAB",
+   "behavior": 1,
+   "params_hex": "2b000703"
+  },
+  {
+   "layer": 4,
+   "pos": 20,
+   "action_code": "F9",
+   "behavior": 1,
+   "params_hex": "42000700"
+  },
+  {
+   "layer": 4,
+   "pos": 21,
+   "action_code": "F11",
+   "behavior": 1,
+   "params_hex": "44000700"
+  },
+  {
+   "layer": 4,
+   "pos": 22,
+   "action_code": "LSHIFT + F11",
+   "behavior": 1,
+   "params_hex": "44000702"
+  },
+  {
+   "layer": 4,
+   "pos": 30,
+   "action_code": "F10",
+   "behavior": 1,
+   "params_hex": "43000700"
+  },
+  {
+   "layer": 4,
+   "pos": 31,
+   "action_code": "LCTRL + GRAVE",
+   "behavior": 1,
+   "params_hex": "35000701"
+  },
+  {
+   "layer": 4,
+   "pos": 32,
+   "action_code": "LCTRL + LSHIFT + GRAVE",
+   "behavior": 1,
+   "params_hex": "35000703"
+  },
+  {
+   "layer": 4,
+   "pos": 33,
+   "action_code": "LSHIFT + LALT + UP",
+   "behavior": 1,
+   "params_hex": "52000706"
+  },
+  {
+   "layer": 4,
+   "pos": 34,
+   "action_code": "LSHIFT + LALT + RIGHT",
+   "behavior": 1,
+   "params_hex": "4f000706"
+  },
+  {
+   "layer": 4,
+   "pos": 35,
+   "action_code": "END",
+   "behavior": 1,
+   "params_hex": "4d000700"
+  },
+  {
+   "layer": 4,
+   "pos": 36,
+   "action_code": "HOME",
+   "behavior": 1,
+   "params_hex": "4a000700"
+  },
+  {
+   "layer": 4,
+   "pos": 46,
+   "action_code": "F8",
+   "behavior": 1,
+   "params_hex": "41000700"
+  },
+  {
+   "layer": 4,
+   "pos": 47,
+   "action_code": "LALT + DOWN",
+   "behavior": 1,
+   "params_hex": "51000704"
+  },
+  {
+   "layer": 4,
+   "pos": 48,
+   "action_code": "LALT + UP",
+   "behavior": 1,
+   "params_hex": "52000704"
+  },
+  {
+   "layer": 4,
+   "pos": 49,
+   "action_code": "LCTRL + TAB",
+   "behavior": 1,
+   "params_hex": "2b000701"
+  },
+  {
+   "layer": 4,
+   "pos": 50,
+   "action_code": "LCTRL + DOWN",
+   "behavior": 1,
+   "params_hex": "51000701"
+  },
+  {
+   "layer": 4,
+   "pos": 51,
+   "action_code": "LCTRL + UP",
+   "behavior": 1,
+   "params_hex": "52000701"
+  },
+  {
+   "layer": 4,
+   "pos": 52,
+   "action_code": "LALT + PG_DN",
+   "behavior": 1,
+   "params_hex": "4e000704"
+  },
+  {
+   "layer": 4,
+   "pos": 62,
+   "action_code": "LALT + PG_UP",
+   "behavior": 1,
+   "params_hex": "4b000704"
+  },
+  {
+   "layer": 4,
+   "pos": 63,
+   "action_code": "F5",
+   "behavior": 1,
+   "params_hex": "3e000700"
+  },
+  {
+   "layer": 4,
+   "pos": 64,
+   "action_code": "LSHIFT + F5",
+   "behavior": 1,
+   "params_hex": "3e000702"
+  }
+ ],
+ "token_usage": {
+  "X": {
+   "usage": 27,
+   "page": 7
+  },
+  "B": {
+   "usage": 5,
+   "page": 7
+  },
+  "BACKSPACE": {
+   "usage": 42,
+   "page": 7
+  },
+  "LEFT": {
+   "usage": 80,
+   "page": 7
+  },
+  "F": {
+   "usage": 9,
+   "page": 7
+  },
+  "A": {
+   "usage": 4,
+   "page": 7
+  },
+  "F8": {
+   "usage": 65,
+   "page": 7
+  },
+  "ESC": {
+   "usage": 41,
+   "page": 7
+  },
+  "TAB": {
+   "usage": 43,
+   "page": 7
+  },
+  "ENTER": {
+   "usage": 0,
+   "page": 0
+  },
+  "I": {
+   "usage": 12,
+   "page": 7
+  },
+  "D": {
+   "usage": 7,
+   "page": 7
+  },
+  "U": {
+   "usage": 24,
+   "page": 7
+  },
+  "Z": {
+   "usage": 29,
+   "page": 7
+  },
+  "F4": {
+   "usage": 61,
+   "page": 7
+  },
+  "C": {
+   "usage": 6,
+   "page": 7
+  },
+  "DELETE": {
+   "usage": 76,
+   "page": 7
+  },
+  "H": {
+   "usage": 11,
+   "page": 7
+  },
+  "RIGHT": {
+   "usage": 79,
+   "page": 7
+  },
+  "SPACE": {
+   "usage": 44,
+   "page": 7
+  },
+  "END": {
+   "usage": 77,
+   "page": 7
+  },
+  "PG_DN": {
+   "usage": 78,
+   "page": 7
+  },
+  "HOME": {
+   "usage": 74,
+   "page": 7
+  },
+  "DOWN": {
+   "usage": 81,
+   "page": 7
+  },
+  "UP": {
+   "usage": 82,
+   "page": 7
+  },
+  "V": {
+   "usage": 25,
+   "page": 7
+  },
+  "PG_UP": {
+   "usage": 75,
+   "page": 7
+  },
+  "T": {
+   "usage": 23,
+   "page": 7
+  },
+  "Y": {
+   "usage": 28,
+   "page": 7
+  },
+  "F12": {
+   "usage": 69,
+   "page": 7
+  },
+  "F2": {
+   "usage": 59,
+   "page": 7
+  },
+  "CLICK": {
+   "usage": 0,
+   "page": 0
+  },
+  "L": {
+   "usage": 15,
+   "page": 7
+  },
+  "F9": {
+   "usage": 66,
+   "page": 7
+  },
+  "F11": {
+   "usage": 68,
+   "page": 7
+  },
+  "F10": {
+   "usage": 67,
+   "page": 7
+  },
+  "GRAVE": {
+   "usage": 53,
+   "page": 7
+  },
+  "F5": {
+   "usage": 62,
+   "page": 7
+  }
+ }
+}
