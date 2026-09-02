@@ -282,5 +282,121 @@
   "source": "device reads (flash2.pcap slots 3/4) + docs/reference/naya-default-module-bindings.json",
   "note": "TUNE fields confirmed from a real read; TRACK has only axis+speed fields (no on-device gesture keypress); TOUCH/FLOAT need a device read",
   "generated": "2026-09-02"
+ },
+ "TOUCH": {
+  "slot_seen": 1,
+  "source": "device slot 1 (stored Touch-Windows config) correlated with default map; address TBD (needs a docked Touch)",
+  "fields": {
+   "0x00": {
+    "kind": "speed",
+    "label": "pointer_speed",
+    "value": 10
+   },
+   "0x01": {
+    "kind": "speed",
+    "label": "scroll_speed",
+    "value": 50
+   },
+   "0x02": {
+    "kind": "speed",
+    "label": "pointer_accel",
+    "value": 50
+   },
+   "0x03": {
+    "kind": "flag",
+    "label": "setting_0x03",
+    "value": 1
+   },
+   "0x04": {
+    "kind": "flag",
+    "label": "setting_0x04",
+    "value": 0
+   },
+   "0x0d": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": -1,
+    "note": "scroll/pointer routing"
+   },
+   "0x0e": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": 1,
+    "note": "scroll/pointer routing"
+   },
+   "0x0f": {
+    "kind": "axis",
+    "axis": 6,
+    "direction": -1,
+    "note": "scroll/pointer routing"
+   },
+   "0x10": {
+    "kind": "axis",
+    "axis": 6,
+    "direction": 1,
+    "note": "scroll/pointer routing"
+   },
+   "0x13": {
+    "kind": "axis",
+    "axis": 3,
+    "direction": 4,
+    "note": "scroll/pointer routing"
+   },
+   "0x15": {
+    "kind": "keypress",
+    "gesture": "swipe_up:touch:3_fingers",
+    "default_action": "LALT + LSHIFT + ESC"
+   },
+   "0x16": {
+    "kind": "keypress",
+    "gesture": "swipe_down:touch:3_fingers",
+    "default_action": "LALT + ESC"
+   },
+   "0x17": {
+    "kind": "keypress",
+    "gesture": "swipe_left:touch:3_fingers",
+    "default_action": "LCTRL + LSHIFT + TAB"
+   },
+   "0x18": {
+    "kind": "keypress",
+    "gesture": "swipe_right:touch:3_fingers",
+    "default_action": "LCTRL + TAB"
+   },
+   "0x19": {
+    "kind": "keypress",
+    "gesture": "tap:touch:4_fingers",
+    "default_action": "LGUI + TAB"
+   },
+   "0x1b": {
+    "kind": "keypress",
+    "gesture": "swipe_up:touch:4_fingers",
+    "default_action": "LALT + PG_UP"
+   },
+   "0x1c": {
+    "kind": "keypress",
+    "gesture": "swipe_down:touch:4_fingers",
+    "default_action": "LALT + PG_DN"
+   },
+   "0x1d": {
+    "kind": "keypress",
+    "gesture": "swipe_left:touch:4_fingers",
+    "default_action": "LGUI + LCTRL + LEFT"
+   },
+   "0x1e": {
+    "kind": "keypress",
+    "gesture": "swipe_right:touch:4_fingers",
+    "default_action": "LGUI + LCTRL + RIGHT"
+   },
+   "0x22": {
+    "kind": "keypress",
+    "gesture": null,
+    "note": "on-device keypress, no default-map match (C_VOL_UP)"
+   },
+   "0x23": {
+    "kind": "keypress",
+    "gesture": null,
+    "note": "on-device keypress, no default-map match (C_VOL_DOWN)"
+   }
+  }
  }
 }
