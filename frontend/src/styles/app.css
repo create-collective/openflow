@@ -218,3 +218,54 @@
   background: var(--neutral17);
   color: var(--text-muted);
 }
+
+/* --- Flash button + preview modal ------------------------------------------ */
+.nav-flash { padding: 0 12px 10px; }
+.flash-btn {
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+  cursor: pointer;
+}
+.flash-btn:hover { background: var(--accent-hover); }
+.flash-btn:disabled { opacity: 0.6; cursor: default; }
+
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.modal {
+  background: var(--neutral10);
+  border: 1px solid var(--neutral24);
+  border-radius: 12px;
+  padding: 20px 22px;
+  width: min(460px, 92vw);
+  max-height: 82vh; overflow: auto;
+  color: var(--neutral90);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.modal h3 { margin: 0 0 6px; color: var(--neutral100); }
+.modal-sub { margin: 0 0 14px; color: var(--neutral70); font-size: 13px; }
+.modal-error { color: var(--err); }
+.flash-diff { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; }
+.flash-diff li { color: var(--neutral80); }
+.flash-diff b { color: var(--accent); }
+.flash-diff-tot { color: var(--neutral60) !important; font-size: 12px; padding-top: 6px; }
+.flash-ops { margin-bottom: 12px; }
+.flash-ops summary { cursor: pointer; color: var(--neutral70); font-size: 13px; }
+.flash-ops table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+.flash-ops td { padding: 3px 6px; border-top: 1px solid var(--neutral17); color: var(--neutral80); }
+.flash-ops .mono { font-family: ui-monospace, monospace; color: var(--neutral60); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.btn-secondary, .btn-primary {
+  padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; border: none;
+}
+.btn-secondary { background: var(--neutral20); color: var(--neutral90); }
+.btn-primary { background: var(--accent); color: var(--accent-fg); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }

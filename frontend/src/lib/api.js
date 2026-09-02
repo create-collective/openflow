@@ -64,6 +64,10 @@ export const api = {
   dumpSettings: (side) => req("POST", "/rpc/dump-settings", { side }),
   checkForUpdates: () => req("POST", "/rpc/check-for-updates"),
 
+  flashPreview: (body = {}) => req("POST", "/rpc/flash-preview", body),
+  moduleGestures: (types) =>
+    req("GET", "/api/module-gestures" + (types ? `?types=${encodeURIComponent(types)}` : "")),
+
   settings: () => req("GET", "/api/settings"),
   setSetting: (key, value) => req("POST", "/rpc/set-setting", { key, value }),
   backups: () => req("GET", "/api/backups"),
