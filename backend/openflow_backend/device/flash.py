@@ -262,10 +262,11 @@ def module_gesture_write(slot: int, module_type: str,
 # --------------------------------------------------------------------------- #
 
 def flash(desired: DesiredState, *, transport=None, dest: int = 0x50, current: DesiredState | None = None,
-          full: bool | None = None, dry_run: bool = True) -> dict:
+          full: bool | None = None, dry_run: bool = True, reader=None) -> dict:
     """Compute + (optionally) send. dry_run=True (default) sends NOTHING — returns the plan,
     the rendered frames, and a summary. dry_run=False requires a connected transport and is the
-    only path that touches the device (ack-checked per frame, then verification reads)."""
+    only path that touches the device (ack-checked per frame, then verified via `reader`, a
+    callable returning a fresh device read as a DesiredState)."""
     plan = compute_plan(desired, current, full=full)
     rendered = render_frames(plan, dest)
     summary = {
@@ -281,5 +282,51 @@ def flash(desired: DesiredState, *, transport=None, dest: int = 0x50, current: D
 
     if transport is None:
         raise ValueError("dry_run=False requires a connected transport")
-    # WET PATH — intentionally not exercised until Phase C. Kept explicit so the flow is reviewable.
-    raise NotImplementedError("live flashing is Phase C; run with dry_run=True until then")
+    return _apply(plan, rendered, transport, desired, reader)
+
+
+def diff_desired(a: "DesiredState", b: "DesiredState") -> list[dict]:
+    """Records/leds in `a` (desired) that differ from `b` (device read-back). Empty = verified.
+    Only the positions/leds `a` sets are checked — a full re-read has extra padding we ignore."""
+    out = []
+    for idx, poss in a.layers.items():
+        for pos, rec in poss.items():
+            if b.layers.get(idx, {}).get(pos) != rec:
+                out.append({"kind": "layer", "layer": idx, "pos": pos,
+                            "want": [rec[0], rec[1].hex()],
+                            "got": _fmt_rec(b.layers.get(idx, {}).get(pos))})
+    for idx, leds in a.leds.items():
+        for i, hv in leds.items():
+            if b.leds.get(idx, {}).get(i) != hv:
+                out.append({"kind": "led", "layer": idx, "led": i,
+                            "want": hv, "got": b.leds.get(idx, {}).get(i)})
+    return out
+
+
+def _fmt_rec(rec):
+    return None if rec is None else [rec[0], rec[1].hex()]
+
+
+def _apply(plan, rendered, transport, desired, reader) -> dict:
+    """WET write: send each frame, check the ack, then verify by read-back. Aborts on the first
+    bad ack (never blind-continues), and reports a verify diff if `reader` is provided. The caller
+    is responsible for taking a backup first and restoring on failure."""
+    sent = []
+    for _op, (label, frames) in zip(plan, rendered):
+        for i, frame in enumerate(frames):
+            resp = transport._send_raw(frame, 2.0)
+            acks = [r for r in resp if getattr(r, "valid", False)]
+            flags = acks[0].flags if acks else None
+            sent.append({"op": label, "frame": i, "ack_flags": flags})
+            if flags != 0x00:   # 0x00 = OK; anything else (e.g. 0xEA) or no ack = stop
+                return {"status": "aborted", "op": label, "frame": i, "ack_flags": flags,
+                        "sent": sent, "reason": "bad or missing ack — not continuing"}
+    result = {"status": "sent", "ops": len(plan), "frames": len(sent), "sent": sent}
+    if reader is not None:
+        readback = reader()                       # a fresh device read as a DesiredState
+        mism = diff_desired(desired, readback)
+        result["verify"] = mism
+        result["status"] = "verified" if not mism else "verify-failed"
+    else:
+        result["status"] = "sent-unverified"
+    return result
