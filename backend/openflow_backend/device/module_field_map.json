@@ -1,0 +1,286 @@
+{
+ "TUNE": {
+  "slot_seen": 4,
+  "fields": {
+   "0x00": {
+    "kind": "speed",
+    "label": "pointer_speed"
+   },
+   "0x01": {
+    "kind": "speed",
+    "label": "scroll_speed"
+   },
+   "0x02": {
+    "kind": "speed",
+    "label": "pointer_accel"
+   },
+   "0x03": {
+    "kind": "flag",
+    "label": "flag_03",
+    "value": 1
+   },
+   "0x04": {
+    "kind": "flag",
+    "label": "flag_04",
+    "value": 0
+   },
+   "0x05": {
+    "kind": "setting",
+    "label": "setting_05",
+    "value": 5
+   },
+   "0x06": {
+    "kind": "setting",
+    "label": "setting_06",
+    "value": 75
+   },
+   "0x07": {
+    "kind": "setting",
+    "label": "setting_07",
+    "value": 1
+   },
+   "0x08": {
+    "kind": "keypress",
+    "gesture": "tap:tune:1_finger",
+    "default_action": "(user-set: Backspace)",
+    "note": "the 1-finger tap we captured flashing"
+   },
+   "0x09": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x0a": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": -1,
+    "note": "scroll L/R axis",
+    "gesture": "horizontal:tune:1_finger"
+   },
+   "0x0b": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": 1,
+    "note": "scroll L/R axis",
+    "gesture": "horizontal:tune:1_finger"
+   },
+   "0x0c": {
+    "kind": "axis",
+    "axis": 6,
+    "direction": -1,
+    "note": "scroll U/D axis",
+    "gesture": "vertical:tune:1_finger"
+   },
+   "0x0d": {
+    "kind": "axis",
+    "axis": 6,
+    "direction": 1,
+    "note": "scroll U/D axis",
+    "gesture": "vertical:tune:1_finger"
+   },
+   "0x0e": {
+    "kind": "keypress",
+    "gesture": "tap:tune:2_fingers",
+    "default_action": "C_PLAY_PAUSE",
+    "note": null
+   },
+   "0x0f": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x10": {
+    "kind": "keypress",
+    "gesture": "swipe_up:tune:2_fingers",
+    "default_action": "C_BRIGHTNESS_INC",
+    "note": null
+   },
+   "0x11": {
+    "kind": "keypress",
+    "gesture": "swipe_down:tune:2_fingers",
+    "default_action": "C_BRIGHTNESS_DEC",
+    "note": null
+   },
+   "0x12": {
+    "kind": "keypress",
+    "gesture": "swipe_left:tune:2_fingers",
+    "default_action": "C_REWIND",
+    "note": null
+   },
+   "0x13": {
+    "kind": "keypress",
+    "gesture": "swipe_right:tune:2_fingers",
+    "default_action": "C_FAST_FORWARD",
+    "note": null
+   },
+   "0x14": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x15": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x16": {
+    "kind": "keypress",
+    "gesture": "tap:tune:3_fingers",
+    "default_action": "C_MUTE",
+    "note": null
+   },
+   "0x17": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x18": {
+    "kind": "keypress",
+    "gesture": "swipe_up:tune:3_fingers",
+    "default_action": null,
+    "note": "LED action (brightness up) - keypress slot empty"
+   },
+   "0x19": {
+    "kind": "keypress",
+    "gesture": "swipe_down:tune:3_fingers",
+    "default_action": null,
+    "note": "LED action (brightness down) - keypress slot empty"
+   },
+   "0x1a": {
+    "kind": "keypress",
+    "gesture": "swipe_left:tune:3_fingers",
+    "default_action": "C_PREVIOUS",
+    "note": null
+   },
+   "0x1b": {
+    "kind": "keypress",
+    "gesture": "swipe_right:tune:3_fingers",
+    "default_action": "C_NEXT",
+    "note": null
+   },
+   "0x1c": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x1d": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x1e": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x1f": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x20": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x21": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x22": {
+    "kind": "keypress",
+    "gesture": "rotate:tune:dial+",
+    "default_action": null,
+    "note": "dial clockwise (was Vol+)"
+   },
+   "0x23": {
+    "kind": "keypress",
+    "gesture": "rotate:tune:dial-",
+    "default_action": null,
+    "note": "dial counter-clockwise (was Vol-)"
+   }
+  }
+ },
+ "TRACK": {
+  "slot_seen": 3,
+  "fields": {
+   "0x00": {
+    "kind": "speed",
+    "label": "pointer_speed"
+   },
+   "0x01": {
+    "kind": "speed",
+    "label": "scroll_speed"
+   },
+   "0x02": {
+    "kind": "speed",
+    "label": "pointer_accel"
+   },
+   "0x03": {
+    "kind": "flag",
+    "label": "flag_03",
+    "value": 1
+   },
+   "0x04": {
+    "kind": "flag",
+    "label": "flag_04",
+    "value": 0
+   },
+   "0x05": {
+    "kind": "axis",
+    "axis": 1,
+    "direction": -1,
+    "note": "scroll/pointer routing (value gesture)"
+   },
+   "0x06": {
+    "kind": "axis",
+    "axis": 1,
+    "direction": 1,
+    "note": "scroll/pointer routing (value gesture)"
+   },
+   "0x07": {
+    "kind": "axis",
+    "axis": 0,
+    "direction": -1,
+    "note": "scroll/pointer routing (value gesture)"
+   },
+   "0x08": {
+    "kind": "axis",
+    "axis": 0,
+    "direction": 1,
+    "note": "scroll/pointer routing (value gesture)"
+   },
+   "0x09": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": 1,
+    "note": "scroll/pointer routing (value gesture)"
+   },
+   "0x0a": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": -1,
+    "note": "scroll/pointer routing (value gesture)"
+   },
+   "0x0b": {
+    "kind": "axis",
+    "axis": 3,
+    "direction": 8,
+    "note": "scroll/pointer routing (value gesture)"
+   },
+   "0x0c": {
+    "kind": "axis",
+    "axis": 3,
+    "direction": 2,
+    "note": "scroll/pointer routing (value gesture)"
+   },
+   "0x0d": {
+    "kind": "axis",
+    "axis": 3,
+    "direction": 4,
+    "note": "scroll/pointer routing (value gesture)"
+   },
+   "0x0e": {
+    "kind": "axis",
+    "axis": 3,
+    "direction": 1,
+    "note": "scroll/pointer routing (value gesture)"
+   }
+  }
+ },
+ "_meta": {
+  "source": "device reads (flash2.pcap slots 3/4) + docs/reference/naya-default-module-bindings.json",
+  "note": "TUNE fields confirmed from a real read; TRACK has only axis+speed fields (no on-device gesture keypress); TOUCH/FLOAT need a device read",
+  "generated": "2026-09-02"
+ }
+}

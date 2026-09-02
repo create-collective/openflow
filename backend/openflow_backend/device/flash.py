@@ -231,6 +231,32 @@ def render_frames(plan: list[WriteOp], dest: int = 0x50) -> list[tuple[str, list
     return [(op.label, R.frames_for(dest, op.sub, op.payload, cat=op.cat)) for op in plan]
 
 
+def module_gesture_write(slot: int, module_type: str,
+                         changes: dict[str, tuple[str, str]]) -> WriteOp | None:
+    """Build a sparse WRITE_MODULE_CONFIG_DATA that rebinds gesture key-actions.
+
+    `changes` maps a gesture string to (action_type, action_code), e.g.
+    {"tap:tune:2_fingers": ("key", "C_MUTE"), "swipe_up:tune:2_fingers": ("key", "A")}.
+    Each gesture is resolved to its device field via module_fields and encoded as a keypress;
+    only the changed fields are sent (read-modify-write — the rest of the slot is left as-is).
+    Raises if a gesture has no writable keypress field (e.g. an axis/LED gesture, or an
+    unmapped module type). Pairs with a prior read so the caller only edits fields it saw."""
+    from . import module_fields as mf
+    gf = mf.gesture_fields(module_type)
+    recs = []
+    for gesture, (atype, acode) in sorted(changes.items()):
+        field = gf.get(gesture)
+        if field is None:
+            raise R.RemapEncodeError(
+                f"{module_type} gesture {gesture!r} has no writable keypress field "
+                f"(axis/LED gesture, or unmapped module)")
+        recs.append(R.encode_module_field(field, R.encode_keypress(atype, acode)))
+    if not recs:
+        return None
+    return WriteOp(R.WRITE_MODULE_CONFIG_DATA, R.encode_module_config(slot, recs),
+                   f"module {module_type} slot {slot} ({len(recs)} gesture(s))")
+
+
 # --------------------------------------------------------------------------- #
 # flash (dry by default)                                                       #
 # --------------------------------------------------------------------------- #
