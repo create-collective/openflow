@@ -510,9 +510,10 @@ _GESTURE_SLOTS = {
         "clockwise_rotate:tune:dial",           # device field 0x22 -- not shown by NayaFlow
         "counter_clockwise_rotate:tune:dial",   # device field 0x23 -- not shown by NayaFlow
     ),
-    "TRACK": tuple(f"tap_hold:track:button_{i}" for i in (1, 2, 3, 4)),
+    # the renderer spells this "hold:"; "tap_hold:" appears only inside NayaCore
+    "TRACK": tuple(f"hold:track:button_{i}" for i in (1, 2, 3, 4)),
     "TOUCH": (
-        "double_tap:touch:2_fingers",   # the enum has no plain 2-finger tap for Touch
+        "tap:touch:2_fingers",          # NayaFlow default: right click
         "pinch:touch:2_fingers",
         "spread:touch:2_fingers",
     ),
