@@ -92,7 +92,21 @@ def test_track_has_no_writable_gestures() -> None:
     print("Track OK: no on-device gesture keypress fields; gesture write refuses (as designed)")
 
 
+def test_module_type_is_address_derived() -> None:
+    """Regression: module type comes from the dock-bus address, not MODULE_DETECT (which
+    returns 0x01 for every module and mislabelled both halves 'Touch')."""
+    from nayactl import constants as C
+    assert C.module_type_from_address(0x40) == "Tune"
+    assert C.module_type_from_address(0x21) == "Track"
+    assert C.module_type_from_address(0x01) == "Unknown (addr 0x01)"  # the old detect byte
+    assert C.module_type_from_address(None) == "Unknown"
+    # MODULE_DETECT byte 0x01 must NOT resolve to a real module type via the address map
+    assert 0x01 not in C.MODULE_ADDR_TYPES
+    print("Module type OK: address-derived (0x40=Tune, 0x21=Track); detect byte 0x01 not a type")
+
+
 if __name__ == "__main__":
     test_field_map_reencodes_device_bytes()
     test_gesture_write_roundtrip()
     test_track_has_no_writable_gestures()
+    test_module_type_is_address_derived()

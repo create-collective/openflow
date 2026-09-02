@@ -119,6 +119,22 @@ MODULE_TYPES = {
   5: "Query",
 }
 
+# Module type is DERIVED FROM THE DOCK-BUS ADDRESS, not queried: MODULE_DETECT (0xDE/0x1002)
+# only reports presence (always 0x01), so keying MODULE_TYPES on it labels every module "Touch".
+# The address comes from SEND_HANDSHAKE (0xDE/0x1001) -> [01][addr] or GET_ADDRESS (0xDE/0x1007).
+# Observed addresses (docs/remap-protocol-live.md); Touch/Float/Query TBD — dock each to capture.
+MODULE_ADDR_TYPES = {
+  0x40: "Tune",
+  0x21: "Track",
+}
+
+
+def module_type_from_address(addr):
+  """Dock-bus address -> module type string. Unknown/None addresses are labelled, not guessed."""
+  if addr is None:
+    return "Unknown"
+  return MODULE_ADDR_TYPES.get(addr, f"Unknown (addr 0x{addr:02X})")
+
 # --- BLE commands (0xBE) ---
 
 BLE_SET_PAIR_ADDRESS      = 0x1001

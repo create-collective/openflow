@@ -159,11 +159,20 @@ class DeviceService:
         if payload is not None and len(payload) >= 6:
             info["bleAddress"] = ":".join(f"{b:02X}" for b in payload[:6])
 
-        # Module detection
-        t.send_command(dest, C.CAT_MODULE, C.MOD_SEND_HANDSHAKE, timeout=1.5)
+        # Module detection. Type is DERIVED FROM THE ADDRESS, not from MODULE_DETECT (which
+        # only reports presence = 0x01 for every module — keying the type on it mislabels
+        # every docked module "Touch"). The address comes from the handshake ([01][addr]) or
+        # GET_ADDRESS. See docs/remap-protocol-live.md.
+        handshake = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_SEND_HANDSHAKE, timeout=1.5))
         payload = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_DETECT))
         if payload is not None and len(payload) >= 1 and payload[0] != 0:
-            module: dict = {"type": C.MODULE_TYPES.get(payload[0], f"Unknown ({payload[0]})")}
+            addr = handshake[1] if handshake is not None and len(handshake) >= 2 else None
+            if addr is None:
+                ap = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_ADDRESS))
+                addr = ap[0] if ap is not None and len(ap) >= 1 else None
+            module: dict = {"type": C.module_type_from_address(addr)}
+            if addr is not None:
+                module["address"] = addr
             mp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_FW_VERSION))
             if mp is not None:
                 module["firmwareVersion"] = format_fw_version(mp)
