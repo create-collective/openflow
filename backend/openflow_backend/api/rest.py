@@ -21,7 +21,8 @@ from ..db import macros as mac
 from ..db import profiles as prof
 from ..db import settings as settings_db
 from ..db import userdata as ud
-from ..device import actions_catalog
+from ..db.database import connect as db_connect
+from ..device import actions_catalog, flash as flash_mod, gesture_presets, module_fields
 from ..device.commands import CommandError, dispatch
 from ..device.service import DangerousCommandError, TransportError
 from .state import get_service
@@ -429,3 +430,45 @@ async def dump_settings(body: dict = Body(default={})) -> dict:
 async def check_for_updates() -> dict:
     # OpenFlow has no external update dependency. Always report up to date.
     return {"updateAvailable": False, "reason": "OpenFlow has no external update source"}
+
+
+# --- flash (write) : preview only for now (dry-run); real write is Phase C ---
+
+@router.get("/api/module-gestures")
+async def module_gestures(types: str = "TUNE,TRACK,TOUCH,FLOAT") -> dict:
+    """Per-module editable gestures + preset actions, for the gesture dropdowns.
+
+    Static structure from the recovered field map; a live device read overlays the current
+    binding later. Modules with no writable gesture fields (e.g. TRACK today) return an empty
+    `gestures` list plus a `note`, so the UI can explain why."""
+    out = []
+    for mt in [t.strip().upper() for t in types.split(",") if t.strip()]:
+        gestures = gesture_presets.gestures_for(mt)
+        entry = {"module_type": mt, "gestures": gestures}
+        if not gestures and module_fields.field_map(mt):
+            entry["note"] = "no on-device gesture keypress fields (axis/speed only)"
+        elif not module_fields.field_map(mt):
+            entry["note"] = "no field map yet — connect this module and read it"
+        out.append(entry)
+    return {"modules": out}
+
+
+def _flash_preview() -> dict:
+    conn = db_connect()
+    try:
+        desired = flash_mod.desired_from_db(conn)
+    finally:
+        conn.close()
+    return flash_mod.flash(desired, dry_run=True, full=True)
+
+
+@router.post("/rpc/flash-preview")
+async def flash_preview(body: dict = Body(default={})) -> dict:
+    """Dry-run the full flash from the current DB: returns the write plan + a diff summary +
+    the rendered frames. Sends NOTHING to the device. The Flash button shows this before a real
+    write (which requires a separate explicit confirm and is Phase C)."""
+    try:
+        result = await run_in_threadpool(_flash_preview)
+    except Exception as e:  # DB/encode errors surface cleanly to the UI
+        raise HTTPException(status_code=400, detail=f"flash preview failed: {e}")
+    return {"dryRun": True, **result}
