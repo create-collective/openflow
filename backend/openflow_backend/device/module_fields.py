@@ -29,6 +29,31 @@ def gesture_fields(module_type: str) -> dict[str, int]:
             if v.get("kind") == "keypress" and v.get("gesture")}
 
 
+# Action types that encode as a device keypress (what a keypress gesture field accepts).
+KEYPRESS_ACTION_TYPES = {"key", "modifier", "shortcut_alias"}
+
+
+def gesture_kind(module_type: str, behavior: str) -> str | None:
+    """The device field kind for a gesture behavior string ('keypress'/'axis'/...), or None
+    if that gesture has no field on the device (unknown module, or not stored on-device)."""
+    for v in field_map(module_type).values():
+        if v.get("gesture") == behavior:
+            return v.get("kind")
+    return None
+
+
+def action_ok_for_kind(action_type: str, field_kind: str | None) -> bool:
+    """Whether an action_type can be flashed into a field of this kind. Used to filter the
+    gesture dropdown so the UI never offers something the firmware could not accept."""
+    if action_type == "none":
+        return True
+    if field_kind == "keypress":
+        return action_type in KEYPRESS_ACTION_TYPES
+    if field_kind == "axis":
+        return action_type == "value"
+    return False  # unknown field kind, or LED/mouse — not confirmed writable
+
+
 def label_fields(module_type: str, parsed_fields: list[tuple[int, int, bytes]]) -> list[dict]:
     """Annotate a device read (list of (field, type, value)) with gesture labels for the UI.
 

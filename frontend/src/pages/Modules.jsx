@@ -29,11 +29,24 @@ function targetLabel(t) {
 // One editable gesture row: gesture label -> action dropdown. Options come from
 // the backend catalog; an imported value that isn't in the catalog is kept as a
 // synthetic first option so nothing is silently dropped.
+// Action types each device field kind can actually hold (data-backed, mirrors the
+// backend module_fields.action_ok_for_kind). Only these are offered when a gesture
+// maps to a real device field, so the UI can't stage something the firmware refuses.
+const KEYPRESS_TYPES = new Set(["key", "modifier", "shortcut_alias"]);
+function okForKind(actionType, fieldKind) {
+  if (actionType === "none") return true;
+  if (fieldKind === "keypress") return KEYPRESS_TYPES.has(actionType);
+  if (fieldKind === "axis") return actionType === "value";
+  return true; // no device field (DB-only) — don't restrict, but the row is badged
+}
+
 function GestureRow({ b, actions, onPick }) {
-  const known = actions.some((a) => a.code === (b.actionCode || ""));
+  // Constrain the dropdown to what this gesture's device field accepts.
+  const usable = actions.filter((a) => okForKind(a.actionType, b.fieldKind));
+  const known = usable.some((a) => a.code === (b.actionCode || ""));
   const opts = known
-    ? actions
-    : [{ code: b.actionCode || "", label: cleanCode(b.actionCode), actionType: b.actionType, group: "Imported" }, ...actions];
+    ? usable
+    : [{ code: b.actionCode || "", label: cleanCode(b.actionCode), actionType: b.actionType, group: "Imported" }, ...usable];
   // Group into <optgroup>s (blank group renders ungrouped at the top).
   const order = [];
   const groups = {};
@@ -42,11 +55,17 @@ function GestureRow({ b, actions, onPick }) {
     if (!(g in groups)) { groups[g] = []; order.push(g); }
     groups[g].push(o);
   }
+  const badge = b.flashable
+    ? { cls: "flashable", text: "flashable", title: "This gesture is stored on the device and can be flashed." }
+    : b.fieldKind === "axis"
+    ? { cls: "axis", text: "axis", title: "Scroll/pointer routing — writing this is not confirmed yet." }
+    : { cls: "dbonly", text: "app only", title: "No device field for this gesture yet — edits stay in the app until confirmed." };
   return (
     <div className="skp-row" style={{ cursor: "default" }}>
       <span className="skp-beh" style={{ textTransform: "capitalize" }}>
         {(b.gesture || "").replace(/_/g, " ")}
       </span>
+      <span className={"gesture-badge " + badge.cls} title={badge.title}>{badge.text}</span>
       <span className="skp-arrow">→</span>
       <select
         className="mac-input mod-action"

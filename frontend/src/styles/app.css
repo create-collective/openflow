@@ -269,3 +269,12 @@
 .btn-secondary { background: var(--neutral20); color: var(--neutral90); }
 .btn-primary { background: var(--accent); color: var(--accent-fg); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* --- Module gesture flashability badges ------------------------------------ */
+.gesture-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 5px; margin: 0 8px; white-space: nowrap;
+}
+.gesture-badge.flashable { background: rgba(52, 211, 153, 0.16); color: var(--ok); }
+.gesture-badge.axis { background: rgba(25, 195, 212, 0.16); color: var(--accent); }
+.gesture-badge.dbonly { background: var(--neutral20); color: var(--neutral60); }

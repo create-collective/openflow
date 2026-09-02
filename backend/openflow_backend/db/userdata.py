@@ -20,6 +20,7 @@ import uuid
 from datetime import datetime, timezone
 
 from .database import connect
+from ..device import module_fields
 
 UNSET_COLOR = "#xxxxxx"
 
@@ -532,6 +533,10 @@ def get_modules() -> dict:
                 (m["id"],),
             ):
                 parts = (b["behavior"] or "").split(":")
+                # Data-backed flashability: does this gesture have a device field, and what
+                # action kinds can it hold? (from the recovered module field map)
+                field_kind = module_fields.gesture_kind(m["type"], b["behavior"] or "")
+                flashable = (b["behavior"] or "") in module_fields.gesture_fields(m["type"])
                 bindings.append({
                     "id": b["id"],
                     "behavior": b["behavior"],
@@ -543,6 +548,8 @@ def get_modules() -> dict:
                     "threshold": b["threshold"],
                     "direction": b["direction"],
                     "mode": b["mode"],
+                    "fieldKind": field_kind,      # 'keypress' / 'axis' / None (no device field)
+                    "flashable": flashable,       # True = a keypress gesture we can write
                 })
             stored = {
                 s["correlation_id"]: s["value"]
