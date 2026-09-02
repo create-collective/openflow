@@ -179,13 +179,13 @@
    },
    "0x22": {
     "kind": "keypress",
-    "gesture": "rotate:tune:dial+",
+    "gesture": "clockwise_rotate:tune:dial",
     "default_action": null,
     "note": "dial clockwise (was Vol+)"
    },
    "0x23": {
     "kind": "keypress",
-    "gesture": "rotate:tune:dial-",
+    "gesture": "counter_clockwise_rotate:tune:dial",
     "default_action": null,
     "note": "dial counter-clockwise (was Vol-)"
    }

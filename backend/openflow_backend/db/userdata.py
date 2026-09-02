@@ -495,6 +495,58 @@ def _ensure_touch_defaults(conn) -> None:
     conn.commit()
 
 
+# Gesture slots NayaFlow's own vocabulary defines but its editor leaves blank or hides,
+# so our UI can bind them. Every string here is verbatim from the recovered enum
+# (docs/reference/naya-gesture-enum.json) -- checked by tests/test_gesture_slots.py.
+#   * parity gaps: gestures NayaFlow renders (blank) that we dropped entirely, because
+#     we build rows from stored bindings and an unbound gesture has no row.
+#   * dial split: the Tune dial's two directions are separate on-device keypress fields
+#     (module_field_map TUNE 0x22/0x23); NayaFlow only exposes the combined value binding.
+_GESTURE_SLOTS = {
+    "TUNE": (
+        "tap:tune:1_finger",                    # blank in NayaFlow; device field 0x08
+        "pinch:tune:2_fingers",
+        "spread:tune:2_fingers",
+        "clockwise_rotate:tune:dial",           # device field 0x22 -- not shown by NayaFlow
+        "counter_clockwise_rotate:tune:dial",   # device field 0x23 -- not shown by NayaFlow
+    ),
+    "TRACK": tuple(f"tap_hold:track:button_{i}" for i in (1, 2, 3, 4)),
+    "TOUCH": (
+        "double_tap:touch:2_fingers",   # the enum has no plain 2-finger tap for Touch
+        "pinch:touch:2_fingers",
+        "spread:touch:2_fingers",
+    ),
+}
+
+
+def _ensure_gesture_slots(conn) -> None:
+    """Backfill unbound gesture rows so every gesture the module supports is editable.
+
+    Additive and idempotent: only inserts a behavior that has no row yet, and always as
+    an unbound ('none') action -- it never touches an existing binding. Rows are created
+    up front rather than synthesised in get_modules so the flash/diff path sees ordinary
+    bindings with real ids."""
+    now = _now()
+    for mtype, behaviors in _GESTURE_SLOTS.items():
+        for m in conn.execute("SELECT id FROM module_configs WHERE type=?", (mtype,)).fetchall():
+            cid = m["id"]
+            existing = {
+                r["behavior"] for r in conn.execute(
+                    "SELECT behavior FROM module_bindings WHERE module_config_id=?", (cid,)
+                )
+            }
+            for behavior in behaviors:
+                if behavior in existing:
+                    continue
+                conn.execute(
+                    "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
+                    "invert, threshold, direction, mode, module_config_id, id, updated_at, created_at) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (None, "", "none", behavior, 0, 0, "+", 0, cid, str(uuid.uuid4()), now, now),
+                )
+    conn.commit()
+
+
 def set_module_binding(binding_id: str, action_code: str, action_type: str) -> dict:
     """Update a module gesture's assigned action (from the Modules dropdown)."""
     conn = connect()
@@ -522,6 +574,7 @@ def get_modules() -> dict:
     conn = connect()
     try:
         _ensure_touch_defaults(conn)
+        _ensure_gesture_slots(conn)
         configs = []
         for m in conn.execute(
             "SELECT id, name, type, size, order_id, icon_id FROM module_configs ORDER BY type, order_id"
