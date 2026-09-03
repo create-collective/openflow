@@ -107,11 +107,44 @@ def test_an_unresolvable_switch_is_not_flashed_as_layer_zero():
     print("  unresolvable -> not written at all; resolvable -> still encodes its real index")
 
 
+def test_reorder_takes_a_complete_list_and_refuses_a_partial_one():
+    """A partial list would silently collapse the missing layers to order 0 and collide."""
+    conn, lids = _db()
+    with mock.patch.object(ud, "connect", lambda: KeepOpen(conn)):
+        ud.reorder_layers("P", [lids[2], lids[0], lids[1]])
+        order = [r["id"] for r in conn.execute(
+            "SELECT id FROM layers WHERE profile_id='P' ORDER BY order_id")]
+        assert order == [lids[2], lids[0], lids[1]], order
+        for bad in ([lids[0]], [lids[0], lids[1]], lids + ["nope"]):
+            try:
+                ud.reorder_layers("P", bad)
+            except ValueError:
+                continue
+            raise AssertionError(f"accepted an incomplete order: {bad}")
+    print("  reorder applies a full list and refuses a partial one")
+
+
+def test_reorder_leaves_switch_bindings_alone():
+    """A switch names its target by uuid and is resolved to an index only at flash time, so a
+    moved layer keeps its keys -- there is nothing to adjust."""
+    conn, lids = _db()
+    before = {r["action_code"] for r in conn.execute("SELECT action_code FROM key_bindings")}
+    with mock.patch.object(ud, "connect", lambda: KeepOpen(conn)):
+        ud.reorder_layers("P", [lids[2], lids[1], lids[0]])
+    after = {r["action_code"] for r in conn.execute("SELECT action_code FROM key_bindings")}
+    assert before == after, "reordering rewrote a binding it did not need to"
+    print("  reordering rewrites no bindings")
+
+
 if __name__ == "__main__":
     for fn in (test_references_are_found_before_deleting,
                test_deleting_a_middle_layer_repoints_to_its_successor,
                test_deleting_the_last_layer_clears_instead,
-               test_an_unresolvable_switch_is_not_flashed_as_layer_zero):
+               test_an_unresolvable_switch_is_not_flashed_as_layer_zero,
+               test_reorder_takes_a_complete_list_and_refuses_a_partial_one,
+               test_reorder_leaves_switch_bindings_alone):
         print(fn.__name__)
         fn()
     print("\nOK")
+
+

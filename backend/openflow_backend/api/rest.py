@@ -382,6 +382,15 @@ async def duplicate_layer(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/rpc/reorder-layers")
+async def reorder_layers(body: dict = Body(...)) -> dict:
+    """Reorder a profile's layers. Takes the complete ordered id list, not a move."""
+    try:
+        return await run_in_threadpool(ud.reorder_layers, body["profileId"], body["orderedIds"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/rpc/set-base-layer")
 async def set_base_layer(body: dict = Body(...)) -> dict:
     try:

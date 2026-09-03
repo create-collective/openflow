@@ -15,6 +15,10 @@ export default function Bindings() {
   const [activeProfileId, setActiveProfileId] = useState(() => {
     try { return localStorage.getItem("openflow.activeProfile") || null; } catch { return null; }
   });
+  // Shown when a layer operation actually adjusted layer-switch keys -- a change the user did
+  // not type. Contextual rather than a standing caution: a permanent banner is dismissed once
+  // and then never seen again, which is exactly when it would have mattered.
+  const [layerNotice, setLayerNotice] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [macros, setMacros] = useState([]);
   const [activeLayerId, setActiveLayerId] = useState(null);
@@ -224,7 +228,28 @@ export default function Bindings() {
             onAdd={async (name) => { const r = await api.createLayer(profile.id, name); await load(); setActiveLayerId(r.id); }}
             onRename={async (id, name) => { await api.renameLayer(id, name); await load(); }}
             onDuplicate={async (id) => { await api.duplicateLayer(id); await load(); }}
-            onDelete={async (id) => { await api.deleteLayer(id); if (activeLayerId === id) setActiveLayerId(null); await load(); }}
+            onDelete={async (id) => {
+              const r = await api.deleteLayer(id);
+              if (activeLayerId === id) setActiveLayerId(null);
+              const moved = (r?.repointedReferences || 0) + (r?.clearedReferences || 0);
+              if (moved) {
+                setLayerNotice(
+                  r.repointedReferences
+                    ? `${r.repointedReferences} layer-switch key(s) now point at the layer that took its place`
+                      + (r.clearedReferences ? `, and ${r.clearedReferences} were cleared.` : ".")
+                      + " Check them before flashing."
+                    : `${r.clearedReferences} layer-switch key(s) were cleared — nothing took the deleted layer's place.`);
+              }
+              await load();
+            }}
+            onReorder={async (orderedIds) => {
+              await api.reorderLayers(profile.id, orderedIds);
+              // Reordering needs no key adjustment: a switch holds the target layer's uuid and
+              // is resolved to an index only at flash time, so it follows the layer it names.
+              await load();
+            }}
+            notice={layerNotice}
+            onDismissNotice={() => setLayerNotice(null)}
             onSetBase={async (id) => { await api.setBaseLayer(id); await load(); }}
             {...layerFileHandlers}
           />

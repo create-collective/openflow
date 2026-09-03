@@ -1546,3 +1546,10 @@
   padding: 0 2px;
 }
 .layer-note-x:hover { color: var(--text); }
+
+/* Layer rows can be dragged to reorder. */
+.layer-row[draggable="true"] { cursor: grab; }
+.layer-row.dragging { opacity: 0.45; }
+.layer-row.dragover {
+  box-shadow: inset 0 2px 0 0 var(--accent);
+}

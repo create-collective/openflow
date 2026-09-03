@@ -15,6 +15,9 @@ export default function LayerList({
   onImportLayer,
   onCopyLayerFrom,
   onCountReferences,
+  onReorder,
+  notice,
+  onDismissNotice,
   profiles = [],
 }) {
   const [menuFor, setMenuFor] = useState(null); // layer id whose menu is open
@@ -29,16 +32,8 @@ export default function LayerList({
   const [importOpen, setImportOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const rootRef = useRef(null);
-  // Copying, reordering or deleting layers re-points layer-switch keys automatically. That is
-  // right far more often than it is wrong, but it is still a change the user did not type, so
-  // say so once and let them dismiss it for good.
-  const [noticeOff, setNoticeOff] = useState(() => {
-    try { return localStorage.getItem("openflow.layerKeyNotice") === "off"; } catch { return false; }
-  });
-  function dismissNotice() {
-    setNoticeOff(true);
-    try { localStorage.setItem("openflow.layerKeyNotice", "off"); } catch { /* ignore */ }
-  }
+  const [dragId, setDragId] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
 
   useEffect(() => {
     function onDoc(e) {
@@ -78,17 +73,32 @@ export default function LayerList({
 
   return (
     <div className="layer-list" ref={rootRef}>
-      {!noticeOff && (
+      {notice && (
         <div className="layer-note">
-          <span>
-            Copying, reordering or deleting layers adjusts layer-switch keys automatically.
-            Check them before flashing.
-          </span>
-          <button className="layer-note-x" title="Don't show this again" onClick={dismissNotice}>✕</button>
+          <span>{notice}</span>
+          <button className="layer-note-x" title="Dismiss" onClick={onDismissNotice}>✕</button>
         </div>
       )}
       {layers.map((l, i) => (
-        <div key={l.id} className={"layer-row" + (l.id === activeLayerId ? " active" : "")}>
+        <div key={l.id}
+             className={"layer-row" + (l.id === activeLayerId ? " active" : "")
+               + (dragId === l.id ? " dragging" : "") + (dragOver === l.id ? " dragover" : "")}
+             draggable={!renaming}
+             onDragStart={(e) => { setDragId(l.id); e.dataTransfer.effectAllowed = "move"; }}
+             onDragEnd={() => { setDragId(null); setDragOver(null); }}
+             onDragOver={(e) => { e.preventDefault(); if (dragId && dragId !== l.id) setDragOver(l.id); }}
+             onDragLeave={() => setDragOver((d) => (d === l.id ? null : d))}
+             onDrop={(e) => {
+               e.preventDefault();
+               setDragOver(null);
+               if (!dragId || dragId === l.id) return;
+               // Rebuild the whole order and hand it over -- the backend takes a complete list
+               // rather than a move, so a dropped frame can never leave layers half-ordered.
+               const ids = layers.map((x) => x.id).filter((x) => x !== dragId);
+               ids.splice(ids.indexOf(l.id), 0, dragId);
+               onReorder(ids);
+               setDragId(null);
+             }}>
           {renaming === l.id ? (
             <input
               className="layer-rename"

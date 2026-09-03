@@ -371,6 +371,29 @@ def duplicate_layer(layer_id: str) -> dict:
         conn.close()
 
 
+def reorder_layers(profile_id: str, ordered_ids: list[str]) -> dict:
+    """Set layer order from a full ordered list of this profile's layer ids.
+
+    Layer-switch bindings need no adjustment: they hold the target layer's uuid and are
+    resolved to an index only at flash time, so a moved layer keeps its keys and they follow
+    it. Order is positional, identity is not.
+    """
+    conn = connect()
+    try:
+        have = [r["id"] for r in conn.execute(
+            "SELECT id FROM layers WHERE profile_id=? ORDER BY order_id", (profile_id,))]
+        if sorted(have) != sorted(ordered_ids):
+            # A partial list would silently drop layers to order 0 and collide.
+            raise ValueError("the new order must list exactly this profile's layers")
+        now = _now()
+        for i, lid in enumerate(ordered_ids):
+            conn.execute("UPDATE layers SET order_id=?, updated_at=? WHERE id=?", (i, now, lid))
+        conn.commit()
+        return {"ok": True, "order": ordered_ids}
+    finally:
+        conn.close()
+
+
 def set_base_layer(layer_id: str) -> dict:
     """Make a layer the base (order_id 0); shift the others after it."""
     conn = connect()

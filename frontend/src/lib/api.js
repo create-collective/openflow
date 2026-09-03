@@ -54,6 +54,7 @@ export const api = {
   importProfile: (data, name) => req("POST", "/rpc/import-profile", { data, name }),
   exportLayer: (layerId) => req("GET", `/api/export-layer?layerId=${encodeURIComponent(layerId)}`),
   importLayer: (profileId, data) => req("POST", "/rpc/import-layer", { profileId, data }),
+  reorderLayers: (profileId, orderedIds) => req("POST", "/rpc/reorder-layers", { profileId, orderedIds }),
   layerReferences: (layerId) => req("GET", `/api/layer-references?layerId=${encodeURIComponent(layerId)}`),
   copyLayer: (layerId, profileId, name) => req("POST", "/rpc/copy-layer", { layerId, profileId, name }),
 
