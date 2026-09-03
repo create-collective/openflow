@@ -546,6 +546,62 @@ def _flash_preview() -> dict:
     return flash_mod.flash(desired, dry_run=True, full=True)
 
 
+@router.post("/rpc/flash")
+async def flash_write(body: dict = Body(default={})) -> dict:
+    """WRITE the current profile to the keyboard. The only endpoint that changes the device.
+
+    Requires `{"confirm": "FLASH"}` -- the UI sends it only from the Confirm button in the
+    preview modal, so a stray POST cannot write.
+
+    A fresh device read is taken first and is NOT optional. compute_plan needs it twice over:
+    to carry through the module->dock bindings at layer positions 0x4A-0x51 (which the app does
+    not model, and which a full write would otherwise blank), and to know which module fields
+    are stale and must be explicitly cleared. Flashing from DB state alone would unassign every
+    module on the board.
+
+    Every frame's ack is checked, the first bad one aborts, and the result is verified by
+    reading the device back.
+    """
+    if body.get("confirm") != "FLASH":
+        raise HTTPException(status_code=400,
+                            detail='refusing: this writes to the keyboard. Send {"confirm": "FLASH"}.')
+    svc = get_service()
+    side = body.get("side", "left")
+    full = bool(body.get("full", False))
+
+    def _run() -> dict:
+        before = svc.read_keymap(side)                       # mandatory pre-flash read
+        current = flash_mod.desired_from_device_read(before)
+        conn = db_connect()
+        try:
+            desired = flash_mod.desired_from_db(conn)
+        finally:
+            conn.close()
+
+        dev = svc._require_side(side)
+        dest = svc._dest_for_side(dev.side)
+        transport = svc._transport_for(dev.port, dest)
+        result = flash_mod.flash(
+            desired, transport=transport, dest=dest, current=current, full=full,
+            dry_run=False,
+            reader=lambda: flash_mod.desired_from_device_read(svc.read_keymap(side)),
+        )
+        result["backup"] = {
+            "layers": {str(i): [[p, t, bytes(v).hex()] for p, t, v in recs]
+                       for i, recs in before["layers"].items()},
+            "led": {str(i): [[a, b, c] for a, b, c in entries]
+                    for i, entries in before.get("led", {}).items()},
+        }
+        return result
+
+    try:
+        return await run_in_threadpool(_run)
+    except TransportError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
+
+
 @router.post("/rpc/flash-preview")
 async def flash_preview(body: dict = Body(default={})) -> dict:
     """Dry-run the full flash from the current DB: returns the write plan + a diff summary +

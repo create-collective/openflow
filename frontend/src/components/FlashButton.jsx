@@ -2,8 +2,10 @@ import { useState } from "react";
 import { api } from "../lib/api.js";
 
 // "Flash to keyboard" — previews the diff (dry-run) first, then requires an explicit
-// confirm. Live flashing is not enabled yet (backend wet path is Phase C), so Confirm
-// surfaces that clearly rather than silently doing nothing.
+// confirm. Confirm performs the real write: the backend takes a fresh device read first
+// (needed to preserve the module->dock bindings the app does not model), checks every
+// frame's ack, and verifies by reading the device back. The pre-flash read comes back in
+// the result as a backup.
 
 function summarize(ops) {
   const g = { layers: 0, colors: 0, modules: 0, timeouts: 0 };
@@ -17,8 +19,9 @@ function summarize(ops) {
 }
 
 export default function FlashButton() {
-  const [state, setState] = useState("idle"); // idle | loading | preview | error | done
+  const [state, setState] = useState("idle"); // idle | loading | preview | writing | done | error
   const [preview, setPreview] = useState(null);
+  const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
   async function openPreview() {
@@ -34,9 +37,28 @@ export default function FlashButton() {
     }
   }
 
+  async function confirmFlash() {
+    setState("writing");
+    setError("");
+    try {
+      const res = await api.flash({ full: false });
+      setResult(res);
+      // "verified" = every ack was good AND the read-back matched. Anything else is a
+      // problem the user needs to see, not a success with a caveat.
+      setState(res.status === "verified" ? "done" : "error");
+      if (res.status !== "verified") {
+        setError(res.reason || `flash finished as "${res.status}" — check the device`);
+      }
+    } catch (e) {
+      setError(e.message || String(e));
+      setState("error");
+    }
+  }
+
   function close() {
     setState("idle");
     setPreview(null);
+    setResult(null);
     setError("");
   }
 
@@ -88,15 +110,30 @@ export default function FlashButton() {
               </>
             )}
 
+            {state === "writing" && (
+              <div className="phase-note">Writing to the keyboard — do not unplug it.</div>
+            )}
+            {state === "done" && result && (
+              <div className="phase-note">
+                Flashed and verified: {result.ops} operation(s), {result.frames} frame(s),
+                read back with no differences.
+              </div>
+            )}
+
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={close}>Cancel</button>
-              <button
-                className="btn-primary"
-                disabled
-                title="Live flashing is not enabled yet (verified encoders, dry-run only)"
-              >
-                Confirm flash (coming soon)
+              <button className="btn-secondary" onClick={close}>
+                {state === "done" ? "Close" : "Cancel"}
               </button>
+              {state !== "done" && (
+                <button
+                  className="btn-primary"
+                  onClick={confirmFlash}
+                  disabled={state === "writing"}
+                  title="Writes this profile to the keyboard, then reads it back to verify"
+                >
+                  {state === "writing" ? "Writing…" : "Confirm flash"}
+                </button>
+              )}
             </div>
           </div>
         </div>

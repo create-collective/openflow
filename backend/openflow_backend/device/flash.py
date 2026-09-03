@@ -80,6 +80,22 @@ def _hex_to_hue_val(hex_color: str) -> tuple[int, int]:
     return round(h * 360) % 360, round(v * 100)
 
 
+def desired_from_device_read(read: dict) -> DesiredState:
+    """DeviceService.read_keymap output -> DesiredState, for use as `current` in a flash.
+
+    A flash needs this, not just the DB: compute_plan uses `current` both to carry through
+    state the app does not model (the module->dock bindings at layer positions 0x4A-0x51) and
+    to know which module fields to clear. Flashing without a fresh read would unassign every
+    module -- see tests/test_flash_preserve.py."""
+    d = DesiredState()
+    for idx, recs in (read.get("layers") or {}).items():
+        d.layers[int(idx)] = {pos: (typ, bytes(param)) for pos, typ, param in recs
+                              if pos in FULL_LAYER_POSITIONS}
+    for idx, entries in (read.get("led") or {}).items():
+        d.leds[int(idx)] = {i: (hue, val) for i, hue, val in entries}
+    return d
+
+
 def desired_from_db(conn) -> DesiredState:
     """Build the desired state from the OpenFlow DB (the DB->device mapping).
 
@@ -447,8 +463,14 @@ def _apply(plan, rendered, transport, desired, reader) -> dict:
             resp = transport._send_raw(frame, 2.0)
             acks = [r for r in resp if getattr(r, "valid", False)]
             flags = acks[0].flags if acks else None
-            sent.append({"op": label, "frame": i, "ack_flags": flags})
-            if flags != 0x00:   # 0x00 = OK; anything else (e.g. 0xEA) or no ack = stop
+            payload = bytes(acks[0].payload)[:1].hex() if acks and acks[0].payload else None
+            sent.append({"op": label, "frame": i, "ack_flags": flags, "ack_payload": payload})
+            # A chunked write acks each continuation frame with flags=0x01 and only the last
+            # with 0x00 -- confirmed in the captured flash, where every multi-frame layer and
+            # LED write does exactly that. Accepting only 0x00 would abort partway through a
+            # full layer and leave the keymap half written. The payload byte echoes the layer
+            # or slot index (observed live in C1-C4); it is recorded, not gated on.
+            if flags not in (0x00, 0x01):
                 return {"status": "aborted", "op": label, "frame": i, "ack_flags": flags,
                         "sent": sent, "reason": "bad or missing ack — not continuing"}
     result = {"status": "sent", "ops": len(plan), "frames": len(sent), "sent": sent}

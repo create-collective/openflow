@@ -27,6 +27,9 @@ export const api = {
   diagnostics: () => req("GET", "/api/diagnostics/report"),
   readKeyboard: (body = {}) => req("POST", "/rpc/read-keyboard", body),
   readModules: (body = {}) => req("POST", "/rpc/read-modules", body),
+  // The only call that writes to the keyboard. The confirm token is required by the
+  // backend, so an accidental call cannot flash.
+  flash: (body = {}) => req("POST", "/rpc/flash", { confirm: "FLASH", ...body }),
 
   userdata: () => req("GET", "/api/userdata"),
   actions: () => req("GET", "/api/actions"),
