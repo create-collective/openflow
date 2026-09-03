@@ -216,3 +216,31 @@ def test_a_module_read_that_imports_nothing_moves_no_bays():
     _run(conn)      # no profile_id
     assert conn.execute("SELECT module_config_id FROM module_config_bindings").fetchone()[0] == UUID
     print("  unscoped read moved nothing")
+
+
+def test_a_capture_keeps_gestures_the_device_read_cannot_report():
+    """The read only reports gestures with a mapped device field -- 4 of a Track's 11. Capturing
+    from the read alone dropped vertical, horizontal and rotate, leaving a profile that could not
+    express them at all. The capture must be the source profile PLUS what was read."""
+    conn = _db(dict(_DEVICE, **{"tap:track:button_1": "M2"}))
+    # Axes exist on the source profile but have no field in writable_fields, so no read reports
+    # them.
+    for g, code in (("vertical:track", "mouse - MOUSE_DOWN - MOUSE_UP"),
+                    ("horizontal:track", "mouse - MOUSE_LEFT - MOUSE_RIGHT"),
+                    ("rotate:track", "mouse - SCROLL_UP - SCROLL_DOWN"),
+                    ("hold:track:button_1", "")):
+        conn.execute("INSERT INTO module_bindings (action_id, action_code, action_type, behavior,"
+                     " invert, threshold, direction, mode, module_config_id, id, updated_at,"
+                     " created_at) VALUES (NULL,?,'value',?,0,0,'+',0,?,?,'','')",
+                     (code, g, UUID, g))
+    conn.commit()
+
+    cap = _run(conn, profile_id="p")["captured"][0]
+    got = {r["behavior"]: r["action_code"] for r in conn.execute(
+        "SELECT behavior, action_code FROM module_bindings WHERE module_config_id=?", (cap["id"],))}
+
+    for g in ("vertical:track", "horizontal:track", "rotate:track", "hold:track:button_1"):
+        assert g in got, f"{g} was dropped by the capture"
+    assert got["vertical:track"] == "mouse - MOUSE_DOWN - MOUSE_UP", "kept from the source"
+    assert got["tap:track:button_1"] == "M1", "the device value still wins where it was read"
+    print(f"  capture has {len(got)} bindings: axes kept, read values applied")

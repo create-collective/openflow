@@ -224,14 +224,25 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
                 (label, e["type"], 0, pos, None, src["variant"] if src else None,
                  e["uuid"], cid, now, now))
 
-            # The device's values, not the app's -- that is the whole point of the capture.
-            for g in e.get("gestures") or []:
-                code = g.get("device")
+            # What we KNOW plus what was READ -- not the read alone.
+            #
+            # The read only reports gestures with a device field we have mapped, which for a
+            # Track is 4 of 11: capturing from it alone silently dropped vertical, horizontal
+            # and rotate, and the new profile came out unable to express them at all. So the
+            # capture starts as a copy of the profile it drifted from, and only the gestures
+            # the device actually reported are overwritten.
+            seen = {g["gesture"]: g.get("device") for g in (e.get("gestures") or [])}
+            rows = {r["behavior"]: (r["action_code"], r["action_type"]) for r in conn.execute(
+                "SELECT behavior, action_code, action_type FROM module_bindings "
+                "WHERE module_config_id=?", (e["uuid"],))}
+            for gesture, device in seen.items():
+                rows[gesture] = (device or "", "keypress" if device else "none")
+            for gesture, (code, atype) in sorted(rows.items()):
                 conn.execute(
                     "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
                     "invert, threshold, direction, mode, module_config_id, id, updated_at, "
                     "created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (None, code or "", "keypress" if code else "none", g["gesture"], 0, 0, "+", 0,
+                    (None, code or "", atype or "none", gesture, 0, 0, "+", 0,
                      cid, str(uuid.uuid4()), now, now))
             made.append({"id": cid, "name": label, "type": e["type"],
                          "capturedFrom": e["uuid"], "slot": e["slot"]})
