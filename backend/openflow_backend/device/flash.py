@@ -605,3 +605,80 @@ def _apply(plan, rendered, transport, desired, reader) -> dict:
     else:
         result["status"] = "sent-unverified"
     return result
+
+
+# --------------------------------------------------------------------------- #
+# per-layer module bays -> slots, list entries and configs                     #
+# --------------------------------------------------------------------------- #
+
+def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
+    """Fold the app's per-layer module choices into a DesiredState.
+
+    Until now the app could never CHANGE a bay by flashing: desired_from_db did not model them
+    and _full_layer_payload carried the device's own bay bytes through, specifically so a flash
+    would not unassign every module. This is what makes the app the author instead.
+
+    Three coordinated writes come out of it, exactly as captured from NayaFlow:
+    the bay byte per layer, the module-config list entry, and the config itself. compute_plan
+    already knows how to emit all three -- this only has to fill them in.
+
+    Only NEWLY ALLOCATED slots get a config write. A profile the board already carries is left
+    alone, which is why re-flashing an unchanged layout sends no module data at all.
+
+    Returns the layout plan for reporting. Mutates `desired`.
+    """
+    from . import module_layout as ml
+
+    pid = desired.profile_id
+    order_of = {r["id"]: r["order_id"] for r in
+                conn.execute("SELECT id, order_id FROM layers WHERE profile_id = ?", (pid,))}
+    bays_by_layer: dict[int, dict[str, str]] = {o: {} for o in order_of.values()}
+    for r in conn.execute(
+            "SELECT layer_id, module_config_id, binding_location, state "
+            "FROM module_config_bindings WHERE profile_id = ?", (pid,)):
+        order = order_of.get(r["layer_id"])
+        if order is None:
+            continue
+        bays_by_layer[order][r["binding_location"]] = r["state"] or r["module_config_id"]
+
+    types, captured_from = {}, {}
+    for r in conn.execute("SELECT id, type, captured_from FROM module_configs"):
+        types[r["id"]] = r["type"]
+        if r["captured_from"]:
+            captured_from[r["id"]] = r["captured_from"]
+    bindings: dict[str, dict[str, str]] = {}
+    for r in conn.execute(
+            "SELECT module_config_id, behavior, action_code FROM module_bindings"):
+        bindings.setdefault(r["module_config_id"], {})[r["behavior"]] = r["action_code"]
+
+    device_list = [{"slot": slot, "uuid": uuid}
+                   for uuid, slot in (mod_read.get("by_uuid") or {}).items()]
+    device_slots = {}
+    for slot, fields in (mod_read.get("slots") or {}).items():
+        device_slots[int(slot)] = {int(f["field"]): (f["type"], bytes.fromhex(f["value"]))
+                                   for f in fields}
+
+    base_order = min(order_of.values()) if order_of else 0
+    layout = ml.plan(bays_by_layer, types, device_list, device_slots, base_order=base_order,
+                     captured_from=captured_from)
+
+    # The bay byte lives in the record's TYPE field with an empty param -- 014c0500 is
+    # layer 1, position 0x4c, type 05 (slot 5), length 0.
+    for order, row in layout["bays"].items():
+        if order not in desired.layers:
+            continue
+        for pos, value in row.items():
+            desired.layers[order][pos] = (value, b"")
+
+    desired.module_list = {slot: (lid, code, uuid16)
+                           for slot, lid, code, uuid16 in layout["list_entries"]}
+    for cid in layout["allocated"] + layout["claimed"]:
+        slot = layout["slot_for"][cid]
+        cfg = ml.overlay(layout["templates"][cid], types[cid], bindings.get(cid, {}))
+        # A claimed slot whose overlay comes out identical needs no data write -- only its list
+        # entry changes, to name the capture instead of the profile it drifted from. Sending
+        # the bytes back unchanged would be pure churn on every flash.
+        if cid in layout["claimed"] and cfg == layout["templates"][cid]:
+            continue
+        desired.modules[slot] = cfg
+    return layout

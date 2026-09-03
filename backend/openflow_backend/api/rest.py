@@ -688,15 +688,44 @@ def _decode_field(module_type: str, idx: int, typ, val: bytes):
     return f"RAW_{val.hex()}"
 
 
-def _flash_preview(profile_id: str | None = None) -> dict:
+def _flash_preview(profile_id: str | None = None, side: str = "left") -> dict:
+    # The module layout needs to know what the board already carries -- which profiles have
+    # slots and what a new slot can be templated from. Without that read the preview can still
+    # show the keymap, but it must not invent a module plan.
+    mod_read = None
+    try:
+        mod_read = get_service().read_module_configs(side)
+    except Exception:
+        pass
     conn = db_connect()
     try:
         desired = flash_mod.desired_from_db(conn, profile_id)
+        layout = (flash_mod.apply_module_layout(desired, conn, mod_read)
+                  if mod_read is not None else None)
     finally:
         conn.close()
     out = flash_mod.flash(desired, dry_run=True, full=True)
     out["profileId"] = desired.profile_id
+    out["modules"] = _layout_summary(layout)
     return out
+
+
+def _layout_summary(layout) -> dict | None:
+    """What the module plan will do, in the terms the UI shows: which profiles get slots and
+    which of those are being added."""
+    if layout is None:
+        return {"available": False,
+                "note": "the keyboard could not be read, so no module profiles are planned"}
+    conn = db_connect()
+    try:
+        names = {r["id"]: r["name"] for r in conn.execute("SELECT id, name FROM module_configs")}
+    finally:
+        conn.close()
+    return {"available": True,
+            "slots": [{"slot": slot, "id": cid, "name": names.get(cid, cid),
+                       "new": cid in layout["allocated"]}
+                      for cid, slot in sorted(layout["slot_for"].items(), key=lambda x: x[1])],
+            "added": len(layout["allocated"])}
 
 
 @router.post("/rpc/flash")
@@ -736,15 +765,23 @@ async def flash_write(body: dict = Body(default={})) -> dict:
     full = True if mode == "recovery" else bool(body.get("full", False))
 
     def _run() -> dict:
-        before, current = None, None
+        before, current, mod_read = None, None, None
         if mode == "sync":
             before = svc.read_keymap(side)                   # mandatory: the preservation baseline
             current = flash_mod.desired_from_device_read(before)
+            # Mandatory too when the profile assigns module bays: allocating a slot or
+            # templating a new config is impossible without knowing what the board carries.
+            mod_read = svc.read_module_configs(side)
         conn = db_connect()
         try:
             # Scoped to ONE profile: the layers table spans all of them, so an unscoped plan
             # writes whichever profile the query returned last.
             desired = flash_mod.desired_from_db(conn, body.get("profileId"))
+            # Recovery mode skips the read, so there is nothing to allocate slots against and
+            # no config to template a new one from. It leaves the module layout alone rather
+            # than guessing -- consistent with everything else recovery does not preserve.
+            layout = (flash_mod.apply_module_layout(desired, conn, mod_read)
+                      if mod_read is not None else None)
         finally:
             conn.close()
 
@@ -761,6 +798,7 @@ async def flash_write(body: dict = Body(default={})) -> dict:
         )
         result["mode"] = mode
         result["profileId"] = desired.profile_id
+        result["modules"] = _layout_summary(layout)
         result["backup"] = None if before is None else {
             "layers": {str(i): [[p, t, bytes(v).hex()] for p, t, v in recs]
                        for i, recs in before["layers"].items()},
@@ -786,7 +824,8 @@ async def flash_preview(body: dict = Body(default={})) -> dict:
     write, which requires a separate explicit confirm). Takes the same profileId as /rpc/flash
     so the preview shows the plan that Confirm would actually send."""
     try:
-        result = await run_in_threadpool(_flash_preview, body.get("profileId"))
+        result = await run_in_threadpool(_flash_preview, body.get("profileId"),
+                                         body.get("side", "left"))
     except Exception as e:  # DB/encode errors surface cleanly to the UI
         raise HTTPException(status_code=400, detail=f"flash preview failed: {e}")
     return {"dryRun": True, **result}

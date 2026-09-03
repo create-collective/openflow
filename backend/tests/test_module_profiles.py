@@ -33,7 +33,7 @@ def _db():
     conn.row_factory = sqlite3.Row
     conn.executescript("""
         CREATE TABLE module_configs (name TEXT, type TEXT, size INT, order_id INT,
-                                     icon_id TEXT, variant TEXT, id TEXT,
+                                     icon_id TEXT, variant TEXT, captured_from TEXT, id TEXT,
                                      updated_at TEXT, created_at TEXT);
         CREATE TABLE module_bindings (action_id TEXT, action_code TEXT, action_type TEXT,
                                       behavior TEXT, invert INT, threshold INT, direction TEXT,

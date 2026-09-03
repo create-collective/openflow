@@ -50,13 +50,16 @@ class LayoutError(Exception):
     """The requested layout cannot be flashed safely."""
 
 
-def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0):
+def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
+         captured_from=None):
     """Work out the module layout to flash.
 
     bays_by_layer: {layer order: {binding_location: config uuid}}  -- what the app wants.
     config_types:  {config uuid: module type}                      -- from module_configs.
     device_list:   parse_module_config_list(...) of the list currently on the device.
     device_slots:  {slot: {field: (type, value)}}                  -- current slot contents.
+    captured_from: {config uuid: the device uuid it was captured from}, so a capture claims the
+                   slot it was taken from instead of stranding it.
 
     Returns {slot_for, list_entries, templates, bays, allocated}.
     """
@@ -66,6 +69,15 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0):
 
     existing = {e["uuid"]: e["slot"] for e in device_list}
     slot_for = {cid: existing[cid] for cid in referenced if cid in existing}
+
+    # A capture has its own uuid but IS the config in the slot it was taken from, so it claims
+    # that slot rather than allocating a new one and leaving the original stranded. If the
+    # profile it was captured FROM is also referenced, that one owns the slot by identity and
+    # the capture falls through to a fresh index.
+    for cid in sorted(referenced - set(slot_for)):
+        src = (captured_from or {}).get(cid)
+        if src and src in existing and src not in referenced and existing[src] not in slot_for.values():
+            slot_for[cid] = existing[src]
 
     # Allocate the lowest free index for profiles the board does not carry yet. Slot 0 is the
     # blank template, so allocation starts at 1.
@@ -80,10 +92,18 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0):
         allocated.append(cid)
 
     # A new slot needs a structurally complete config, which only an existing one can supply.
+    claimed = [cid for cid in slot_for
+               if cid not in existing and cid not in allocated]
     templates = {}
-    for cid in allocated:
+    for cid in allocated + claimed:
         typ = config_types.get(cid)
-        src = _template_slot(typ, config_types, existing, device_slots)
+        if cid in claimed:
+            # A capture already IS the config in the slot it is claiming, so it templates from
+            # that slot rather than from some other profile of the same type. If its bindings
+            # still match, the overlay comes out identical and no config write is needed.
+            src = device_slots.get(slot_for[cid]) or device_slots.get(str(slot_for[cid]))
+        else:
+            src = _template_slot(typ, config_types, existing, device_slots)
         if src is None:
             raise LayoutError(
                 "cannot add a %s profile: nothing of that type is on the keyboard to copy a "
@@ -100,7 +120,8 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0):
         list_entries.append((slot_for[cid], slot_for[cid], code, _uuid16(cid)))
 
     return {"slot_for": slot_for, "list_entries": list_entries, "templates": templates,
-            "bays": _bays(bays_by_layer, base, slot_for, base_order), "allocated": allocated}
+            "bays": _bays(bays_by_layer, base, slot_for, base_order), "allocated": allocated,
+            "claimed": claimed}
 
 
 def _bays(bays_by_layer, base, slot_for, base_order):

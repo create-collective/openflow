@@ -41,6 +41,11 @@ _ADDED_COLUMNS = [
     # asymmetric variants (left/right) that must group separately in the UI, and the name
     # cannot be trusted for that -- profiles are renameable.
     ("module_configs", "variant", "TEXT"),
+    # The device identity a captured profile was taken from. A capture gets its own uuid so it
+    # does not seize the row the user has been editing, but it still IS the config sitting in
+    # that device slot -- without this the flash cannot tell, allocates a fresh slot, and
+    # strands the original on every read->capture->flash cycle.
+    ("module_configs", "captured_from", "TEXT"),
 ]
 
 

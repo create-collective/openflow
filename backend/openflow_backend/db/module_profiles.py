@@ -219,9 +219,10 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
             conn.execute("UPDATE module_configs SET order_id = order_id + 1 "
                          "WHERE type=? AND order_id >= ?", (e["type"], pos))
             conn.execute(
-                "INSERT INTO module_configs (name, type, size, order_id, icon_id, variant, id, "
-                "updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-                (label, e["type"], 0, pos, None, src["variant"] if src else None, cid, now, now))
+                "INSERT INTO module_configs (name, type, size, order_id, icon_id, variant, "
+                "captured_from, id, updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (label, e["type"], 0, pos, None, src["variant"] if src else None,
+                 e["uuid"], cid, now, now))
 
             # The device's values, not the app's -- that is the whole point of the capture.
             for g in e.get("gestures") or []:
@@ -260,6 +261,12 @@ def repoint_bays(pairs) -> int:
             moved += conn.execute(
                 "UPDATE module_config_bindings SET module_config_id=?, updated_at=? "
                 "WHERE module_config_id=?", (dst, now, src)).rowcount
+            # Record where the live profile came from if we do not know yet. Captures made
+            # before this column existed have no provenance, and without it a flash allocates a
+            # fresh slot and strands the original -- the read is the one place that can tell.
+            conn.execute(
+                "UPDATE module_configs SET captured_from=? "
+                "WHERE id=? AND (captured_from IS NULL OR captured_from='')", (src, dst))
         conn.commit()
         return moved
     finally:
