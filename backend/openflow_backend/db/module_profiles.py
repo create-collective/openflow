@@ -241,7 +241,7 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
         conn.close()
 
 
-def repoint_bays(pairs) -> int:
+def repoint_bays(pairs, profile_id) -> int:
     """Move bays from a profile that is no longer live onto the one that is.
 
     A bay names the profile a layer RUNS. When a read finds the board running something other
@@ -249,10 +249,14 @@ def repoint_bays(pairs) -> int:
     the UI while a flash quietly wrote a different one. The profile being moved away from is
     untouched and can be selected again deliberately.
 
+    Scoped to ONE profile, and that matters: only the profile representing the board should
+    follow it. Another profile's bays are a deliberate choice about what to flash NEXT, and
+    rewriting those on every read silently threw the user's selections away.
+
     `pairs` is [(from config id, to config id)]. Returns the number of bays moved.
     """
     pairs = [(a, b) for a, b in pairs if a and b and a != b]
-    if not pairs:
+    if not pairs or not profile_id:
         return 0
     now, moved = _now(), 0
     conn = connect()
@@ -260,10 +264,11 @@ def repoint_bays(pairs) -> int:
         for src, dst in pairs:
             moved += conn.execute(
                 "UPDATE module_config_bindings SET module_config_id=?, updated_at=? "
-                "WHERE module_config_id=?", (dst, now, src)).rowcount
-            # Record where the live profile came from if we do not know yet. Captures made
-            # before this column existed have no provenance, and without it a flash allocates a
-            # fresh slot and strands the original -- the read is the one place that can tell.
+                "WHERE module_config_id=? AND profile_id=?",
+                (dst, now, src, profile_id)).rowcount
+            # Provenance is a fact about the profile, not about any one profile's bays, so it
+            # is recorded whatever the scope. Captures made before this column existed have
+            # none, and without it a flash allocates a fresh slot and strands the original.
             conn.execute(
                 "UPDATE module_configs SET captured_from=? "
                 "WHERE id=? AND (captured_from IS NULL OR captured_from='')", (src, dst))

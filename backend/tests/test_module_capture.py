@@ -91,10 +91,10 @@ def _read():
     return {"by_uuid": {UUID: 1}, "slots": {1: _fields()}}
 
 
-def _run(conn):
+def _run(conn, profile_id=None):
     with mock.patch.object(rest, "db_connect", lambda: KeepOpen(conn)), \
          mock.patch.object(mp, "connect", lambda: KeepOpen(conn)):
-        return rest._module_diff(_read())
+        return rest._module_diff(_read(), profile_id)
 
 
 def _names(conn):
@@ -129,7 +129,7 @@ def test_a_drifted_profile_is_not_live_and_the_board_is_captured():
 
 def test_the_capture_holds_the_boards_values_not_the_apps():
     conn = _db(dict(_DEVICE, **{"tap:track:button_1": "M2"}))
-    cap = _run(conn)["captured"][0]
+    cap = _run(conn, profile_id="p")["captured"][0]
     got = {r["behavior"]: r["action_code"] for r in conn.execute(
         "SELECT behavior, action_code FROM module_bindings WHERE module_config_id=?", (cap["id"],))}
     assert got["tap:track:button_1"] == "M1", got      # the device value, not the app's M2
@@ -160,7 +160,7 @@ def test_a_capture_takes_over_the_bays_that_pointed_at_the_drifted_profile():
                  "VALUES ('p','l0',?,'track:keyboard_left',NULL,'','')", (UUID,))
     conn.commit()
 
-    cap = _run(conn)["captured"][0]
+    cap = _run(conn, profile_id="p")["captured"][0]
     now = conn.execute("SELECT module_config_id FROM module_config_bindings").fetchone()[0]
     assert now == cap["id"], "the bay should follow what the board actually runs"
     assert _run(conn) is not None  # a re-read keeps it there
@@ -178,6 +178,41 @@ def test_a_bay_pointing_elsewhere_is_left_alone():
                  "VALUES ('p','l0',?,'track:keyboard_right',NULL,'','')", (other,))
     conn.commit()
 
-    _run(conn)
+    _run(conn, profile_id="p")
     assert conn.execute("SELECT module_config_id FROM module_config_bindings").fetchone()[0] == other
     print("  unrelated bays untouched")
+
+
+def test_a_read_only_moves_bays_on_the_profile_that_represents_the_board():
+    """The bug this exists for: repointing ran unscoped, so reading the keyboard rewrote the bay
+    selections of EVERY profile. A profile other than the board's is a deliberate choice about
+    what to flash next -- a read must not silently overwrite it."""
+    conn = _db(dict(_DEVICE, **{"tap:track:button_1": "M2"}))
+    for pid in ("board-profile", "my-own-profile"):
+        conn.execute("INSERT INTO module_config_bindings (profile_id, layer_id, "
+                     "module_config_id, binding_location, state, updated_at, created_at) "
+                     "VALUES (?,'l0',?,'track:keyboard_left',NULL,'','')", (pid, UUID))
+    conn.commit()
+
+    with mock.patch.object(rest, "db_connect", lambda: KeepOpen(conn)), \
+         mock.patch.object(mp, "connect", lambda: KeepOpen(conn)):
+        out = rest._module_diff(_read(), profile_id="board-profile")
+
+    got = dict(conn.execute("SELECT profile_id, module_config_id FROM module_config_bindings"))
+    cap = out["captured"][0]["id"]
+    assert got["board-profile"] == cap, "the board's profile should follow the board"
+    assert got["my-own-profile"] == UUID, "another profile's selection must be left alone"
+    print("  board profile moved; the user's own profile untouched")
+
+
+def test_a_module_read_that_imports_nothing_moves_no_bays():
+    """/rpc/read-modules names no profile, so it has no business rewriting any profile's bays."""
+    conn = _db(dict(_DEVICE, **{"tap:track:button_1": "M2"}))
+    conn.execute("INSERT INTO module_config_bindings (profile_id, layer_id, module_config_id, "
+                 "binding_location, state, updated_at, created_at) "
+                 "VALUES ('p','l0',?,'track:keyboard_left',NULL,'','')", (UUID,))
+    conn.commit()
+
+    _run(conn)      # no profile_id
+    assert conn.execute("SELECT module_config_id FROM module_config_bindings").fetchone()[0] == UUID
+    print("  unscoped read moved nothing")

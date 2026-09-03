@@ -90,7 +90,8 @@ async def read_keyboard(body: dict = Body(default={})) -> dict:
     # The list is already in hand -- this costs no extra device round-trip.
     if mod_read is not None:
         try:
-            out.update(await run_in_threadpool(_module_diff, mod_read))
+            out.update(await run_in_threadpool(_module_diff, mod_read,
+                                               out.get("profileId")))
         except Exception:
             pass    # the keymap import is the payload that matters
     return out
@@ -568,7 +569,7 @@ async def read_modules(body: dict = Body(default={})) -> dict:
     return await run_in_threadpool(_module_diff, read)
 
 
-def _module_diff(read: dict) -> dict:
+def _module_diff(read: dict, profile_id: str | None = None) -> dict:
     """Diff a module-config read against the app's stored bindings.
 
     Shared by /rpc/read-modules and /rpc/read-keyboard: the keymap read already pulls the
@@ -584,10 +585,9 @@ def _module_diff(read: dict) -> dict:
         # Rebuild against the profiles that now exist, so each entry describes the row it
         # points at -- a capture must not inherit the diff rows of the profile it drifted from.
         out = _build_entries(read)
-    # Bays follow what the board runs, whether the capture happened just now or in an earlier
-    # read. Without this a bay stays on the drifted profile forever and the picker's selection
-    # would disagree with what a flash writes.
-    repointed = mprof.repoint_bays([(e.get("uuid"), e.get("matched")) for e in out])
+    # Bays follow what the board runs -- but only for the profile that REPRESENTS the board.
+    # /rpc/read-modules imports nothing, so it names no profile and moves no bays.
+    repointed = mprof.repoint_bays([(e.get("uuid"), e.get("matched")) for e in out], profile_id)
     return {"modules": out, "slotMap": read["by_uuid"], "captured": captured,
             "repointedBays": repointed}
 

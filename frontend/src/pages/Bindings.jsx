@@ -127,22 +127,19 @@ export default function Bindings() {
     const liveIds = new Set(
       Object.values(deviceRead || {}).map((e) => e.matched).filter(Boolean));
 
-    // The bay stores a uuid, but that uuid may name a profile that has drifted from the board.
-    // Resolve it the same way the board's module click does -- through the read's content match
-    // -- so the radio sits on the profile that is actually running, not on the row that merely
-    // shares the device's identity.
-    const resolveLive = (cid) => {
-      if (!cid) return cid;
-      const entry = Object.values(deviceRead || {}).find((e) => e.uuid === cid);
-      return entry?.matched || cid;
-    };
-
+    // Strictly what THIS profile has stored, falling back to the base layer for an unset bay.
+    //
+    // It deliberately does NOT re-resolve through the device read. Doing that made every
+    // profile display whatever the board happened to be running, so a deliberate selection on
+    // one profile silently showed as the live one instead -- the profile is a choice about
+    // what to flash next, not a mirror of the keyboard. The read still marks which entries are
+    // live; that is a label on the options, not a change to the answer.
     const selectedFor = (type, side) => {
       const own = layer?.bays?.[key(type, side)];
       if (own === "disabled") return "disabled";
-      if (own && own !== "transparent") return resolveLive(own);
+      if (own && own !== "transparent") return own;
       const inh = base?.bays?.[key(type, side)];
-      return inh && inh !== "transparent" ? resolveLive(inh) : null;
+      return inh && inh !== "transparent" ? inh : null;
     };
 
     return {
@@ -402,11 +399,12 @@ export default function Bindings() {
                 {busy === "read" ? "Reading…" : "⌨  Read from keyboard"}
               </button>
               <button className="board-btn" onClick={saveMap} disabled={!!busy}
-                title="Snapshot the current map to a backup">
-                {busy === "save" ? "Saving…" : "Save"}
+                title="Snapshot this profile to a backup file. Edits are saved as you make them —
+this is for keeping a restore point.">
+                {busy === "save" ? "Backing up…" : "⭳  Back up"}
               </button>
               <FlashButton variant="toolbar" />
-              {saved && <span className="saved-note">Saved {saved.toLocaleTimeString()}</span>}
+              {saved && <span className="saved-note">Backed up {saved.toLocaleTimeString()}</span>}
             </div>
           </div>
           <KeymapBoard
