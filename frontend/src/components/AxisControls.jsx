@@ -11,6 +11,17 @@ export default function AxisControls({ axis, actions, onSetHalf, onInvert, busy 
   const keyActions = actions.filter((a) => a.actionType === "key" || a.actionType === "keypress");
   const label = (axis.behavior || "").split(":")[0].replace(/_/g, " ");
 
+  // What this half does when it is NOT bound to a key: the matching side of the module's own
+  // combined binding. Showing a bare "motion" would hide the thing the user came to read.
+  const motionLabel = (side) => {
+    const d = side === "-" ? axis.defaultMinus : axis.defaultPlus;
+    const shown = (d || "").replace(/_/g, " ").toLowerCase();
+    // Invert swaps which direction each half drives, so say so rather than showing a stale label.
+    const eff = axis.invert ? (side === "-" ? axis.defaultPlus : axis.defaultMinus) : d;
+    const effShown = (eff || "").replace(/_/g, " ").toLowerCase();
+    return eff ? `motion — ${effShown}` : shown ? `motion — ${shown}` : "motion";
+  };
+
   const half = (side, code, field) => (
     <div className="axis-half" key={side}>
       <span className="axis-dir" title={`device field 0x${field.toString(16).padStart(2, "0")}`}>
@@ -21,7 +32,7 @@ export default function AxisControls({ axis, actions, onSetHalf, onInvert, busy 
         disabled={busy}
         onChange={(e) => onSetHalf(axis.behavior, side, e.target.value || null)}
       >
-        <option value="">motion (default)</option>
+        <option value="">{motionLabel(side)}</option>
         {keyActions.map((a) => (
           <option key={a.code} value={a.code}>{a.label || a.code}</option>
         ))}

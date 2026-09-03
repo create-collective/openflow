@@ -746,11 +746,20 @@ def get_modules() -> dict:
                     code = r["action_code"] or ""
                     if code and " - " not in code:      # a per-half key, not the combined form
                         per[r["direction"] or "+"] = code
+                # The unsplit form is one row holding BOTH directions -- "mouse - MOUSE_LEFT -
+                # MOUSE_RIGHT" or "C_VOL_DOWN - C_VOL_UP". The last two parts are the two halves,
+                # in - then + order, and the UI must show them: "motion" alone tells the user
+                # nothing about what the axis does.
+                combined = next((r["action_code"] for r in rows
+                                 if r["action_code"] and " - " in r["action_code"]), "")
+                parts = [x.strip() for x in combined.split(" - ")] if combined else []
                 axes.append({
                     "behavior": gesture,
                     "fields": {"-": spec["-"], "+": spec["+"]},
                     "minus": per.get("-"),
                     "plus": per.get("+"),
+                    "defaultMinus": parts[-2] if len(parts) >= 2 else None,
+                    "defaultPlus": parts[-1] if len(parts) >= 2 else None,
                     "split": bool(per),
                     "invert": any(r["invert"] for r in rows),
                 })
