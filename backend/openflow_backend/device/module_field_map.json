@@ -371,8 +371,8 @@
     "kind": "mouse_button",
     "mask": 2,
     "value": "M2",
-    "gesture": null,
-    "note": "category-3 (mouse-button) record, cleared by the 2026-09-02 write -- present in the older stored config, gesture unknown"
+    "gesture": "tap:touch:2_fingers",
+    "note": "2-finger tap = right click, the Touch's stock default (confirmed by the device owner); the field holds mask 2 = M2, which is right click"
    },
    "0x0d": {
     "kind": "axis",

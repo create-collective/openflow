@@ -146,6 +146,26 @@ AXIS_HALVES = {
 }
 
 
+# Only Track earns the two-direction control: its one physical surface drives all three axes, so
+# "which way did I move" is the useful question. Touch names its 1- and 2-finger motions
+# separately already, and a Tune dial is one rotation with one target.
+SPLITTABLE_TYPES = {"TRACK"}
+
+# Rendering order: the order the module is actually used in, not alphabetical.
+AXIS_ORDER = ["vertical", "horizontal", "rotate"]
+
+
+def splittable_axes(module_type: str) -> dict:
+    """Axis gestures the UI offers a per-direction control for, in display order."""
+    if (module_type or "").upper() not in SPLITTABLE_TYPES:
+        return {}
+    halves = axis_halves(module_type)
+    def rank(g):
+        head = g.split(":")[0]
+        return AXIS_ORDER.index(head) if head in AXIS_ORDER else len(AXIS_ORDER)
+    return {g: halves[g] for g in sorted(halves, key=rank)}
+
+
 def axis_halves(module_type: str) -> dict:
     """{gesture: {"-": field, "+": field, "category": n}} for the split-able axis gestures."""
     return AXIS_HALVES.get((module_type or "").upper(), {})

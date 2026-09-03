@@ -735,9 +735,9 @@ def get_modules() -> dict:
                     except (TypeError, ValueError):
                         cur = f["default"]
                 settings_schema.append({**f, "value": cur})
-            halves = module_fields.axis_halves(m["type"])
+            halves = module_fields.splittable_axes(m["type"])
             axes = []
-            for gesture, spec in sorted(halves.items()):
+            for gesture, spec in halves.items():   # already in display order
                 rows = [b for b in conn.execute(
                     "SELECT action_code, direction, invert FROM module_bindings "
                     "WHERE module_config_id=? AND behavior=?", (m["id"], gesture))]

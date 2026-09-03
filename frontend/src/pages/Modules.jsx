@@ -61,7 +61,13 @@ function GestureRow({ b, actions, onPick, dev }) {
     if (!(g in groups)) { groups[g] = []; order.push(g); }
     groups[g].push(o);
   }
-  const badge = b.flashable
+  // A Track hold has no device field at all: the capture showed NayaFlow writing the hold value
+  // over the tap and the tap never reaching the board. Offering it as editable would be
+  // offering to lose the tap, so it renders disabled.
+  const unsupported = /^hold:track:button_/.test(b.behavior || "");
+  const badge = unsupported
+    ? { cls: "dbonly", text: "experimental", title: "The Track has one field per button and no room for a hold. NayaFlow lets you set one and silently overwrites the tap; we do not." }
+    : b.flashable
     ? { cls: "flashable", text: "flashable", title: "This gesture is stored on the device and can be flashed." }
     : b.fieldKind === "axis"
     ? { cls: "axis", text: "axis", title: "Scroll/pointer routing — writing this is not confirmed yet." }
@@ -86,6 +92,8 @@ function GestureRow({ b, actions, onPick, dev }) {
       <select
         className="mac-input mod-action"
         value={b.actionCode || ""}
+        disabled={unsupported}
+        title={unsupported ? "The Track cannot store a hold — setting one would overwrite the tap." : undefined}
         onChange={(e) => onPick(b.id, opts.find((o) => o.code === e.target.value))}
       >
         {order.map((g) =>
