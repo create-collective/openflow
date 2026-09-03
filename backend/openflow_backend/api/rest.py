@@ -65,14 +65,26 @@ async def status(verbose: bool = False) -> dict:
 
 @router.post("/rpc/read-keyboard")
 async def read_keyboard(body: dict = Body(default={})) -> dict:
-    """Read the map currently on the keyboard and import it as a new profile."""
+    """Read the map currently on the keyboard and import it, matching an existing profile by
+    layer uuid where one exists.
+
+    The module config LIST is read too, so the per-layer module bays can be resolved from slot
+    numbers to actual profiles. Without it the bays would be uninterpretable -- a bay holds a
+    slot index, and only the list says which profile that slot is.
+    """
     svc = get_service()
     side = body.get("side", "left")
     try:
         read = await run_in_threadpool(svc.read_keymap, side)
+        slot_uuid = {}
+        try:
+            mods = await run_in_threadpool(svc.read_module_configs, side)
+            slot_uuid = {slot: uuid for uuid, slot in (mods.get("by_uuid") or {}).items()}
+        except Exception:
+            pass    # a keymap read is still worth having if the module list is unreadable
     except TransportError as e:
         raise HTTPException(status_code=503, detail=str(e))
-    return await run_in_threadpool(kmi.import_read, read, body.get("name"))
+    return await run_in_threadpool(kmi.import_read, read, body.get("name"), slot_uuid)
 
 
 @router.get("/api/userdata")

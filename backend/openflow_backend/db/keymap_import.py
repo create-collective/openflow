@@ -27,8 +27,47 @@ def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def import_read(read: dict, profile_name: str | None = None) -> dict:
-    """Create a new profile from a raw device read. Returns a summary dict."""
+def _import_bays(conn, profile_id, order_to_layer, read, slot_uuid, now) -> int:
+    """Persist which module profile each bay uses, per layer.
+
+    This is what the virtual board's module slots should show. Until now they were a
+    localStorage toy -- {left, right} with no connection to the device at all -- so reading the
+    keyboard could not update them because there was nothing to update.
+
+    Rows go in module_config_bindings, which is NayaFlow's own table for exactly this and whose
+    binding_location values match the bay layout we decoded from the layer data.
+    """
+    n = 0
+    conn.execute("DELETE FROM module_config_bindings WHERE profile_id=?", (profile_id,))
+    for order, bays in (read.get("bays") or {}).items():
+        lid = order_to_layer.get(int(order))
+        if lid is None:
+            continue
+        for location, value in bays.items():
+            if value == "transparent":
+                state, cfg = "transparent", None
+            elif value == "disabled":
+                state, cfg = "disabled", None
+            else:
+                cfg = slot_uuid.get(value)
+                if cfg is None:
+                    continue          # a slot we have no config for: record nothing, invent nothing
+                state = None
+            conn.execute(
+                "INSERT INTO module_config_bindings (profile_id, layer_id, module_config_id, "
+                "binding_location, state, updated_at, created_at) VALUES (?,?,?,?,?,?,?)",
+                (profile_id, lid, cfg, location, state, now, now))
+            n += 1
+    return n
+
+
+def import_read(read: dict, profile_name: str | None = None,
+                slot_uuid: dict | None = None) -> dict:
+    """Create or update a profile from a raw device read. Returns a summary dict.
+
+    `slot_uuid` maps module-config SLOT -> config uuid, from the device's module config list.
+    Without it the bays cannot be resolved to profiles and are skipped rather than guessed at.
+    """
     now = _now()
     name = profile_name or f"Read from keyboard {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     device_uuids = read.get("layer_uuids") or {}
@@ -104,6 +143,8 @@ def import_read(read: dict, profile_name: str | None = None) -> dict:
                         (None, str(code), atype, beh, kid, str(uuid.uuid4()), now, now),
                     )
                     n_bindings += 1
+
+        bays = _import_bays(conn, prof_id, order_to_layer, read, slot_uuid or {}, now)
 
         for order, cmap in colors.items():
             for pos, hexv in cmap.items():

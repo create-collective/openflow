@@ -260,11 +260,36 @@ def read_keymap(transport, dest: int) -> dict:
     for li in layer_idxs:
         layers[li] = parse_records(read_full(READ_LAYER_DATA, li))
         led[li] = parse_led_map(read_full(READ_LED_MAP, li))
-    return {"layers": layers, "led": led, "layer_uuids": layer_uuids}
+    return {"layers": layers, "led": led, "layer_uuids": layer_uuids,
+            "bays": {li: decode_bays(recs) for li, recs in layers.items()}}
 
 
 READ_MODULE_CONFIG_LIST = 0x1009
 READ_MODULE_CONFIG_DATA = 0x100B
+
+
+# Layer positions 0x4A-0x51 are the module BAYS, not keys: 4 module types x 2 sides, in type
+# order. The value is the module-config SLOT bound to that bay on that layer, with 0x78 meaning
+# "inherit from the base layer" and 0 meaning "nothing here". The names match NayaFlow's own
+# module_config_bindings.binding_location, which independently confirms the layout.
+BAY_LOCATIONS = {
+    0x4A: "touch:keyboard_left",  0x4B: "touch:keyboard_right",
+    0x4C: "track:keyboard_left",  0x4D: "track:keyboard_right",
+    0x4E: "tune:keyboard_left",   0x4F: "tune:keyboard_right",
+    0x50: "float:keyboard_left",  0x51: "float:keyboard_right",
+}
+BAY_INHERIT = 0x78
+
+
+def decode_bays(records) -> dict:
+    """One layer's records -> {binding_location: slot|'transparent'|'disabled'}."""
+    out = {}
+    for pos, typ, _param in records:
+        loc = BAY_LOCATIONS.get(pos)
+        if loc is None:
+            continue
+        out[loc] = "transparent" if typ == BAY_INHERIT else ("disabled" if typ == 0 else typ)
+    return out
 
 
 def read_module_configs(transport, dest: int, slots: range = range(8)) -> dict:
