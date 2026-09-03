@@ -253,6 +253,20 @@ def decode_mouse_button(value: bytes) -> str:
     return MOUSE_MASK_REV[mask]
 
 
+MODULE_SLOT_FIELDS = 40      # slot 0 is a blank template of 40 empty records
+
+
+def encode_module_config_blank(slot: int, fields: int = MODULE_SLOT_FIELDS) -> bytes:
+    """The payload that empties a module slot: every field as type 0, length 0.
+
+    This is NayaFlow's own idiom, captured 2026-09-03 when it garbage-collected an unreferenced
+    profile -- not type-7 clears, and not a short write (a short write is what leaves a slot
+    holding a previous module's tail). It matches slot 0, which the device keeps as a blank
+    template of 40 empty records.
+    """
+    return bytes([slot]) + b"".join(bytes([f, 0x00, 0x00]) for f in range(fields))
+
+
 def encode_module_config_list(entries: list) -> bytes:
     """[00] + per-slot [slot][list_id][flag][10][uuid16], mirroring encode_layer_list.
 
@@ -262,10 +276,19 @@ def encode_module_config_list(entries: list) -> bytes:
     """
     out = bytearray([0x00])
     for slot, list_id, module_type, uuid in entries:
+        if not uuid:
+            # deletion: [slot] 00 00 00, exactly what NayaFlow sent to drop a profile
+            out += bytes([slot, 0x00, 0x00, 0x00])
+            continue
         if len(uuid) != 16:
             raise RemapEncodeError("module-config-list uuid must be 16 bytes")
         out += bytes([slot, list_id, module_type, 0x10]) + uuid
     return bytes(out)
+
+
+def encode_module_config_list_delete(slots: list) -> bytes:
+    """Remove list entries. Captured form: `00` + `[slot] 00 00 00` per slot."""
+    return encode_module_config_list([(s, 0, 0, b"") for s in slots])
 
 
 def parse_module_config_list(payload: bytes) -> list:
