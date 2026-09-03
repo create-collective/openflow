@@ -53,13 +53,21 @@ def create(variant: str, name: str | None = None) -> dict:
     now, cid = _now(), str(uuid.uuid4())
     conn = connect()
     try:
-        n = conn.execute("SELECT COUNT(*) c FROM module_configs WHERE type=?",
-                         (stock["module_type"],)).fetchone()["c"]
-        label = name or (stock["default_name"] if n == 0 else f"{stock['default_name']} {n + 1}")
+        # Number within the VARIANT, not the type: a second Track Left should be
+        # "Naya Track Left 2", not "3" just because a Track Right also exists.
+        base = stock["default_name"]
+        taken = {r["name"] for r in conn.execute(
+            "SELECT name FROM module_configs WHERE name = ? OR name LIKE ?", (base, base + " %"))}
+        label = name or base
+        if not name and label in taken:
+            n = 2
+            while f"{base} {n}" in taken:
+                n += 1
+            label = f"{base} {n}"
         conn.execute(
             "INSERT INTO module_configs (name, type, size, order_id, icon_id, id, updated_at, created_at) "
             "VALUES (?,?,?,?,?,?,?,?)",
-            (label, stock["module_type"], 0, n, None, cid, now, now),
+            (label, stock["module_type"], 0, len(taken), None, cid, now, now),
         )
         for behavior, b in sorted(stock["bindings"].items()):
             conn.execute(

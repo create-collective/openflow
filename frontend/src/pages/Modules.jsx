@@ -128,6 +128,10 @@ export default function Modules() {
   // What is actually flashed on the keyboard, per module config (null = not read yet).
   const [device, setDevice] = useState(null);
   const [reading, setReading] = useState(false);
+  const [variants, setVariants] = useState([]);
+  const [adding, setAdding] = useState(false);      // the "add profile" dropdown
+  const [renaming, setRenaming] = useState(null);   // config id being renamed
+  const [renameVal, setRenameVal] = useState("");
   const [searchParams] = useSearchParams();
   const wantType = (searchParams.get("type") || "").toUpperCase();
 
@@ -135,6 +139,7 @@ export default function Modules() {
     try {
       const r = await api.modules();
       const mods = r.modules || [];
+      api.moduleVariants().then((v) => setVariants(v.variants || [])).catch(() => {});
       setModules(mods);
       setActions(r.actions || []);
       if (!selectedId && mods.length) {
@@ -151,6 +156,51 @@ export default function Modules() {
   // Read the module configs off the keyboard and diff them against the app. Read-only:
   // the app has always shown only its own stored bindings, so until this runs there is no
   // way to tell an edit that was flashed from one that was never written.
+  async function addProfile(variant) {
+    setAdding(false);
+    setErr(null);
+    try {
+      const r = await api.createModuleProfile(variant);
+      await load();
+      setSelectedId(r.id);
+      setActiveTarget(null);
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
+  function startRename(m) {
+    setRenaming(m.id);
+    setRenameVal(m.name);
+  }
+
+  async function commitRename() {
+    const id = renaming;
+    const v = renameVal.trim();
+    setRenaming(null);
+    if (!id || !v) return;
+    try {
+      await api.renameModuleProfile(id, v);
+      await load();
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
+  async function removeProfile(m) {
+    // The backend refuses the last profile of a type -- a module with no profile cannot be
+    // driven -- so surface that reason rather than a bare failure.
+    if (!window.confirm(`Delete the module profile "${m.name}"? Its bindings go with it.`)) return;
+    setErr(null);
+    try {
+      await api.deleteModuleProfile(m.id);
+      if (selectedId === m.id) setSelectedId(null);
+      await load();
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
   async function readDevice() {
     setReading(true);
     setErr(null);
@@ -222,18 +272,57 @@ export default function Modules() {
 
       <div className="module-layout">
         <div className="module-list">
+          <div className="module-add">
+            <button className="board-btn" onClick={() => setAdding((v) => !v)}
+                    title="Add another profile for a module. A layer can use a different profile
+                           than the base layer, so more than one per module is useful.">
+              + Add profile
+            </button>
+            {adding && (
+              <div className="module-add-menu">
+                {variants.map((v) => (
+                  <button key={v.id} className="module-add-item" onClick={() => addProfile(v.id)}>
+                    {v.label}
+                    <span className="module-add-count">{v.bindings} binds</span>
+                  </button>
+                ))}
+                {variants.length === 0 && <div className="palette-disabled">No stock profiles found.</div>}
+              </div>
+            )}
+          </div>
           {TYPE_ORDER.map((type) =>
             grouped[type] ? (
               <div key={type} className="module-group">
                 <div className="module-group-title">{type}</div>
                 {grouped[type].map((m) => (
-                  <button
-                    key={m.id}
-                    className={"module-item" + (m.id === selectedId ? " active" : "")}
-                    onClick={() => { setSelectedId(m.id); setActiveTarget(null); }}
-                  >
-                    ◉ {m.name}
-                  </button>
+                  renaming === m.id ? (
+                    <input
+                      key={m.id}
+                      className="module-rename"
+                      autoFocus
+                      value={renameVal}
+                      onChange={(e) => setRenameVal(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") setRenaming(null);
+                      }}
+                    />
+                  ) : (
+                  <div key={m.id} className={"module-item-row" + (m.id === selectedId ? " active" : "")}>
+                    <button
+                      className={"module-item" + (m.id === selectedId ? " active" : "")}
+                      onClick={() => { setSelectedId(m.id); setActiveTarget(null); }}
+                      onDoubleClick={() => startRename(m)}
+                      title="Double-click to rename"
+                    >
+                      ◉ {m.name}
+                    </button>
+                    <button className="module-item-x" title="Rename" onClick={() => startRename(m)}>✎</button>
+                    <button className="module-item-x" title="Delete this profile"
+                            onClick={() => removeProfile(m)}>✕</button>
+                  </div>
+                  )
                 ))}
               </div>
             ) : null

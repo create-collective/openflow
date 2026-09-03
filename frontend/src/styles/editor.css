@@ -73,7 +73,10 @@
   font-size: 10px;
 }
 
-.profile-menu-btn {
+/* The profile bar's menu button is always visible, unlike the layer rows' (which reveal on
+   row hover). This must out-specify .layer-menu-btn { opacity: 0 } rather than merely restate
+   it: that rule is defined LATER in this file, so an equal-specificity override loses. */
+.profile-menu-btn.layer-menu-btn {
   opacity: 1;
 }
 
@@ -1343,4 +1346,82 @@
 .anim-item.active {
   background: color-mix(in srgb, var(--accent) 22%, var(--neutral12));
   border-color: var(--accent);
+}
+
+/* --- module profile rail ---------------------------------------------------
+   A module can hold several profiles and each layer picks one, so this rail
+   manages a set rather than showing a fixed four. */
+.module-add {
+  position: relative;
+  margin-bottom: 10px;
+}
+.module-add > .board-btn {
+  width: 100%;
+}
+.module-add-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--neutral6);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.module-add-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 9px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.module-add-item:hover { background: var(--neutral12); }
+.module-add-count {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* The row wraps the profile button so rename/delete can sit beside it without
+   nesting a button inside a button. */
+.module-item-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.module-item-row > .module-item { flex: 1; margin-bottom: 0; }
+.module-item-row + .module-item-row { margin-top: 2px; }
+.module-item-x {
+  opacity: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 5px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.module-item-row:hover .module-item-x { opacity: 1; }
+.module-item-x:hover { background: var(--neutral12); color: var(--text); }
+
+.module-rename {
+  width: 100%;
+  padding: 8px 11px;
+  margin-bottom: 2px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--neutral6);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
 }

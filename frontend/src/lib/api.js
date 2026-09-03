@@ -27,6 +27,10 @@ export const api = {
   diagnostics: () => req("GET", "/api/diagnostics/report"),
   readKeyboard: (body = {}) => req("POST", "/rpc/read-keyboard", body),
   readModules: (body = {}) => req("POST", "/rpc/read-modules", body),
+  moduleVariants: () => req("GET", "/api/module-variants"),
+  createModuleProfile: (variant, name) => req("POST", "/rpc/create-module-profile", { variant, name }),
+  renameModuleProfile: (configId, name) => req("POST", "/rpc/rename-module-profile", { configId, name }),
+  deleteModuleProfile: (configId) => req("POST", "/rpc/delete-module-profile", { configId }),
   // The only call that writes to the keyboard. The confirm token is required by the
   // backend, so an accidental call cannot flash.
   flash: (body = {}) => req("POST", "/rpc/flash", { confirm: "FLASH", ...body }),
