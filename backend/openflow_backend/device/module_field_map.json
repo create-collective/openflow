@@ -197,7 +197,7 @@
   "slot_seen": 4,
   "confidence": "CONFIRMED by a live write + read-back (2026-09-02)",
   "source": "NayaFlow flash of the 'Naya Track Left' profile, captured on the wire (device/out/track-swap-writes.json slot 4) and read back (device/out/module-probe-after-trackflash.json). Our encoder re-encodes that captured write byte-exactly.",
-  "note": "The four axis-3 fields 0x0b-0x0e ARE the Track's buttons 1-4 in field order, and the value is a mouse-button bitmask. Proven by both orientations: Track Right stores 8,2,4,1 = M4,M2,M3,M1 and Track Left stores 1,4,2,8 = M1,M3,M2,M4, each matching its profile's button_1..4 exactly. A Track config is only 15 fields (0x00-0x0e); it has no keypress gesture fields, so keyboard shortcuts on Track buttons are still unproven.",
+  "note": "The four category-3 fields 0x0b-0x0e ARE the Track's buttons 1-4, and the value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4) -- proven by a single-field write in C2. They are NOT limited to mouse buttons: NayaFlow wrote a second Track profile on 2026-09-03 with 4-byte KEYPRESS records (D/R/S/T) in those same fields, so the field's record TYPE decides what it holds. The earlier claim that Track has no keypress gesture fields was wrong -- we had only ever seen these fields holding masks. A Track config is 15 fields (0x00-0x0e).",
   "fields": {
    "0x00": {
     "kind": "speed",

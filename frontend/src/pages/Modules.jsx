@@ -32,10 +32,13 @@ function targetLabel(t) {
 // Action types each device field kind can actually hold (data-backed, mirrors the
 // backend module_fields.action_ok_for_kind). Only these are offered when a gesture
 // maps to a real device field, so the UI can't stage something the firmware refuses.
-const KEYPRESS_TYPES = new Set(["key", "modifier", "shortcut_alias"]);
+// A gesture field is not locked to one record type: the same field takes a keypress OR a
+// mouse button, and the TYPE byte decides. Proven on hardware twice — Tune 0x08 took both,
+// and NayaFlow wrote KEYPRESS records into the Track button fields that normally hold masks.
+const CLICK_TYPES = new Set(["key", "modifier", "shortcut_alias", "mouse"]);
 function okForKind(actionType, fieldKind) {
   if (actionType === "none") return true;
-  if (fieldKind === "keypress") return KEYPRESS_TYPES.has(actionType);
+  if (fieldKind === "keypress" || fieldKind === "mouse_button") return CLICK_TYPES.has(actionType);
   if (fieldKind === "axis") return actionType === "value";
   return true; // no device field (DB-only) — don't restrict, but the row is badged
 }

@@ -74,16 +74,28 @@ def gesture_kind(module_type: str, behavior: str) -> str | None:
     return None
 
 
+# A gesture field is NOT locked to one record type -- the TYPE byte decides what it means, and
+# the same field accepts either kind. Proven twice on hardware:
+#   * Tune 0x08 (1-finger tap) took a keypress ("B", C1) and later a category-3 mouse button.
+#   * Track 0x0b-0x0e held mouse-button masks in the stock profile and 4-byte KEYPRESSES
+#     (D/R/S/T) in a second profile NayaFlow wrote on 2026-09-03.
+# So "kind" records what a field currently holds, not what it can hold. This also retires the
+# old claim that Track has no keypress gesture fields -- it has the same fields, and we had
+# only ever seen them holding mouse masks.
+MOUSE_ACTION_TYPES = {"mouse"}
+CLICKABLE_KINDS = {"keypress", "mouse_button"}
+
+
 def action_ok_for_kind(action_type: str, field_kind: str | None) -> bool:
     """Whether an action_type can be flashed into a field of this kind. Used to filter the
     gesture dropdown so the UI never offers something the firmware could not accept."""
     if action_type == "none":
         return True
-    if field_kind == "keypress":
-        return action_type in KEYPRESS_ACTION_TYPES
+    if field_kind in CLICKABLE_KINDS:
+        return action_type in KEYPRESS_ACTION_TYPES | MOUSE_ACTION_TYPES
     if field_kind == "axis":
         return action_type == "value"
-    return False  # unknown field kind, or LED/mouse — not confirmed writable
+    return False  # no device field, or an action kind we have not seen written
 
 
 def label_fields(module_type: str, parsed_fields: list[tuple[int, int, bytes]]) -> list[dict]:
