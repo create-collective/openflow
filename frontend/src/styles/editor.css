@@ -1425,3 +1425,28 @@
   font: inherit;
   font-weight: 600;
 }
+
+/* --- modules: page-level read, and which profiles the keyboard carries ------
+   Reading is a whole-device action, so it sits in the page header rather than
+   inside a selected profile. Its result is per-profile state, shown in the rail. */
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.module-dev-dot {
+  float: right;
+  font-size: 9px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.module-dev-dot.on { color: var(--accent); }
+
+/* A profile the board is actually carrying reads brighter than one that only
+   exists in the app and has never been flashed. */
+.module-item.on-device {
+  color: var(--text);
+}

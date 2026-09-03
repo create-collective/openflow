@@ -266,8 +266,25 @@ export default function Modules() {
 
   return (
     <div>
-      <h1 className="page-title">Modules</h1>
-      <p className="page-sub">Configure Touch, Track, and Tune modules.</p>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Modules</h1>
+          <p className="page-sub">Configure Touch, Track, and Tune modules.</p>
+        </div>
+        {/* Reading is a whole-device action: one read tells us which of these profiles the
+            keyboard is actually carrying. Per-profile reads invited mismatch confusion. */}
+        <div className="board-actions">
+          <button className="board-btn primary" onClick={readDevice} disabled={reading}
+                  title="Read the keyboard and mark which profiles are on it">
+            {reading ? "Reading…" : "⌨  Read from keyboard"}
+          </button>
+          {device && (
+            <span className="saved-note">
+              {Object.keys(device).length} profile(s) on the keyboard
+            </span>
+          )}
+        </div>
+      </div>
       {err && <div className="card"><div className="phase-note">{err}</div></div>}
 
       <div className="module-layout">
@@ -311,12 +328,24 @@ export default function Modules() {
                   ) : (
                   <div key={m.id} className={"module-item-row" + (m.id === selectedId ? " active" : "")}>
                     <button
-                      className={"module-item" + (m.id === selectedId ? " active" : "")}
+                      className={"module-item" + (m.id === selectedId ? " active" : "")
+                        + (device && device[m.id] ? " on-device" : "")}
                       onClick={() => { setSelectedId(m.id); setActiveTarget(null); }}
                       onDoubleClick={() => startRename(m)}
-                      title="Double-click to rename"
+                      title={
+                        !device
+                          ? "Double-click to rename"
+                          : device[m.id]
+                          ? `On the keyboard as slot ${device[m.id].slot}`
+                          : "Not on the keyboard — flash to put it there"
+                      }
                     >
                       ◉ {m.name}
+                      {device && (
+                        <span className={"module-dev-dot" + (device[m.id] ? " on" : "")}>
+                          {device[m.id] ? "●" : "○"}
+                        </span>
+                      )}
                     </button>
                     <button className="module-item-x" title="Rename" onClick={() => startRename(m)}>✎</button>
                     <button className="module-item-x" title="Delete this profile"
@@ -338,10 +367,6 @@ export default function Modules() {
               <div className="module-tabs">
                 <button className={"tab" + (tab === "bindings" ? " active" : "")} onClick={() => setTab("bindings")}>bindings</button>
                 <button className={"tab" + (tab === "settings" ? " active" : "")} onClick={() => setTab("settings")}>settings</button>
-                <button className="tab" onClick={readDevice} disabled={reading}
-                        title="Read what is actually flashed on the keyboard and compare it with the app">
-                  {reading ? "reading…" : "read from keyboard"}
-                </button>
               </div>
               {onDevice && (
                 <div className="phase-note" style={{ marginBottom: 10 }}>
