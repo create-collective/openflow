@@ -1,4 +1,5 @@
 import { useState } from "react";
+import WindowsIcon from "./WindowsIcon";
 import { MAIN_ROWS, NAV_ROWS, NUMPAD, VK_MODIFIERS, FKEYS_EXTRA, resolveVirtualKey } from "../lib/keydict";
 
 const UNIT = 42; // px per keyboard unit (a normal 1u key)
@@ -18,6 +19,10 @@ export default function VirtualKeyboard({ disabled, onPick }) {
   const pickF = (code) => { setFmore(false); if (!disabled) onPick({ actionCode: code, actionType: "key" }); };
   // A key's secondary legend: its shifted symbol, or its Mac label — whichever it
   // has — and whether that legend is currently the active one.
+  // LGUI/RGUI show the real Windows logo instead of the dictionary's maths glyph -- except in
+  // mac mode, where altOf already swaps in the Cmd symbol.
+  const glyphOf = (k) =>
+    !mac && (k.code === "LGUI" || k.code === "RGUI") ? <WindowsIcon size={14} /> : k.glyph;
   const altOf = (k) => (k.shift ? { g: k.shift[1], on: shift } : (k.mac ? { g: k.mac, on: mac } : null));
   const macLabel = (m) => (mac ? ({ win: "Cmd", alt: "Option", altgr: "Option" }[m.id] || m.label) : m.label);
 
@@ -52,7 +57,7 @@ export default function VirtualKeyboard({ disabled, onPick }) {
         onClick={() => click(k)}
       >
         {alt && <span className="vk-sub">{alt.g}</span>}
-        <span className="vk-base">{k.glyph}</span>
+        <span className="vk-base">{glyphOf(k)}</span>
       </button>
     );
   };
@@ -76,7 +81,7 @@ export default function VirtualKeyboard({ disabled, onPick }) {
           title={k.code}
           onClick={() => click(k)}
         >
-          <span className="vk-base">{k.glyph}</span>
+          <span className="vk-base">{glyphOf(k)}</span>
         </button>
       ))}
     </div>

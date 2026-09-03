@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import FlashButton from "../components/FlashButton.jsx";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { POS_LABEL } from "../lib/layout";
@@ -231,11 +232,7 @@ export default function Bindings() {
                 title="Snapshot the current map to a backup">
                 {busy === "save" ? "Saving…" : "Save"}
               </button>
-              <button className="board-btn" disabled={!saved || !!busy}
-                onClick={() => setErr("Flashing to the keyboard isn't wired up yet — coming soon.")}
-                title={saved ? "Flash the current map to the keyboard" : "Save the map first to enable flashing"}>
-                ⚡ Flash to keyboard
-              </button>
+              <FlashButton variant="toolbar" />
               {saved && <span className="saved-note">Saved {saved.toLocaleTimeString()}</span>}
             </div>
           </div>

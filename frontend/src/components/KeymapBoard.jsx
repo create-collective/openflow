@@ -1,5 +1,6 @@
 import { keyLegend } from "../lib/keylabels";
 import LayersIcon from "./LayersIcon";
+import WindowsIcon from "./WindowsIcon";
 import { SHAPES, POS_SHAPE } from "../lib/keyshapes";
 import {
   LEFT_COLS, RIGHT_COLS, KEY_WRAPPERS, LEFT_THUMBS, RIGHT_THUMBS,
@@ -27,6 +28,12 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
   const [, , vbw, vbh] = shape.viewBox.split(" ").map(Number);
   const w = vbw * KEY_UNIT, h = vbh * KEY_UNIT;
   const legend = keyLegend(data?.binding, layerMap);
+  // A key can carry four behaviours (tap / hold / double-tap / tap+hold) in two records.
+  // The legend only shows the tap, so mark the cap when there is more than one.
+  const behaviours = data?.bindings ? Object.keys(data.bindings).length : 0;
+  const code = data?.binding?.actionCode;
+  // LGUI/RGUI get the real Windows logo rather than the maths glyph in the dictionary.
+  const isWinKey = code === "LGUI" || code === "RGUI";
   const color = data?.colorHex;
   const showColor = mode === "color" && color;
   const textColor = showColor ? contrastText(color) : undefined;
@@ -63,7 +70,12 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
       {!legend.layer && (legend.main || legend.sub) && (
         <span className="kc-legend" style={{ top: shape.legend.top, left: shape.legend.left, color: textColor }}>
           {legend.sub && <span className="kc-sub" style={{ color: textColor }}>{legend.sub}</span>}
-          <span className="kc-main">{legend.main}</span>
+          <span className="kc-main">{isWinKey ? <WindowsIcon size={15} /> : legend.main}</span>
+        </span>
+      )}
+      {behaviours > 1 && (
+        <span className="kc-multi" title={`${behaviours} behaviours: ${Object.keys(data.bindings).join(", ")}`}>
+          ★
         </span>
       )}
     </button>

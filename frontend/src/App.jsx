@@ -9,7 +9,6 @@ import Bindings from "./pages/Bindings.jsx";
 import Color from "./pages/Color.jsx";
 import Modules from "./pages/Modules.jsx";
 import Macros from "./pages/Macros.jsx";
-import FlashButton from "./components/FlashButton.jsx";
 
 // Routes mirror the recovered NayaFlow renderer.
 const NAV = [
@@ -47,9 +46,6 @@ function Sidebar() {
         </NavLink>
       ))}
       <div className="nav-spacer" />
-      <div className="nav-flash">
-        <FlashButton />
-      </div>
       <div className="nav-item" style={{ pointerEvents: "none" }}>
         <span className={"dot " + (connected ? "ok" : "err")} />
         {connected ? "Backend connected" : "Backend offline"}

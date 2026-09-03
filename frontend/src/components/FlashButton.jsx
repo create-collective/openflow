@@ -41,7 +41,7 @@ function summarize(ops) {
   return g;
 }
 
-export default function FlashButton() {
+export default function FlashButton({ variant = "sidebar" }) {
   const [state, setState] = useState("idle"); // idle | loading | preview | writing | done | error
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -95,7 +95,12 @@ export default function FlashButton() {
 
   return (
     <>
-      <button className="flash-btn" onClick={openPreview} disabled={state === "loading"}>
+      <button
+        className={variant === "toolbar" ? "board-btn primary" : "flash-btn"}
+        onClick={openPreview}
+        disabled={state === "loading"}
+        title="Preview the changes, then confirm to write them to the keyboard"
+      >
         {state === "loading" ? "Previewing…" : "⚡ Flash to keyboard"}
       </button>
 

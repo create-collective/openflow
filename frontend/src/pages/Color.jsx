@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import FlashButton from "../components/FlashButton.jsx";
 import { api } from "../lib/api";
 import { hsvToHex, isValidHex } from "../lib/color";
 import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
@@ -184,7 +185,10 @@ export default function Color() {
           />
         </div>
         <div className="board-wrap">
-          <div className="board-header"><strong>{layer?.name}</strong> — LED view</div>
+          <div className="board-header">
+            <div><strong>{layer?.name}</strong> — LED view</div>
+            <div className="board-actions"><FlashButton variant="toolbar" /></div>
+          </div>
           <KeymapBoard keysByPosition={keysByPosition} mode="color" onSelectKey={onKey} layerMap={layerMap} />
         </div>
       </div>
