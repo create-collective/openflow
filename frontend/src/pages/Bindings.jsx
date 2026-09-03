@@ -31,6 +31,7 @@ export default function Bindings() {
   // and then never seen again, which is exactly when it would have mattered.
   const [layerNotice, setLayerNotice] = useState(null);
   const [catalog, setCatalog] = useState(null);
+  const [moduleProfiles, setModuleProfiles] = useState([]);
   const [macros, setMacros] = useState([]);
   const [activeLayerId, setActiveLayerId] = useState(null);
   const [selectedPos, setSelectedPos] = useState(null);
@@ -83,6 +84,56 @@ export default function Bindings() {
     return entry?.matched || id;
   }
 
+  // Everything the board's module row needs to offer a profile per bay.
+  //
+  // A choice is written against the LAYER being edited. Set them on the base layer and the rest
+  // inherit; change one elsewhere and only that layer differs -- the flash then works out that
+  // the board needs the base layer's profiles plus that alternate.
+  const bayUI = useMemo(() => {
+    if (!profile || !catalog) return null;
+    const layer = profile.layers.find((l) => l.id === activeLayerId);
+    const base = profile.layers.find((l) => l.orderId === 0) || profile.layers[0];
+    const key = (type, side) => `${type}:keyboard_${side || "left"}`;
+    const liveIds = new Set(
+      Object.values(deviceRead || {}).map((e) => e.matched).filter(Boolean));
+
+    const selectedFor = (type, side) => {
+      const own = layer?.bays?.[key(type, side)];
+      if (own === "disabled") return "disabled";
+      if (own && own !== "transparent") return own;
+      const inh = base?.bays?.[key(type, side)];
+      return inh && inh !== "transparent" ? inh : null;
+    };
+
+    return {
+      profilesFor: (type) => (moduleProfiles || [])
+        .filter((m) => m.type === type.toUpperCase())
+        .map((m) => ({ id: m.id, name: m.name, onBoard: liveIds.has(m.id) })),
+      selectedFor,
+      // True when this layer says nothing and the value shown comes from the base layer.
+      inheritedFor: (type, side) => {
+        if (!layer || layer.id === base?.id) return false;
+        const own = layer.bays?.[key(type, side)];
+        return !own || own === "transparent";
+      },
+      onPick: async (type, side, configId) => {
+        try {
+          await api.setLayerBay({
+            layerId: activeLayerId, moduleType: type.toUpperCase(), side, configId,
+          });
+          await load();
+        } catch (e) { setErr(e.message); }
+      },
+      onManage: (type, side) => {
+        const id = selectedFor(type, side);
+        navigate(id && id !== "disabled"
+          ? `/module-configuration?config=${id}`
+          : `/module-configuration?type=${type.toUpperCase()}`);
+      },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, catalog, activeLayerId, deviceRead, moduleProfiles]);
+
   // Replace the hand-placed bays with what the board reports is actually docked. Best effort:
   // the keymap read has already succeeded by this point, so a module query that fails should
   // not turn a good read into an error.
@@ -94,10 +145,12 @@ export default function Bindings() {
 
   const load = useCallback(async () => {
     try {
-      const [ud, acts, mac] = await Promise.all([api.userdata(), api.actions(), api.macros()]);
+      const [ud, acts, mac, mods] = await Promise.all([
+        api.userdata(), api.actions(), api.macros(), api.modules()]);
       setProfiles(ud.profiles || []);
       setCatalog(acts);
       setMacros(mac.macros || []);
+      setModuleProfiles(mods.modules || []);
     } catch (e) {
       setErr(e.message);
     }
@@ -349,6 +402,7 @@ export default function Bindings() {
             onAssignModule={assignModule}
             pickedModule={pickedModule}
             onPickModule={setPickedModule}
+            bays={bayUI}
             onSelectModule={(type, bay) => {
               const id = liveConfigForBay(type, bay);
               navigate(id ? `/module-configuration?config=${id}` : `/module-configuration?type=${type}`);

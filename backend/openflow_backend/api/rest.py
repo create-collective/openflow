@@ -785,3 +785,14 @@ async def flash_preview(body: dict = Body(default={})) -> dict:
     except Exception as e:  # DB/encode errors surface cleanly to the UI
         raise HTTPException(status_code=400, detail=f"flash preview failed: {e}")
     return {"dryRun": True, **result}
+
+
+@router.post("/rpc/set-layer-bay")
+async def set_layer_bay(body: dict = Body(...)) -> dict:
+    """Pick the module profile a layer runs in one bay (the board's module dropdowns)."""
+    try:
+        return await run_in_threadpool(
+            ud.set_layer_bay, body["layerId"], body["moduleType"],
+            body.get("configId"), body.get("side"))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))

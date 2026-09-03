@@ -1553,3 +1553,88 @@
 .layer-row.dragover {
   box-shadow: inset 0 2px 0 0 var(--accent);
 }
+
+/* Module profile picker, opened from the board's module row. */
+.kb-palette-slot {
+  position: relative;
+}
+
+.bay-menu {
+  position: fixed;
+  z-index: 60;            /* over the board; the modal backdrop at 1000 still wins */
+  min-width: 240px;
+  max-width: 320px;
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--neutral2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.bay-menu-head {
+  padding: 6px 8px 8px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.bay-menu-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bay-menu-item:hover {
+  background: var(--neutral4);
+}
+
+.bay-menu-item.on {
+  background: var(--neutral3);
+}
+
+.bay-menu-item.subtle {
+  color: var(--text-dim);
+}
+
+.bay-radio {
+  flex: 0 0 14px;
+  color: var(--accent);
+}
+
+.bay-menu-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bay-tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0a0a0a;
+  font-size: 10px;
+}
+
+.bay-menu-note,
+.bay-menu-empty {
+  padding: 6px 8px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.bay-menu-sep {
+  margin: 5px 4px;
+  border-top: 1px solid var(--border);
+}

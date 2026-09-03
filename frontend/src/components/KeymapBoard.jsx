@@ -1,3 +1,5 @@
+import { useState } from "react";
+import ModuleBayPicker from "./ModuleBayPicker";
 import { keyLegend } from "../lib/keylabels";
 import LayersIcon from "./LayersIcon";
 import WindowsIcon from "./WindowsIcon";
@@ -26,11 +28,13 @@ function moduleImg(type, side) {
 // One palette entry per orderable part -- hence Track twice. Dropping still assigns a
 // plain type; the bay decides which hand to draw, so a Track dragged from either entry
 // looks right wherever it lands.
+// `side` is the bay this entry governs, or null for a symmetric module that governs both.
+// Track is the exception because its left and right units are different hardware.
 const PALETTE = [
-  { key: "track:left", type: "track", side: "left", label: "Track (left)" },
-  { key: "track:right", type: "track", side: "right", label: "Track (right)" },
-  { key: "touch", type: "touch", side: "left", label: "Touch" },
-  { key: "tune", type: "tune", side: "left", label: "Tune" },
+  { key: "track:left", type: "track", side: "left", art: "left", label: "Track (left)" },
+  { key: "track:right", type: "track", side: "right", art: "right", label: "Track (right)" },
+  { key: "touch", type: "touch", side: null, art: "left", label: "Touch" },
+  { key: "tune", type: "tune", side: null, art: "left", label: "Tune" },
 ];
 function paletteType(key) {
   return key ? String(key).split(":")[0] : key;
@@ -173,8 +177,9 @@ export default function KeymapBoard(props) {
   const {
     keysByPosition = {}, mode = "bindings", selectedPosition = null, onSelectKey = () => {},
     onSelectModule = null, moduleAssign = {}, showModulePalette = false, onAssignModule = null,
-    pickedModule = null, onPickModule = null, layerMap = {},
+    pickedModule = null, onPickModule = null, layerMap = {}, bays = null,
   } = props;
+  const [openBay, setOpenBay] = useState(null);
   const kp = { keysByPosition, mode, selectedPosition, onSelectKey, layerMap };
 
   return (
@@ -189,11 +194,23 @@ export default function KeymapBoard(props) {
         {showModulePalette ? (
           <div className="kb-palette-row">
             {PALETTE.map((m) => (
-              <img key={m.key} src={moduleImg(m.type, m.side)} alt={m.label} draggable
-                title={`Drag ${m.label} to a slot, or click then click a slot`}
-                onDragStart={(e) => e.dataTransfer.setData("text/plain", m.type)}
-                onClick={() => onPickModule && onPickModule(pickedModule === m.key ? null : m.key)}
-                className={"kb-palette-mod" + (pickedModule === m.key ? " picked" : "")} />
+              <div className="kb-palette-slot" key={m.key}>
+                <img src={moduleImg(m.type, m.art)} alt={m.label}
+                  title={`${m.label} — choose the profile this layer runs`}
+                  onClick={() => setOpenBay(openBay === m.key ? null : m.key)}
+                  className={"kb-palette-mod" + (openBay === m.key ? " picked" : "")} />
+                {bays && (
+                  <ModuleBayPicker
+                    open={openBay === m.key}
+                    anchorLabel={m.label}
+                    profiles={bays.profilesFor(m.type)}
+                    selectedId={bays.selectedFor(m.type, m.side)}
+                    inherited={bays.inheritedFor(m.type, m.side)}
+                    onPick={(id) => bays.onPick(m.type, m.side, id)}
+                    onManage={() => bays.onManage(m.type, m.side)}
+                    onClose={() => setOpenBay(null)} />
+                )}
+              </div>
             ))}
           </div>
         ) : (

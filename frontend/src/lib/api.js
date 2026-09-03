@@ -40,6 +40,7 @@ export const api = {
   modules: () => req("GET", "/api/modules"),
   setModuleSetting: (body) => req("POST", "/rpc/set-module-setting", body),
   setModuleBinding: (body) => req("POST", "/rpc/set-module-binding", body),
+  setLayerBay: (body) => req("POST", "/rpc/set-layer-bay", body),
   macros: () => req("GET", "/api/macros"),
   createMacro: (name) => req("POST", "/rpc/create-macro", { name }),
   deleteMacro: (id) => req("POST", "/rpc/delete-macro", { id }),

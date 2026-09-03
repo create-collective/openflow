@@ -761,3 +761,58 @@ def set_key_color(layer_id: str, position_id: int, color_hex: str | None) -> dic
         return {"ok": True, "colorHex": color_hex}
     finally:
         conn.close()
+
+
+def set_layer_bay(layer_id: str, module_type: str, config_id: str | None,
+                  side: str | None = None) -> dict:
+    """Choose which module profile one layer runs in a bay.
+
+    A symmetric module (Touch, Tune) is set on BOTH sides from a single choice -- the same
+    profile behaves identically in either hand, so splitting it would be two controls that are
+    always set the same. Track is asymmetric hardware, so its sides are chosen separately and
+    the caller passes `side`.
+
+    `config_id` of None means inherit (the layer follows the base layer) and "disabled" means
+    the bay is off on this layer. Both are stored in `state`, which is how NayaFlow's own schema
+    distinguishes them from a real profile reference.
+    """
+    from ..device.module_layout import BAY_POSITIONS
+
+    module_type = (module_type or "").upper()
+    if module_type not in BAY_POSITIONS:
+        raise ValueError(f"unknown module type {module_type!r}")
+    sides = [side] if side else list(BAY_POSITIONS[module_type])
+    for s in sides:
+        if s not in BAY_POSITIONS[module_type]:
+            raise ValueError(f"unknown side {s!r}")
+
+    conn = connect()
+    try:
+        row = conn.execute("SELECT profile_id FROM layers WHERE id=?", (layer_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"no layer {layer_id}")
+        profile_id, now = row["profile_id"], _now()
+
+        if config_id and config_id not in ("transparent", "disabled"):
+            if conn.execute("SELECT 1 FROM module_configs WHERE id=? AND type=?",
+                            (config_id, module_type)).fetchone() is None:
+                raise ValueError(f"no {module_type} profile {config_id}")
+
+        for s in sides:
+            location = f"{module_type.lower()}:keyboard_{s}"
+            conn.execute("DELETE FROM module_config_bindings WHERE profile_id=? AND layer_id=? "
+                         "AND binding_location=?", (profile_id, layer_id, location))
+            if config_id == "disabled":
+                state, cfg = "disabled", None
+            elif not config_id or config_id == "transparent":
+                state, cfg = "transparent", None
+            else:
+                state, cfg = None, config_id
+            conn.execute(
+                "INSERT INTO module_config_bindings (profile_id, layer_id, module_config_id, "
+                "binding_location, state, updated_at, created_at) VALUES (?,?,?,?,?,?,?)",
+                (profile_id, layer_id, cfg, location, state, now, now))
+        conn.commit()
+        return {"ok": True, "sides": sides, "configId": config_id}
+    finally:
+        conn.close()
