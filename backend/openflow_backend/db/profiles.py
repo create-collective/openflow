@@ -302,9 +302,24 @@ def export_layer(layer_id: str) -> dict:
             raise ValueError(f"no layer {layer_id}")
         macro_ids: set[str] = set()
         payload = _layer_payload(conn, l, macro_ids)
+        # Layer-switch bindings reference other layers by uuid, and those layers are NOT part
+        # of a single-layer export. Carry their ORDER instead: the device stores a switch as a
+        # layer INDEX, so order is the meaningful identity, and the importing profile can
+        # resolve it against its own layer at the same position.
+        refs = {}
+        for k in payload.get("keys", []):
+            for b in k.get("bindings", []):
+                code = b.get("actionCode") or ""
+                for pre in LAYER_PREFIXES:
+                    if code.startswith(pre):
+                        tgt = code[len(pre):]
+                        row = conn.execute("SELECT order_id FROM layers WHERE id=?", (tgt,)).fetchone()
+                        if row is not None:
+                            refs[tgt] = row["order_id"]
         return {
             "version": EXPORT_VERSION, "kind": "layer",
             "layer": payload, "macros": _macros_payload(conn, macro_ids),
+            "layerRefs": refs,
         }
     finally:
         conn.close()
@@ -343,9 +358,16 @@ def _create_macros(conn, macros, now) -> dict:
     return macro_map
 
 
-def _import_layers(conn, profile_id, layers, now, macro_map, base_order=0):
-    """Two-pass: create layers (build src->new map), then keys+bindings with remap."""
+def _import_layers(conn, profile_id, layers, now, macro_map, base_order=0, layer_refs=None):
+    """Two-pass: create layers (build src->new map), then keys+bindings with remap.
+
+    `layer_refs` adds src->existing mappings for layers that are NOT part of this import --
+    used when importing a single layer, whose switch bindings point at layers already in the
+    destination profile."""
     layer_map = {l["srcId"]: _uid() for l in layers}
+    if layer_refs:
+        for src, dest in layer_refs.items():
+            layer_map.setdefault(src, dest)
     for l in layers:
         conn.execute(
             "INSERT INTO layers (name, order_id, icon_id, profile_id, animation_id, id, updated_at, created_at) VALUES (?,?,?,?,?,?,?,?)",
@@ -418,7 +440,15 @@ def import_layer(profile_id: str, data: dict) -> dict:
         max_order = conn.execute(
             "SELECT COALESCE(MAX(order_id), -1) FROM layers WHERE profile_id=?", (profile_id,)
         ).fetchone()[0]
-        _import_layers(conn, profile_id, [data["layer"]], now, macro_map, base_order=max_order + 1)
+        # Point layer-switch bindings at THIS profile's layer of the same order. Without this
+        # they keep the source profile's uuids, which do not exist here -- the binding renders
+        # as an unresolved "?" and would flash a layer index the profile may not have.
+        by_order = {r["order_id"]: r["id"] for r in conn.execute(
+            "SELECT id, order_id FROM layers WHERE profile_id=?", (profile_id,))}
+        extra = {src: by_order[order] for src, order in (data.get("layerRefs") or {}).items()
+                 if order in by_order}
+        _import_layers(conn, profile_id, [data["layer"]], now, macro_map,
+                       base_order=max_order + 1, layer_refs=extra)
         conn.commit()
         return {"ok": True}
     finally:
