@@ -165,3 +165,76 @@ def delete(config_id: str) -> dict:
         return {"ok": True, "id": config_id, "name": row["name"]}
     finally:
         conn.close()
+
+
+def capture_from_device(entries: list[dict]) -> list[dict]:
+    """Give the board's own module state a profile of its own.
+
+    A read used to leave drift implicit: the app kept an edited profile, the device kept
+    something else, and the UI marked the edited one "on the keyboard" because it shared the
+    device's uuid. That is a false claim, and it hides the board's real state entirely -- there
+    was nowhere in the app to see what the keyboard was actually running.
+
+    So a device config with no content-matching profile gets captured as one, the same way a
+    layer whose uuid we do not recognise becomes a layer rather than being dropped. The user's
+    edited profile is left exactly as it is, under its own name, no longer claiming to be live.
+
+    The capture is a NEW row with a NEW uuid, deliberately: rewriting the id of a profile the
+    user has been editing would repoint every bay that references it. The cost is that flashing
+    a capture writes its new uuid into the slot, so the board's identity for that slot changes
+    to the profile that was flashed -- which is the honest outcome.
+
+    Only drifted configs whose TYPE we know are captured. A slot whose uuid matches nothing in
+    the app has no discoverable type, so it is reported and left alone rather than guessed at.
+
+    `entries` is the /rpc/read-modules module list. Returns one dict per captured profile.
+    """
+    todo = [e for e in entries
+            if not e.get("unknown") and e.get("differs") and e.get("matched") is None]
+    if not todo:
+        return []
+
+    now = _now()
+    made = []
+    conn = connect()
+    try:
+        for e in todo:
+            cid = str(uuid.uuid4())
+            # Name it after the profile it drifted from, so the pair reads as what it is.
+            base = f"{e['name']} (on board)"
+            taken = {r["name"] for r in conn.execute(
+                "SELECT name FROM module_configs WHERE name = ? OR name LIKE ?",
+                (base, base + " %"))}
+            label = base
+            if label in taken:
+                n = 2
+                while f"{base} {n}" in taken:
+                    n += 1
+                label = f"{base} {n}"
+
+            # Sits directly below the profile it was captured from.
+            src = conn.execute("SELECT order_id, variant FROM module_configs WHERE id=?",
+                               (e["uuid"],)).fetchone()
+            pos = (src["order_id"] + 1) if src else 0
+            conn.execute("UPDATE module_configs SET order_id = order_id + 1 "
+                         "WHERE type=? AND order_id >= ?", (e["type"], pos))
+            conn.execute(
+                "INSERT INTO module_configs (name, type, size, order_id, icon_id, variant, id, "
+                "updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (label, e["type"], 0, pos, None, src["variant"] if src else None, cid, now, now))
+
+            # The device's values, not the app's -- that is the whole point of the capture.
+            for g in e.get("gestures") or []:
+                code = g.get("device")
+                conn.execute(
+                    "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
+                    "invert, threshold, direction, mode, module_config_id, id, updated_at, "
+                    "created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (None, code or "", "keypress" if code else "none", g["gesture"], 0, 0, "+", 0,
+                     cid, str(uuid.uuid4()), now, now))
+            made.append({"id": cid, "name": label, "type": e["type"],
+                         "capturedFrom": e["uuid"], "slot": e["slot"]})
+        conn.commit()
+        return made
+    finally:
+        conn.close()

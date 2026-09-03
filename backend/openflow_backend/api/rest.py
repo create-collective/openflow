@@ -575,6 +575,20 @@ def _module_diff(read: dict) -> dict:
     module config list to resolve bays, so it can report which profiles are on the board
     without opening the port a second time.
     """
+    out = _build_entries(read)
+
+    # A read imports what it finds. Anything the board is running that no profile represents
+    # becomes one, so the device's state is visible in the app and not just as a diff count.
+    captured = mprof.capture_from_device(out)
+    if captured:
+        # Rebuild against the profiles that now exist, so each entry describes the row it
+        # points at -- a capture must not inherit the diff rows of the profile it drifted from.
+        out = _build_entries(read)
+    return {"modules": out, "slotMap": read["by_uuid"], "captured": captured}
+
+
+def _build_entries(read: dict) -> list:
+    """One entry per device slot, resolved against the app's current module profiles."""
     conn = db_connect()
     try:
         configs = {r["id"]: dict(r) for r in
@@ -594,19 +608,43 @@ def _module_diff(read: dict) -> dict:
             continue
         fields = {int(f["field"]): (f["type"], bytes.fromhex(f["value"]))
                   for f in read["slots"].get(slot, read["slots"].get(str(slot), []))}
-        gestures, differs = [], 0
-        for gesture, idx in sorted(module_fields.writable_fields(cfg["type"]).items()):
-            typ, val = fields.get(idx, (None, b""))
-            device = _decode_field(cfg["type"], idx, typ, val)
-            app = bindings.get(uuid, {}).get(gesture)
-            same = _same_action(device, app)
-            differs += 0 if same else 1
-            gestures.append({"gesture": gesture, "field": idx, "device": device,
-                             "app": app, "differs": not same})
-        out.append({"uuid": uuid, "slot": slot, "name": cfg["name"], "type": cfg["type"],
-                    "fieldCount": len(fields), "gestures": gestures, "differs": differs,
-                    "trailing": max(0, len(fields) - _EXPECTED_FIELDS.get(cfg["type"], len(fields)))})
-    return {"modules": out, "slotMap": read["by_uuid"]}
+        gestures, differs = _compare(cfg["type"], fields, bindings.get(uuid, {}))
+        entry = {"uuid": uuid, "slot": slot, "name": cfg["name"], "type": cfg["type"],
+                 "fieldCount": len(fields), "gestures": gestures, "differs": differs,
+                 "trailing": max(0, len(fields) - _EXPECTED_FIELDS.get(cfg["type"], len(fields)))}
+
+        # Which app profile is ACTUALLY on the board? Sharing the device's uuid is not enough:
+        # an unflashed local edit keeps the uuid while no longer being what the keyboard runs,
+        # and marking it "on the keyboard" is simply false. The profile on the board is the one
+        # whose CONTENT matches, whichever row that is.
+        entry["matched"] = uuid if differs == 0 else None
+        if differs:
+            for other_id, other in configs.items():
+                if other_id == uuid or other["type"] != cfg["type"]:
+                    continue
+                g2, d2 = _compare(cfg["type"], fields, bindings.get(other_id, {}))
+                if d2 == 0:
+                    # Report the slot as the matching profile sees it: identical, no drift.
+                    entry["matched"] = other_id
+                    entry["matchedName"] = other["name"]
+                    entry["matchedGestures"] = g2
+                    break
+        out.append(entry)
+    return out
+
+
+def _compare(module_type: str, fields: dict, app_bindings: dict):
+    """Device fields vs one app profile's bindings -> (per-gesture rows, count that differ)."""
+    gestures, differs = [], 0
+    for gesture, idx in sorted(module_fields.writable_fields(module_type).items()):
+        typ, val = fields.get(idx, (None, b""))
+        device = _decode_field(module_type, idx, typ, val)
+        app = app_bindings.get(gesture)
+        same = _same_action(device, app)
+        differs += 0 if same else 1
+        gestures.append({"gesture": gesture, "field": idx, "device": device,
+                         "app": app, "differs": not same})
+    return gestures, differs
 
 
 # A Track config is 15 fields; anything past that is orphaned data from a previous module

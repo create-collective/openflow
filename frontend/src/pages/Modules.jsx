@@ -227,12 +227,28 @@ export default function Modules() {
   }, [modules]);
 
   const config = modules.find((m) => m.id === selectedId) || null;
-  const onDevice = device && config ? device[config.id] : null;
+  // Which profile is LIVE is decided by the read's content match, not by sharing the device's
+  // uuid: an edited-but-unflashed profile keeps the uuid while the board runs something else.
+  const liveIds = useMemo(() => {
+    const live = new Set();
+    for (const e of Object.values(device || {})) if (e.matched) live.add(e.matched);
+    return live;
+  }, [device]);
+  const isLive = (id) => liveIds.has(id);
+  // The read entry describing the slot this profile occupies, live or not.
+  const entryFor = (id) =>
+    Object.values(device || {}).find((e) => e.matched === id || e.uuid === id) || null;
+  const onDevice = config ? entryFor(config.id) : null;
+  // One slot entry can describe two profiles -- the drifted original and the capture taken from
+  // the board -- so the per-gesture rows differ by which one is selected. The entry's own rows
+  // compare the board against the original; matchedGestures compares it against the capture.
+  const isCapture = !!onDevice && onDevice.matched === config?.id && onDevice.uuid !== config?.id;
+  const deviceGestures = isCapture ? (onDevice.matchedGestures || []) : (onDevice?.gestures || []);
   const deviceByGesture = useMemo(() => {
     const g = {};
-    for (const x of onDevice?.gestures || []) g[x.gesture] = x;
+    for (const x of deviceGestures) g[x.gesture] = x;
     return g;
-  }, [onDevice]);
+  }, [onDevice, isCapture]);
 
   const axes = useMemo(
     () => (config?.bindings || []).filter((b) => !b.target).sort(byGesture),
@@ -333,21 +349,23 @@ export default function Modules() {
                   <div key={m.id} className={"module-item-row" + (m.id === selectedId ? " active" : "")}>
                     <button
                       className={"module-item" + (m.id === selectedId ? " active" : "")
-                        + (device && device[m.id] ? " on-device" : "")}
+                        + (device && isLive(m.id) ? " on-device" : "")}
                       onClick={() => { setSelectedId(m.id); setActiveTarget(null); }}
                       onDoubleClick={() => startRename(m)}
                       title={
                         !device
                           ? "Double-click to rename"
-                          : device[m.id]
-                          ? `On the keyboard as slot ${device[m.id].slot}`
+                          : isLive(m.id)
+                          ? `Running on the keyboard as slot ${entryFor(m.id)?.slot}`
+                          : entryFor(m.id)
+                          ? "Edited since the last read — the keyboard is running something else"
                           : "Not on the keyboard — flash to put it there"
                       }
                     >
                       ◉ {m.name}
                       {device && (
-                        <span className={"module-dev-dot" + (device[m.id] ? " on" : "")}>
-                          {device[m.id] ? "●" : "○"}
+                        <span className={"module-dev-dot" + (isLive(m.id) ? " on" : "")}>
+                          {isLive(m.id) ? "●" : "○"}
                         </span>
                       )}
                     </button>
@@ -374,10 +392,11 @@ export default function Modules() {
               </div>
               {onDevice && (
                 <div className="phase-note" style={{ marginBottom: 10 }}>
-                  On the keyboard as slot {onDevice.slot}: {onDevice.fieldCount} fields,{" "}
-                  {onDevice.differs === 0
-                    ? "everything matches the app."
-                    : `${onDevice.differs} gesture(s) differ from the app.`}
+                  {isLive(config.id)
+                    ? `Running on the keyboard as slot ${onDevice.slot}: ${onDevice.fieldCount} fields, everything matches.`
+                    : `Edited since the last read — the keyboard is running something else in slot ${onDevice.slot}` +
+                      ` (${onDevice.differs} gesture(s) differ).` +
+                      (onDevice.matchedName ? ` The board's version is “${onDevice.matchedName}”.` : "")}
                   {onDevice.trailing > 0 &&
                     ` ${onDevice.trailing} trailing field(s) belong to a previous module config — harmless, left alone.`}
                 </div>
