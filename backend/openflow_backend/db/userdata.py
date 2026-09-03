@@ -60,6 +60,7 @@ def get_userdata() -> dict:
                         "iconId": l["icon_id"],
                         "animationId": l["animation_id"],
                         "keys": keys,
+                        "bays": _bays_for_layer(conn, p["id"], l["id"]),
                     }
                 )
             profiles.append(
@@ -75,6 +76,23 @@ def get_userdata() -> dict:
         return {"profiles": profiles}
     finally:
         conn.close()
+
+
+def _bays_for_layer(conn, profile_id: str, layer_id: str) -> dict:
+    """{bay location: module config id | "transparent" | "disabled"} for one layer.
+
+    A layer picks which module profile each of the eight bays uses, and the keymap read has been
+    importing that since bays were decoded -- but it never reached the UI, so the app could not
+    say which module profile a given layer actually runs. Clicking a module on the virtual board
+    needs exactly this to open the right profile rather than the first one of that type.
+    """
+    out = {}
+    for r in conn.execute(
+        "SELECT module_config_id, binding_location, state FROM module_config_bindings "
+        "WHERE profile_id = ? AND layer_id = ?", (profile_id, layer_id)
+    ):
+        out[r["binding_location"]] = r["state"] or r["module_config_id"]
+    return out
 
 
 def _keys_for_layer(conn, layer_id: str) -> list[dict]:

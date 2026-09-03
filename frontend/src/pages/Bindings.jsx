@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import FlashButton from "../components/FlashButton.jsx";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { readDockedModules } from "../lib/dockedModules";
-import { setModuleRead } from "../lib/deviceState";
+import { setModuleRead, subscribeDeviceState, getDeviceState } from "../lib/deviceState";
 import { POS_LABEL } from "../lib/layout";
 import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import KeymapBoard from "../components/KeymapBoard";
@@ -59,6 +59,28 @@ export default function Bindings() {
   function assignModule(slot, type) {
     persistAssign({ [slot]: type });
     setPickedModule(null);
+  }
+
+  const deviceRead = useSyncExternalStore(subscribeDeviceState, getDeviceState).modules;
+
+  // Which module profile is running in one bay of the layer being edited.
+  //
+  // Three steps, and skipping any of them lands on the wrong profile: the layer's own bay
+  // assignment, falling back to the BASE layer because an unset bay inherits from layer 0
+  // (not from the nearest layer below -- proved by overriding a bay on layer 1 and pressing
+  // the buttons on layer 2); then the device read, because the profile a bay names may be an
+  // edited copy while the board is running the version we captured from it.
+  function liveConfigForBay(type, bay) {
+    if (!profile || !bay) return null;
+    const layer = profile.layers.find((l) => l.id === activeLayerId);
+    const base = profile.layers.find((l) => l.orderId === 0) || profile.layers[0];
+    const key = `${type}:keyboard_${bay}`;
+    let id = layer?.bays?.[key];
+    if (!id || id === "transparent") id = base?.bays?.[key];
+    if (!id || id === "transparent" || id === "disabled") return null;
+
+    const entry = Object.values(deviceRead || {}).find((e) => e.uuid === id);
+    return entry?.matched || id;
   }
 
   // Replace the hand-placed bays with what the board reports is actually docked. Best effort:
@@ -327,7 +349,10 @@ export default function Bindings() {
             onAssignModule={assignModule}
             pickedModule={pickedModule}
             onPickModule={setPickedModule}
-            onSelectModule={(type) => navigate(`/module-configuration?type=${type}`)}
+            onSelectModule={(type, bay) => {
+              const id = liveConfigForBay(type, bay);
+              navigate(id ? `/module-configuration?config=${id}` : `/module-configuration?type=${type}`);
+            }}
           />
         </div>
       </div>

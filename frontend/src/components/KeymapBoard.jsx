@@ -158,8 +158,8 @@ function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosit
   return (
     <button
       className={"kb-module" + (assigned ? " filled" : "") + ((assigned || onAssignModule) ? " clickable" : "") + (pickedModule ? " droptarget" : "")}
-      title={assigned ? `${assigned} module — configure` : `${id} slot — drag or click-place a module`}
-      onClick={() => { if (pickedModule && onAssignModule) onAssignModule(id, paletteType(pickedModule)); else if (assigned && onSelectModule) onSelectModule(assigned); }}
+      title={assigned ? `${assigned} module on the ${id} — open the profile this layer runs` : `${id} slot — drag or click-place a module`}
+      onClick={() => { if (pickedModule && onAssignModule) onAssignModule(id, paletteType(pickedModule)); else if (assigned && onSelectModule) onSelectModule(assigned, id); }}
       onDragOver={(e) => { if (onAssignModule) e.preventDefault(); }}
       onDrop={(e) => { if (!onAssignModule) return; e.preventDefault(); const t = e.dataTransfer.getData("text/plain"); if (t) onAssignModule(id, t); }}
     >

@@ -138,6 +138,9 @@ export default function Modules() {
   const [renameVal, setRenameVal] = useState("");
   const [searchParams] = useSearchParams();
   const wantType = (searchParams.get("type") || "").toUpperCase();
+  // ?config= names one exact profile (a bay click, which knows which profile that bay runs);
+  // ?type= is the looser fallback for when it does not.
+  const wantConfig = searchParams.get("config") || "";
 
   async function load() {
     try {
@@ -147,9 +150,10 @@ export default function Modules() {
       setModules(mods);
       setActions(r.actions || []);
       if (!selectedId && mods.length) {
-        // Prefer a config matching ?type= (from a Bindings module click).
-        const match = wantType && mods.find((m) => m.type === wantType);
-        setSelectedId((match || mods[0]).id);
+        // Prefer the exact profile the caller named, then a type match, then the first.
+        const exact = wantConfig && mods.find((m) => m.id === wantConfig);
+        const match = !exact && wantType && mods.find((m) => m.type === wantType);
+        setSelectedId((exact || match || mods[0]).id);
       }
     } catch (e) {
       setErr(e.message);
