@@ -53,9 +53,10 @@ def create(variant: str, name: str | None = None) -> dict:
     now, cid = _now(), str(uuid.uuid4())
     conn = connect()
     try:
-        # Number within the VARIANT, not the type: a second Track Left should be
-        # "Naya Track Left 2", not "3" just because a Track Right also exists.
-        base = stock["default_name"]
+        # A new profile is a copy of the stock map, so say so -- and number within the
+        # VARIANT, not the type: a second Track Left must not be numbered because a Track
+        # Right also exists.
+        base = f"Copy of {stock['default_name']} Defaults"
         taken = {r["name"] for r in conn.execute(
             "SELECT name FROM module_configs WHERE name = ? OR name LIKE ?", (base, base + " %"))}
         label = name or base
