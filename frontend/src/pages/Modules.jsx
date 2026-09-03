@@ -251,6 +251,15 @@ export default function Modules() {
         }
         await api.setModuleBinding({ bindingId: combinedRow.id, actionCode: "", actionType: "none" });
       } else {
+        // Fold the halves back into the combined binding before clearing them. Blanking the
+        // combined row on the way IN means there is nothing to restore on the way OUT, so the
+        // value has to come back from the halves -- which also preserves any edit made while
+        // split was on.
+        const by = Object.fromEntries(halves.map((h) => [h.behavior, h.actionCode || ""]));
+        const minus = by[pair.minusBehavior], plus = by[pair.plusBehavior];
+        const combined = minus || plus ? `${minus} - ${plus}` : "";
+        await api.setModuleBinding({ bindingId: combinedRow.id, actionCode: combined,
+                                     actionType: combined ? "value" : "none" });
         for (const h of halves) {
           await api.setModuleBinding({ bindingId: h.id, actionCode: "", actionType: "none" });
         }
