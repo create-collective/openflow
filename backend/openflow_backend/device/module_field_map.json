@@ -1,6 +1,6 @@
 {
  "TUNE": {
-  "slot_seen": 4,
+  "slot_seen": 2,
   "fields": {
    "0x00": {
     "kind": "speed",
@@ -43,7 +43,7 @@
     "kind": "keypress",
     "gesture": "tap:tune:1_finger",
     "default_action": "(user-set: Backspace)",
-    "note": "the 1-finger tap we captured flashing"
+    "note": "the 1-finger tap we captured flashing; the probe shows it EMPTY again, so a later flash rewrote the whole slot"
    },
    "0x09": {
     "kind": "unbound",
@@ -179,15 +179,15 @@
    },
    "0x22": {
     "kind": "keypress",
-    "gesture": "clockwise_rotate:tune:dial",
+    "gesture": null,
     "default_action": null,
-    "note": "dial clockwise (was Vol+)"
+    "note": "C_VOL_UP/DOWN; guessed as dial clockwise but Touch slot 1 has the identical pair with no dial -- shared schema slot, unconfirmed. Needs a write test."
    },
    "0x23": {
     "kind": "keypress",
-    "gesture": "counter_clockwise_rotate:tune:dial",
+    "gesture": null,
     "default_action": null,
-    "note": "dial counter-clockwise (was Vol-)"
+    "note": "C_VOL_UP/DOWN; guessed as dial counter-clockwise but Touch slot 1 has the identical pair with no dial -- shared schema slot, unconfirmed. Needs a write test."
    }
   }
  },
@@ -276,16 +276,17 @@
     "direction": 1,
     "note": "scroll/pointer routing (value gesture)"
    }
-  }
+  },
+  "note": "NO Track config is stored on the device as of the 2026-09-02 probe (slots 0-7 read on both halves; only Touch=1 and Tune=2 exist) even with a Track docked. Fields below are from the older slot-3 read."
  },
  "_meta": {
-  "source": "device reads (flash2.pcap slots 3/4) + docs/reference/naya-default-module-bindings.json",
-  "note": "TUNE fields confirmed from a real read; TRACK has only axis+speed fields (no on-device gesture keypress); TOUCH/FLOAT need a device read",
+  "source": "live read-only probe 2026-09-02 (tools/naya_module_probe.py) + earlier device reads",
+  "note": "TUNE re-confirmed field-for-field against the live probe (36/36). TOUCH completed from the live probe. TRACK is the older slot-3 read and is NOT currently on the device. Slot indices are NOT stable: Tune moved 4 -> 2 between reads, so any write must resolve its slot from a live read, never a constant.",
   "generated": "2026-09-02"
  },
  "TOUCH": {
   "slot_seen": 1,
-  "source": "device slot 1 (stored Touch-Windows config) correlated with default map; address TBD (needs a docked Touch)",
+  "source": "live probe 2026-09-02 (device/out/module-probe-baseline.json) slot 1 -- full 36-field read; supersedes the earlier partial",
   "fields": {
    "0x00": {
     "kind": "speed",
@@ -312,6 +313,54 @@
     "label": "setting_0x04",
     "value": 0
    },
+   "0x05": {
+    "kind": "axis",
+    "axis": 1,
+    "direction": -1,
+    "note": "scroll/pointer routing"
+   },
+   "0x06": {
+    "kind": "axis",
+    "axis": 1,
+    "direction": 1,
+    "note": "scroll/pointer routing"
+   },
+   "0x07": {
+    "kind": "axis",
+    "axis": 0,
+    "direction": -1,
+    "note": "scroll/pointer routing"
+   },
+   "0x08": {
+    "kind": "axis",
+    "axis": 0,
+    "direction": 1,
+    "note": "scroll/pointer routing"
+   },
+   "0x09": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": 1,
+    "note": "scroll/pointer routing"
+   },
+   "0x0a": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": -1,
+    "note": "scroll/pointer routing"
+   },
+   "0x0b": {
+    "kind": "axis",
+    "axis": 3,
+    "direction": 8,
+    "note": "scroll/pointer routing"
+   },
+   "0x0c": {
+    "kind": "axis",
+    "axis": 3,
+    "direction": 2,
+    "note": "scroll/pointer routing"
+   },
    "0x0d": {
     "kind": "axis",
     "axis": 4,
@@ -336,11 +385,23 @@
     "direction": 1,
     "note": "scroll/pointer routing"
    },
+   "0x11": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x12": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
    "0x13": {
     "kind": "axis",
     "axis": 3,
     "direction": 4,
     "note": "scroll/pointer routing"
+   },
+   "0x14": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
    },
    "0x15": {
     "kind": "keypress",
@@ -367,6 +428,10 @@
     "gesture": "tap:touch:4_fingers",
     "default_action": "LGUI + TAB"
    },
+   "0x1a": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
    "0x1b": {
     "kind": "keypress",
     "gesture": "swipe_up:touch:4_fingers",
@@ -386,6 +451,18 @@
     "kind": "keypress",
     "gesture": "swipe_right:touch:4_fingers",
     "default_action": "LGUI + LCTRL + RIGHT"
+   },
+   "0x1f": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x20": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x21": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
    },
    "0x22": {
     "kind": "keypress",

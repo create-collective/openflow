@@ -500,15 +500,19 @@ def _ensure_touch_defaults(conn) -> None:
 # (docs/reference/naya-gesture-enum.json) -- checked by tests/test_gesture_slots.py.
 #   * parity gaps: gestures NayaFlow renders (blank) that we dropped entirely, because
 #     we build rows from stored bindings and an unbound gesture has no row.
-#   * dial split: the Tune dial's two directions are separate on-device keypress fields
-#     (module_field_map TUNE 0x22/0x23); NayaFlow only exposes the combined value binding.
+#   * dial split: NayaFlow exposes only a combined dial binding; the enum has each direction
+#     separately. Which device fields back them is still open (see module_field_map notes).
 _GESTURE_SLOTS = {
     "TUNE": (
         "tap:tune:1_finger",                    # blank in NayaFlow; device field 0x08
         "pinch:tune:2_fingers",
         "spread:tune:2_fingers",
-        "clockwise_rotate:tune:dial",           # device field 0x22 -- not shown by NayaFlow
-        "counter_clockwise_rotate:tune:dial",   # device field 0x23 -- not shown by NayaFlow
+        # NayaFlow exposes only the combined "rotate:tune:dial" value binding. These two are
+        # real enum gestures, but the 0x22/0x23 fields we thought held them are unconfirmed
+        # (Touch carries the identical C_VOL_UP/DOWN pair and has no dial), so they badge
+        # app-only until a write test says otherwise.
+        "clockwise_rotate:tune:dial",
+        "counter_clockwise_rotate:tune:dial",
     ),
     # the renderer spells this "hold:"; "tap_hold:" appears only inside NayaCore
     "TRACK": tuple(f"hold:track:button_{i}" for i in (1, 2, 3, 4)),

@@ -6,8 +6,9 @@ editable row with the right flashability badge.
    instead of inventing a behavior NayaFlow would reject.
 2. The backfill is additive and idempotent against a scratch DB: it never edits an
    existing binding, and running it twice adds nothing the second time.
-3. The Tune dial's two directions resolve to their on-device keypress fields, i.e. the
-   slots we expose beyond NayaFlow's editor are actually writable.
+3. Flashability badges only claim what a real read backs: Tune's 1-finger tap resolves to
+   its keypress field, and the dial directions -- whose device fields the live probe left
+   unconfirmed -- resolve to nothing, so their rows badge app-only.
 No hardware.
 """
 from __future__ import annotations
@@ -69,18 +70,20 @@ def test_backfill_is_additive_and_idempotent():
     print(f"  {after_one} rows after backfill, existing binding preserved, second run a no-op")
 
 
-def test_dial_directions_are_device_backed():
+def test_badges_only_claim_what_a_read_backs():
     gf = mf.gesture_fields("TUNE")
-    assert gf.get("clockwise_rotate:tune:dial") == 0x22
-    assert gf.get("counter_clockwise_rotate:tune:dial") == 0x23
-    assert mf.gesture_kind("TUNE", "tap:tune:1_finger") == "keypress"
-    print("  dial CW/CCW -> fields 0x22/0x23, 1-finger tap -> keypress")
+    assert gf.get("tap:tune:1_finger") == 0x08, "1-finger tap lost its captured keypress field"
+    # 0x22/0x23 hold C_VOL_UP/DOWN on Tune AND on Touch, which has no dial -- shared schema,
+    # not a dial binding. Until a write test says otherwise these must not badge flashable.
+    for g in ("clockwise_rotate:tune:dial", "counter_clockwise_rotate:tune:dial"):
+        assert g not in gf, f"{g} claims a device field the probe did not confirm"
+    print("  1-finger tap -> 0x08; dial directions correctly unclaimed")
 
 
 if __name__ == "__main__":
     for fn in (test_slots_are_real_nayaflow_gestures,
                test_backfill_is_additive_and_idempotent,
-               test_dial_directions_are_device_backed):
+               test_badges_only_claim_what_a_read_backs):
         print(fn.__name__)
         fn()
     print("\nOK")

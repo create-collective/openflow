@@ -23,7 +23,9 @@ SNAPSHOT = _REPO / "device" / "userdata-snapshot" / "user-data-2026-08-28.db"
 
 def test_module_gesture_dropdowns() -> None:
     tune = gp.gestures_for("TUNE")
-    assert len(tune) == 13, f"expected 13 Tune gestures, got {len(tune)}"
+    # 11, not 13: the 2026-09-02 live probe retracted 0x22/0x23 as the dial directions
+    # (Touch carries the same C_VOL_UP/DOWN pair and has no dial).
+    assert len(tune) == 11, f"expected 11 Tune gestures, got {len(tune)}"
     for g in tune:
         assert g["allow_custom"] is True and g["presets"], "every gesture allows custom + has presets"
         assert isinstance(g["field"], int)
