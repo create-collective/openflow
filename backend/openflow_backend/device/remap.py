@@ -230,10 +230,10 @@ def encode_module_config_list(entries: list) -> bytes:
     (unlike the layer list, where it is always 0x00).
     """
     out = bytearray([0x00])
-    for slot, list_id, flag, uuid in entries:
+    for slot, list_id, module_type, uuid in entries:
         if len(uuid) != 16:
             raise RemapEncodeError("module-config-list uuid must be 16 bytes")
-        out += bytes([slot, list_id, flag, 0x10]) + uuid
+        out += bytes([slot, list_id, module_type, 0x10]) + uuid
     return bytes(out)
 
 
