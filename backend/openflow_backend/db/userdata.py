@@ -594,7 +594,7 @@ def get_modules() -> dict:
                 # Data-backed flashability: does this gesture have a device field, and what
                 # action kinds can it hold? (from the recovered module field map)
                 field_kind = module_fields.gesture_kind(m["type"], b["behavior"] or "")
-                flashable = (b["behavior"] or "") in module_fields.gesture_fields(m["type"])
+                flashable = (b["behavior"] or "") in module_fields.writable_fields(m["type"])
                 bindings.append({
                     "id": b["id"],
                     "behavior": b["behavior"],
@@ -606,8 +606,8 @@ def get_modules() -> dict:
                     "threshold": b["threshold"],
                     "direction": b["direction"],
                     "mode": b["mode"],
-                    "fieldKind": field_kind,      # 'keypress' / 'axis' / None (no device field)
-                    "flashable": flashable,       # True = a keypress gesture we can write
+                    "fieldKind": field_kind,      # 'keypress'/'mouse_button'/'axis'/None
+                    "flashable": flashable,       # True = we can write it (proved live in C1/C2)
                 })
             stored = {
                 s["correlation_id"]: s["value"]

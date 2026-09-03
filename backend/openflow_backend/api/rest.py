@@ -22,7 +22,7 @@ from ..db import profiles as prof
 from ..db import settings as settings_db
 from ..db import userdata as ud
 from ..db.database import connect as db_connect
-from ..device import actions_catalog, flash as flash_mod, gesture_presets, module_fields
+from ..device import actions_catalog, flash as flash_mod, gesture_presets, keymap_read, module_fields, remap
 from ..device.commands import CommandError, dispatch
 from ..device.service import DangerousCommandError, TransportError
 from .state import get_service
@@ -451,6 +451,90 @@ async def module_gestures(types: str = "TUNE,TRACK,TOUCH,FLOAT") -> dict:
             entry["note"] = "no field map yet — connect this module and read it"
         out.append(entry)
     return {"modules": out}
+
+
+@router.post("/rpc/read-modules")
+async def read_modules(body: dict = Body(default={})) -> dict:
+    """Read what is ACTUALLY on the keyboard for each module, and diff it against the app.
+
+    The keymap read only ever asked for layers + LEDs, so module data never reached the UI.
+    This returns, per module config we can match by uuid: its device slot, each gesture's
+    device value, and whether it differs from what the app has stored. Read-only.
+    """
+    svc = get_service()
+    try:
+        read = await run_in_threadpool(svc.read_module_configs, body.get("side", "left"))
+    except TransportError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+    conn = db_connect()
+    try:
+        configs = {r["id"]: dict(r) for r in
+                   conn.execute("SELECT id, name, type FROM module_configs")}
+        bindings = {}
+        for r in conn.execute("SELECT module_config_id, behavior, action_code FROM module_bindings"):
+            bindings.setdefault(r["module_config_id"], {})[r["behavior"]] = r["action_code"]
+    finally:
+        conn.close()
+
+    out = []
+    for uuid, slot in read["by_uuid"].items():
+        cfg = configs.get(uuid)
+        if cfg is None:
+            out.append({"uuid": uuid, "slot": slot, "unknown": True,
+                        "note": "on the device but not in the app's module configs"})
+            continue
+        fields = {int(f["field"]): (f["type"], bytes.fromhex(f["value"]))
+                  for f in read["slots"].get(slot, read["slots"].get(str(slot), []))}
+        gestures, differs = [], 0
+        for gesture, idx in sorted(module_fields.writable_fields(cfg["type"]).items()):
+            typ, val = fields.get(idx, (None, b""))
+            device = _decode_field(cfg["type"], idx, typ, val)
+            app = bindings.get(uuid, {}).get(gesture)
+            same = _same_action(device, app)
+            differs += 0 if same else 1
+            gestures.append({"gesture": gesture, "field": idx, "device": device,
+                             "app": app, "differs": not same})
+        out.append({"uuid": uuid, "slot": slot, "name": cfg["name"], "type": cfg["type"],
+                    "fieldCount": len(fields), "gestures": gestures, "differs": differs,
+                    "trailing": max(0, len(fields) - _EXPECTED_FIELDS.get(cfg["type"], len(fields)))})
+    return {"modules": out, "slotMap": read["by_uuid"]}
+
+
+# A Track config is 15 fields; anything past that is orphaned data from a previous module
+# (NayaFlow writes a shorter config over a longer one without truncating).
+_EXPECTED_FIELDS = {"TRACK": 15}
+
+
+def _same_action(device, app) -> bool:
+    """Compare a decoded device action with the app's action_code, modifier-order-insensitive.
+
+    We decode a chord in HID modifier-bit order (LCTRL, LSHIFT, LALT, LGUI) while NayaFlow
+    stored whatever order the user built it in, so "LCTRL + LGUI + LEFT" and "LGUI + LCTRL +
+    LEFT" are the same binding. Comparing the raw strings reports every shortcut as changed,
+    which would bury the differences that are real.
+    """
+    if device is None or app is None or device == "" or app == "":
+        return not device and not app
+    if device == app:
+        return True
+    parts = lambda v: sorted(t.strip().upper() for t in str(v).split("+"))
+    return parts(device) == parts(app)
+
+
+def _decode_field(module_type: str, idx: int, typ, val: bytes):
+    """One device field -> the app's action_code vocabulary, or None if unbound."""
+    if typ is None or typ == remap.NONE_BEH or not val:
+        return None
+    kind = module_fields.field_map(module_type).get(f"0x{idx:02x}", {}).get("kind")
+    try:
+        if kind == "mouse_button":
+            return remap.decode_mouse_button(val)
+        if kind == "keypress":
+            return keymap_read.decode_keypress(val)[1]
+    except Exception:
+        return f"RAW_{val.hex()}"
+    return f"RAW_{val.hex()}"
 
 
 def _flash_preview() -> dict:

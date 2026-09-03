@@ -43,6 +43,16 @@ def mouse_button_fields(module_type: str) -> dict:
             if v.get("kind") == "mouse_button" and v.get("gesture")}
 
 
+def writable_fields(module_type: str) -> dict:
+    """{gesture: field_index} for every gesture we can actually write, of any kind.
+
+    Keypress gestures (proved live in C1: Tune 1-finger tap) plus mouse-button gestures
+    (proved live in C2: a Track button rebind changed the hardware). Anything not in here
+    badges app-only in the UI, which is the promise that an edit will reach the device.
+    """
+    return {**gesture_fields(module_type), **mouse_button_fields(module_type)}
+
+
 def motion_axis_fields(module_type: str) -> dict:
     """{category: [field_index, ...]} for the motion axes (the +1/-1 direction pairs).
 

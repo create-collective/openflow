@@ -40,7 +40,7 @@ function okForKind(actionType, fieldKind) {
   return true; // no device field (DB-only) — don't restrict, but the row is badged
 }
 
-function GestureRow({ b, actions, onPick }) {
+function GestureRow({ b, actions, onPick, dev }) {
   // Constrain the dropdown to what this gesture's device field accepts.
   const usable = actions.filter((a) => okForKind(a.actionType, b.fieldKind));
   const known = usable.some((a) => a.code === (b.actionCode || ""));
@@ -66,6 +66,16 @@ function GestureRow({ b, actions, onPick }) {
         {(b.gesture || "").replace(/_/g, " ")}
       </span>
       <span className={"gesture-badge " + badge.cls} title={badge.title}>{badge.text}</span>
+      {dev && (
+        <span
+          className={"gesture-badge " + (dev.differs ? "dbonly" : "flashable")}
+          title={dev.differs
+            ? `On the keyboard this is ${dev.device ?? "unbound"}; the app has ${dev.app || "nothing"}. Flash to make them match.`
+            : `Matches what is on the keyboard (field ${"0x" + dev.field.toString(16)}).`}
+        >
+          {dev.differs ? `device: ${dev.device ?? "unbound"}` : "on device"}
+        </span>
+      )}
       <span className="skp-arrow">→</span>
       <select
         className="mac-input mod-action"
@@ -112,6 +122,9 @@ export default function Modules() {
   const [tab, setTab] = useState("bindings");
   const [activeTarget, setActiveTarget] = useState(null);
   const [err, setErr] = useState(null);
+  // What is actually flashed on the keyboard, per module config (null = not read yet).
+  const [device, setDevice] = useState(null);
+  const [reading, setReading] = useState(false);
   const [searchParams] = useSearchParams();
   const wantType = (searchParams.get("type") || "").toUpperCase();
 
@@ -132,6 +145,24 @@ export default function Modules() {
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
+  // Read the module configs off the keyboard and diff them against the app. Read-only:
+  // the app has always shown only its own stored bindings, so until this runs there is no
+  // way to tell an edit that was flashed from one that was never written.
+  async function readDevice() {
+    setReading(true);
+    setErr(null);
+    try {
+      const r = await api.readModules();
+      const byUuid = {};
+      for (const m of r.modules || []) byUuid[m.uuid] = m;
+      setDevice(byUuid);
+    } catch (e) {
+      setErr(`Could not read the keyboard: ${e.message}`);
+    } finally {
+      setReading(false);
+    }
+  }
+
   const grouped = useMemo(() => {
     const g = {};
     for (const m of modules) (g[m.type] ||= []).push(m);
@@ -139,6 +170,12 @@ export default function Modules() {
   }, [modules]);
 
   const config = modules.find((m) => m.id === selectedId) || null;
+  const onDevice = device && config ? device[config.id] : null;
+  const deviceByGesture = useMemo(() => {
+    const g = {};
+    for (const x of onDevice?.gestures || []) g[x.gesture] = x;
+    return g;
+  }, [onDevice]);
 
   const axes = useMemo(
     () => (config?.bindings || []).filter((b) => !b.target).sort(byGesture),
@@ -209,7 +246,26 @@ export default function Modules() {
               <div className="module-tabs">
                 <button className={"tab" + (tab === "bindings" ? " active" : "")} onClick={() => setTab("bindings")}>bindings</button>
                 <button className={"tab" + (tab === "settings" ? " active" : "")} onClick={() => setTab("settings")}>settings</button>
+                <button className="tab" onClick={readDevice} disabled={reading}
+                        title="Read what is actually flashed on the keyboard and compare it with the app">
+                  {reading ? "reading…" : "read from keyboard"}
+                </button>
               </div>
+              {onDevice && (
+                <div className="phase-note" style={{ marginBottom: 10 }}>
+                  On the keyboard as slot {onDevice.slot}: {onDevice.fieldCount} fields,{" "}
+                  {onDevice.differs === 0
+                    ? "everything matches the app."
+                    : `${onDevice.differs} gesture(s) differ from the app.`}
+                  {onDevice.trailing > 0 &&
+                    ` ${onDevice.trailing} trailing field(s) belong to a previous module config — harmless, left alone.`}
+                </div>
+              )}
+              {device && !onDevice && (
+                <div className="phase-note" style={{ marginBottom: 10 }}>
+                  This config is not currently on the keyboard — nothing is flashed for it.
+                </div>
+              )}
 
               {tab === "bindings" && (
                 <div style={{ maxWidth: 620 }}>
@@ -219,7 +275,7 @@ export default function Modules() {
                     <>
                       <div className="skp-head"><span>Gesture</span><span className="skp-arrow">→</span><span>Action</span></div>
                       {axes.map((b) => (
-                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding} />
+                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding} dev={deviceByGesture[b.behavior]} />
                       ))}
                     </>
                   )}
@@ -234,7 +290,7 @@ export default function Modules() {
                         ))}
                       </div>
                       {targetBindings.map((b) => (
-                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding} />
+                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding} dev={deviceByGesture[b.behavior]} />
                       ))}
                     </>
                   )}
