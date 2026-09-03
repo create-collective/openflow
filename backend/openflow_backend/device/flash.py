@@ -627,7 +627,7 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
 
     Returns the layout plan for reporting. Mutates `desired`.
     """
-    from . import module_layout as ml
+    from . import module_fields, module_layout as ml
 
     pid = desired.profile_id
     order_of = {r["id"]: r["order_id"] for r in
@@ -646,10 +646,28 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
         types[r["id"]] = r["type"]
         if r["captured_from"]:
             captured_from[r["id"]] = r["captured_from"]
+    # Single-field gestures and axis gestures are read apart, because an axis is TWO fields and
+    # its two halves can be bound independently once the gesture is split.
     bindings: dict[str, dict[str, str]] = {}
+    axes: dict[str, dict[str, dict]] = {}
     for r in conn.execute(
-            "SELECT module_config_id, behavior, action_code FROM module_bindings"):
-        bindings.setdefault(r["module_config_id"], {})[r["behavior"]] = r["action_code"]
+            "SELECT module_config_id, behavior, action_code, direction, invert "
+            "FROM module_bindings"):
+        cid, beh = r["module_config_id"], r["behavior"]
+        typ = types.get(cid)
+        if typ and beh in module_fields.axis_halves(typ):
+            spec = axes.setdefault(cid, {}).setdefault(beh, {"minus": None, "plus": None,
+                                                             "invert": False})
+            if r["invert"]:
+                spec["invert"] = True
+            # The stock form is ONE row holding both halves as "mouse - LEFT - RIGHT"; that is
+            # not a per-half binding, so it leaves the axis records in place. A split stores a
+            # row per half, keyed by the direction column.
+            code = r["action_code"] or ""
+            if code and " - " not in code:
+                spec["plus" if (r["direction"] or "+") == "+" else "minus"] = code
+        else:
+            bindings.setdefault(cid, {})[beh] = r["action_code"]
 
     device_list = [{"slot": slot, "uuid": uuid}
                    for uuid, slot in (mod_read.get("by_uuid") or {}).items()]
@@ -674,7 +692,8 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
                            for slot, lid, code, uuid16 in layout["list_entries"]}
     for cid in layout["allocated"] + layout["claimed"]:
         slot = layout["slot_for"][cid]
-        cfg = ml.overlay(layout["templates"][cid], types[cid], bindings.get(cid, {}))
+        cfg = ml.overlay(layout["templates"][cid], types[cid], bindings.get(cid, {}),
+                         axes.get(cid, {}))
         # A claimed slot whose overlay comes out identical needs no data write -- only its list
         # entry changes, to name the capture instead of the profile it drifted from. Sending
         # the bytes back unchanged would be pure churn on every flash.

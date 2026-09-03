@@ -116,3 +116,61 @@ def label_fields(module_type: str, parsed_fields: list[tuple[int, int, bytes]]) 
             "value": val.hex(),
         })
     return out
+
+
+# --- axis gestures: two fields per gesture, one per direction ---------------- #
+#
+# Confirmed by capture 2026-09-03: splitting horizontal:track in NayaFlow turned fields 0x07 and
+# 0x08 into two INDEPENDENT keypress records ('s' and 'g'), and on the device the -1 field fired
+# on a leftward swipe and the +1 field on a rightward one. So the pair is the gesture, the
+# selector sign is the direction, and either half can hold any record type.
+#
+# Mapped explicitly rather than by category, because a category is not unique within a module:
+# Touch carries two cat-4 pairs and only one of them is the 2-finger scroll.
+AXIS_HALVES = {
+    "TRACK": {
+        "vertical:track":   {"-": 0x05, "+": 0x06, "category": 1},
+        "horizontal:track": {"-": 0x07, "+": 0x08, "category": 0},
+        "rotate:track":     {"-": 0x0A, "+": 0x09, "category": 4},
+    },
+    "TUNE": {
+        "horizontal:tune:1_finger": {"-": 0x0A, "+": 0x0B, "category": 4},
+        "vertical:tune:1_finger":   {"-": 0x0C, "+": 0x0D, "category": 6},
+    },
+    "TOUCH": {
+        "vertical:touch:1_finger":    {"-": 0x05, "+": 0x06, "category": 1},
+        "horizontal:touch:1_finger":  {"-": 0x07, "+": 0x08, "category": 0},
+        "horizontal:touch:2_fingers": {"-": 0x0D, "+": 0x0E, "category": 4},
+        "vertical:touch:2_fingers":   {"-": 0x0F, "+": 0x10, "category": 6},
+    },
+}
+
+
+def axis_halves(module_type: str) -> dict:
+    """{gesture: {"-": field, "+": field, "category": n}} for the split-able axis gestures."""
+    return AXIS_HALVES.get((module_type or "").upper(), {})
+
+
+def axis_fields(module_type: str) -> dict:
+    """{field index: (gesture, half)} -- the inverse, for decoding a slot."""
+    out = {}
+    for gesture, h in axis_halves(module_type).items():
+        out[h["-"]] = (gesture, "-")
+        out[h["+"]] = (gesture, "+")
+    return out
+
+
+# Gestures the app can express but the DEVICE has no field for. A Track's 15 fields are fully
+# accounted for without hold (capture 2026-09-03: NayaFlow wrote the hold value over the tap and
+# the tap never reached the board), so offering both is offering to lose one.
+UNBACKED_GESTURES = {
+    "TRACK": {f"hold:track:button_{i}" for i in (1, 2, 3, 4)},
+}
+
+
+def gesture_has_device_field(module_type: str, behavior: str) -> bool:
+    """Whether a gesture can actually reach the hardware."""
+    t = (module_type or "").upper()
+    if behavior in UNBACKED_GESTURES.get(t, ()):
+        return False
+    return behavior in writable_fields(t) or behavior in axis_halves(t)

@@ -55,7 +55,8 @@ def _db(bays_per_layer):
     conn.executescript("""
         CREATE TABLE layers (id TEXT, order_id INT, profile_id TEXT);
         CREATE TABLE module_configs (id TEXT, name TEXT, type TEXT, captured_from TEXT);
-        CREATE TABLE module_bindings (module_config_id TEXT, behavior TEXT, action_code TEXT);
+        CREATE TABLE module_bindings (module_config_id TEXT, behavior TEXT, action_code TEXT,
+                                      direction TEXT DEFAULT "+", invert INT DEFAULT 0);
         CREATE TABLE module_config_bindings (profile_id TEXT, layer_id TEXT,
                                              module_config_id TEXT, binding_location TEXT,
                                              state TEXT);
@@ -63,7 +64,7 @@ def _db(bays_per_layer):
     for cid, (name, typ) in NAMES.items():
         conn.execute("INSERT INTO module_configs VALUES (?,?,?,NULL)", (cid, name, typ))
     for i, code in zip((1, 2, 3, 4), ("M1", "M3", "M2", "M4")):
-        conn.execute("INSERT INTO module_bindings VALUES (?,?,?)",
+        conn.execute("INSERT INTO module_bindings (module_config_id,behavior,action_code) VALUES (?,?,?)",
                      (TRACK_ALT, f"tap:track:button_{i}", code))
     for order, bays in bays_per_layer.items():
         conn.execute("INSERT INTO layers VALUES (?,?,?)", (f"l{order}", order, PID))
@@ -201,7 +202,7 @@ def _db_with_capture(bays_per_layer, captured_from=TRACK_R, edited=False):
     conn.execute("INSERT INTO module_configs VALUES (?,?,?,?)",
                  (CAPTURE, "Track R (on board)", "TRACK", captured_from))
     if edited:
-        conn.execute("INSERT INTO module_bindings VALUES (?,?,?)",
+        conn.execute("INSERT INTO module_bindings (module_config_id,behavior,action_code) VALUES (?,?,?)",
                      (CAPTURE, "tap:track:button_1", "M2"))
     conn.commit()
     return conn
@@ -276,3 +277,71 @@ def test_provenance_pointing_at_something_not_on_the_board_is_ignored():
     d, layout = _desired_with_capture({0: bays}, captured_from="dead-uuid-not-on-device")
     assert layout["claimed"] == [] and layout["allocated"] == [CAPTURE]
     print("  stale provenance ignored; fell back to allocation")
+
+
+# --- axis gestures: two fields, splittable, invertible ---------------------- #
+#
+# Ground truth is the NayaFlow capture of 2026-09-03: splitting horizontal:track and binding the
+# halves to 's' and 'g' produced exactly these two records, and on the device the -1 field fired
+# on a leftward swipe.
+
+def test_an_unsplit_axis_writes_the_two_direction_records():
+    got = ml.encode_axis("TRACK", "horizontal:track", {})
+    assert got[0x07] == (R.TWO_WORD, R.encode_two_word(0, -1))
+    assert got[0x08] == (R.TWO_WORD, R.encode_two_word(0, +1))
+    print("  0x07 sel -1, 0x08 sel +1")
+
+
+def test_a_split_axis_writes_a_keypress_per_half_matching_the_capture():
+    got = ml.encode_axis("TRACK", "horizontal:track", {"minus": "S", "plus": "G"})
+    # The exact bytes NayaFlow sent: usage, page 7, no modifiers.
+    assert got[0x07][1].hex() == "16000700", got[0x07][1].hex()
+    assert got[0x08][1].hex() == "0a000700", got[0x08][1].hex()
+    assert got[0x07][0] == R.KEY_PRESS and got[0x08][0] == R.KEY_PRESS
+    print("  0x07='s' 16000700, 0x08='g' 0a000700 -- byte-identical to the capture")
+
+
+def test_half_a_split_leaves_the_other_half_as_an_axis():
+    """Binding one direction to a key must not silently kill motion in the other."""
+    got = ml.encode_axis("TRACK", "horizontal:track", {"minus": "S"})
+    assert got[0x07][0] == R.KEY_PRESS
+    assert got[0x08] == (R.TWO_WORD, R.encode_two_word(0, +1))
+    print("  one key, one axis half")
+
+
+def test_invert_flips_both_selector_signs():
+    """There is no invert flag anywhere in the config -- inverting IS writing the opposite signs.
+    That is why NayaFlow's invert control does nothing: it never wrote anything at all."""
+    got = ml.encode_axis("TRACK", "horizontal:track", {"invert": True})
+    assert got[0x07] == (R.TWO_WORD, R.encode_two_word(0, +1))
+    assert got[0x08] == (R.TWO_WORD, R.encode_two_word(0, -1))
+    print("  signs swapped, no flag byte touched")
+
+
+def test_invert_does_not_disturb_a_half_bound_to_a_key():
+    got = ml.encode_axis("TRACK", "horizontal:track", {"minus": "S", "invert": True})
+    assert got[0x07][1].hex() == "16000700", "the key stays put"
+    assert got[0x08] == (R.TWO_WORD, R.encode_two_word(0, -1)), "the axis half inverts"
+    print("  key half unchanged, axis half inverted")
+
+
+def test_rotate_halves_are_not_in_field_order():
+    """rotate:track stores +1 at 0x09 and -1 at 0x0a -- the reverse of the other pairs. Deriving
+    the field from the sign would put both records in the wrong place."""
+    got = ml.encode_axis("TRACK", "rotate:track", {})
+    assert got[0x09] == (R.TWO_WORD, R.encode_two_word(4, +1))
+    assert got[0x0A] == (R.TWO_WORD, R.encode_two_word(4, -1))
+    print("  0x09 is the + half, 0x0a the - half")
+
+
+def test_a_track_hold_binding_cannot_reach_the_device():
+    """Capture 2026-09-03: NayaFlow wrote the hold value over the tap and the tap never arrived.
+    Track has one field per button and no sixteenth field, so hold has nowhere to live."""
+    from openflow_backend.device import module_fields as MF
+    assert MF.gesture_has_device_field("TRACK", "tap:track:button_1")
+    assert not MF.gesture_has_device_field("TRACK", "hold:track:button_1")
+    # And it must not be silently written into the tap's field.
+    cfg = ml.overlay({0x0B: (R.KEY_PRESS, b"\x00")}, "TRACK",
+                     {"tap:track:button_1": "D", "hold:track:button_1": "A"})
+    assert cfg[0x0B][1].hex() == "07000700", "the TAP must win the field, not the hold"
+    print("  hold is unbacked; the tap keeps its field")

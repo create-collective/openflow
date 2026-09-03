@@ -698,7 +698,10 @@ def get_modules() -> dict:
                 # Data-backed flashability: does this gesture have a device field, and what
                 # action kinds can it hold? (from the recovered module field map)
                 field_kind = module_fields.gesture_kind(m["type"], b["behavior"] or "")
-                flashable = (b["behavior"] or "") in module_fields.writable_fields(m["type"])
+                # An axis gesture has no single field, so writable_fields does not list it -- but
+                # it very much reaches the device, as two. And a Track hold has a row in the app
+                # and nowhere on the board at all.
+                flashable = module_fields.gesture_has_device_field(m["type"], b["behavior"] or "")
                 bindings.append({
                     "id": b["id"],
                     "behavior": b["behavior"],
@@ -732,10 +735,32 @@ def get_modules() -> dict:
                     except (TypeError, ValueError):
                         cur = f["default"]
                 settings_schema.append({**f, "value": cur})
+            halves = module_fields.axis_halves(m["type"])
+            axes = []
+            for gesture, spec in sorted(halves.items()):
+                rows = [b for b in conn.execute(
+                    "SELECT action_code, direction, invert FROM module_bindings "
+                    "WHERE module_config_id=? AND behavior=?", (m["id"], gesture))]
+                per = {}
+                for r in rows:
+                    code = r["action_code"] or ""
+                    if code and " - " not in code:      # a per-half key, not the combined form
+                        per[r["direction"] or "+"] = code
+                axes.append({
+                    "behavior": gesture,
+                    "fields": {"-": spec["-"], "+": spec["+"]},
+                    "minus": per.get("-"),
+                    "plus": per.get("+"),
+                    "split": bool(per),
+                    "invert": any(r["invert"] for r in rows),
+                })
             configs.append({
                 "id": m["id"],
                 "name": m["name"],
                 "type": m["type"],
+                # Axis gestures occupy two device fields and each half can hold a key instead of
+                # motion; the UI needs both halves to offer that.
+                "axes": axes,
                 # Track ships two asymmetric variants and a profile belongs to exactly one of
                 # them, so the left and right bays must offer different lists.
                 "variant": m["variant"],
@@ -818,5 +843,70 @@ def set_layer_bay(layer_id: str, module_type: str, config_id: str | None,
                 (profile_id, layer_id, cfg, location, state, now, now))
         conn.commit()
         return {"ok": True, "sides": sides, "configId": config_id}
+    finally:
+        conn.close()
+
+
+def set_axis_split(config_id: str, behavior: str, half: str, action_code: str | None) -> dict:
+    """Bind one half of an axis gesture to a key, or clear it back to motion.
+
+    An axis gesture occupies TWO device fields, one per direction, and either can hold a keypress
+    instead of the motion record -- that is what NayaFlow's "split" does (capture 2026-09-03).
+    The halves are stored as separate rows keyed by the `direction` column; the stock single row
+    with a combined "mouse - LEFT - RIGHT" code means neither half is bound to a key.
+
+    `half` is "-" or "+". `action_code` of None clears that half back to motion.
+    """
+    from ..device.module_fields import axis_halves
+
+    if half not in ("-", "+"):
+        raise ValueError(f"half must be '-' or '+', got {half!r}")
+    conn = connect()
+    try:
+        row = conn.execute("SELECT type FROM module_configs WHERE id=?", (config_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"no module config {config_id}")
+        if behavior not in axis_halves(row["type"]):
+            raise ValueError(f"{behavior!r} is not a splittable axis on a {row['type']}")
+
+        now = _now()
+        conn.execute("DELETE FROM module_bindings WHERE module_config_id=? AND behavior=? "
+                     "AND direction=? AND action_code NOT LIKE '% - %'",
+                     (config_id, behavior, half))
+        if action_code:
+            conn.execute(
+                "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
+                "invert, threshold, direction, mode, module_config_id, id, updated_at, created_at)"
+                " VALUES (NULL,?,?,?,0,0,?,0,?,?,?,?)",
+                (action_code, "key", behavior, half, config_id, str(uuid.uuid4()), now, now))
+        conn.commit()
+        return {"ok": True, "behavior": behavior, "half": half, "actionCode": action_code}
+    finally:
+        conn.close()
+
+
+def set_axis_invert(config_id: str, behavior: str, invert: bool) -> dict:
+    """Flip an axis gesture's direction.
+
+    At the device level inverting IS writing the opposite selector signs -- there is no invert
+    flag in the config anywhere. NayaFlow has the control but never writes anything for it, which
+    is why toggling it there does nothing (capture 2026-09-03: zero writes).
+    """
+    from ..device.module_fields import axis_halves
+
+    conn = connect()
+    try:
+        row = conn.execute("SELECT type FROM module_configs WHERE id=?", (config_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"no module config {config_id}")
+        if behavior not in axis_halves(row["type"]):
+            raise ValueError(f"{behavior!r} is not an axis gesture on a {row['type']}")
+        cur = conn.execute("UPDATE module_bindings SET invert=?, updated_at=? "
+                           "WHERE module_config_id=? AND behavior=?",
+                           (1 if invert else 0, _now(), config_id, behavior))
+        if cur.rowcount == 0:
+            raise ValueError(f"no {behavior!r} binding on this profile")
+        conn.commit()
+        return {"ok": True, "behavior": behavior, "invert": bool(invert)}
     finally:
         conn.close()

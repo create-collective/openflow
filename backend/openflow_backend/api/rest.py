@@ -840,3 +840,23 @@ async def set_layer_bay(body: dict = Body(...)) -> dict:
             body.get("configId"), body.get("side"))
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/set-axis-split")
+async def set_axis_split(body: dict = Body(...)) -> dict:
+    """Bind one direction of an axis gesture to a key, or clear it back to motion."""
+    try:
+        return await run_in_threadpool(ud.set_axis_split, body["configId"], body["behavior"],
+                                       body["half"], body.get("actionCode"))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/set-axis-invert")
+async def set_axis_invert(body: dict = Body(...)) -> dict:
+    """Flip an axis gesture's direction (written as opposite selector signs)."""
+    try:
+        return await run_in_threadpool(ud.set_axis_invert, body["configId"], body["behavior"],
+                                       bool(body.get("invert")))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))

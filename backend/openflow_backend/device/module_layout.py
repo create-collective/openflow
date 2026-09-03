@@ -171,11 +171,14 @@ def _template_slot(module_type, config_types, existing, device_slots):
     return best
 
 
-def overlay(template, module_type, bindings):
+def overlay(template, module_type, bindings, axes=None):
     """A complete config: the template's fields with the profile's gestures written over it.
 
-    `bindings` is {gesture: action_code}. Only gestures in writable_fields are applied -- every
-    other field passes through untouched, which is the whole point of templating.
+    `bindings` is {gesture: action_code} for single-field gestures.
+    `axes` is {gesture: {"minus": code|None, "plus": code|None, "invert": bool}} for the axis
+    gestures, which occupy TWO fields each.
+
+    Every other field passes through untouched, which is the whole point of templating.
     """
     out = dict(template)
     for gesture, idx in module_fields.writable_fields(module_type).items():
@@ -185,6 +188,39 @@ def overlay(template, module_type, bindings):
         rec = _encode_gesture(idx, code)
         if rec is not None:
             out[idx] = rec
+    for gesture, spec in (axes or {}).items():
+        for idx, rec in encode_axis(module_type, gesture, spec).items():
+            out[idx] = rec
+    return out
+
+
+def encode_axis(module_type, gesture, spec):
+    """{field: (type, value)} for one axis gesture's two halves.
+
+    A half holding a pointer/scroll action stays a two-word record whose SELECTOR SIGN is the
+    direction; a half bound to a key becomes a keypress record instead, which is exactly what
+    NayaFlow wrote when the gesture was split (capture 2026-09-03).
+
+    `invert` flips the two signs. That is the whole of it at the device level -- there is no
+    invert flag anywhere in the config, and NayaFlow never wrote one, which is why its own invert
+    control does nothing.
+    """
+    half = module_fields.axis_halves(module_type).get(gesture)
+    if half is None:
+        return {}
+    category = half["category"]
+    invert = bool(spec.get("invert"))
+    out = {}
+    for sign, key in (("-", "minus"), ("+", "plus")):
+        idx = half[sign]
+        code = spec.get(key)
+        if code:
+            rec = _encode_gesture(idx, code)     # a key bound to this half
+            if rec is not None:
+                out[idx] = rec
+                continue
+        selector = (1 if sign == "+" else -1) * (-1 if invert else 1)
+        out[idx] = (R.TWO_WORD, R.encode_two_word(category, selector))
     return out
 
 
