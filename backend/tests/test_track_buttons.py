@@ -67,10 +67,33 @@ def test_field_map_agrees():
     print("  field map matches; Track config is 15 fields, no keypress gestures")
 
 
+def test_only_the_buttons_differ_between_orientations():
+    """The strongest evidence that category 3 is buttons and not ball direction: swapping
+    Track Right -> Track Left changes ONLY the four category-3 values, and permutes them
+    rather than negating them. The motion axes (categories 0/1/4) are byte-identical, so
+    whatever inverts the ball physically is not stored in this config."""
+    recs = {f: v for f, t, v in kr.parse_records(bytes.fromhex(WRITES["4"])[1:]) if t == 0x0F}
+    motion = {f: v for f, v in recs.items() if f <= 0x0A}
+    # from the earlier Track Right read (module_field_map before the 2026-09-02 update)
+    RIGHT_MOTION = {0x05: (1, -1), 0x06: (1, 1), 0x07: (0, -1), 0x08: (0, 1),
+                    0x09: (4, 1), 0x0A: (4, -1)}
+    for f, v in motion.items():
+        cat = int.from_bytes(v[:4], "little")
+        direction = int.from_bytes(v[4:], "little", signed=True)
+        assert (cat, direction) == RIGHT_MOTION[f], f"motion field {f:#04x} differs between orientations"
+    buttons = [int.from_bytes(recs[f][4:], "little", signed=True) for f in (0x0B, 0x0C, 0x0D, 0x0E)]
+    assert sorted(buttons) == [1, 2, 4, 8], "category-3 values are not a permutation of the 4 masks"
+    assert all(b > 0 for b in buttons), "a button mask is never negative (a direction would be)"
+    print("  motion axes identical across orientations; only the 4 button masks permute")
+
+
 if __name__ == "__main__":
     for fn in (test_captured_writes_reencode_exactly,
                test_track_buttons_decode_to_the_flashed_profile,
-               test_field_map_agrees):
+               test_field_map_agrees,
+               test_only_the_buttons_differ_between_orientations):
         print(fn.__name__)
         fn()
     print("\nOK")
+
+
