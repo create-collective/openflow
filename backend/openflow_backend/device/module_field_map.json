@@ -192,97 +192,105 @@
   }
  },
  "TRACK": {
-  "slot_seen": 3,
+  "slot_seen": 4,
+  "confidence": "CONFIRMED by a live write + read-back (2026-09-02)",
+  "source": "NayaFlow flash of the 'Naya Track Left' profile, captured on the wire (device/out/track-swap-writes.json slot 4) and read back (device/out/module-probe-after-trackflash.json). Our encoder re-encodes that captured write byte-exactly.",
+  "note": "The four axis-3 fields 0x0b-0x0e ARE the Track's buttons 1-4 in field order, and the value is a mouse-button bitmask. Proven by both orientations: Track Right stores 8,2,4,1 = M4,M2,M3,M1 and Track Left stores 1,4,2,8 = M1,M3,M2,M4, each matching its profile's button_1..4 exactly. A Track config is only 15 fields (0x00-0x0e); it has no keypress gesture fields, so keyboard shortcuts on Track buttons are still unproven.",
   "fields": {
    "0x00": {
     "kind": "speed",
-    "label": "pointer_speed"
+    "label": "pointer_speed",
+    "value": 10
    },
    "0x01": {
     "kind": "speed",
-    "label": "scroll_speed"
+    "label": "scroll_speed",
+    "value": 10
    },
    "0x02": {
     "kind": "speed",
-    "label": "pointer_accel"
+    "label": "pointer_accel",
+    "value": 50
    },
    "0x03": {
-    "kind": "flag",
-    "label": "flag_03",
+    "kind": "setting",
+    "label": "setting_0x03",
     "value": 1
    },
    "0x04": {
-    "kind": "flag",
-    "label": "flag_04",
+    "kind": "setting",
+    "label": "setting_0x04",
     "value": 0
    },
    "0x05": {
     "kind": "axis",
     "axis": 1,
     "direction": -1,
-    "note": "scroll/pointer routing (value gesture)"
+    "note": "pointer/scroll routing"
    },
    "0x06": {
     "kind": "axis",
     "axis": 1,
     "direction": 1,
-    "note": "scroll/pointer routing (value gesture)"
+    "note": "pointer/scroll routing"
    },
    "0x07": {
     "kind": "axis",
     "axis": 0,
     "direction": -1,
-    "note": "scroll/pointer routing (value gesture)"
+    "note": "pointer/scroll routing"
    },
    "0x08": {
     "kind": "axis",
     "axis": 0,
     "direction": 1,
-    "note": "scroll/pointer routing (value gesture)"
+    "note": "pointer/scroll routing"
    },
    "0x09": {
     "kind": "axis",
     "axis": 4,
     "direction": 1,
-    "note": "scroll/pointer routing (value gesture)"
+    "note": "pointer/scroll routing"
    },
    "0x0a": {
     "kind": "axis",
     "axis": 4,
     "direction": -1,
-    "note": "scroll/pointer routing (value gesture)"
+    "note": "pointer/scroll routing"
    },
    "0x0b": {
-    "kind": "axis",
-    "axis": 3,
-    "direction": 8,
-    "note": "scroll/pointer routing (value gesture)"
+    "kind": "mouse_button",
+    "gesture": "tap:track:button_1",
+    "mask": 1,
+    "value": "M1",
+    "note": "button 1; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
    },
    "0x0c": {
-    "kind": "axis",
-    "axis": 3,
-    "direction": 2,
-    "note": "scroll/pointer routing (value gesture)"
+    "kind": "mouse_button",
+    "gesture": "tap:track:button_2",
+    "mask": 4,
+    "value": "M3",
+    "note": "button 2; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
    },
    "0x0d": {
-    "kind": "axis",
-    "axis": 3,
-    "direction": 4,
-    "note": "scroll/pointer routing (value gesture)"
+    "kind": "mouse_button",
+    "gesture": "tap:track:button_3",
+    "mask": 2,
+    "value": "M2",
+    "note": "button 3; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
    },
    "0x0e": {
-    "kind": "axis",
-    "axis": 3,
-    "direction": 1,
-    "note": "scroll/pointer routing (value gesture)"
+    "kind": "mouse_button",
+    "gesture": "tap:track:button_4",
+    "mask": 8,
+    "value": "M4",
+    "note": "button 4; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
    }
-  },
-  "note": "SUSPECT -- probably NOT Track. These 15 fields are byte-identical to the first 15 of the live TOUCH slot 1 (36 fields), including the reversed 0x09/0x0a direction pair, so this is most likely a TRUNCATED read of a pointer-module config that was labelled TRACK by mistake. It also explains the old 'Track has no keypress fields' claim: Touch's keypresses sit at 0x15-0x1e, past where that read stopped. No Track config existed on the device at the 2026-09-02 probe (slots 0-7, both halves). Do not use for writes until a real Track read exists.",
-  "confidence": "suspect - likely mislabelled Touch data"
+  }
  },
  "_meta": {
   "source": "live read-only probe 2026-09-02 (tools/naya_module_probe.py) + earlier device reads",
-  "note": "TUNE re-confirmed field-for-field against the live probe (36/36). TOUCH completed from the live probe. TRACK is the older slot-3 read and is NOT currently on the device. Slot indices are NOT stable: Tune moved 4 -> 2 between reads, so any write must resolve its slot from a live read, never a constant.",
+  "note": "TUNE and TRACK confirmed against live reads; TRACK additionally against a captured write. TOUCH from the live probe. Slot indices are NOT stable (Tune 4->2; Track appeared at 4) -- resolve slots from WRITE_MODULE_CONFIG_LIST or a live read, never a constant.",
   "generated": "2026-09-02"
  },
  "TOUCH": {
