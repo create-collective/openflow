@@ -29,6 +29,16 @@ export default function LayerList({
   const [importOpen, setImportOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const rootRef = useRef(null);
+  // Copying, reordering or deleting layers re-points layer-switch keys automatically. That is
+  // right far more often than it is wrong, but it is still a change the user did not type, so
+  // say so once and let them dismiss it for good.
+  const [noticeOff, setNoticeOff] = useState(() => {
+    try { return localStorage.getItem("openflow.layerKeyNotice") === "off"; } catch { return false; }
+  });
+  function dismissNotice() {
+    setNoticeOff(true);
+    try { localStorage.setItem("openflow.layerKeyNotice", "off"); } catch { /* ignore */ }
+  }
 
   useEffect(() => {
     function onDoc(e) {
@@ -68,6 +78,15 @@ export default function LayerList({
 
   return (
     <div className="layer-list" ref={rootRef}>
+      {!noticeOff && (
+        <div className="layer-note">
+          <span>
+            Copying, reordering or deleting layers adjusts layer-switch keys automatically.
+            Check them before flashing.
+          </span>
+          <button className="layer-note-x" title="Don't show this again" onClick={dismissNotice}>✕</button>
+        </div>
+      )}
       {layers.map((l, i) => (
         <div key={l.id} className={"layer-row" + (l.id === activeLayerId ? " active" : "")}>
           {renaming === l.id ? (

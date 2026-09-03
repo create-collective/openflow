@@ -285,13 +285,34 @@ def delete_layer(layer_id: str) -> dict:
         ).fetchone()[0]
         if n <= 1:
             raise ValueError("cannot delete the only layer")
-        # Keys elsewhere that switch TO this layer would be left pointing at nothing. A
-        # dangling reference is not merely cosmetic: the flash encoder resolves an unknown
-        # layer to index 0, so it would silently become "switch to the base layer" on the
-        # keyboard. Clear them instead, and report how many so the user can be told.
+        # Keys elsewhere that switch TO this layer would be left pointing at nothing, and a
+        # dangling reference is not merely cosmetic: the flash encoder used to resolve an
+        # unknown layer to index 0, silently becoming "switch to the base layer".
+        #
+        # They are REPOINTED by position rather than dropped: whichever layer shifts up into
+        # the deleted layer's order takes its place, so a key that meant "go to the third
+        # layer" still means that. References to layers that merely SHIFT need nothing -- they
+        # are held by uuid and resolved to an index at flash time, so they follow along.
+        # Only when nothing takes the vacated position (the last layer was deleted) is the
+        # binding cleared, because then there is genuinely nothing to point at.
         stranded = layer_references(conn, layer_id)
+        gone_order = conn.execute("SELECT order_id FROM layers WHERE id=?", (layer_id,)).fetchone()["order_id"]
+        successor = conn.execute(
+            "SELECT id FROM layers WHERE profile_id=? AND order_id>? ORDER BY order_id LIMIT 1",
+            (row["profile_id"], gone_order)).fetchone()
+        repointed = cleared = 0
         for ref in stranded:
+            if successor is not None:
+                cur = conn.execute("SELECT action_code FROM key_bindings WHERE id=?",
+                                   (ref["bindingId"],)).fetchone()
+                prefix = next((p for p in LAYER_PREFIXES if cur["action_code"].startswith(p)), None)
+                if prefix:
+                    conn.execute("UPDATE key_bindings SET action_code=?, updated_at=? WHERE id=?",
+                                 (prefix + successor["id"], _now(), ref["bindingId"]))
+                    repointed += 1
+                    continue
             conn.execute("DELETE FROM key_bindings WHERE id=?", (ref["bindingId"],))
+            cleared += 1
 
         key_ids = [r["id"] for r in conn.execute("SELECT id FROM keys WHERE layer_id=?", (layer_id,))]
         for kid in key_ids:
@@ -299,7 +320,8 @@ def delete_layer(layer_id: str) -> dict:
         conn.execute("DELETE FROM keys WHERE layer_id=?", (layer_id,))
         conn.execute("DELETE FROM layers WHERE id=?", (layer_id,))
         conn.commit()
-        return {"ok": True, "clearedReferences": len(stranded)}
+        return {"ok": True, "repointedReferences": repointed,
+                "clearedReferences": cleared, "affected": len(stranded)}
     finally:
         conn.close()
 

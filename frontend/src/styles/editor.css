@@ -1519,3 +1519,30 @@
   color: var(--text-dim);
   border-bottom: 1px solid var(--border);
 }
+
+/* Layer-switch keys are re-pointed automatically when layers move. Said once, dismissible
+   for good -- a change the user did not type should be surfaced, but not nagged about. */
+.layer-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--neutral6);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+.layer-note-x {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.layer-note-x:hover { color: var(--text); }

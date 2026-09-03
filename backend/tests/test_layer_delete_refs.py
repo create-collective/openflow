@@ -68,14 +68,31 @@ def test_references_are_found_before_deleting():
     print("  2 keys found switching to the layer, on the layers that hold them")
 
 
-def test_delete_clears_them_and_reports_how_many():
+def test_deleting_a_middle_layer_repoints_to_its_successor():
+    """A key that meant "go to the third layer" should still mean that: whichever layer
+    shifts up into the vacated position takes over the reference."""
+    conn, lids = _db()
+    # add a 4th layer and point the switches at layer 2 (the middle one about to go)
+    conn.execute("INSERT INTO layers VALUES ('L3',3,'P','L3id','t','t')")
+    conn.commit()
+    with mock.patch.object(ud, "connect", lambda: KeepOpen(conn)):
+        r = ud.delete_layer(lids[2])
+    assert r["repointedReferences"] == 2 and r["clearedReferences"] == 0, r
+    codes = {x["action_code"] for x in conn.execute(
+        "SELECT action_code FROM key_bindings WHERE action_code LIKE 'MO_LAYER_%'")}
+    assert codes == {"MO_LAYER_L3id"}, codes
+    print("  both switches now point at the layer that took the vacated position")
+
+
+def test_deleting_the_last_layer_clears_instead():
+    """Nothing shifts into the vacated position, so there is genuinely nothing to point at."""
     conn, lids = _db()
     with mock.patch.object(ud, "connect", lambda: KeepOpen(conn)):
         r = ud.delete_layer(lids[2])
-    assert r["clearedReferences"] == 2, r
+    assert r["clearedReferences"] == 2 and r["repointedReferences"] == 0, r
     left = conn.execute("SELECT COUNT(*) c FROM key_bindings WHERE action_code LIKE 'MO_LAYER_%'").fetchone()["c"]
-    assert left == 0, f"{left} stranded binding(s) survived the delete"
-    print("  both cleared, and the count is reported so the user can be told")
+    assert left == 0, f"{left} stranded binding(s) survived"
+    print("  last layer deleted -> the bindings are cleared, not pointed somewhere arbitrary")
 
 
 def test_an_unresolvable_switch_is_not_flashed_as_layer_zero():
@@ -92,7 +109,8 @@ def test_an_unresolvable_switch_is_not_flashed_as_layer_zero():
 
 if __name__ == "__main__":
     for fn in (test_references_are_found_before_deleting,
-               test_delete_clears_them_and_reports_how_many,
+               test_deleting_a_middle_layer_repoints_to_its_successor,
+               test_deleting_the_last_layer_clears_instead,
                test_an_unresolvable_switch_is_not_flashed_as_layer_zero):
         print(fn.__name__)
         fn()
