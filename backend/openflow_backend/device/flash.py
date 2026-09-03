@@ -64,6 +64,11 @@ class DesiredState:
     timeouts: tuple[int, int, int] | None = None                                     # (idle, sleep, sleep_batt) ms
     layer_uuids: dict[int, bytes] = field(default_factory=dict)                       # idx -> 16-byte id (add/delete)
     profile_id: str | None = None                                                     # which profile this came from
+    # {slot: (list_id, module_type, uuid16)} -- the module-config LIST the app intends.
+    # None means the app is not managing the module set, and NOTHING is garbage collected.
+    # That distinction matters: desired.modules is empty today, so a naive "anything on the
+    # device we do not want is an orphan" rule would wipe every module config on the board.
+    module_list: dict[int, tuple[int, int, bytes]] | None = None
 
 
 def desired_from_read(read_json: dict) -> DesiredState:
@@ -417,6 +422,24 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *, 
     emit only changed layers/leds (sparse per-record diffs are a Phase-C refinement)."""
     full = full if full is not None else current is None
     ops: list[WriteOp] = []
+    # --- garbage collection, only when the app actually manages the module set -----------
+    # NayaFlow's own removal sequence, captured 2026-09-03: point the bays away first, then
+    # delete the list entry, then blank the slot. Doing it in that order means nothing ever
+    # references a slot that is being emptied.
+    orphans: list[int] = []
+    if full and current is not None and desired.module_list is not None:
+        orphans = sorted(set(current.modules) - set(desired.module_list))
+        if orphans:
+            gone = set(orphans)
+            for idx, poss in desired.layers.items():
+                device_layer = current.layers.get(idx, {})
+                for pos in MODULE_SLOT_POSITIONS:
+                    slot_now = poss.get(pos, device_layer.get(pos, (None, b"")))[0]
+                    if slot_now in gone:
+                        # 0 = disabled. Unambiguous on any layer, and it is NayaFlow's own
+                        # idiom for a bay with nothing in it.
+                        poss[pos] = (0x00, b"")
+
     for idx in sorted(desired.layers):
         if full or current is None or desired.layers[idx] != current.layers.get(idx):
             ops.append(WriteOp(R.WRITE_LAYER_DATA,
@@ -438,9 +461,30 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *, 
         ops.append(WriteOp(R.WRITE_MODULE_CONFIG_DATA, R.encode_module_config(slot, recs),
                            f"module slot {slot}"
                            + (f" (+{len(recs) - len(want)} clear(s))" if len(recs) > len(want) else "")))
+    if desired.module_list is not None and (full or current is None
+                                           or _list_differs(desired, current)):
+        entries = [(slot, lid, mtype, uuid)
+                   for slot, (lid, mtype, uuid) in sorted(desired.module_list.items())]
+        if entries:
+            ops.append(WriteOp(R.WRITE_MODULE_CONFIG_LIST, R.encode_module_config_list(entries),
+                               f"module list ({len(entries)} entr{'y' if len(entries) == 1 else 'ies'})"))
+    for slot in orphans:
+        ops.append(WriteOp(R.WRITE_MODULE_CONFIG_LIST, R.encode_module_config_list_delete([slot]),
+                           f"drop module list entry {slot}"))
+        # Blank the slot LAST and in full: a short write is what leaves a slot holding the
+        # previous module's tail (see the Touch/Track hybrid at slot 1).
+        ops.append(WriteOp(R.WRITE_MODULE_CONFIG_DATA, R.encode_module_config_blank(slot),
+                           f"blank module slot {slot}"))
     if desired.timeouts and (full or current is None or desired.timeouts != current.timeouts):
         ops.append(WriteOp(SYS_SET_TIMEOUTS, R.encode_timeouts(*desired.timeouts), "timeouts", cat=CAT_SYSTEM))
     return ops
+
+
+def _list_differs(desired: DesiredState, current: DesiredState | None) -> bool:
+    """Whether the module list needs rewriting. Without a read we cannot tell, so we do."""
+    if current is None or current.module_list is None:
+        return True
+    return desired.module_list != current.module_list
 
 
 def render_frames(plan: list[WriteOp], dest: int = 0x50) -> list[tuple[str, list[bytes]]]:
