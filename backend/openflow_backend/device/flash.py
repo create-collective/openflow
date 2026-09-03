@@ -201,6 +201,44 @@ def slot_map_for(list_payload: bytes) -> dict[str, int]:
     return {e["uuid"]: e["slot"] for e in R.parse_module_config_list(list_payload)}
 
 
+class SlotShapeError(ValueError):
+    """A slot's contents do not match the module type we were told to write to."""
+
+
+def assert_track_shape(fields: dict[int, tuple[int, bytes]]) -> int:
+    """Verify a slot really holds a Track config; return the count of trailing junk fields.
+
+    Checked by SHAPE, not field count. Slot 1 on the reference device is a genuine Track Right
+    config carrying 21 orphaned Touch fields on the tail (NayaFlow wrote a 15-field Track over a
+    36-field Touch and never truncated), so `len(fields) == 15` wrongly refuses a real Track. A
+    cleared button field is allowed -- that is the broken state we repair, not a reason to bail.
+
+    Raises SlotShapeError if the slot is not a Track. This is the check that stops a write
+    landing on another module's config when the device's own list is mislabelled.
+    """
+    for f in range(0x00, 0x05):
+        if fields.get(f, (None,))[0] != 0x01:
+            raise SlotShapeError(f"field {f:#04x} is not a u8 setting")
+    motion: dict[int, list[int]] = {}
+    for f in range(0x05, 0x0B):
+        typ, val = fields.get(f, (None, b""))
+        if typ != R.TWO_WORD:
+            raise SlotShapeError(f"field {f:#04x} is not a two-word record")
+        cat, sel = R.decode_two_word(val)
+        if cat == R.MOUSE_CATEGORY or sel not in (1, -1):
+            raise SlotShapeError(f"field {f:#04x} is not a motion axis")
+        motion.setdefault(cat, []).append(sel)
+    if sorted(motion) != [0, 1, 4] or any(sorted(v) != [-1, 1] for v in motion.values()):
+        raise SlotShapeError(f"motion axes are not a Track's three pairs: {motion}")
+    for f in MF.mouse_button_fields("TRACK").values():
+        typ, val = fields.get(f, (None, b""))
+        if typ == R.NONE_BEH:
+            continue
+        if typ != R.TWO_WORD or R.decode_two_word(val)[0] != R.MOUSE_CATEGORY:
+            raise SlotShapeError(f"field {f:#04x} is neither a mouse-button record nor cleared")
+    return max(0, len(fields) - 15)
+
+
 def module_button_write(slot: int, module_type: str, changes: dict[str, str]) -> WriteOp | None:
     """Rebind mouse-button gestures (Track buttons, Touch tap-to-click).
 
