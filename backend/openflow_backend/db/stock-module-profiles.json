@@ -1,0 +1,200 @@
+{
+ "_meta": {
+  "what": "Stock module profiles -- what a factory Naya module ships with.",
+  "source": "Recovered from the reference machine's NayaFlow user-data, cross-checked against docs/reference/naya-default-module-bindings.json (the installer's own default map). The Track BUTTON assignments are absent from the installer file -- it only carries horizontal/vertical -- and were confirmed independently by the device owner, matching the DB exactly.",
+  "note": "Track Left and Track Right are separate profiles because the module is ASYMMETRIC: flipping it to the other side reverses the physical button order and the scroll direction, so the two need different default maps. This is not a bay choice -- both are module_type 1 and either can occupy either bay.",
+  "generated": "2026-09-03"
+ },
+ "TOUCH_WINDOWS": {
+  "module_type": "TOUCH",
+  "default_name": "Naya Touch Windows",
+  "bindings": {
+   "horizontal:touch:1_finger": {
+    "action_type": "value",
+    "action_code": "mouse - MOUSE_LEFT - MOUSE_RIGHT"
+   },
+   "horizontal:touch:2_fingers": {
+    "action_type": "value",
+    "action_code": "mouse - SCROLL_LEFT - SCROLL_RIGHT"
+   },
+   "swipe_down:touch:3_fingers": {
+    "action_type": "shortcut_alias",
+    "action_code": "LALT + ESC"
+   },
+   "swipe_down:touch:4_fingers": {
+    "action_type": "shortcut_alias",
+    "action_code": "LALT + PG_DN"
+   },
+   "swipe_left:touch:3_fingers": {
+    "action_type": "shortcut_alias",
+    "action_code": "LCTRL + LSHIFT + TAB"
+   },
+   "swipe_left:touch:4_fingers": {
+    "action_type": "shortcut_alias",
+    "action_code": "LGUI + LCTRL + LEFT"
+   },
+   "swipe_right:touch:3_fingers": {
+    "action_type": "shortcut_alias",
+    "action_code": "LCTRL + TAB"
+   },
+   "swipe_right:touch:4_fingers": {
+    "action_type": "shortcut_alias",
+    "action_code": "LGUI + LCTRL + RIGHT"
+   },
+   "swipe_up:touch:3_fingers": {
+    "action_type": "shortcut_alias",
+    "action_code": "LALT + LSHIFT + ESC"
+   },
+   "swipe_up:touch:4_fingers": {
+    "action_type": "shortcut_alias",
+    "action_code": "LALT + PG_UP"
+   },
+   "tap:touch:1_finger": {
+    "action_type": "mouse",
+    "action_code": "M1"
+   },
+   "tap:touch:3_fingers": {
+    "action_type": "mouse",
+    "action_code": "M3"
+   },
+   "tap:touch:4_fingers": {
+    "action_type": "shortcut_alias",
+    "action_code": "LGUI + TAB"
+   },
+   "vertical:touch:1_finger": {
+    "action_type": "value",
+    "action_code": "mouse - MOUSE_DOWN - MOUSE_UP"
+   },
+   "vertical:touch:2_fingers": {
+    "action_type": "value",
+    "action_code": "mouse - SCROLL_UP - SCROLL_DOWN"
+   }
+  }
+ },
+ "TRACK_LEFT": {
+  "module_type": "TRACK",
+  "default_name": "Naya Track Left",
+  "bindings": {
+   "horizontal:track": {
+    "action_type": "value",
+    "action_code": "mouse - MOUSE_LEFT - MOUSE_RIGHT"
+   },
+   "rotate:track": {
+    "action_type": "value",
+    "action_code": "mouse - SCROLL_UP - SCROLL_DOWN"
+   },
+   "tap:track:button_1": {
+    "action_type": "mouse",
+    "action_code": "M1"
+   },
+   "tap:track:button_2": {
+    "action_type": "mouse",
+    "action_code": "M3"
+   },
+   "tap:track:button_3": {
+    "action_type": "mouse",
+    "action_code": "M2"
+   },
+   "tap:track:button_4": {
+    "action_type": "mouse",
+    "action_code": "M4"
+   },
+   "vertical:track": {
+    "action_type": "value",
+    "action_code": "mouse - MOUSE_DOWN - MOUSE_UP"
+   }
+  }
+ },
+ "TRACK_RIGHT": {
+  "module_type": "TRACK",
+  "default_name": "Naya Track Right",
+  "bindings": {
+   "horizontal:track": {
+    "action_type": "value",
+    "action_code": "mouse - MOUSE_LEFT - MOUSE_RIGHT"
+   },
+   "rotate:track": {
+    "action_type": "value",
+    "action_code": "mouse - SCROLL_UP - SCROLL_DOWN"
+   },
+   "tap:track:button_1": {
+    "action_type": "mouse",
+    "action_code": "M4"
+   },
+   "tap:track:button_2": {
+    "action_type": "mouse",
+    "action_code": "M2"
+   },
+   "tap:track:button_3": {
+    "action_type": "mouse",
+    "action_code": "M3"
+   },
+   "tap:track:button_4": {
+    "action_type": "mouse",
+    "action_code": "M1"
+   },
+   "vertical:track": {
+    "action_type": "value",
+    "action_code": "mouse - MOUSE_DOWN - MOUSE_UP"
+   }
+  }
+ },
+ "TUNE": {
+  "module_type": "TUNE",
+  "default_name": "Naya Tune Mac/Win",
+  "bindings": {
+   "horizontal:tune:1_finger": {
+    "action_type": "value",
+    "action_code": "mouse - SCROLL_LEFT - SCROLL_RIGHT"
+   },
+   "rotate:tune:dial": {
+    "action_type": "value",
+    "action_code": "C_VOL_DOWN - C_VOL_UP"
+   },
+   "swipe_down:tune:2_fingers": {
+    "action_type": "key",
+    "action_code": "C_BRIGHTNESS_DEC"
+   },
+   "swipe_down:tune:3_fingers": {
+    "action_type": "LED",
+    "action_code": "LED_BRIGHTNESS_DOWN"
+   },
+   "swipe_left:tune:2_fingers": {
+    "action_type": "key",
+    "action_code": "C_REWIND"
+   },
+   "swipe_left:tune:3_fingers": {
+    "action_type": "key",
+    "action_code": "C_PREVIOUS"
+   },
+   "swipe_right:tune:2_fingers": {
+    "action_type": "key",
+    "action_code": "C_FAST_FORWARD"
+   },
+   "swipe_right:tune:3_fingers": {
+    "action_type": "key",
+    "action_code": "C_NEXT"
+   },
+   "swipe_up:tune:2_fingers": {
+    "action_type": "key",
+    "action_code": "C_BRIGHTNESS_INC"
+   },
+   "swipe_up:tune:3_fingers": {
+    "action_type": "LED",
+    "action_code": "LED_BRIGHTNESS_UP"
+   },
+   "tap:tune:2_fingers": {
+    "action_type": "key",
+    "action_code": "C_PLAY_PAUSE"
+   },
+   "tap:tune:3_fingers": {
+    "action_type": "key",
+    "action_code": "C_MUTE"
+   },
+   "vertical:tune:1_finger": {
+    "action_type": "value",
+    "action_code": "mouse - SCROLL_UP - SCROLL_DOWN"
+   }
+  }
+ }
+}

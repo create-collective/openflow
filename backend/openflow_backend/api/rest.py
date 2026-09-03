@@ -18,6 +18,7 @@ from .. import __version__
 from ..db import backup as bak
 from ..db import keymap_import as kmi
 from ..db import macros as mac
+from ..db import module_profiles as mprof
 from ..db import profiles as prof
 from ..db import settings as settings_db
 from ..db import userdata as ud
@@ -433,6 +434,44 @@ async def check_for_updates() -> dict:
 
 
 # --- flash (write) : preview only for now (dry-run); real write is Phase C ---
+
+@router.get("/api/module-variants")
+async def module_variants() -> dict:
+    """The stock profiles the "add profile" dropdown offers.
+
+    Track appears twice because the module is ASYMMETRIC: flipping it to the other side reverses
+    the physical button order and the scroll direction, so left and right ship different default
+    maps. Either can occupy either bay -- the variant is about the bindings, not the position.
+    """
+    return {"variants": mprof.variants()}
+
+
+@router.post("/rpc/create-module-profile")
+async def create_module_profile(body: dict = Body(...)) -> dict:
+    """Add a module profile, seeded from its stock map so it works immediately."""
+    try:
+        return await run_in_threadpool(mprof.create, body.get("variant"), body.get("name"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/rename-module-profile")
+async def rename_module_profile(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(mprof.rename, body.get("configId"), body.get("name"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/delete-module-profile")
+async def delete_module_profile(body: dict = Body(...)) -> dict:
+    """Remove a profile. Refuses the last one of its type -- a module with no profile cannot be
+    driven, and the device needs a config in the bay for it to work at all."""
+    try:
+        return await run_in_threadpool(mprof.delete, body.get("configId"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.get("/api/module-gestures")
 async def module_gestures(types: str = "TUNE,TRACK,TOUCH,FLOAT") -> dict:
