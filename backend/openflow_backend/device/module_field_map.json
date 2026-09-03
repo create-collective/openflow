@@ -26,8 +26,9 @@
    },
    "0x05": {
     "kind": "setting",
-    "label": "setting_05",
-    "value": 5
+    "label": "tick_spacing?",
+    "value": 5,
+    "note": "NOT ticks_per_rotation as previously mapped: that defaults to 72 and bottoms out at 5, and a stored 5 would be an odd floor. Setting it to 100 made the dial's detents SOFTER and further apart, so it reads as tick spacing rather than a count."
    },
    "0x06": {
     "kind": "setting",
@@ -53,28 +54,28 @@
     "kind": "axis",
     "axis": 4,
     "direction": -1,
-    "note": "scroll L/R axis",
+    "note": "scroll L/R axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
     "gesture": "horizontal:tune:1_finger"
    },
    "0x0b": {
     "kind": "axis",
     "axis": 4,
     "direction": 1,
-    "note": "scroll L/R axis",
+    "note": "scroll L/R axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
     "gesture": "horizontal:tune:1_finger"
    },
    "0x0c": {
     "kind": "axis",
     "axis": 6,
     "direction": -1,
-    "note": "scroll U/D axis",
+    "note": "scroll U/D axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
     "gesture": "vertical:tune:1_finger"
    },
    "0x0d": {
     "kind": "axis",
     "axis": 6,
     "direction": 1,
-    "note": "scroll U/D axis",
+    "note": "scroll U/D axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
     "gesture": "vertical:tune:1_finger"
    },
    "0x0e": {
@@ -189,7 +190,8 @@
     "default_action": null,
     "note": "C_VOL_UP/DOWN; guessed as dial counter-clockwise but Touch slot 1 has the identical pair with no dial -- shared schema slot, unconfirmed. Needs a write test."
    }
-  }
+  },
+  "note": "Scroll axes are cat 4 (0x0a/0x0b) and cat 6 (0x0c/0x0d) -- the SAME bytes a Touch carries at 0x0d-0x10 for its 2-finger scroll. The Tune has no pointer axes of its own; forcing cat 0/cat 1 into these fields does move the cursor, but slowly, and no config value changes that."
  },
  "TRACK": {
   "slot_seen": 4,
@@ -487,6 +489,6 @@
     "note": "on-device keypress, no default-map match (C_VOL_DOWN)"
    }
   },
-  "note": "Category-3 fields are mouse-button records (tap-to-click), not axes. Only 0x13 (M3 = 3-finger tap) survived the fresh 2026-09-02 write; 1- and 2-finger tap are not stored on the device at all, so they are firmware or host defaults."
+  "note": "Category-3 fields are mouse-button records (tap-to-click), not axes. Only 0x13 (M3 = 3-finger tap) survived the fresh 2026-09-02 write; 1- and 2-finger tap are not stored on the device at all, so they are firmware or host defaults. The Touch's 1-finger CURSOR gestures have no device fields at all -- only its 2-finger scroll is stored (cat 4/cat 6 at 0x0d-0x10). Its cursor is native module firmware, which is why a Tune cannot be made to behave like one by copying config."
  }
 }
