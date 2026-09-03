@@ -31,10 +31,22 @@ export default function LayerList({
       if (rootRef.current && !rootRef.current.contains(e.target)) {
         setMenuFor(null);
         setConfirmDel(null);
+        setImportOpen(false);
+      }
+    }
+    function onKey(e) {
+      if (e.key === "Escape") {
+        setMenuFor(null);
+        setConfirmDel(null);
+        setImportOpen(false);
       }
     }
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   function startRename(l) {

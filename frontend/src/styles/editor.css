@@ -1461,10 +1461,16 @@
 }
 .layer-import-menu {
   position: absolute;
-  z-index: 30;
+  /* Above sibling menus, but BELOW the modal backdrop (1000) -- a dropdown must never
+     float over a dialog. */
+  z-index: 40;
   top: calc(100% + 4px);
-  right: 0;
+  /* Anchored LEFT so it opens across the board. Right-anchored, a 260px menu extended past
+     the left edge of .main, which is a scroll container (overflow: auto) and therefore clips
+     it -- it was being cut off, not painted behind the nav. */
+  left: 0;
   min-width: 260px;
+  max-width: 340px;
   max-height: 320px;
   overflow-y: auto;
   background: var(--neutral12);
