@@ -40,6 +40,22 @@ def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def backfill_variants(conn) -> int:
+    """Tag pre-existing rows with the variant they obviously are.
+
+    Rows written before the `variant` column existed have none, so a new profile cannot be
+    grouped beside them. The stock profiles are identifiable by their default name, so tag
+    those; anything renamed beyond recognition keeps its position and simply is not grouped.
+    """
+    n = 0
+    for key, stock in _STOCK.items():
+        cur = conn.execute(
+            "UPDATE module_configs SET variant=? WHERE variant IS NULL AND (name = ? OR name LIKE ?)",
+            (key, stock["default_name"], f"Copy of {stock['default_name']} Defaults%"))
+        n += cur.rowcount
+    return n
+
+
 def variants() -> list[dict]:
     """The stock profiles a user can add, for the UI dropdown."""
     return [{**v, "bindings": len(_STOCK[v["id"]]["bindings"])} for v in VARIANTS if v["id"] in _STOCK]
@@ -56,7 +72,8 @@ def create(variant: str, name: str | None = None) -> dict:
         # A new profile is a copy of the stock map, so say so -- and number within the
         # VARIANT, not the type: a second Track Left must not be numbered because a Track
         # Right also exists.
-        base = f"Copy of {stock['default_name']} Defaults"
+        stock_name = stock["default_name"]
+        base = f"Copy of {stock_name} Defaults"
         taken = {r["name"] for r in conn.execute(
             "SELECT name FROM module_configs WHERE name = ? OR name LIKE ?", (base, base + " %"))}
         label = name or base
@@ -65,10 +82,37 @@ def create(variant: str, name: str | None = None) -> dict:
             while f"{base} {n}" in taken:
                 n += 1
             label = f"{base} {n}"
+
+        # Insert BELOW the profiles of the same variant, not at the top of the type. Track is
+        # the case that matters: adding a right-hand profile should land under the existing
+        # right-hand ones, not above "Naya Track Left". Variant is matched by name, which is
+        # only reliable at creation time -- but order_id is written once and then stays, so a
+        # later rename does not move anything (and should not).
+        siblings = list(conn.execute(
+            "SELECT id, name, order_id, variant FROM module_configs WHERE type=? ORDER BY order_id",
+            (stock["module_type"],)))
+
+        def is_variant(r):
+            # Prefer the stored variant; fall back to the name only for rows written before the
+            # column existed (a renamed legacy row simply appends at the end, which is safe).
+            if r["variant"]:
+                return r["variant"] == variant
+            return r["name"] == stock_name or r["name"].startswith(f"Copy of {stock_name} Defaults")
+
+        after = -1
+        for i, r in enumerate(siblings):
+            if is_variant(r):
+                after = i
+        pos = after + 1 if after >= 0 else len(siblings)   # end of the type if no sibling found
+        for i, r in enumerate(siblings):
+            if i >= pos:
+                conn.execute("UPDATE module_configs SET order_id=? WHERE id=?", (i + 1, r["id"]))
+            elif r["order_id"] != i:
+                conn.execute("UPDATE module_configs SET order_id=? WHERE id=?", (i, r["id"]))
         conn.execute(
-            "INSERT INTO module_configs (name, type, size, order_id, icon_id, id, updated_at, created_at) "
-            "VALUES (?,?,?,?,?,?,?,?)",
-            (label, stock["module_type"], 0, len(taken), None, cid, now, now),
+            "INSERT INTO module_configs (name, type, size, order_id, icon_id, variant, id, "
+            "updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            (label, stock["module_type"], 0, pos, None, variant, cid, now, now),
         )
         for behavior, b in sorted(stock["bindings"].items()):
             conn.execute(

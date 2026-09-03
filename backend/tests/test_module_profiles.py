@@ -33,7 +33,8 @@ def _db():
     conn.row_factory = sqlite3.Row
     conn.executescript("""
         CREATE TABLE module_configs (name TEXT, type TEXT, size INT, order_id INT,
-                                     icon_id TEXT, id TEXT, updated_at TEXT, created_at TEXT);
+                                     icon_id TEXT, variant TEXT, id TEXT,
+                                     updated_at TEXT, created_at TEXT);
         CREATE TABLE module_bindings (action_id TEXT, action_code TEXT, action_type TEXT,
                                       behavior TEXT, invert INT, threshold INT, direction TEXT,
                                       mode INT, module_config_id TEXT, id TEXT,
@@ -78,6 +79,22 @@ def test_create_seeds_from_stock():
             conn.execute("SELECT behavior, action_code FROM module_bindings WHERE module_config_id=?", (r["id"],))}
     assert rows["tap:track:button_1"] == "M1"
     print(f"  a new Track (left) arrives with {r['bindings']} working bindings")
+
+
+def test_new_profiles_append_below_their_own_variant():
+    """Track is the case that matters: a right-hand profile must land under the existing
+    right-hand ones, not at the top of the whole TRACK group."""
+    conn = _db()
+    with _patch(conn):
+        mp.create("TRACK_LEFT", "Left A")
+        mp.create("TRACK_RIGHT", "Right A")
+        mp.create("TRACK_RIGHT")          # -> below Right A
+        mp.create("TRACK_LEFT")           # -> below Left A, above the rights
+    order = [r["name"] for r in conn.execute(
+        "SELECT name FROM module_configs WHERE type='TRACK' ORDER BY order_id")]
+    assert order[0] == "Left A" and order[1].startswith("Copy of Naya Track Left"), order
+    assert order[2] == "Right A" and order[3].startswith("Copy of Naya Track Right"), order
+    print(f"  {order}")
 
 
 def test_second_profile_of_a_type_is_named_distinctly():
@@ -136,6 +153,7 @@ def test_delete_removes_its_bindings_too():
 
 if __name__ == "__main__":
     for fn in (test_the_stock_track_buttons_are_the_real_defaults,
+               test_new_profiles_append_below_their_own_variant,
                test_rotate_action_type_is_normalised,
                test_create_seeds_from_stock,
                test_second_profile_of_a_type_is_named_distinctly,

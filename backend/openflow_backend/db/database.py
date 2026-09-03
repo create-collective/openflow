@@ -33,8 +33,26 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     return conn
 
 
+# Columns OpenFlow adds on top of the recovered NayaFlow schema. Additive only: a column
+# NayaFlow does not know about is harmless to it, and this keeps existing databases working
+# without a rebuild.
+_ADDED_COLUMNS = [
+    # Which stock variant a module profile was created from. Needed because Track ships two
+    # asymmetric variants (left/right) that must group separately in the UI, and the name
+    # cannot be trusted for that -- profiles are renameable.
+    ("module_configs", "variant", "TEXT"),
+]
+
+
+def _apply_added_columns(conn) -> None:
+    for table, column, decl in _ADDED_COLUMNS:
+        cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
 def init_db(path: Path | None = None) -> None:
-    """Create the schema if the database is empty."""
+    """Create the schema if the database is empty, then apply any additive columns."""
     conn = connect(path)
     try:
         existing = conn.execute(
@@ -42,6 +60,10 @@ def init_db(path: Path | None = None) -> None:
         ).fetchone()
         if existing is None:
             conn.executescript(_schema_sql())
-            conn.commit()
+        _apply_added_columns(conn)
+        # Tag rows that predate the column so new profiles can be grouped beside them.
+        from .module_profiles import backfill_variants
+        backfill_variants(conn)
+        conn.commit()
     finally:
         conn.close()
