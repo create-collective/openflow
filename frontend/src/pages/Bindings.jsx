@@ -10,6 +10,15 @@ import ProfileBar from "../components/ProfileBar";
 import SelectedKeyPanel from "../components/SelectedKeyPanel";
 import ActionPalette from "../components/ActionPalette";
 
+// Does this profile contain any layer-switch keys? If not, reordering cannot surprise anyone
+// and the notice would just be noise.
+const LAYER_PREFIXES = ["MO_LAYER_", "TO_LAYER_", "TOGGLE_LAYER_", "STICKY_LAYER_"];
+function countsSwitches(profile) {
+  return (profile?.layers || []).some((l) =>
+    (l.keys || []).some((k) =>
+      LAYER_PREFIXES.some((p) => (k.binding?.actionCode || "").startsWith(p))));
+}
+
 export default function Bindings() {
   const [profiles, setProfiles] = useState([]);
   const [activeProfileId, setActiveProfileId] = useState(() => {
@@ -138,6 +147,9 @@ export default function Bindings() {
       try {
         if (!profile) return;
         await api.copyLayer(layerId, profile.id);
+        setLayerNotice(
+          "Layer copied. Any switch keys on it were re-pointed at this profile's layer of the "
+          + "same position. Check them before flashing.");
         await load();
       } catch (e) { setErr(e.message); }
     },
@@ -244,8 +256,16 @@ export default function Bindings() {
             }}
             onReorder={async (orderedIds) => {
               await api.reorderLayers(profile.id, orderedIds);
-              // Reordering needs no key adjustment: a switch holds the target layer's uuid and
-              // is resolved to an index only at flash time, so it follows the layer it names.
+              // No binding is rewritten -- a switch holds the target layer's uuid and is
+              // resolved to an index only at flash time, so it follows the layer it names.
+              // Worth saying anyway: the layer's NUMBER changed, so a key the user thinks of
+              // as "go to layer 2" may now read differently even though it still goes to the
+              // same layer.
+              if (countsSwitches(profile)) {
+                setLayerNotice(
+                  "Layer order changed. Switch keys still point at the layers they named, so "
+                  + "their numbers may have shifted. Check them before flashing.");
+              }
               await load();
             }}
             notice={layerNotice}
