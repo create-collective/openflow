@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { invalidateDeviceState } from "../lib/deviceState";
 import { api } from "../lib/api.js";
 
 // "Flash to keyboard" — previews the diff (dry-run) first, then requires an explicit
@@ -66,6 +67,8 @@ export default function FlashButton({ variant = "sidebar" }) {
     setState("writing");
     setError("");
     try {
+      // Whatever we believed was on the device is now stale, whether this succeeds or not.
+      invalidateDeviceState("flash");
       const res = await api.flash(
         recovery
           ? { mode: "recovery", acknowledgeRecovery: true, profileId: activeProfileId() }

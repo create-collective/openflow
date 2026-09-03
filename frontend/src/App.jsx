@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { invalidateDeviceState } from "./lib/deviceState";
 import { useSSE } from "./lib/useSSE";
 import Hub from "./pages/Hub.jsx";
 import DeviceManagement from "./pages/DeviceManagement.jsx";
@@ -24,6 +26,10 @@ const NAV = [
 
 function Sidebar() {
   const { data, connected } = useSSE("sse:naya-devices-stream");
+  // If we lose the backend we can no longer vouch for what is on the keyboard.
+  useEffect(() => {
+    if (!connected) invalidateDeviceState("disconnected");
+  }, [connected]);
   const deviceCount = data?.devices?.length ?? 0;
   return (
     <nav className="sidebar">

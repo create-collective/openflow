@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSyncExternalStore } from "react";
+import { subscribeDeviceState, getDeviceState, setModuleRead } from "../lib/deviceState";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 
@@ -126,7 +128,9 @@ export default function Modules() {
   const [activeTarget, setActiveTarget] = useState(null);
   const [err, setErr] = useState(null);
   // What is actually flashed on the keyboard, per module config (null = not read yet).
-  const [device, setDevice] = useState(null);
+  // Held outside the component so it survives navigating to another page and back -- a read
+  // costs a COM-port round trip and is a whole-app fact, not this page's state.
+  const device = useSyncExternalStore(subscribeDeviceState, getDeviceState).modules;
   const [reading, setReading] = useState(false);
   const [variants, setVariants] = useState([]);
   const [adding, setAdding] = useState(false);      // the "add profile" dropdown
@@ -208,7 +212,7 @@ export default function Modules() {
       const r = await api.readModules();
       const byUuid = {};
       for (const m of r.modules || []) byUuid[m.uuid] = m;
-      setDevice(byUuid);
+      setModuleRead(byUuid);
     } catch (e) {
       setErr(`Could not read the keyboard: ${e.message}`);
     } finally {
