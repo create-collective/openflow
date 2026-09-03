@@ -245,13 +245,22 @@ def read_keymap(transport, dest: int) -> dict:
     r = send(READ_LAYER_LIST)
     llp = bytes(r[0].payload) if r else b""
     entries = llp[1:]
-    layer_idxs = [entries[k] for k in range(0, len(entries) - 19, 20)]
+    # Each entry is [idx][id][flag][len=0x10][uuid16]. The UUID is the layer's IDENTITY and the
+    # only stable handle the device carries -- there is no name field anywhere in the protocol.
+    # Keeping it is what lets a re-read update the layer it already knows (preserving the user's
+    # name) instead of creating a fresh one every time.
+    layer_idxs, layer_uuids = [], {}
+    for k in range(0, len(entries) - 19, 20):
+        blk = entries[k:k + 20]
+        layer_idxs.append(blk[0])
+        h = blk[4:20].hex()
+        layer_uuids[blk[0]] = f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
 
     layers, led = {}, {}
     for li in layer_idxs:
         layers[li] = parse_records(read_full(READ_LAYER_DATA, li))
         led[li] = parse_led_map(read_full(READ_LED_MAP, li))
-    return {"layers": layers, "led": led}
+    return {"layers": layers, "led": led, "layer_uuids": layer_uuids}
 
 
 READ_MODULE_CONFIG_LIST = 0x1009
