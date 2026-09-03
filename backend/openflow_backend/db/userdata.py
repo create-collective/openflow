@@ -604,25 +604,26 @@ def _ensure_touch_defaults(conn) -> None:
 #   * parity gaps: gestures NayaFlow renders (blank) that we dropped entirely, because
 #     we build rows from stored bindings and an unbound gesture has no row.
 #   * dial split: NayaFlow exposes only a combined dial binding; the enum has each direction
-#     separately. Which device fields back them is still open (see module_field_map notes).
+#     separately. Those are fields 0x22/0x23 -- see the retraction note below.
+#   * pinch and spread are ONE gesture on this hardware (a single "pinch + tap"), so they are
+#     one row rather than the enum's two.
 _GESTURE_SLOTS = {
     "TUNE": (
         "tap:tune:1_finger",                    # blank in NayaFlow; device field 0x08
-        "pinch:tune:2_fingers",
-        "spread:tune:2_fingers",
-        # NayaFlow exposes only the combined "rotate:tune:dial" value binding. These two are
-        # real enum gestures, but the 0x22/0x23 fields we thought held them are unconfirmed
-        # (Touch carries the identical C_VOL_UP/DOWN pair and has no dial), so they badge
-        # app-only until a write test says otherwise.
+        "pinch:tune:2_fingers",       # rendered "Pinch & Spread": one gesture, not two
+        # NayaFlow exposes only the combined "rotate:tune:dial" binding; these are the two
+        # halves, at 0x22/0x23. The earlier doubt ("Touch carries the identical pair and has no
+        # dial") came from a Touch map probed at a 36-field hybrid slot -- a real Touch config
+        # is 31 fields, so those indices were an orphaned tail, not Touch schema.
         "clockwise_rotate:tune:dial",
         "counter_clockwise_rotate:tune:dial",
     ),
     # the renderer spells this "hold:"; "tap_hold:" appears only inside NayaCore
     "TRACK": tuple(f"hold:track:button_{i}" for i in (1, 2, 3, 4)),
     "TOUCH": (
-        "tap:touch:2_fingers",          # NayaFlow default: right click
-        "pinch:touch:2_fingers",
-        "spread:touch:2_fingers",
+        "tap:touch:1_finger",           # left click; device field 0x0b
+        "tap:touch:2_fingers",          # NayaFlow default: right click; device field 0x0c
+        "pinch:touch:2_fingers",      # rendered "Pinch & Spread": one gesture, not two
     ),
 }
 
@@ -763,10 +764,27 @@ def get_modules() -> dict:
                     "split": bool(per),
                     "invert": any(r["invert"] for r in rows),
                 })
+            # A paired gesture (the Tune dial) is one row until it is split, then two. The UI
+            # hides the halves until then, so it needs to know which rows are halves.
+            pairs = []
+            for combined, halves in module_fields.paired_gestures(m["type"]).items():
+                codes = {}
+                for side, gesture in halves.items():
+                    row = conn.execute(
+                        "SELECT action_code FROM module_bindings WHERE module_config_id=? "
+                        "AND behavior=?", (m["id"], gesture)).fetchone()
+                    codes[side] = (row["action_code"] or "") if row else ""
+                pairs.append({
+                    "behavior": combined,
+                    "minusBehavior": halves["-"], "plusBehavior": halves["+"],
+                    "minus": codes.get("-") or None, "plus": codes.get("+") or None,
+                    "split": any(codes.values()),
+                })
             configs.append({
                 "id": m["id"],
                 "name": m["name"],
                 "type": m["type"],
+                "pairs": pairs,
                 # Axis gestures occupy two device fields and each half can hold a key instead of
                 # motion; the UI needs both halves to offer that.
                 "axes": axes,

@@ -23,9 +23,11 @@ SNAPSHOT = _REPO / "device" / "userdata-snapshot" / "user-data-2026-08-28.db"
 
 def test_module_gesture_dropdowns() -> None:
     tune = gp.gestures_for("TUNE")
-    # 11, not 13: the 2026-09-02 live probe retracted 0x22/0x23 as the dial directions
-    # (Touch carries the same C_VOL_UP/DOWN pair and has no dial).
-    assert len(tune) == 11, f"expected 11 Tune gestures, got {len(tune)}"
+    # 13, including the dial directions at 0x22/0x23. The earlier retraction to 11 rested
+    # on "Touch carries the same pair and has no dial" -- but that Touch map was probed at
+    # slot 1, a 36-field hybrid, and a real Touch config is 31 fields, so everything above
+    # 0x1e there was an orphaned tail rather than Touch schema.
+    assert len(tune) == 13, f"expected 13 Tune gestures, got {len(tune)}"
     for g in tune:
         assert g["allow_custom"] is True and g["presets"], "every gesture allows custom + has presets"
         assert isinstance(g["field"], int)

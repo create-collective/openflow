@@ -73,11 +73,27 @@ def test_backfill_is_additive_and_idempotent():
 def test_badges_only_claim_what_a_read_backs():
     gf = mf.gesture_fields("TUNE")
     assert gf.get("tap:tune:1_finger") == 0x08, "1-finger tap lost its captured keypress field"
-    # 0x22/0x23 hold C_VOL_UP/DOWN on Tune AND on Touch, which has no dial -- shared schema,
-    # not a dial binding. Until a write test says otherwise these must not badge flashable.
-    for g in ("clockwise_rotate:tune:dial", "counter_clockwise_rotate:tune:dial"):
-        assert g not in gf, f"{g} claims a device field the probe did not confirm"
-    print("  1-finger tap -> 0x08; dial directions correctly unclaimed")
+    # 0x22/0x23 ARE the dial, retracting the earlier objection that Touch carries them too.
+    # That reading came from a Touch map probed at slot 1, which held 36 fields -- a Touch config
+    # is 31 (0x00-0x1e), so everything at 0x1f and above there was an orphaned tail from a
+    # previous config, not Touch schema. On the Tune the pair holds exactly the two halves of the
+    # combined binding, "C_VOL_DOWN - C_VOL_UP", and the dial does control volume by default.
+    for g, field in (("clockwise_rotate:tune:dial", 0x22),
+                     ("counter_clockwise_rotate:tune:dial", 0x23)):
+        assert gf.get(g) == field, f"{g} should map to 0x{field:02x}"
+    print("  1-finger tap -> 0x08; dial directions -> 0x22/0x23")
+
+
+def test_a_touch_config_is_31_fields_so_the_high_indices_are_not_its_schema():
+    """The guard that keeps the retraction above honest: if a Touch really did carry 0x22/0x23,
+    the dial mapping would be reading shared bytes rather than a dial."""
+    import json
+    from pathlib import Path
+    m = json.loads((Path(mf.__file__).with_name("module_field_map.json")).read_text())
+    assert m["TOUCH"]["slot_seen"] == 1, "the Touch map came from the hybrid slot"
+    assert max(int(k, 16) for k in m["TOUCH"]["fields"]) > 0x1E, (
+        "this map still includes the orphaned tail -- treat anything above 0x1e as not Touch")
+    print("  Touch map is from the 36-field hybrid slot; >0x1e is orphaned tail, not schema")
 
 
 if __name__ == "__main__":

@@ -46,7 +46,11 @@ function okForKind(actionType, fieldKind) {
   return true; // no device field (DB-only) — don't restrict, but the row is badged
 }
 
-function GestureRow({ b, actions, onPick, dev }) {
+// Behaviors whose slug does not read as a name. Pinch and spread are ONE gesture on this
+// hardware -- a single "pinch + tap" -- so it is one row, not two.
+const GESTURE_LABEL = { pinch: "Pinch & Spread" };
+
+function GestureRow({ b, actions, onPick, dev, extra }) {
   // Constrain the dropdown to what this gesture's device field accepts.
   const usable = actions.filter((a) => okForKind(a.actionType, b.fieldKind));
   const known = usable.some((a) => a.code === (b.actionCode || ""));
@@ -64,7 +68,7 @@ function GestureRow({ b, actions, onPick, dev }) {
   // A Track hold has no device field at all: the capture showed NayaFlow writing the hold value
   // over the tap and the tap never reaching the board. Offering it as editable would be
   // offering to lose the tap, so it renders disabled.
-  const unsupported = /^hold:track:button_/.test(b.behavior || "");
+  const unsupported = /^hold:track:button_/.test(b.behavior || "") || b.pairedSplit;
   const badge = unsupported
     ? { cls: "dbonly", text: "experimental", title: "The Track has one field per button and no room for a hold. NayaFlow lets you set one and silently overwrites the tap; we do not." }
     : b.flashable
@@ -74,8 +78,8 @@ function GestureRow({ b, actions, onPick, dev }) {
     : { cls: "dbonly", text: "app only", title: "No device field for this gesture yet — edits stay in the app until confirmed." };
   return (
     <div className="skp-row" style={{ cursor: "default" }}>
-      <span className="skp-beh" style={{ textTransform: "capitalize" }}>
-        {(b.gesture || "").replace(/_/g, " ")}
+      <span className="skp-beh" style={{ textTransform: GESTURE_LABEL[b.gesture] ? "none" : "capitalize" }}>
+        {GESTURE_LABEL[b.gesture] || (b.gesture || "").replace(/_/g, " ")}
       </span>
       <span className={"gesture-badge " + badge.cls} title={badge.title}>{badge.text}</span>
       {dev && (
@@ -217,6 +221,35 @@ export default function Modules() {
     } catch (e) {
       setErr(e.message);
     }
+  }
+
+  const pairFor = (behavior) => (config?.pairs || []).find((p) => p.behavior === behavior);
+  const pairForHalf = (behavior) =>
+    (config?.pairs || []).find((p) => p.minusBehavior === behavior || p.plusBehavior === behavior);
+  const isPairHalf = (behavior) => !!pairForHalf(behavior);
+
+  async function toggleSplit(pair, combinedRow, on) {
+    setBusy("split");
+    try {
+      const halves = (config.bindings || []).filter(
+        (x) => x.behavior === pair.minusBehavior || x.behavior === pair.plusBehavior);
+      if (on) {
+        // Seed each half from the combined binding's matching side, so splitting starts from
+        // what the gesture already did rather than from nothing.
+        const parts = (combinedRow.actionCode || "").split(" - ").map((x) => x.trim());
+        const seed = { [pair.minusBehavior]: parts.at(-2), [pair.plusBehavior]: parts.at(-1) };
+        for (const h of halves) {
+          await api.setModuleBinding({ bindingId: h.id, actionCode: seed[h.behavior] || "",
+                                       actionType: seed[h.behavior] ? "key" : "none" });
+        }
+        await api.setModuleBinding({ bindingId: combinedRow.id, actionCode: "", actionType: "none" });
+      } else {
+        for (const h of halves) {
+          await api.setModuleBinding({ bindingId: h.id, actionCode: "", actionType: "none" });
+        }
+      }
+      await load();
+    } catch (e) { setErr(e.message); } finally { setBusy(null); }
   }
 
   async function setAxisHalf(behavior, half, actionCode) {
@@ -473,9 +506,24 @@ export default function Modules() {
                           </button>
                         ))}
                       </div>
-                      {targetBindings.map((b) => (
-                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding} dev={deviceByGesture[b.behavior]} />
-                      ))}
+                      {targetBindings.map((b) => {
+                        const pair = pairFor(b.behavior);
+                        // A paired gesture is ONE row until it is split. Its two halves stay
+                        // hidden until then, and the combined row carries the toggle.
+                        if (isPairHalf(b.behavior) && !pairForHalf(b.behavior)?.split) return null;
+                        return (
+                          <GestureRow key={b.id} actions={actions} onPick={pickBinding}
+                            dev={deviceByGesture[b.behavior]}
+                            b={{ ...b, pairedSplit: !!pair?.split }}
+                            extra={pair && (
+                              <label className="split-toggle" title="Bind each direction separately.">
+                                <input type="checkbox" checked={!!pair.split} disabled={!!busy}
+                                  onChange={(e) => toggleSplit(pair, b, e.target.checked)} />
+                                split
+                              </label>
+                            )} />
+                        );
+                      })}
                     </>
                   )}
                 </div>

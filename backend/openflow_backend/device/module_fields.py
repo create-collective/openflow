@@ -193,4 +193,24 @@ def gesture_has_device_field(module_type: str, behavior: str) -> bool:
     t = (module_type or "").upper()
     if behavior in UNBACKED_GESTURES.get(t, ()):
         return False
+    # A combined pair reaches the device as its two halves, so it is backed if they are.
+    pair = paired_gestures(t).get(behavior)
+    if pair:
+        return all(h in writable_fields(t) for h in pair.values())
     return behavior in writable_fields(t) or behavior in axis_halves(t)
+
+
+# Gestures made of a PAIR of fields whose halves are plain keypresses rather than motion
+# records. The Tune dial is the case: its combined binding is "C_VOL_DOWN - C_VOL_UP" and the
+# two values sit in 0x23 and 0x22, so the pair is real even though neither half is an axis.
+PAIRED_GESTURES = {
+    "TUNE": {
+        "rotate:tune:dial": {"-": "counter_clockwise_rotate:tune:dial",
+                             "+": "clockwise_rotate:tune:dial"},
+    },
+}
+
+
+def paired_gestures(module_type: str) -> dict:
+    """{combined gesture: {"-": half gesture, "+": half gesture}}."""
+    return PAIRED_GESTURES.get((module_type or "").upper(), {})

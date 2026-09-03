@@ -180,15 +180,13 @@
    },
    "0x22": {
     "kind": "keypress",
-    "gesture": null,
-    "default_action": null,
-    "note": "C_VOL_UP/DOWN; guessed as dial clockwise but Touch slot 1 has the identical pair with no dial -- shared schema slot, unconfirmed. Needs a write test."
+    "gesture": "clockwise_rotate:tune:dial",
+    "note": "dial clockwise; holds C_VOL_UP in the stock profile"
    },
    "0x23": {
     "kind": "keypress",
-    "gesture": null,
-    "default_action": null,
-    "note": "C_VOL_UP/DOWN; guessed as dial counter-clockwise but Touch slot 1 has the identical pair with no dial -- shared schema slot, unconfirmed. Needs a write test."
+    "gesture": "counter_clockwise_rotate:tune:dial",
+    "note": "dial counter-clockwise; holds C_VOL_DOWN in the stock profile"
    }
   },
   "note": "Scroll axes are cat 4 (0x0a/0x0b) and cat 6 (0x0c/0x0d) -- the SAME bytes a Touch carries at 0x0d-0x10 for its 2-finger scroll. The Tune has no pointer axes of its own; forcing cat 0/cat 1 into these fields does move the cursor, but slowly, and no config value changes that."
@@ -364,8 +362,8 @@
     "kind": "mouse_button",
     "mask": 8,
     "value": "M4",
-    "gesture": null,
-    "note": "category-3 (mouse-button) record, cleared by the 2026-09-02 write -- present in the older stored config, gesture unknown"
+    "gesture": "tap:touch:1_finger",
+    "note": "1-finger tap (device owner). Category-3 button field, same shape as 0x0c/0x13."
    },
    "0x0c": {
     "kind": "mouse_button",
