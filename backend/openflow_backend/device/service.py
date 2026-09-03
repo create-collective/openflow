@@ -245,6 +245,30 @@ class DeviceService:
             t = self._transport_for(dev.port, dest)
             return keymap_read.read_keymap(t, dest)
 
+    def read_module_configs(self, side: str = "left") -> dict:
+        """Read the module config list + every non-empty slot. Read-only.
+
+        Module configs live on the central/left half regardless of which half a module is
+        docked to (checked: the right half reports no slots at all), so this defaults to left
+        like read_keymap. Returns {"list": hex, "slots": {slot: [{field, type, value}]}} plus
+        {"by_uuid": {module_config_id: slot}} -- always resolve a slot through that map rather
+        than assuming an index, because slots move between flashes.
+        """
+        from . import keymap_read
+        from . import flash as F
+
+        with self._lock:
+            dev = self._require_side(side)
+            dest = self._dest_for_side(dev.side)
+            t = self._transport_for(dev.port, dest)
+            read = keymap_read.read_module_configs(t, dest)
+        return {
+            "list": read["list"].hex(),
+            "by_uuid": F.slot_map_for(read["list"]),
+            "slots": {slot: [{"field": f, "type": ty, "value": v.hex()} for f, ty, v in recs]
+                      for slot, recs in read["slots"].items()},
+        }
+
     # --- troubleshooting -------------------------------------------------------
 
     def spi_flash_test(self, side: str) -> dict:

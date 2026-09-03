@@ -359,16 +359,18 @@
     "note": "scroll/pointer routing"
    },
    "0x0b": {
-    "kind": "axis",
-    "axis": 3,
-    "direction": 8,
-    "note": "scroll/pointer routing"
+    "kind": "mouse_button",
+    "mask": 8,
+    "value": "M4",
+    "gesture": null,
+    "note": "category-3 (mouse-button) record, cleared by the 2026-09-02 write -- present in the older stored config, gesture unknown"
    },
    "0x0c": {
-    "kind": "axis",
-    "axis": 3,
-    "direction": 2,
-    "note": "scroll/pointer routing"
+    "kind": "mouse_button",
+    "mask": 2,
+    "value": "M2",
+    "gesture": null,
+    "note": "category-3 (mouse-button) record, cleared by the 2026-09-02 write -- present in the older stored config, gesture unknown"
    },
    "0x0d": {
     "kind": "axis",
@@ -403,10 +405,11 @@
     "note": "none - slot exists, no binding"
    },
    "0x13": {
-    "kind": "axis",
-    "axis": 3,
-    "direction": 4,
-    "note": "scroll/pointer routing"
+    "kind": "mouse_button",
+    "mask": 4,
+    "value": "M3",
+    "gesture": "tap:touch:3_fingers",
+    "note": "tap-to-click; category-3 record, same shape as a Track button"
    },
    "0x14": {
     "kind": "unbound",
@@ -483,6 +486,7 @@
     "gesture": null,
     "note": "on-device keypress, no default-map match (C_VOL_DOWN)"
    }
-  }
+  },
+  "note": "Category-3 fields are mouse-button records (tap-to-click), not axes. Only 0x13 (M3 = 3-finger tap) survived the fresh 2026-09-02 write; 1- and 2-finger tap are not stored on the device at all, so they are firmware or host defaults."
  }
 }

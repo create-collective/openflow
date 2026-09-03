@@ -183,6 +183,77 @@ def encode_module_config(slot: int, field_records: list[bytes]) -> bytes:
     return bytes([slot]) + b"".join(field_records)
 
 
+# --- module config: two-word records (type 0x0f) ---------------------------- #
+# An 0x0f field is NOT "an axis" -- it is a record format: two LE u32s, [category][selector].
+# Category 0/1/4/6 are motion axes and the selector is a direction (+1 / -1). Category 3 is
+# the mouse buttons and the selector is a button bitmask (never negative, never combined).
+# Confirmed against the 2026-09-02 Track Left flash; see docs/module-gestures.md.
+TWO_WORD = 0x0F
+MOUSE_CATEGORY = 3
+MOUSE_MASK = {"M1": 1, "M2": 2, "M3": 4, "M4": 8}
+MOUSE_MASK_REV = {v: k for k, v in MOUSE_MASK.items()}
+
+
+def encode_two_word(category: int, selector: int) -> bytes:
+    """[category:u32le][selector:i32le] -- the 8-byte value of a type-0x0f field."""
+    return (category & 0xFFFFFFFF).to_bytes(4, "little") + (selector & 0xFFFFFFFF).to_bytes(4, "little")
+
+
+def decode_two_word(value: bytes) -> tuple[int, int]:
+    if len(value) != 8:
+        raise RemapEncodeError(f"two-word field must be 8 bytes, got {len(value)}")
+    return (int.from_bytes(value[:4], "little"),
+            int.from_bytes(value[4:], "little", signed=True))
+
+
+def encode_mouse_button(code: str) -> bytes:
+    """'M1'..'M4' -> the type-0x0f value binding a Track button / Touch tap to that click."""
+    if code not in MOUSE_MASK:
+        raise RemapEncodeError(f"unknown mouse button {code!r} (expected one of {sorted(MOUSE_MASK)})")
+    return encode_two_word(MOUSE_CATEGORY, MOUSE_MASK[code])
+
+
+def decode_mouse_button(value: bytes) -> str:
+    category, mask = decode_two_word(value)
+    if category != MOUSE_CATEGORY:
+        raise RemapEncodeError(f"category {category} is not a mouse-button record")
+    if mask not in MOUSE_MASK_REV:
+        raise RemapEncodeError(f"mouse mask {mask} is not one of 1/2/4/8")
+    return MOUSE_MASK_REV[mask]
+
+
+def encode_module_config_list(entries: list) -> bytes:
+    """[00] + per-slot [slot][list_id][flag][10][uuid16], mirroring encode_layer_list.
+
+    entries: (slot, list_id, flag, uuid16). Captured live: slot 3 -> Touch Windows with flag
+    0x00 and slot 4 -> Track Left with flag 0x01, so the flag is carried rather than assumed
+    (unlike the layer list, where it is always 0x00).
+    """
+    out = bytearray([0x00])
+    for slot, list_id, flag, uuid in entries:
+        if len(uuid) != 16:
+            raise RemapEncodeError("module-config-list uuid must be 16 bytes")
+        out += bytes([slot, list_id, flag, 0x10]) + uuid
+    return bytes(out)
+
+
+def parse_module_config_list(payload: bytes) -> list:
+    """Inverse of encode_module_config_list -> [{slot, list_id, flag, uuid}], uuid canonical
+    and hyphenated so it matches module_configs.id directly."""
+    out, i = [], 1                      # skip the leading 00
+    while i + 4 <= len(payload):
+        slot, list_id, flag, ln = payload[i:i + 4]
+        i += 4
+        raw = payload[i:i + ln]
+        i += ln
+        if ln != 16:
+            continue                    # deletion / empty entry
+        h = raw.hex()
+        out.append({"slot": slot, "list_id": list_id, "flag": flag,
+                    "uuid": f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"})
+    return out
+
+
 def encode_layer_list(entries: list[tuple[int, int, bytes]]) -> bytes:
     """[00] + per-layer [idx][id][00][10][uuid16] (add) or [idx] 00 00 00 (delete, id=0/len=0).
 

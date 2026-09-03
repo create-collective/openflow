@@ -33,6 +33,28 @@ def gesture_fields(module_type: str) -> dict[str, int]:
 KEYPRESS_ACTION_TYPES = {"key", "modifier", "shortcut_alias"}
 
 
+def mouse_button_fields(module_type: str) -> dict:
+    """{gesture: field_index} for the mouse-button (category-3) fields of this module type.
+
+    These are the Track's four buttons and a Touch's tap-to-click. Confirmed writable-shaped
+    from the captured Track Left flash, but no single-field write has been verified yet."""
+    return {v["gesture"]: int(k, 16)
+            for k, v in field_map(module_type).items()
+            if v.get("kind") == "mouse_button" and v.get("gesture")}
+
+
+def motion_axis_fields(module_type: str) -> dict:
+    """{category: [field_index, ...]} for the motion axes (the +1/-1 direction pairs).
+
+    A pair is one physical motion (Track: category 1 and 0 are ball X/Y, 4 is rotate).
+    Inverting a motion = swapping the two selectors within its pair."""
+    out: dict = {}
+    for k, v in field_map(module_type).items():
+        if v.get("kind") == "axis" and v.get("axis") is not None:
+            out.setdefault(int(v["axis"]), []).append(int(k, 16))
+    return {cat: sorted(fs) for cat, fs in sorted(out.items())}
+
+
 def gesture_kind(module_type: str, behavior: str) -> str | None:
     """The device field kind for a gesture behavior string ('keypress'/'axis'/...), or None
     if that gesture has no field on the device (unknown module, or not stored on-device)."""

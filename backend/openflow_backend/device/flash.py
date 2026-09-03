@@ -22,6 +22,7 @@ import colorsys
 from dataclasses import dataclass, field
 
 from .._vendor.nayactl.constants import CAT_SYSTEM
+from . import module_fields as MF
 from . import remap as R
 
 FULL_LAYER_POSITIONS = range(0x00, 0x52)     # 82 positions = whole board + module slots
@@ -177,10 +178,70 @@ def _read_timeouts(conn) -> tuple[int, int, int] | None:
 
 
 def _read_module_safe_fields(conn) -> dict[int, dict[int, tuple[int, bytes]]]:
-    """Only the captured-safe module fields (speeds + 1-finger tap). Gesture fields skipped."""
-    # Slot numbering is device-assigned (Track/Tune order); left to the flash caller to map
-    # module_config_id -> slot. Returned empty here until the slot map is wired in Phase C.
+    """Only the captured-safe module fields (speeds + 1-finger tap). Gesture fields skipped.
+
+    Still empty: the caller supplies module writes explicitly via the module_* helpers below,
+    because a slot number is only meaningful next to a live READ_MODULE_CONFIG_LIST (see
+    slot_map_for -- slot indices move between flashes)."""
     return {}
+
+
+# --------------------------------------------------------------------------- #
+# module config: slot resolution + targeted writes                            #
+# --------------------------------------------------------------------------- #
+
+def slot_map_for(list_payload: bytes) -> dict[str, int]:
+    """{module_config_id: slot} from a READ/WRITE_MODULE_CONFIG_LIST payload.
+
+    Slot indices are NOT stable -- Tune was observed moving from slot 4 to slot 2, and Track
+    appeared at slot 4 only once its profile was flashed. Always resolve a slot by the module
+    config's UUID against a live list read; never hardcode one, or a write lands on another
+    module's config.
+    """
+    return {e["uuid"]: e["slot"] for e in R.parse_module_config_list(list_payload)}
+
+
+def module_button_write(slot: int, module_type: str, changes: dict[str, str]) -> WriteOp | None:
+    """Rebind mouse-button gestures (Track buttons, Touch tap-to-click).
+
+    changes: {gesture: 'M1'..'M4'}. Emits a sparse WRITE_MODULE_CONFIG_DATA carrying only the
+    changed fields -- the same shape as the 4-byte single-field write NayaFlow was captured
+    sending, so the rest of the slot is left alone.
+    """
+    fields = MF.mouse_button_fields(module_type)
+    recs = []
+    for gesture, code in sorted(changes.items()):
+        if gesture not in fields:
+            raise ValueError(f"{module_type} has no mouse-button field for {gesture!r}")
+        recs.append(R.encode_module_field(fields[gesture], R.encode_mouse_button(code), R.TWO_WORD))
+    if not recs:
+        return None
+    return WriteOp(R.WRITE_MODULE_CONFIG_DATA, R.encode_module_config(slot, recs),
+                   f"module {module_type} slot {slot} ({len(recs)} button(s))")
+
+
+def module_axis_invert(slot: int, module_type: str, current: dict[int, tuple[int, bytes]],
+                       category: int) -> WriteOp | None:
+    """Flip one motion axis by swapping the +1/-1 selectors of its field pair.
+
+    This is what makes Track rotate scroll the intuitive way: clockwise -> down. Neither
+    NayaFlow nor our UI exposes it, but a motion axis is just a (category, direction) pair,
+    so inverting it is a two-field sparse write and is reversed by applying it again.
+    `current` is the slot as read from the device: {field: (type, value)}.
+    """
+    pair = MF.motion_axis_fields(module_type).get(category)
+    if not pair or len(pair) != 2:
+        raise ValueError(f"{module_type} category {category} is not a single axis pair: {pair}")
+    recs = []
+    for field, other in (pair, pair[::-1]):
+        typ, value = current.get(field, (None, None))
+        if typ != R.TWO_WORD or value is None:
+            raise ValueError(f"field {field:#04x} is not a two-word record on this device")
+        cat, _ = R.decode_two_word(value)
+        _, other_sel = R.decode_two_word(current[other][1])
+        recs.append(R.encode_module_field(field, R.encode_two_word(cat, other_sel), R.TWO_WORD))
+    return WriteOp(R.WRITE_MODULE_CONFIG_DATA, R.encode_module_config(slot, recs),
+                   f"module {module_type} slot {slot} (invert axis category {category})")
 
 
 # --------------------------------------------------------------------------- #

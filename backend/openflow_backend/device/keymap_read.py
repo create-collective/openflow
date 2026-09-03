@@ -239,6 +239,46 @@ def read_keymap(transport, dest: int) -> dict:
     return {"layers": layers, "led": led}
 
 
+READ_MODULE_CONFIG_LIST = 0x1009
+READ_MODULE_CONFIG_DATA = 0x100B
+
+
+def read_module_configs(transport, dest: int, slots: range = range(8)) -> dict:
+    """Read the module config list + every non-empty slot from a connected half.
+
+    The keymap read deliberately does not do this -- it asks only for layers and LEDs -- so
+    module data never reached the app at all. Returns {"list": raw_list_payload,
+    "slots": {slot: [(field, type, value), ...]}}. Read-only.
+    """
+    def send(sub, payload=b"", flags=0x00, timeout=2.0):
+        return [r for r in transport._send_raw(_build(dest, sub, payload, flags), timeout) if r.valid]
+
+    def read_full(sub, index):
+        parts, first = [], True
+        while True:
+            r = send(sub, bytes([index]), flags=0x00 if first else 0x01)
+            if not r:
+                break
+            resp = r[0]
+            p = bytes(resp.payload)
+            parts.append(p if first else p[1:])
+            first = False
+            if resp.flags != 0x01 or len(p) < CHUNK_MAX:
+                break
+        stitched = b"".join(parts)
+        return stitched[1:] if stitched[:1] == bytes([index]) else stitched
+
+    r = send(READ_MODULE_CONFIG_LIST, b"\x00")
+    raw_list = bytes(r[0].payload) if r else b""
+    out = {}
+    for slot in slots:
+        recs = [(f, t, v) for f, t, v in parse_records(read_full(READ_MODULE_CONFIG_DATA, slot))
+                if not (t == 0 and not v)]
+        if recs:
+            out[slot] = recs
+    return {"list": raw_list, "slots": out}
+
+
 def decode_keymap(read: dict, order_to_layer: dict[int, str]) -> dict:
     """Raw read -> {order: {position_id: [(behavior, action_type, code), ...]}} plus
     {"_colors": {order: {pos: hex}}, "_warnings": [...], "_dropped": [...]}."""
