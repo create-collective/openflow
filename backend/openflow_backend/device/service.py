@@ -173,6 +173,9 @@ class DeviceService:
             module: dict = {"type": C.module_type_from_address(addr)}
             if addr is not None:
                 module["address"] = addr
+                # The address's low bit is the side, so the board tells us which half a
+                # module is docked on -- no guessing from which port answered.
+                module["docked"] = C.module_side_from_address(addr)
             mp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_FW_VERSION))
             if mp is not None:
                 module["firmwareVersion"] = format_fw_version(mp)

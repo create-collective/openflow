@@ -119,21 +119,41 @@ MODULE_TYPES = {
   5: "Query",
 }
 
-# Module type is DERIVED FROM THE DOCK-BUS ADDRESS, not queried: MODULE_DETECT (0xDE/0x1002)
-# only reports presence (always 0x01), so keying MODULE_TYPES on it labels every module "Touch".
-# The address comes from SEND_HANDSHAKE (0xDE/0x1001) -> [01][addr] or GET_ADDRESS (0xDE/0x1007).
-# Observed addresses (docs/remap-protocol-live.md); Touch/Float/Query TBD — dock each to capture.
+# MODULE_DETECT (0xDE/0x1002) only reports PRESENCE -- it answers 0x01 for any docked module --
+# so keying MODULE_TYPES on its payload labels every module "Touch". The module's type comes from
+# its dock-bus address instead, which SEND_HANDSHAKE (0xDE/0x1001) returns as [01][addr] and
+# GET_ADDRESS (0xDE/0x1007) returns directly.
+#
+# The address carries the type AND the side: bit 0 is the side (0 = left, 1 = right) and the rest
+# identifies the module. Observed on a real Create (fw 3.41.0) by moving the same two modules
+# between halves:
+#
+#     Track   0x20 left / 0x21 right
+#     Tune    0x40 left / 0x41 right
+#
+# So the type is looked up on the address with the side bit masked off. Touch and Float are still
+# unknown -- dock one and run `nayactl status -v` to capture its address.
+MODULE_SIDE_BIT = 0x01
 MODULE_ADDR_TYPES = {
+  0x20: "Track",
   0x40: "Tune",
-  0x21: "Track",
 }
 
 
+def module_side_from_address(addr):
+  """Dock-bus address -> which half the module is docked on."""
+  if addr is None:
+    return None
+  return "right" if addr & MODULE_SIDE_BIT else "left"
+
+
 def module_type_from_address(addr):
-  """Dock-bus address -> module type string. Unknown/None addresses are labelled, not guessed."""
+  """Dock-bus address -> module type. Unknown addresses are reported, not guessed."""
   if addr is None:
     return "Unknown"
-  return MODULE_ADDR_TYPES.get(addr, f"Unknown (addr 0x{addr:02X})")
+  base = addr & ~MODULE_SIDE_BIT
+  known = MODULE_ADDR_TYPES.get(base)
+  return known if known else f"Unknown (addr 0x{addr:02X})"
 
 # --- BLE commands (0xBE) ---
 
