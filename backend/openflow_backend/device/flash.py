@@ -206,11 +206,14 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
             return R.TWO_PARAM, R.encode_twoparam(3, prof)
         return None
     if at in ("layer_polite_hold",):
-        return R.LAYER_HOLD, R.encode_layer_param(_target_order(code, layer_order))
+        order = _target_order(code, layer_order)
+        return None if order is None else (R.LAYER_HOLD, R.encode_layer_param(order))
     if at in ("layer_rude_toggle",):
-        return R.LAYER_TO, R.encode_layer_param(_target_order(code, layer_order))
+        order = _target_order(code, layer_order)
+        return None if order is None else (R.LAYER_TO, R.encode_layer_param(order))
     if at in ("layer_polite_toggle",):
-        return R.LAYER_TOGGLE, R.encode_layer_param(_target_order(code, layer_order))
+        order = _target_order(code, layer_order)
+        return None if order is None else (R.LAYER_TOGGLE, R.encode_layer_param(order))
     return None   # macros, LED-system, mouse, unknown -> not encoded here (see plan)
 
 
@@ -239,10 +242,16 @@ def _behaviour(row) -> str:
     return "tap" if b == "press" else b
 
 
-def _target_order(code: str, layer_order: dict) -> int:
-    """'TO_LAYER_<uuid>' / 'TOGGLE_LAYER_<uuid>' / 'MO_LAYER_<uuid>' -> device layer index."""
+def _target_order(code: str, layer_order: dict) -> int | None:
+    """'TO_LAYER_<uuid>' / 'TOGGLE_LAYER_<uuid>' / 'MO_LAYER_<uuid>' -> device layer index.
+
+    None if the layer does not exist in this profile. This used to default to 0, which meant a
+    stale reference -- to a layer that had been deleted, or copied in from another profile --
+    silently flashed as "switch to the base layer". The UI showed it as unresolved while the
+    keyboard got a real, wrong binding. An unresolvable switch is not written at all.
+    """
     uuid = code.split("_LAYER_", 1)[-1]
-    return layer_order.get(uuid, 0)
+    return layer_order.get(uuid)
 
 
 def _read_term_flavour(conn) -> tuple[int, int]:

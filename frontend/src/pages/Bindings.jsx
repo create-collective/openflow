@@ -129,6 +129,7 @@ export default function Bindings() {
     },
     // Copy a layer that already exists in the app -- e.g. take the layer just read off the
     // keyboard and drop it into your own profile, without saving a file in between.
+    onCountReferences: (layerId) => api.layerReferences(layerId),
     onCopyLayerFrom: async (layerId) => {
       try {
         if (!profile) return;

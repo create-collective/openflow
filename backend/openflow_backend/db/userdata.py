@@ -242,6 +242,38 @@ def rename_layer(layer_id: str, name: str) -> dict:
         conn.close()
 
 
+LAYER_PREFIXES = ("MO_LAYER_", "TO_LAYER_", "TOGGLE_LAYER_", "STICKY_LAYER_")
+
+
+def layer_references(conn, layer_id: str) -> list[dict]:
+    """Keys ANYWHERE in the profile whose binding switches to this layer.
+
+    Deleting a layer strands these. They cannot be repointed automatically -- there is no
+    correct answer to "which layer did you mean instead" -- so they are reported so the user
+    can be told, and cleared rather than left dangling.
+    """
+    out = []
+    for pre in LAYER_PREFIXES:
+        for r in conn.execute(
+            "SELECT b.id, l.name AS layer_name, k.position_id, b.behavior "
+            "FROM key_bindings b JOIN keys k ON k.id = b.key_id JOIN layers l ON l.id = k.layer_id "
+            "WHERE b.action_code = ?", (pre + layer_id,)
+        ):
+            out.append({"bindingId": r["id"], "layerName": r["layer_name"],
+                        "positionId": r["position_id"], "behavior": r["behavior"]})
+    return out
+
+
+def layer_reference_count(layer_id: str) -> dict:
+    """For the delete confirmation, before anything is removed."""
+    conn = connect()
+    try:
+        refs = layer_references(conn, layer_id)
+        return {"count": len(refs), "keys": refs}
+    finally:
+        conn.close()
+
+
 def delete_layer(layer_id: str) -> dict:
     conn = connect()
     try:
@@ -253,13 +285,21 @@ def delete_layer(layer_id: str) -> dict:
         ).fetchone()[0]
         if n <= 1:
             raise ValueError("cannot delete the only layer")
+        # Keys elsewhere that switch TO this layer would be left pointing at nothing. A
+        # dangling reference is not merely cosmetic: the flash encoder resolves an unknown
+        # layer to index 0, so it would silently become "switch to the base layer" on the
+        # keyboard. Clear them instead, and report how many so the user can be told.
+        stranded = layer_references(conn, layer_id)
+        for ref in stranded:
+            conn.execute("DELETE FROM key_bindings WHERE id=?", (ref["bindingId"],))
+
         key_ids = [r["id"] for r in conn.execute("SELECT id FROM keys WHERE layer_id=?", (layer_id,))]
         for kid in key_ids:
             conn.execute("DELETE FROM key_bindings WHERE key_id=?", (kid,))
         conn.execute("DELETE FROM keys WHERE layer_id=?", (layer_id,))
         conn.execute("DELETE FROM layers WHERE id=?", (layer_id,))
         conn.commit()
-        return {"ok": True}
+        return {"ok": True, "clearedReferences": len(stranded)}
     finally:
         conn.close()
 

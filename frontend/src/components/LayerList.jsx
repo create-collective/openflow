@@ -14,12 +14,16 @@ export default function LayerList({
   onExportLayer,
   onImportLayer,
   onCopyLayerFrom,
+  onCountReferences,
   profiles = [],
 }) {
   const [menuFor, setMenuFor] = useState(null); // layer id whose menu is open
   const [renaming, setRenaming] = useState(null); // layer id being renamed
   const [renameVal, setRenameVal] = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
+  // How many keys switch TO the layer being deleted. Those bindings cannot be
+  // repointed automatically, so the user is told before they are cleared.
+  const [delRefs, setDelRefs] = useState(null);
   const [adding, setAdding] = useState(false);
   // Import has two lanes: a file, or a layer that already exists in this app.
   const [importOpen, setImportOpen] = useState(false);
@@ -31,6 +35,7 @@ export default function LayerList({
       if (rootRef.current && !rootRef.current.contains(e.target)) {
         setMenuFor(null);
         setConfirmDel(null);
+        setDelRefs(null);
         setImportOpen(false);
       }
     }
@@ -38,6 +43,7 @@ export default function LayerList({
       if (e.key === "Escape") {
         setMenuFor(null);
         setConfirmDel(null);
+        setDelRefs(null);
         setImportOpen(false);
       }
     }
@@ -100,14 +106,30 @@ export default function LayerList({
               <button onClick={() => { onDuplicate(l.id); setMenuFor(null); }}>Duplicate</button>
               <button onClick={() => { onExportLayer(l.id); setMenuFor(null); }}>Export to file…</button>
               {confirmDel === l.id ? (
-                <button className="danger" onClick={() => { onDelete(l.id); setMenuFor(null); setConfirmDel(null); }}>
-                  Really delete?
-                </button>
+                <>
+                  {delRefs > 0 && (
+                    <div className="layer-del-warn">
+                      {delRefs} key{delRefs === 1 ? "" : "s"} switch to this layer.
+                      Deleting it clears {delRefs === 1 ? "that binding" : "those bindings"}.
+                    </div>
+                  )}
+                  <button className="danger"
+                          onClick={() => { onDelete(l.id); setMenuFor(null); setConfirmDel(null); setDelRefs(null); }}>
+                    Really delete?
+                  </button>
+                </>
               ) : (
                 <button
                   className="danger"
                   disabled={layers.length <= 1}
-                  onClick={() => setConfirmDel(l.id)}
+                  onClick={async () => {
+                    setConfirmDel(l.id);
+                    setDelRefs(null);
+                    try {
+                      const r = await onCountReferences(l.id);
+                      setDelRefs(r?.count ?? 0);
+                    } catch { setDelRefs(0); }
+                  }}
                 >
                   Delete
                 </button>

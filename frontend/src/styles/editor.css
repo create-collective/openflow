@@ -1508,3 +1508,14 @@
   color: var(--text-dim);
   white-space: nowrap;
 }
+
+/* Deleting a layer strands any key that switches to it. Those bindings cannot be
+   repointed automatically -- there is no correct answer to "which layer instead" --
+   so the count is shown before they are cleared. */
+.layer-del-warn {
+  padding: 7px 9px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}

@@ -352,6 +352,20 @@ async def rename_layer(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/api/layer-references")
+async def layer_references(layerId: str) -> dict:
+    """How many keys switch TO this layer -- for the delete confirmation, before anything goes.
+
+    They cannot be repointed automatically: there is no correct answer to "which layer did you
+    mean instead", and guessing would silently change what the keyboard does. So the user is
+    told the count and the bindings are cleared on delete.
+    """
+    try:
+        return await run_in_threadpool(ud.layer_reference_count, layerId)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/rpc/delete-layer")
 async def delete_layer(body: dict = Body(...)) -> dict:
     try:
