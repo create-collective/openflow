@@ -161,32 +161,34 @@ def record(position: int, type_byte: int, param: bytes = b"") -> bytes:
 
 
 # --- hold-tap (two actions on one key) -------------------------------------- #
-# Both header constants are taken verbatim from records NayaFlow flashed to the board
-# (flash2 layer 0): a 0x03 home-row record and a 0x10 OneKey record. The body is identical
-# for both -- header, then hold(4), pad(4), tap(4), pad(4) -- so param length is header + 16.
-# The 0x10 header is the 0x03 header with three bytes in front. c2 00 = 194, which is very
-# likely the tapping term in ms, but it has not been varied and confirmed, so these are
-# reproduced rather than generated.
-HOLD_TAP_HEADERS = {
-    HOLD_TAP_HOME: bytes.fromhex("010102c200"),        # 0x03, 5-byte header
-    HOLD_TAP_ONEKEY: bytes.fromhex("c20003010102c200"),  # 0x10, 8-byte header
-}
+# The header is NOT a constant: encode_holdtap_param builds it as 01 01 <flavour> <term u16 LE>
+# (with the 0x10 OneKey form prefixing <term u16> 03). Two captures confirm both fields vary --
+# `...0102c200` is flavour 2 / term 194 and `...0100c800` is flavour 0 / term 200.
+#
+# The flavour is the ZMK hold-tap enum and its valid range is 0-3 (hold-preferred, balanced,
+# tap-preferred, tap-unless-interrupted; see _read_term_flavour in flash.py). Writing 4 there was
+# accepted and stored and then stopped every key on the board until it was power-cycled, so this
+# field must never be swept.
+HOLD_TAP_FLAVOURS = range(0, 4)
+DEFAULT_TAPPING_TERM = 200
 
 
 def encode_hold_tap(tap: tuple[str, str], hold: tuple[str, str],
-                    type_byte: int = HOLD_TAP_ONEKEY) -> bytes:
+                    type_byte: int = HOLD_TAP_ONEKEY, flavour: int = 0,
+                    term: int = DEFAULT_TAPPING_TERM) -> bytes:
     """(tap, hold) as (action_type, action_code) pairs -> a hold-tap binding param.
 
-    Confirmed supported by the firmware: the board carries records NayaFlow flashed with two
-    different keys on tap vs hold (e.g. tap DELETE / hold BACKSPACE), so the capability is
-    real even though NayaFlow's editor cannot express it.
+    Convenience wrapper over encode_holdtap_param for callers that have actions rather than
+    encoded keypresses. Confirmed against the firmware: a key really does hold two different
+    actions (captured with two ordinary keys, tap DELETE / hold BACKSPACE).
     """
-    if type_byte not in HOLD_TAP_HEADERS:
-        raise RemapEncodeError(f"unknown hold-tap record type {type_byte:#04x}")
-    pad = bytes(4)
-    return (HOLD_TAP_HEADERS[type_byte]
-            + encode_keypress(*hold) + pad
-            + encode_keypress(*tap) + pad)
+    if flavour not in HOLD_TAP_FLAVOURS:
+        raise RemapEncodeError(
+            f"hold-tap flavour {flavour} is out of range {HOLD_TAP_FLAVOURS.start}-"
+            f"{HOLD_TAP_FLAVOURS.stop - 1}; an invalid flavour stops the keyboard until it is "
+            "power-cycled")
+    return encode_holdtap_param(type_byte, flavour, term,
+                                encode_keypress(*hold), encode_keypress(*tap))
 
 
 def encode_layer_data(layer: int, records: list[bytes]) -> bytes:

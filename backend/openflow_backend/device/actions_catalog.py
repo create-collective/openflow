@@ -38,12 +38,19 @@ LAYER_ACTION_TYPES = {
 # read + reflash test (2026-09-01) proved NayaFlow drops Double Tap and Tap + Hold on
 # flash — they're half-finished firmware slots — so they're disabled + flagged
 # experimental like Double Tap + Hold until the open OneKey firmware lands.
+# A key holds FOUR behaviours, stored as TWO hold-tap records 0x52 apart: the primary bank is
+# tap + hold, the secondary bank is double-tap + tap+hold. Confirmed live 2026-09-03 by capturing
+# NayaFlow writing both records and then pressing the key (b / zzz / x / yyy). Read, write and
+# round-trip are covered by tests/test_second_bank.py and test_four_behaviour_roundtrip.py.
+#
+# "Double Tap + Hold" stays disabled: there is no third bank and nothing has ever been observed
+# writing it, so it is not known to exist.
 BEHAVIOR_SLOTS = [
     {"id": "tap", "label": "Tap", "enabled": True},
     {"id": "hold", "label": "Hold", "enabled": True},
-    {"id": "double_tap", "label": "Double Tap", "enabled": False, "experimental": True},
-    {"id": "tap+hold", "label": "Tap + Hold", "enabled": False, "experimental": True},
-    {"id": "double_tap+hold", "label": "Double Tap + Hold", "enabled": False, "experimental": True},
+    {"id": "double_tap", "label": "Double Tap", "enabled": True},
+    {"id": "tap_hold", "label": "Tap + Hold", "enabled": True},
+    {"id": "double_tap+hold", "label": "Double Tap + Hold", "enabled": False},
 ]
 
 

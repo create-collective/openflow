@@ -26,6 +26,14 @@ from . import module_fields as MF
 from . import remap as R
 
 FULL_LAYER_POSITIONS = range(0x00, 0x52)     # 82 positions = whole board + module slots
+# A key's double-tap and tap+hold live in a SECOND bank of the same 82 positions, offset by
+# 0x52 (confirmed live: pos 0x49 tap/hold, pos 0x9b double-tap/tap+hold on the same key).
+SECOND_BANK = 0x52
+# The second bank is 74 positions (0x52-0x9b), not another 82: the 8 module slots at
+# 0x4A-0x51 have no double-tap. 82 + 74 = 156, which is exactly the record count the device
+# returns for a layer, and 0x9b is the highest position it reports.
+SECOND_BANK_KEYS = range(0x00, 0x4A)
+ALL_LAYER_POSITIONS = range(0x00, 0x9C)
 LED_COUNT = 88                                # 0x00..0x57 (observed full LED map = 136? see note)
 SYS_SET_TIMEOUTS = 0x100A
 
@@ -126,6 +134,10 @@ def desired_from_db(conn) -> DesiredState:
             rec = _binding_rows_to_record(rows, term, flavour, layer_order)
             if rec is not None:
                 d.layers[idx][pos] = rec
+            # double-tap / tap+hold are a second hold-tap record at pos + 0x52
+            second = _second_bank_record(rows, term, flavour)
+            if second is not None:
+                d.layers[idx][pos + SECOND_BANK] = second
         for pos, hexc in colors.items():
             if len(hexc) == 7 and hexc[0] == "#" and all(c in "0123456789abcdefABCDEF" for c in hexc[1:]):
                 d.leds[idx][pos] = _hex_to_hue_val(hexc)
@@ -162,6 +174,31 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
     if at in ("layer_polite_toggle",):
         return R.LAYER_TOGGLE, R.encode_layer_param(_target_order(code, layer_order))
     return None   # macros, LED-system, mouse, unknown -> not encoded here (see plan)
+
+
+def _second_bank_record(rows: list, term: int, flavour: int) -> tuple[int, bytes] | None:
+    """A position's double_tap / tap_hold rows -> the secondary-bank hold-tap record.
+
+    The secondary bank reuses the ordinary hold-tap shape: its TAP slot is the key's double-tap
+    and its HOLD slot is the key's tap+hold. Either may be absent, in which case that slot is an
+    empty keypress -- which is exactly what the device showed for the LED gestures and for keys
+    with only one of the two bound.
+    """
+    dt = next((r for r in rows if _behaviour(r) == "double_tap"), None)
+    th = next((r for r in rows if _behaviour(r) == "tap_hold"), None)
+    if dt is None and th is None:
+        return None
+    empty = bytes(4)
+    tap_kp = R.encode_keypress(dt["at"], dt["ac"]) if dt is not None else empty
+    hold_kp = R.encode_keypress(th["at"], th["ac"]) if th is not None else empty
+    return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
+
+
+def _behaviour(row) -> str:
+    """Normalise the behaviour name. The UI slot is 'tap+hold' and the device decoder emits
+    'tap_hold'; both mean the same slot."""
+    b = (row["beh"] or "").replace("+", "_")
+    return "tap" if b == "press" else b
 
 
 def _target_order(code: str, layer_order: dict) -> int:
@@ -326,7 +363,7 @@ def _full_layer_payload(idx: int, poss: dict[int, tuple[int, bytes]],
     state the app does not model."""
     device = device or {}
     recs = []
-    for pos in FULL_LAYER_POSITIONS:
+    for pos in ALL_LAYER_POSITIONS:
         if pos in poss:
             typ, param = poss[pos]
         elif pos in MODULE_SLOT_POSITIONS and pos in device:
