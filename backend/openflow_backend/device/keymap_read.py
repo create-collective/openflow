@@ -84,6 +84,21 @@ HOLD_TAP_TYPES = (0x10, 0x03)
 BT_PROFILE = {0: "BT_DEVICE_1", 1: "BT_DEVICE_2", 2: "BT_DEVICE_3", 3: "BT_DEVICE_4"}
 MAX_POSITION = 96
 
+# A key has TWO records, 0x52 apart. The primary bank (0x00-0x51) holds tap + hold; the
+# secondary bank (position + 0x52) holds double-tap + tap-hold in the same two slots. Captured
+# live 2026-09-03: NayaFlow wrote pos 0x49 (tap B / hold Z) and pos 0x9b (tap X / hold Y), and
+# pressing that key produced b / zzz / x / yyy for tap / hold / double-tap / tap+hold.
+#
+# This is what "four behaviours per key" actually is -- not four slots in one record. Reads that
+# stop at 0x51 silently drop every double-tap and tap+hold binding on the board.
+SECOND_BANK = 0x52
+SECOND_BANK_BEHAVIOR = {"press": "double_tap", "hold": "tap_hold"}
+
+
+def split_position(pos: int) -> tuple[int, bool]:
+    """Device position -> (key position, is_secondary_bank)."""
+    return (pos - SECOND_BANK, True) if pos >= SECOND_BANK else (pos, False)
+
 
 class Unmapped(str):
     """An action_code we couldn't resolve; still a string so it round-trips, but
@@ -292,13 +307,19 @@ def decode_keymap(read: dict, order_to_layer: dict[int, str]) -> dict:
             slots = translate(typ, param, order_to_layer)
             if not slots:
                 continue
-            if idx > MAX_POSITION:
+            key, secondary = split_position(idx)
+            if key > MAX_POSITION:
                 dropped.append([order, idx, typ])
                 continue
+            if secondary:
+                # Same record shape, different meaning: this bank's tap slot is the key's
+                # double-tap and its hold slot is the key's tap+hold.
+                slots = [(SECOND_BANK_BEHAVIOR.get(b, b), at, code) for b, at, code in slots]
             for _b, _at, code in slots:
                 if isinstance(code, Unmapped):
                     warnings.append(f"layer {order} pos {idx}: undecoded ({code})")
-            pos[idx] = slots
+            pos.setdefault(key, [])
+            pos[key] = [s for s in pos[key] if s[0] not in {b for b, _, _ in slots}] + slots
         out[order] = pos
     for order, entries in sorted(read.get("led", {}).items()):
         colors[order] = {i: hsv_to_hex(h, v) for i, h, v in entries if i <= MAX_POSITION and v > 0}
