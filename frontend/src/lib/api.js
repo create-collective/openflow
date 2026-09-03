@@ -54,6 +54,7 @@ export const api = {
   importProfile: (data, name) => req("POST", "/rpc/import-profile", { data, name }),
   exportLayer: (layerId) => req("GET", `/api/export-layer?layerId=${encodeURIComponent(layerId)}`),
   importLayer: (profileId, data) => req("POST", "/rpc/import-layer", { profileId, data }),
+  copyLayer: (layerId, profileId, name) => req("POST", "/rpc/copy-layer", { layerId, profileId, name }),
 
   createLayer: (profileId, name) => req("POST", "/rpc/create-layer", { profileId, name }),
   renameLayer: (layerId, name) => req("POST", "/rpc/rename-layer", { layerId, name }),

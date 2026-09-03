@@ -313,6 +313,21 @@ async def export_layer(layerId: str) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/rpc/copy-layer")
+async def copy_layer(body: dict = Body(...)) -> dict:
+    """Copy a layer from any profile into another, without going through a file.
+
+    Layer import/export has only ever worked through the file browser, which makes "take the
+    layer I just read off the keyboard and put it in my own profile" a save-then-load chore for
+    something entirely internal.
+    """
+    try:
+        return await run_in_threadpool(prof.copy_layer, body["layerId"], body["profileId"],
+                                       body.get("name"))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/rpc/import-layer")
 async def import_layer(body: dict = Body(...)) -> dict:
     try:

@@ -391,6 +391,23 @@ def import_profile(data: dict, name: str | None = None) -> dict:
         conn.close()
 
 
+def copy_layer(layer_id: str, profile_id: str, name: str | None = None) -> dict:
+    """Copy one layer into another profile (or the same one).
+
+    Export and import already round-trip a layer through a plain dict, so a copy is those two
+    composed -- done here rather than in the browser so the client never has to hold, or risk
+    mangling, the intermediate payload. Macros referenced by the layer come with it, exactly as
+    a file import would bring them.
+
+    A copy is a NEW layer: it gets its own id, because a layer id is the device's identity for
+    that layer and two profiles must never claim the same one.
+    """
+    data = export_layer(layer_id)
+    if name:
+        data["layer"]["name"] = name
+    return import_layer(profile_id, data)
+
+
 def import_layer(profile_id: str, data: dict) -> dict:
     if data.get("kind") != "layer":
         raise ValueError("not a layer export")

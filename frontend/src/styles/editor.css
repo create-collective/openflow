@@ -1450,3 +1450,55 @@
 .module-item.on-device {
   color: var(--text);
 }
+
+/* --- layer import: file, or copy from another profile ----------------------
+   Layer import/export only ever worked through the file browser, which made
+   "take the layer I just read off the keyboard and put it in my profile" a
+   save-then-load chore for something entirely internal. */
+.layer-import-wrap {
+  position: relative;
+  display: inline-block;
+}
+.layer-import-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--neutral12);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 4px;
+}
+.layer-import-menu button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 9px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.layer-import-menu button:hover { background: var(--neutral20); }
+.layer-import-head {
+  padding: 6px 9px 3px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+.layer-import-layer { font-weight: 600; }
+.layer-import-profile {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}

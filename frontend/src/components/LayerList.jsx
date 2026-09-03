@@ -13,12 +13,16 @@ export default function LayerList({
   onSetBase,
   onExportLayer,
   onImportLayer,
+  onCopyLayerFrom,
+  profiles = [],
 }) {
   const [menuFor, setMenuFor] = useState(null); // layer id whose menu is open
   const [renaming, setRenaming] = useState(null); // layer id being renamed
   const [renameVal, setRenameVal] = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
   const [adding, setAdding] = useState(false);
+  // Import has two lanes: a file, or a layer that already exists in this app.
+  const [importOpen, setImportOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const rootRef = useRef(null);
 
@@ -117,7 +121,30 @@ export default function LayerList({
       ) : (
         <div className="layer-add-row">
           <button className="layer-add" onClick={() => setAdding(true)}>+ Add layer</button>
-          <button className="layer-add import" title="Import a layer from a file" onClick={onImportLayer}>Import…</button>
+          <span className="layer-import-wrap">
+            <button className="layer-add import" title="Import a layer from a file, or copy one from another profile"
+                    onClick={() => setImportOpen((v) => !v)}>Import…</button>
+            {importOpen && (
+              <div className="layer-import-menu">
+                <button onClick={() => { setImportOpen(false); onImportLayer(); }}>
+                  From a file…
+                </button>
+                <div className="profile-menu-sep" />
+                <div className="layer-import-head">Copy from a profile</div>
+                {profiles.flatMap((p) =>
+                  (p.layers || []).map((l) => (
+                    <button key={`${p.id}:${l.id}`}
+                            onClick={() => { setImportOpen(false); onCopyLayerFrom(l.id); }}
+                            title={`Copy "${l.name}" from ${p.name}`}>
+                      <span className="layer-import-layer">{l.name}</span>
+                      <span className="layer-import-profile">{p.name}</span>
+                    </button>
+                  ))
+                )}
+                {profiles.length === 0 && <div className="palette-disabled">No other profiles.</div>}
+              </div>
+            )}
+          </span>
         </div>
       )}
     </div>

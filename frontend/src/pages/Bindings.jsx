@@ -127,6 +127,15 @@ export default function Bindings() {
       const l = profile.layers.find((x) => x.id === id);
       downloadJSON(`${safeName(l?.name)}.openflow-layer.json`, data);
     },
+    // Copy a layer that already exists in the app -- e.g. take the layer just read off the
+    // keyboard and drop it into your own profile, without saving a file in between.
+    onCopyLayerFrom: async (layerId) => {
+      try {
+        if (!profile) return;
+        await api.copyLayer(layerId, profile.id);
+        await load();
+      } catch (e) { setErr(e.message); }
+    },
     onImportLayer: async () => {
       try {
         const data = await pickJSONFile();
@@ -207,6 +216,7 @@ export default function Bindings() {
         <div className="layer-col">
           <ProfileBar profiles={profiles} activeProfileId={profile.id} {...profileHandlers} />
           <LayerList
+            profiles={profiles.filter((p) => p.id !== profile.id)}
             layers={profile.layers}
             activeLayerId={layer?.id}
             onSelect={(id) => { setActiveLayerId(id); setSelectedPos(null); }}
