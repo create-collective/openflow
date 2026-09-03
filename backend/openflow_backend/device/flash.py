@@ -63,6 +63,7 @@ class DesiredState:
     modules: dict[int, dict[int, tuple[int, bytes]]] = field(default_factory=dict)   # slot -> {field: (type, value)}
     timeouts: tuple[int, int, int] | None = None                                     # (idle, sleep, sleep_batt) ms
     layer_uuids: dict[int, bytes] = field(default_factory=dict)                       # idx -> 16-byte id (add/delete)
+    profile_id: str | None = None                                                     # which profile this came from
 
 
 def desired_from_read(read_json: dict) -> DesiredState:
@@ -98,13 +99,37 @@ def desired_from_device_read(read: dict) -> DesiredState:
     d = DesiredState()
     for idx, recs in (read.get("layers") or {}).items():
         d.layers[int(idx)] = {pos: (typ, bytes(param)) for pos, typ, param in recs
-                              if pos in FULL_LAYER_POSITIONS}
+                              if pos in ALL_LAYER_POSITIONS}
     for idx, entries in (read.get("led") or {}).items():
         d.leds[int(idx)] = {i: (hue, val) for i, hue, val in entries}
     return d
 
 
-def desired_from_db(conn) -> DesiredState:
+class AmbiguousProfileError(ValueError):
+    """More than one profile exists and the caller did not say which one to flash."""
+
+
+def _resolve_profile(conn, profile_id: str | None) -> str:
+    """Which profile to flash. Never guessed.
+
+    The layers table spans every profile, so flashing without scoping it writes whichever
+    profile the query happened to return last -- a different keymap each time the DB changes.
+    `state = 'ON_BOARD'` is not a usable marker either: importing a read sets it, so several
+    profiles claim it at once.
+    """
+    rows = [dict(r) for r in conn.execute("SELECT id, name FROM profiles ORDER BY order_id, name")]
+    if profile_id is not None:
+        if not any(r["id"] == profile_id for r in rows):
+            raise ValueError(f"no profile {profile_id}")
+        return profile_id
+    if len(rows) == 1:
+        return rows[0]["id"]
+    raise AmbiguousProfileError(
+        f"{len(rows)} profiles exist; say which one to flash. "
+        + ", ".join(f'{r["name"]!r} ({r["id"]})' for r in rows))
+
+
+def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
     """Build the desired state from the OpenFlow DB (the DB->device mapping).
 
     Layers/keys/key_bindings -> binding records; keys.color_hex -> LED map; module_configs +
@@ -112,8 +137,12 @@ def desired_from_db(conn) -> DesiredState:
     Gesture bindings are deliberately skipped (see MODULE CONFIDENCE)."""
     d = DesiredState()
     term, flavour = _read_term_flavour(conn)
-    layer_order = {row["id"]: row["order_id"] for row in conn.execute("SELECT id, order_id FROM layers")}
-    for lrow in conn.execute("SELECT id, order_id FROM layers ORDER BY order_id"):
+    pid = _resolve_profile(conn, profile_id)
+    d.profile_id = pid
+    layer_order = {row["id"]: row["order_id"] for row in
+                   conn.execute("SELECT id, order_id FROM layers WHERE profile_id = ?", (pid,))}
+    for lrow in conn.execute(
+            "SELECT id, order_id FROM layers WHERE profile_id = ? ORDER BY order_id", (pid,)):
         idx = lrow["order_id"]
         d.layers[idx], d.leds[idx] = {}, {}
         q = conn.execute(
@@ -155,10 +184,14 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
     hold = next((r for r in rows if r["beh"] == "hold"), None)
     at, code = press["at"], press["ac"]
 
-    if hold is not None:   # tap + hold -> hold-tap record (home-row 0x03 form)
+    if hold is not None:
+        # OneKey (0x10), not the home-row 0x03 form. Both are hold-tap records with the same
+        # body, but the type encodes intent and 0x10 is what NayaFlow writes for a user-created
+        # tap+hold -- it is what sits on the board, and what the secondary bank uses. Emitting
+        # 0x03 here made a re-flash of a profile READ FROM the device rewrite those two keys.
         tap_kp = R.encode_keypress(at, code)
         hold_kp = R.encode_keypress(hold["at"], hold["ac"])
-        return R.HOLD_TAP_HOME, R.encode_holdtap_param(R.HOLD_TAP_HOME, flavour, term, hold_kp, tap_kp)
+        return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
 
     if at in ("key", "modifier", "shortcut_alias"):
         return R.KEY_PRESS, R.encode_keypress(at, code)

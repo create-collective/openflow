@@ -7,6 +7,18 @@ import { api } from "../lib/api.js";
 // frame's ack, and verifies by reading the device back. The pre-flash read comes back in
 // the result as a backup.
 
+// The profile the Bindings page has selected. A flash MUST name one: the layers table spans
+// every profile, so an unscoped plan would write whichever one the DB happened to return last.
+// If nothing is selected we send nothing and let the backend refuse by name -- better than
+// guessing which keymap goes on the keyboard.
+function activeProfileId() {
+  try {
+    return localStorage.getItem("openflow.activeProfile") || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function summarize(ops) {
   const g = { layers: 0, colors: 0, modules: 0, timeouts: 0 };
   for (const op of ops || []) {
@@ -28,7 +40,7 @@ export default function FlashButton() {
     setState("loading");
     setError("");
     try {
-      const res = await api.flashPreview();
+      const res = await api.flashPreview({ profileId: activeProfileId() });
       setPreview(res);
       setState("preview");
     } catch (e) {
@@ -41,7 +53,7 @@ export default function FlashButton() {
     setState("writing");
     setError("");
     try {
-      const res = await api.flash({ full: false });
+      const res = await api.flash({ full: false, profileId: activeProfileId() });
       setResult(res);
       // "verified" = every ack was good AND the read-back matched. Anything else is a
       // problem the user needs to see, not a success with a caveat.

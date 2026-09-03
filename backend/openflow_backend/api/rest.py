@@ -537,13 +537,15 @@ def _decode_field(module_type: str, idx: int, typ, val: bytes):
     return f"RAW_{val.hex()}"
 
 
-def _flash_preview() -> dict:
+def _flash_preview(profile_id: str | None = None) -> dict:
     conn = db_connect()
     try:
-        desired = flash_mod.desired_from_db(conn)
+        desired = flash_mod.desired_from_db(conn, profile_id)
     finally:
         conn.close()
-    return flash_mod.flash(desired, dry_run=True, full=True)
+    out = flash_mod.flash(desired, dry_run=True, full=True)
+    out["profileId"] = desired.profile_id
+    return out
 
 
 @router.post("/rpc/flash")
@@ -574,7 +576,9 @@ async def flash_write(body: dict = Body(default={})) -> dict:
         current = flash_mod.desired_from_device_read(before)
         conn = db_connect()
         try:
-            desired = flash_mod.desired_from_db(conn)
+            # Scoped to ONE profile: the layers table spans all of them, so an unscoped plan
+            # writes whichever profile the query returned last.
+            desired = flash_mod.desired_from_db(conn, body.get("profileId"))
         finally:
             conn.close()
 
@@ -596,6 +600,8 @@ async def flash_write(body: dict = Body(default={})) -> dict:
 
     try:
         return await run_in_threadpool(_run)
+    except flash_mod.AmbiguousProfileError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except TransportError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
@@ -606,9 +612,10 @@ async def flash_write(body: dict = Body(default={})) -> dict:
 async def flash_preview(body: dict = Body(default={})) -> dict:
     """Dry-run the full flash from the current DB: returns the write plan + a diff summary +
     the rendered frames. Sends NOTHING to the device. The Flash button shows this before a real
-    write (which requires a separate explicit confirm and is Phase C)."""
+    write, which requires a separate explicit confirm). Takes the same profileId as /rpc/flash
+    so the preview shows the plan that Confirm would actually send."""
     try:
-        result = await run_in_threadpool(_flash_preview)
+        result = await run_in_threadpool(_flash_preview, body.get("profileId"))
     except Exception as e:  # DB/encode errors surface cleanly to the UI
         raise HTTPException(status_code=400, detail=f"flash preview failed: {e}")
     return {"dryRun": True, **result}

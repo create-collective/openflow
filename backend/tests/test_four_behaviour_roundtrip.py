@@ -29,7 +29,8 @@ def _db(behaviours):
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
     conn.executescript("""
-        CREATE TABLE layers (id TEXT, order_id INT);
+        CREATE TABLE profiles (id TEXT, name TEXT, order_id INT);
+        CREATE TABLE layers (id TEXT, order_id INT, profile_id TEXT);
         CREATE TABLE keys (id TEXT, layer_id TEXT, position_id INT, color_hex TEXT);
         CREATE TABLE key_bindings (id TEXT, key_id TEXT, behavior TEXT, action_type TEXT,
                                    action_code TEXT, context TEXT);
@@ -39,7 +40,8 @@ def _db(behaviours):
                                       action_type TEXT, action_code TEXT);
         CREATE TABLE module_settings (module_config_id TEXT, correlation_id TEXT, value TEXT);
     """)
-    conn.execute("INSERT INTO layers VALUES ('L0', 0)")
+    conn.execute("INSERT INTO profiles VALUES ('P0', 'test', 0)")
+    conn.execute("INSERT INTO layers VALUES ('L0', 0, 'P0')")
     conn.execute("INSERT INTO keys VALUES ('K', 'L0', ?, NULL)", (POS,))
     for beh, (at, code) in behaviours.items():
         conn.execute("INSERT INTO key_bindings VALUES (?,?,?,?,?,NULL)",
