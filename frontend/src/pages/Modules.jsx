@@ -97,7 +97,13 @@ function GestureRow({ b, actions, onPick, dev, extra }) {
         className="mac-input mod-action"
         value={b.actionCode || ""}
         disabled={unsupported}
-        title={unsupported ? "The Track cannot store a hold — setting one would overwrite the tap." : undefined}
+        title={
+          b.pairedSplit
+            ? "Split is on — each direction is bound separately below. Untick split to set one action for the whole gesture."
+            : unsupported
+            ? "The Track cannot store a hold — setting one would overwrite the tap."
+            : undefined
+        }
         onChange={(e) => onPick(b.id, opts.find((o) => o.code === e.target.value))}
       >
         {order.map((g) =>
@@ -110,6 +116,7 @@ function GestureRow({ b, actions, onPick, dev, extra }) {
           )
         )}
       </select>
+      {extra}
     </div>
   );
 }
