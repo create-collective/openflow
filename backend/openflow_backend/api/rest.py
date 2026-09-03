@@ -76,15 +76,24 @@ async def read_keyboard(body: dict = Body(default={})) -> dict:
     side = body.get("side", "left")
     try:
         read = await run_in_threadpool(svc.read_keymap, side)
-        slot_uuid = {}
+        slot_uuid, mod_read = {}, None
         try:
-            mods = await run_in_threadpool(svc.read_module_configs, side)
-            slot_uuid = {slot: uuid for uuid, slot in (mods.get("by_uuid") or {}).items()}
+            mod_read = await run_in_threadpool(svc.read_module_configs, side)
+            slot_uuid = {slot: uuid for uuid, slot in (mod_read.get("by_uuid") or {}).items()}
         except Exception:
             pass    # a keymap read is still worth having if the module list is unreadable
     except TransportError as e:
         raise HTTPException(status_code=503, detail=str(e))
-    return await run_in_threadpool(kmi.import_read, read, body.get("name"), slot_uuid)
+    out = await run_in_threadpool(kmi.import_read, read, body.get("name"), slot_uuid)
+    # Report which module profiles the board carries, so reading from the Bindings page
+    # populates the same shared device state that reading from the Modules page does.
+    # The list is already in hand -- this costs no extra device round-trip.
+    if mod_read is not None:
+        try:
+            out.update(await run_in_threadpool(_module_diff, mod_read))
+        except Exception:
+            pass    # the keymap import is the payload that matters
+    return out
 
 
 @router.get("/api/userdata")
@@ -556,6 +565,16 @@ async def read_modules(body: dict = Body(default={})) -> dict:
     except TransportError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
+    return await run_in_threadpool(_module_diff, read)
+
+
+def _module_diff(read: dict) -> dict:
+    """Diff a module-config read against the app's stored bindings.
+
+    Shared by /rpc/read-modules and /rpc/read-keyboard: the keymap read already pulls the
+    module config list to resolve bays, so it can report which profiles are on the board
+    without opening the port a second time.
+    """
     conn = db_connect()
     try:
         configs = {r["id"]: dict(r) for r in

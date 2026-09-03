@@ -3,6 +3,7 @@ import FlashButton from "../components/FlashButton.jsx";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { readDockedModules } from "../lib/dockedModules";
+import { setModuleRead } from "../lib/deviceState";
 import { POS_LABEL } from "../lib/layout";
 import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import KeymapBoard from "../components/KeymapBoard";
@@ -206,6 +207,14 @@ export default function Bindings() {
       await load();
       switchProfile(r.profileId);
       await syncDockedModules();
+      // A read is a read wherever it was started from: publish the module configs the board
+      // carries into the shared device state, so the Modules page shows the on-device marks
+      // without having to read again.
+      if (r.modules) {
+        const byUuid = {};
+        for (const m of r.modules) byUuid[m.uuid] = m;
+        setModuleRead(byUuid);
+      }
       // Flashing is gated on this: until the board has been read, the app's idea of the keymap
       // may not match what is on the keyboard, and edits would be flashed over an unknown state.
       try { sessionStorage.setItem("openflow.deviceRead", String(Date.now())); } catch { /* ignore */ }
