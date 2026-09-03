@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import FlashButton from "../components/FlashButton.jsx";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
+import { readDockedModules } from "../lib/dockedModules";
 import { POS_LABEL } from "../lib/layout";
 import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import KeymapBoard from "../components/KeymapBoard";
@@ -46,13 +47,26 @@ export default function Bindings() {
   });
   const navigate = useNavigate();
 
-  function assignModule(slot, type) {
+  function persistAssign(patch) {
     setModuleAssign((prev) => {
-      const next = { ...prev, [slot]: type };
+      const next = { ...prev, ...patch };
       try { localStorage.setItem("openflow.moduleAssign", JSON.stringify(next)); } catch { /* ignore */ }
       return next;
     });
+  }
+
+  function assignModule(slot, type) {
+    persistAssign({ [slot]: type });
     setPickedModule(null);
+  }
+
+  // Replace the hand-placed bays with what the board reports is actually docked. Best effort:
+  // the keymap read has already succeeded by this point, so a module query that fails should
+  // not turn a good read into an error.
+  async function syncDockedModules() {
+    try {
+      persistAssign(await readDockedModules(api));
+    } catch { /* leave the existing assignment alone */ }
   }
 
   const load = useCallback(async () => {
@@ -191,6 +205,7 @@ export default function Bindings() {
       const r = await api.readKeyboard();
       await load();
       switchProfile(r.profileId);
+      await syncDockedModules();
       // Flashing is gated on this: until the board has been read, the app's idea of the keymap
       // may not match what is on the keyboard, and edits would be flashed over an unknown state.
       try { sessionStorage.setItem("openflow.deviceRead", String(Date.now())); } catch { /* ignore */ }

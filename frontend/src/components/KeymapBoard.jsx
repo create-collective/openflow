@@ -7,7 +7,35 @@ import {
   LEFT_LEDS, RIGHT_LEDS, KEY_UNIT, REM,
 } from "../lib/boardgeom";
 
-const MODULE_IMG = { track: "/modules/track-plain.png", touch: "/modules/touch.png", tune: "/modules/tune.png" };
+// Track's left and right modules are physically different parts, not one module mirrored,
+// so each gets its own artwork. Touch and Tune are symmetric and use a single image.
+const MODULE_IMG = {
+  track: { left: "/modules/track4-left.png", right: "/modules/track4-right.png" },
+  touch: "/modules/touch.png",
+  tune: "/modules/tune.png",
+};
+
+// `side` is the bay the module sits in, so a Track always renders the artwork for the
+// half it is actually docked on rather than a fixed hand.
+function moduleImg(type, side) {
+  const entry = MODULE_IMG[type];
+  if (!entry) return null;
+  return typeof entry === "string" ? entry : entry[side] || entry.left;
+}
+
+// One palette entry per orderable part -- hence Track twice. Dropping still assigns a
+// plain type; the bay decides which hand to draw, so a Track dragged from either entry
+// looks right wherever it lands.
+const PALETTE = [
+  { key: "track:left", type: "track", side: "left", label: "Track (left)" },
+  { key: "track:right", type: "track", side: "right", label: "Track (right)" },
+  { key: "touch", type: "touch", side: "left", label: "Touch" },
+  { key: "tune", type: "tune", side: "left", label: "Tune" },
+];
+function paletteType(key) {
+  return key ? String(key).split(":")[0] : key;
+}
+
 const NORMAL_W = 44 * KEY_UNIT; // a plain keycap's width; columns are fixed to this
                                 // so wide/hex keys overflow toward center, not push neighbors
 
@@ -131,11 +159,11 @@ function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosit
     <button
       className={"kb-module" + (assigned ? " filled" : "") + ((assigned || onAssignModule) ? " clickable" : "") + (pickedModule ? " droptarget" : "")}
       title={assigned ? `${assigned} module — configure` : `${id} slot — drag or click-place a module`}
-      onClick={() => { if (pickedModule && onAssignModule) onAssignModule(id, pickedModule); else if (assigned && onSelectModule) onSelectModule(assigned); }}
+      onClick={() => { if (pickedModule && onAssignModule) onAssignModule(id, paletteType(pickedModule)); else if (assigned && onSelectModule) onSelectModule(assigned); }}
       onDragOver={(e) => { if (onAssignModule) e.preventDefault(); }}
       onDrop={(e) => { if (!onAssignModule) return; e.preventDefault(); const t = e.dataTransfer.getData("text/plain"); if (t) onAssignModule(id, t); }}
     >
-      {assigned ? <img src={MODULE_IMG[assigned]} alt={assigned} className="kb-module-img" />
+      {assigned ? <img src={moduleImg(assigned, id)} alt={assigned} className="kb-module-img" />
         : <><span className="kb-module-icon">◉</span><span className="kb-module-label">{id}</span></>}
     </button>
   );
@@ -160,12 +188,12 @@ export default function KeymapBoard(props) {
       <div className="kb-center">
         {showModulePalette ? (
           <div className="kb-palette-row">
-            {["track", "touch", "tune"].map((t) => (
-              <img key={t} src={MODULE_IMG[t]} alt={t} draggable
-                title={`Drag ${t} to a slot, or click then click a slot`}
-                onDragStart={(e) => e.dataTransfer.setData("text/plain", t)}
-                onClick={() => onPickModule && onPickModule(pickedModule === t ? null : t)}
-                className={"kb-palette-mod" + (pickedModule === t ? " picked" : "")} />
+            {PALETTE.map((m) => (
+              <img key={m.key} src={moduleImg(m.type, m.side)} alt={m.label} draggable
+                title={`Drag ${m.label} to a slot, or click then click a slot`}
+                onDragStart={(e) => e.dataTransfer.setData("text/plain", m.type)}
+                onClick={() => onPickModule && onPickModule(pickedModule === m.key ? null : m.key)}
+                className={"kb-palette-mod" + (pickedModule === m.key ? " picked" : "")} />
             ))}
           </div>
         ) : (
