@@ -37,6 +37,9 @@ def _schema(conn):
         CREATE TABLE key_bindings (context TEXT, action_code TEXT, action_type TEXT,
                                    behavior TEXT, key_id TEXT, id TEXT,
                                    updated_at TEXT, created_at TEXT);
+        CREATE TABLE module_config_bindings (profile_id TEXT, layer_id TEXT,
+                                             module_config_id TEXT, binding_location TEXT,
+                                             state TEXT, updated_at TEXT, created_at TEXT);
     """)
 
 
@@ -46,6 +49,8 @@ def _read():
         "layers": {0: [(0x00, R.KEY_PRESS, R.encode_keypress("key", "A"))], 1: []},
         "led": {0: [], 1: []},
         "layer_uuids": dict(UUIDS),
+        "bays": {0: {"track:keyboard_left": 4, "tune:keyboard_right": "transparent",
+                     "float:keyboard_left": "disabled"}},
     }
 
 
@@ -56,9 +61,9 @@ class KeepOpen:
     def close(self): pass
 
 
-def _run(conn, name=None, read=None):
+def _run(conn, name=None, read=None, slot_uuid=None):
     with mock.patch.object(ki, "connect", lambda: KeepOpen(conn)):
-        return ki.import_read(read or _read(), name)
+        return ki.import_read(read or _read(), name, slot_uuid)
 
 
 def test_layer_rows_use_the_device_uuid():
@@ -110,12 +115,43 @@ def test_an_unknown_board_still_makes_a_new_profile():
     print("  a board we have not seen still gets its own profile")
 
 
+def test_bays_are_stored_and_replaced_on_reread():
+    """The per-layer module bays: what the virtual board's module slots should show. A slot we
+    have no config for is recorded as nothing rather than guessed at."""
+    conn = sqlite3.connect(":memory:"); conn.row_factory = sqlite3.Row; _schema(conn)
+    _run(conn, "first", slot_uuid={4: "cfg-track-left"})
+    rows = {r["binding_location"]: (r["module_config_id"], r["state"]) for r in
+            conn.execute("SELECT binding_location, module_config_id, state FROM module_config_bindings")}
+    assert rows["track:keyboard_left"] == ("cfg-track-left", None), rows
+    assert rows["tune:keyboard_right"] == (None, "transparent"), rows
+    assert rows["float:keyboard_left"] == (None, "disabled"), rows
+
+    _run(conn, slot_uuid={4: "cfg-track-left"})          # re-read the same board
+    n = conn.execute("SELECT COUNT(*) c FROM module_config_bindings").fetchone()["c"]
+    assert n == 3, f"a re-read stacked bay rows ({n})"
+    print("  bays stored with the right states, and replaced rather than duplicated")
+
+
+def test_an_unknown_slot_is_not_invented():
+    conn = sqlite3.connect(":memory:"); conn.row_factory = sqlite3.Row; _schema(conn)
+    _run(conn, "first", slot_uuid={})                     # no config list available
+    locs = {r["binding_location"] for r in
+            conn.execute("SELECT binding_location FROM module_config_bindings")}
+    assert "track:keyboard_left" not in locs, "a bay was recorded for a slot we cannot resolve"
+    assert {"tune:keyboard_right", "float:keyboard_left"} <= locs, "states should still be kept"
+    print("  an unresolvable slot is skipped; transparent/disabled are still recorded")
+
+
 if __name__ == "__main__":
     for fn in (test_layer_rows_use_the_device_uuid,
                test_a_reread_updates_instead_of_duplicating,
                test_a_user_given_layer_name_survives_a_reread,
                test_bindings_are_replaced_not_accumulated,
-               test_an_unknown_board_still_makes_a_new_profile):
+               test_an_unknown_board_still_makes_a_new_profile,
+               test_bays_are_stored_and_replaced_on_reread,
+               test_an_unknown_slot_is_not_invented):
         print(fn.__name__)
         fn()
     print("\nOK")
+
+
