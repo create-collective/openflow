@@ -19,6 +19,17 @@ function activeProfileId() {
   }
 }
 
+// Has the keyboard been read in this app session? The normal flow is connect -> read ->
+// edit -> flash, so that the plan is built against the board's real state. Without a read the
+// app is guessing at what it is overwriting.
+function hasReadDevice() {
+  try {
+    return Boolean(sessionStorage.getItem("openflow.deviceRead"));
+  } catch {
+    return false;
+  }
+}
+
 function summarize(ops) {
   const g = { layers: 0, colors: 0, modules: 0, timeouts: 0 };
   for (const op of ops || []) {
@@ -35,6 +46,8 @@ export default function FlashButton() {
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [recovery, setRecovery] = useState(false);
+  const readOk = hasReadDevice();
 
   async function openPreview() {
     setState("loading");
@@ -53,7 +66,10 @@ export default function FlashButton() {
     setState("writing");
     setError("");
     try {
-      const res = await api.flash({ full: false, profileId: activeProfileId() });
+      const res = await api.flash(
+        recovery
+          ? { mode: "recovery", acknowledgeRecovery: true, profileId: activeProfileId() }
+          : { full: false, profileId: activeProfileId() });
       setResult(res);
       // "verified" = every ack was good AND the read-back matched. Anything else is a
       // problem the user needs to see, not a success with a caveat.
@@ -122,6 +138,19 @@ export default function FlashButton() {
               </>
             )}
 
+            {!readOk && !recovery && (
+              <div className="phase-note">
+                Read the keyboard first (Bindings → Read from keyboard). Flashing without it
+                would write over a state the app has not seen.
+              </div>
+            )}
+            {recovery && (
+              <div className="phase-note">
+                <strong>Recovery flash.</strong> The board is not read first, so nothing can be
+                preserved: module-to-dock assignments, transparent keys and double-tap bindings
+                are all overwritten. Only use this if the keyboard cannot be read.
+              </div>
+            )}
             {state === "writing" && (
               <div className="phase-note">Writing to the keyboard — do not unplug it.</div>
             )}
@@ -136,14 +165,33 @@ export default function FlashButton() {
               <button className="btn-secondary" onClick={close}>
                 {state === "done" ? "Close" : "Cancel"}
               </button>
+              {state !== "done" && !readOk && !recovery && (
+                <button
+                  className="btn-secondary"
+                  onClick={() => setRecovery(true)}
+                  title="For a keyboard that can no longer be read. Overwrites everything."
+                >
+                  Can't read the board?
+                </button>
+              )}
               {state !== "done" && (
                 <button
                   className="btn-primary"
                   onClick={confirmFlash}
-                  disabled={state === "writing"}
-                  title="Writes this profile to the keyboard, then reads it back to verify"
+                  disabled={state === "writing" || (!readOk && !recovery)}
+                  title={
+                    recovery
+                      ? "Overwrites the keyboard without reading it first"
+                      : readOk
+                      ? "Writes this profile to the keyboard, then reads it back to verify"
+                      : "Read the keyboard first"
+                  }
                 >
-                  {state === "writing" ? "Writing…" : "Confirm flash"}
+                  {state === "writing"
+                    ? "Writing…"
+                    : recovery
+                    ? "Recovery flash (overwrites everything)"
+                    : "Confirm flash"}
                 </button>
               )}
             </div>

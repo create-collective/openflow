@@ -164,6 +164,9 @@ export default function Bindings() {
       const r = await api.readKeyboard();
       await load();
       switchProfile(r.profileId);
+      // Flashing is gated on this: until the board has been read, the app's idea of the keymap
+      // may not match what is on the keyboard, and edits would be flashed over an unknown state.
+      try { sessionStorage.setItem("openflow.deviceRead", String(Date.now())); } catch { /* ignore */ }
       if (r.warnings?.length) {
         setErr(`Read ${r.bindings} bindings across ${r.layers} layers — ${r.warnings.length} key(s) need review (BT/LED/other).`);
       }

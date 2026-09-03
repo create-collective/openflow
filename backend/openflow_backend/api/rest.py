@@ -550,30 +550,45 @@ def _flash_preview(profile_id: str | None = None) -> dict:
 
 @router.post("/rpc/flash")
 async def flash_write(body: dict = Body(default={})) -> dict:
-    """WRITE the current profile to the keyboard. The only endpoint that changes the device.
+    """WRITE a profile to the keyboard. The only endpoint that changes the device.
 
-    Requires `{"confirm": "FLASH"}` -- the UI sends it only from the Confirm button in the
-    preview modal, so a stray POST cannot write.
+    Requires `{"confirm": "FLASH"}` and an explicit `profileId`. Two modes, with genuinely
+    different safety properties:
 
-    A fresh device read is taken first and is NOT optional. compute_plan needs it twice over:
-    to carry through the module->dock bindings at layer positions 0x4A-0x51 (which the app does
-    not model, and which a full write would otherwise blank), and to know which module fields
-    are stale and must be explicitly cleared. Flashing from DB state alone would unassign every
-    module on the board.
+    **mode="sync" (default).** Takes a fresh device read first and plans against it. This is
+    what makes preservation possible: compute_plan uses the read to carry through everything
+    the app does not model -- the module->dock bindings at layer positions 0x4A-0x51, TRANS
+    records, and second-bank positions -- and to know which module fields are stale. If the
+    read fails, the flash is refused, because a plan built without it would blank all of that.
 
-    Every frame's ack is checked, the first bad one aborts, and the result is verified by
+    **mode="recovery".** For a board that can no longer be read. It skips the read, so NOTHING
+    can be preserved: every position in both banks is written explicitly and anything the app
+    does not model is lost, module->dock assignments included. Requires
+    `{"acknowledgeRecovery": true}` on top of the confirm, and is always a full write.
+
+    Every frame's ack is checked, the first bad one aborts, and a sync flash is verified by
     reading the device back.
     """
     if body.get("confirm") != "FLASH":
         raise HTTPException(status_code=400,
                             detail='refusing: this writes to the keyboard. Send {"confirm": "FLASH"}.')
+    mode = body.get("mode", "sync")
+    if mode not in ("sync", "recovery"):
+        raise HTTPException(status_code=400, detail=f'unknown mode {mode!r} (sync|recovery)')
+    if mode == "recovery" and body.get("acknowledgeRecovery") is not True:
+        raise HTTPException(status_code=400, detail=(
+            "recovery mode cannot preserve anything the app does not model -- module-to-dock "
+            "assignments, transparent keys and second-bank bindings are all overwritten. "
+            'Send {"acknowledgeRecovery": true} to accept that.'))
     svc = get_service()
     side = body.get("side", "left")
-    full = bool(body.get("full", False))
+    full = True if mode == "recovery" else bool(body.get("full", False))
 
     def _run() -> dict:
-        before = svc.read_keymap(side)                       # mandatory pre-flash read
-        current = flash_mod.desired_from_device_read(before)
+        before, current = None, None
+        if mode == "sync":
+            before = svc.read_keymap(side)                   # mandatory: the preservation baseline
+            current = flash_mod.desired_from_device_read(before)
         conn = db_connect()
         try:
             # Scoped to ONE profile: the layers table spans all of them, so an unscoped plan
@@ -588,9 +603,14 @@ async def flash_write(body: dict = Body(default={})) -> dict:
         result = flash_mod.flash(
             desired, transport=transport, dest=dest, current=current, full=full,
             dry_run=False,
-            reader=lambda: flash_mod.desired_from_device_read(svc.read_keymap(side)),
+            # A recovery flash targets a board we could not read, so do not claim a verify we
+            # cannot trust; report it as sent-unverified and let the caller re-read if it can.
+            reader=(None if mode == "recovery"
+                    else lambda: flash_mod.desired_from_device_read(svc.read_keymap(side))),
         )
-        result["backup"] = {
+        result["mode"] = mode
+        result["profileId"] = desired.profile_id
+        result["backup"] = None if before is None else {
             "layers": {str(i): [[p, t, bytes(v).hex()] for p, t, v in recs]
                        for i, recs in before["layers"].items()},
             "led": {str(i): [[a, b, c] for a, b, c in entries]
