@@ -294,10 +294,29 @@ class WriteOp:
     cat: int = R.CAT_REMAP
 
 
-def _full_layer_payload(idx: int, poss: dict[int, tuple[int, bytes]]) -> bytes:
+# Positions 0x4A-0x51 in layer data are the module dock slots: each holds the module CONFIG
+# SLOT bound to that dock (layer 0 on the reference board reads 0x4c -> 4 = Track Left,
+# 0x4d -> 1 = Track Right, which is the side-binding proved in C2; higher layers carry 0x78 =
+# inherit). The app has no UI for them and desired_from_db does not model them, so a full
+# layer write MUST take them from the device rather than defaulting them to NONE -- otherwise
+# flashing unassigns every module on the board.
+MODULE_SLOT_POSITIONS = range(0x4A, 0x52)
+
+
+def _full_layer_payload(idx: int, poss: dict[int, tuple[int, bytes]],
+                        device: dict[int, tuple[int, bytes]] | None = None) -> bytes:
+    """Every position in one layer. Positions absent from `poss` fall back to what the device
+    already has (`device`) before defaulting to NONE, so a full write never silently drops
+    state the app does not model."""
+    device = device or {}
     recs = []
     for pos in FULL_LAYER_POSITIONS:
-        typ, param = poss.get(pos, (R.NONE_BEH, b""))
+        if pos in poss:
+            typ, param = poss[pos]
+        elif pos in MODULE_SLOT_POSITIONS and pos in device:
+            typ, param = device[pos]          # carry the module->dock binding through
+        else:
+            typ, param = device.get(pos, (R.NONE_BEH, b""))
         recs.append(R.record(pos, typ, param))
     return R.encode_layer_data(idx, recs)
 
@@ -314,13 +333,25 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *, 
     ops: list[WriteOp] = []
     for idx in sorted(desired.layers):
         if full or current is None or desired.layers[idx] != current.layers.get(idx):
-            ops.append(WriteOp(R.WRITE_LAYER_DATA, _full_layer_payload(idx, desired.layers[idx]), f"layer {idx}"))
+            ops.append(WriteOp(R.WRITE_LAYER_DATA,
+                               _full_layer_payload(idx, desired.layers[idx],
+                                                   (current.layers.get(idx) if current else None)),
+                               f"layer {idx}"))
     for idx in sorted(desired.leds):
         if desired.leds[idx] and (full or current is None or desired.leds[idx] != current.leds.get(idx)):
             ops.append(WriteOp(R.WRITE_LED_MAP_DATA, _led_payload(idx, desired.leds[idx]), f"led {idx}"))
     for slot in sorted(desired.modules):
-        recs = [R.encode_module_field(f, v, t) for f, (t, v) in sorted(desired.modules[slot].items())]
-        ops.append(WriteOp(R.WRITE_MODULE_CONFIG_DATA, R.encode_module_config(slot, recs), f"module slot {slot}"))
+        want = desired.modules[slot]
+        recs = [R.encode_module_field(f, v, t) for f, (t, v) in sorted(want.items())]
+        # Writing N fields does NOT delete fields N+1..M -- that is exactly how the reference
+        # board ended up with a 15-field Track config carrying 21 orphaned Touch fields. A full
+        # write therefore has to clear what the device has and we do not, explicitly.
+        if full and current is not None:
+            stale = sorted(set(current.modules.get(slot, {})) - set(want))
+            recs += [R.encode_module_field(f, b"", R.NONE_BEH) for f in stale]
+        ops.append(WriteOp(R.WRITE_MODULE_CONFIG_DATA, R.encode_module_config(slot, recs),
+                           f"module slot {slot}"
+                           + (f" (+{len(recs) - len(want)} clear(s))" if len(recs) > len(want) else "")))
     if desired.timeouts and (full or current is None or desired.timeouts != current.timeouts):
         ops.append(WriteOp(SYS_SET_TIMEOUTS, R.encode_timeouts(*desired.timeouts), "timeouts", cat=CAT_SYSTEM))
     return ops
