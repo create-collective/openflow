@@ -84,6 +84,36 @@ export default function Bindings() {
     return entry?.matched || id;
   }
 
+
+  // Replace the hand-placed bays with what the board reports is actually docked. Best effort:
+  // the keymap read has already succeeded by this point, so a module query that fails should
+  // not turn a good read into an error.
+  async function syncDockedModules() {
+    try {
+      persistAssign(await readDockedModules(api));
+    } catch { /* leave the existing assignment alone */ }
+  }
+
+  const load = useCallback(async () => {
+    try {
+      const [ud, acts, mac, mods] = await Promise.all([
+        api.userdata(), api.actions(), api.macros(), api.modules()]);
+      setProfiles(ud.profiles || []);
+      setCatalog(acts);
+      setMacros(mac.macros || []);
+      setModuleProfiles(mods.modules || []);
+    } catch (e) {
+      setErr(e.message);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const profile = useMemo(
+    () => profiles.find((p) => p.id === activeProfileId) || profiles[0] || null,
+    [profiles, activeProfileId]
+  );
+
   // Everything the board's module row needs to offer a profile per bay.
   //
   // A choice is written against the LAYER being edited. Set them on the base layer and the rest
@@ -133,35 +163,6 @@ export default function Bindings() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, catalog, activeLayerId, deviceRead, moduleProfiles]);
-
-  // Replace the hand-placed bays with what the board reports is actually docked. Best effort:
-  // the keymap read has already succeeded by this point, so a module query that fails should
-  // not turn a good read into an error.
-  async function syncDockedModules() {
-    try {
-      persistAssign(await readDockedModules(api));
-    } catch { /* leave the existing assignment alone */ }
-  }
-
-  const load = useCallback(async () => {
-    try {
-      const [ud, acts, mac, mods] = await Promise.all([
-        api.userdata(), api.actions(), api.macros(), api.modules()]);
-      setProfiles(ud.profiles || []);
-      setCatalog(acts);
-      setMacros(mac.macros || []);
-      setModuleProfiles(mods.modules || []);
-    } catch (e) {
-      setErr(e.message);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const profile = useMemo(
-    () => profiles.find((p) => p.id === activeProfileId) || profiles[0] || null,
-    [profiles, activeProfileId]
-  );
 
   // Keep an active layer that belongs to the active profile.
   useEffect(() => {
