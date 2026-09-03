@@ -136,9 +136,16 @@ export default function Bindings() {
     };
 
     return {
-      profilesFor: (type) => (moduleProfiles || [])
-        .filter((m) => m.type === type.toUpperCase())
-        .map((m) => ({ id: m.id, name: m.name, onBoard: liveIds.has(m.id) })),
+      // A Track profile belongs to one side: the left and right units are different hardware,
+      // so the left bay must not offer right-hand profiles. Symmetric modules have a single
+      // variant and every profile of the type is valid in either bay.
+      profilesFor: (type, side) => {
+        const t = type.toUpperCase();
+        const want = t === "TRACK" && side ? `TRACK_${side.toUpperCase()}` : null;
+        return (moduleProfiles || [])
+          .filter((m) => m.type === t && (!want || m.variant === want))
+          .map((m) => ({ id: m.id, name: m.name, onBoard: liveIds.has(m.id) }));
+      },
       selectedFor,
       // True when this layer says nothing and the value shown comes from the base layer.
       inheritedFor: (type, side) => {

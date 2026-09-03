@@ -685,7 +685,8 @@ def get_modules() -> dict:
         _ensure_gesture_slots(conn)
         configs = []
         for m in conn.execute(
-            "SELECT id, name, type, size, order_id, icon_id FROM module_configs ORDER BY type, order_id"
+            "SELECT id, name, type, size, order_id, icon_id, variant FROM module_configs "
+            "ORDER BY type, order_id"
         ):
             bindings = []
             for b in conn.execute(
@@ -735,6 +736,9 @@ def get_modules() -> dict:
                 "id": m["id"],
                 "name": m["name"],
                 "type": m["type"],
+                # Track ships two asymmetric variants and a profile belongs to exactly one of
+                # them, so the left and right bays must offer different lists.
+                "variant": m["variant"],
                 "size": m["size"],
                 "orderId": m["order_id"],
                 "bindings": bindings,
