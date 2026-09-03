@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSyncExternalStore } from "react";
 import { subscribeDeviceState, getDeviceState, setModuleRead } from "../lib/deviceState";
 import { useSearchParams } from "react-router-dom";
+import AxisControls from "../components/AxisControls";
 import { api } from "../lib/api";
 
 // Module configuration (Touch / Track / Tune). Grouped list on the left; the
@@ -132,6 +133,7 @@ export default function Modules() {
   // costs a COM-port round trip and is a whole-app fact, not this page's state.
   const device = useSyncExternalStore(subscribeDeviceState, getDeviceState).modules;
   const [reading, setReading] = useState(false);
+  const [busy, setBusy] = useState(null);   // an axis edit in flight
   const [variants, setVariants] = useState([]);
   const [adding, setAdding] = useState(false);      // the "add profile" dropdown
   const [renaming, setRenaming] = useState(null);   // config id being renamed
@@ -209,6 +211,22 @@ export default function Modules() {
     }
   }
 
+  async function setAxisHalf(behavior, half, actionCode) {
+    setBusy("axis");
+    try {
+      await api.setAxisSplit({ configId: selectedId, behavior, half, actionCode });
+      await load();
+    } catch (e) { setErr(e.message); } finally { setBusy(null); }
+  }
+
+  async function setAxisInvert(behavior, invert) {
+    setBusy("axis");
+    try {
+      await api.setAxisInvert({ configId: selectedId, behavior, invert });
+      await load();
+    } catch (e) { setErr(e.message); } finally { setBusy(null); }
+  }
+
   async function readDevice() {
     setReading(true);
     setErr(null);
@@ -254,10 +272,14 @@ export default function Modules() {
     return g;
   }, [onDevice, isCapture]);
 
-  const axes = useMemo(
-    () => (config?.bindings || []).filter((b) => !b.target).sort(byGesture),
-    [config]
-  );
+  // Anything without a button/finger target that is NOT an axis gesture -- the axes have their
+  // own two-direction control above.
+  const axes = useMemo(() => {
+    const handled = new Set((config?.axes || []).map((a) => a.behavior));
+    return (config?.bindings || [])
+      .filter((b) => !b.target && !handled.has(b.behavior))
+      .sort(byGesture);
+  }, [config]);
   const targets = useMemo(() => {
     const t = [];
     for (const b of config?.bindings || []) if (b.target && !t.includes(b.target)) t.push(b.target);
@@ -414,6 +436,16 @@ export default function Modules() {
               {tab === "bindings" && (
                 <div style={{ maxWidth: 620 }}>
                   <ModuleVisual type={config.type} activeButton={curTarget} />
+
+                  {(config.axes || []).length > 0 && (
+                    <>
+                      <div className="skp-head"><span>Motion</span><span className="skp-arrow">→</span><span>Per direction</span></div>
+                      {config.axes.map((a) => (
+                        <AxisControls key={a.behavior} axis={a} actions={actions} busy={!!busy}
+                          onSetHalf={setAxisHalf} onInvert={setAxisInvert} />
+                      ))}
+                    </>
+                  )}
 
                   {axes.length > 0 && (
                     <>
