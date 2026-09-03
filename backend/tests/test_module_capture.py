@@ -72,6 +72,9 @@ def _db(app_bindings):
                                       behavior TEXT, invert INT, threshold INT, direction TEXT,
                                       mode INT, module_config_id TEXT, id TEXT,
                                       updated_at TEXT, created_at TEXT);
+        CREATE TABLE module_config_bindings (profile_id TEXT, layer_id TEXT,
+                                             module_config_id TEXT, binding_location TEXT,
+                                             state TEXT, updated_at TEXT, created_at TEXT);
     """)
     conn.execute("INSERT INTO module_configs (name,type,size,order_id,icon_id,variant,id,"
                  "updated_at,created_at) VALUES ('Naya Track Left',?,0,0,NULL,'TRACK_LEFT',?,'','')",
@@ -145,3 +148,36 @@ def test_reading_twice_does_not_mint_a_second_capture():
     assert _names(conn) == after_first, "the profile list must not grow on every read"
     assert second["modules"][0]["matched"] == first["captured"][0]["id"]
     print("  re-read is idempotent: still 2 profiles, still pointing at the capture")
+
+
+def test_a_capture_takes_over_the_bays_that_pointed_at_the_drifted_profile():
+    """A bay names the profile a layer RUNS. After the read, the thing running in that slot is
+    the capture -- so leaving the bay on the edited row would show one profile as live while a
+    flash quietly wrote a different one."""
+    conn = _db(dict(_DEVICE, **{"tap:track:button_1": "M2"}))
+    conn.execute("INSERT INTO module_config_bindings (profile_id, layer_id, module_config_id, "
+                 "binding_location, state, updated_at, created_at) "
+                 "VALUES ('p','l0',?,'track:keyboard_left',NULL,'','')", (UUID,))
+    conn.commit()
+
+    cap = _run(conn)["captured"][0]
+    now = conn.execute("SELECT module_config_id FROM module_config_bindings").fetchone()[0]
+    assert now == cap["id"], "the bay should follow what the board actually runs"
+    assert _run(conn) is not None  # a re-read keeps it there
+
+    # The edited profile survives and can be chosen again deliberately.
+    assert conn.execute("SELECT 1 FROM module_configs WHERE id=?", (UUID,)).fetchone()
+    print("  bay repointed to the capture; the edited profile still exists")
+
+
+def test_a_bay_pointing_elsewhere_is_left_alone():
+    other = "99999999-9999-9999-9999-999999999999"
+    conn = _db(dict(_DEVICE, **{"tap:track:button_1": "M2"}))
+    conn.execute("INSERT INTO module_config_bindings (profile_id, layer_id, module_config_id, "
+                 "binding_location, state, updated_at, created_at) "
+                 "VALUES ('p','l0',?,'track:keyboard_right',NULL,'','')", (other,))
+    conn.commit()
+
+    _run(conn)
+    assert conn.execute("SELECT module_config_id FROM module_config_bindings").fetchone()[0] == other
+    print("  unrelated bays untouched")

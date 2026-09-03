@@ -238,3 +238,29 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
         return made
     finally:
         conn.close()
+
+
+def repoint_bays(pairs) -> int:
+    """Move bays from a profile that is no longer live onto the one that is.
+
+    A bay names the profile a layer RUNS. When a read finds the board running something other
+    than the profile a bay points at, leaving the bay alone would show one profile as live in
+    the UI while a flash quietly wrote a different one. The profile being moved away from is
+    untouched and can be selected again deliberately.
+
+    `pairs` is [(from config id, to config id)]. Returns the number of bays moved.
+    """
+    pairs = [(a, b) for a, b in pairs if a and b and a != b]
+    if not pairs:
+        return 0
+    now, moved = _now(), 0
+    conn = connect()
+    try:
+        for src, dst in pairs:
+            moved += conn.execute(
+                "UPDATE module_config_bindings SET module_config_id=?, updated_at=? "
+                "WHERE module_config_id=?", (dst, now, src)).rowcount
+        conn.commit()
+        return moved
+    finally:
+        conn.close()

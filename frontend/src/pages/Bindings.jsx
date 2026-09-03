@@ -127,12 +127,22 @@ export default function Bindings() {
     const liveIds = new Set(
       Object.values(deviceRead || {}).map((e) => e.matched).filter(Boolean));
 
+    // The bay stores a uuid, but that uuid may name a profile that has drifted from the board.
+    // Resolve it the same way the board's module click does -- through the read's content match
+    // -- so the radio sits on the profile that is actually running, not on the row that merely
+    // shares the device's identity.
+    const resolveLive = (cid) => {
+      if (!cid) return cid;
+      const entry = Object.values(deviceRead || {}).find((e) => e.uuid === cid);
+      return entry?.matched || cid;
+    };
+
     const selectedFor = (type, side) => {
       const own = layer?.bays?.[key(type, side)];
       if (own === "disabled") return "disabled";
-      if (own && own !== "transparent") return own;
+      if (own && own !== "transparent") return resolveLive(own);
       const inh = base?.bays?.[key(type, side)];
-      return inh && inh !== "transparent" ? inh : null;
+      return inh && inh !== "transparent" ? resolveLive(inh) : null;
     };
 
     return {

@@ -584,7 +584,12 @@ def _module_diff(read: dict) -> dict:
         # Rebuild against the profiles that now exist, so each entry describes the row it
         # points at -- a capture must not inherit the diff rows of the profile it drifted from.
         out = _build_entries(read)
-    return {"modules": out, "slotMap": read["by_uuid"], "captured": captured}
+    # Bays follow what the board runs, whether the capture happened just now or in an earlier
+    # read. Without this a bay stays on the drifted profile forever and the picker's selection
+    # would disagree with what a flash writes.
+    repointed = mprof.repoint_bays([(e.get("uuid"), e.get("matched")) for e in out])
+    return {"modules": out, "slotMap": read["by_uuid"], "captured": captured,
+            "repointedBays": repointed}
 
 
 def _build_entries(read: dict) -> list:

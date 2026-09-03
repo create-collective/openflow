@@ -1567,8 +1567,9 @@
   padding: 6px;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
-  background: var(--neutral2);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  background: var(--neutral17);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.6);
 }
 
 .bay-menu-head {
@@ -1595,11 +1596,11 @@
 }
 
 .bay-menu-item:hover {
-  background: var(--neutral4);
+  background: var(--neutral24);
 }
 
 .bay-menu-item.on {
-  background: var(--neutral3);
+  background: var(--neutral20);
 }
 
 .bay-menu-item.subtle {

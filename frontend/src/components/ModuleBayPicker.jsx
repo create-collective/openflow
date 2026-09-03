@@ -45,7 +45,7 @@ export default function ModuleBayPicker({
       ) : (
         profiles.map((p) => (
           <button key={p.id} className={"bay-menu-item" + (p.id === selectedId ? " on" : "")}
-            onClick={() => { onPick(p.id); onClose(); }}>
+            onClick={() => onPick(p.id)}>
             <span className="bay-radio">{p.id === selectedId ? "◉" : "○"}</span>
             <span className="bay-menu-name">{p.name}</span>
             {p.onBoard && <span className="bay-tag" title="Running on the keyboard">live</span>}
@@ -58,7 +58,7 @@ export default function ModuleBayPicker({
         </div>
       )}
       <div className="bay-menu-sep" />
-      <button className="bay-menu-item subtle" onClick={() => { onPick("disabled"); onClose(); }}>
+      <button className="bay-menu-item subtle" onClick={() => onPick("disabled")}>
         <span className="bay-radio">{selectedId === "disabled" ? "◉" : "○"}</span>
         <span className="bay-menu-name">Disabled on this layer</span>
       </button>
