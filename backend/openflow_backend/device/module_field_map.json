@@ -277,7 +277,8 @@
     "note": "scroll/pointer routing (value gesture)"
    }
   },
-  "note": "NO Track config is stored on the device as of the 2026-09-02 probe (slots 0-7 read on both halves; only Touch=1 and Tune=2 exist) even with a Track docked. Fields below are from the older slot-3 read."
+  "note": "SUSPECT -- probably NOT Track. These 15 fields are byte-identical to the first 15 of the live TOUCH slot 1 (36 fields), including the reversed 0x09/0x0a direction pair, so this is most likely a TRUNCATED read of a pointer-module config that was labelled TRACK by mistake. It also explains the old 'Track has no keypress fields' claim: Touch's keypresses sit at 0x15-0x1e, past where that read stopped. No Track config existed on the device at the 2026-09-02 probe (slots 0-7, both halves). Do not use for writes until a real Track read exists.",
+  "confidence": "suspect - likely mislabelled Touch data"
  },
  "_meta": {
   "source": "live read-only probe 2026-09-02 (tools/naya_module_probe.py) + earlier device reads",
