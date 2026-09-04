@@ -83,6 +83,11 @@ class RemapEncodeError(ValueError):
 # keypress: [id_lo][id_hi][page][mods]  (inverse of decode_keypress)          #
 # --------------------------------------------------------------------------- #
 
+# Shortcut bases that are not keyboard usages: the record holds the modifier and the user
+# supplies the rest with the mouse.
+MODIFIER_ONLY_BASES = {"CLICK", "MOUSE_CLICK", "LEFT_CLICK"}
+
+
 def encode_keypress(action_type: str, action_code: str) -> bytes:
     """(action_type, action_code) -> 4-byte KEY_PRESS param."""
     code = CODE_ALIASES.get(action_code, action_code)
@@ -96,7 +101,14 @@ def encode_keypress(action_type: str, action_code: str) -> bytes:
         *mod_toks, base = [t.strip() for t in code.split(" + ")]
         mods = 0
         for t in mod_toks:
-            t = t.strip("[]")                      # a bracketed modifier still sets its bit
+            # A BRACKETED modifier does not set its bit. It marks a modifier the context already
+            # holds -- an app switcher keeping Alt down, say -- so the record carries only the
+            # rest. Checked against a real flash capture: "[LALT] + TAB" was stored 2b000700 and
+            # "[LALT] + LSHIFT + TAB" 2b000702, both without the LALT bit.
+            if t.startswith("[") and t.endswith("]"):
+                if t.strip("[]") not in MOD_BIT:
+                    raise RemapEncodeError(f"unknown modifier token {t!r} in {action_code!r}")
+                continue
             if t not in MOD_BIT:
                 raise RemapEncodeError(f"unknown modifier token {t!r} in {action_code!r}")
             mods |= MOD_BIT[t]
@@ -105,6 +117,10 @@ def encode_keypress(action_type: str, action_code: str) -> bytes:
             return bytes([PAGE7_REV[base], 0x00, 0x07, mods])
         if base in PAGE12_REV:
             return bytes([PAGE12_REV[base], 0x00, 0x0C, mods])
+        # A base that is not a keyboard usage at all -- "LALT + CLICK" is "hold Alt, then click
+        # with the mouse". The device stores the modifier alone, page 0: captured 00000004.
+        if base in MODIFIER_ONLY_BASES:
+            return bytes([0x00, 0x00, 0x00, mods])
         raise RemapEncodeError(f"unknown base key {base!r} in {action_code!r}")
 
     # plain key
