@@ -278,3 +278,37 @@
 .gesture-badge.flashable { background: rgba(52, 211, 153, 0.16); color: var(--ok); }
 .gesture-badge.axis { background: rgba(25, 195, 212, 0.16); color: var(--accent); }
 .gesture-badge.dbonly { background: var(--neutral20); color: var(--neutral60); }
+
+/* --- Flash: writing + success feedback -------------------------------------
+   A flash is slow and irreversible, and the dialog used to unmount the moment it
+   started, so it finished with no signal at all. These are the two places that
+   now say what happened: the note inside the dialog, and the button for five
+   seconds after it closes. Additive only -- nothing above is modified. */
+.flash-btn.flashed,
+.board-btn.primary.flashed {
+  background: var(--ok);
+  color: #06281c;
+}
+.flash-btn.flashed:hover,
+.board-btn.primary.flashed:hover { background: var(--ok); }
+
+.phase-note.flash-ok {
+  border-left-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  color: var(--text);
+}
+
+.flash-spinner {
+  display: inline-block;
+  width: 11px; height: 11px;
+  margin-right: 8px;
+  vertical-align: -1px;
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: flash-spin 0.7s linear infinite;
+}
+@keyframes flash-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .flash-spinner { animation: none; border-top-color: var(--accent); }
+}

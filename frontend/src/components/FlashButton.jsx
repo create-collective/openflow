@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invalidateDeviceState } from "../lib/deviceState";
 import { api } from "../lib/api.js";
 
@@ -48,11 +48,25 @@ export default function FlashButton({ variant = "sidebar" }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [recovery, setRecovery] = useState(false);
+  const [flashed, setFlashed] = useState(false);
+  const [wrote, setWrote] = useState(false);   // did this attempt reach the device?
+  const timer = useRef(null);
   const readOk = hasReadDevice();
+
+  // The dialog reports the result, but it gets closed. A flash is slow, irreversible and easy
+  // to be unsure about, so the button carries the answer for a few seconds afterwards too.
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  function markFlashed() {
+    setFlashed(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setFlashed(false), 5000);
+  }
 
   async function openPreview() {
     setState("loading");
     setError("");
+    setWrote(false);
     try {
       const res = await api.flashPreview({ profileId: activeProfileId() });
       setPreview(res);
@@ -66,6 +80,7 @@ export default function FlashButton({ variant = "sidebar" }) {
   async function confirmFlash() {
     setState("writing");
     setError("");
+    setWrote(true);
     try {
       // Whatever we believed was on the device is now stale, whether this succeeds or not.
       invalidateDeviceState("flash");
@@ -77,6 +92,7 @@ export default function FlashButton({ variant = "sidebar" }) {
       // "verified" = every ack was good AND the read-back matched. Anything else is a
       // problem the user needs to see, not a success with a caveat.
       setState(res.status === "verified" ? "done" : "error");
+      if (res.status === "verified") markFlashed();
       if (res.status !== "verified") {
         setError(res.reason || `flash finished as "${res.status}" — check the device`);
       }
@@ -91,6 +107,7 @@ export default function FlashButton({ variant = "sidebar" }) {
     setPreview(null);
     setResult(null);
     setError("");
+    setWrote(false);
   }
 
   const s = preview?.summary;
@@ -99,26 +116,52 @@ export default function FlashButton({ variant = "sidebar" }) {
   return (
     <>
       <button
-        className={variant === "toolbar" ? "board-btn primary" : "flash-btn"}
+        className={
+          (variant === "toolbar" ? "board-btn primary" : "flash-btn") +
+          (flashed ? " flashed" : "")
+        }
         onClick={openPreview}
-        disabled={state === "loading"}
-        title="Preview the changes, then confirm to write them to the keyboard"
+        disabled={state === "loading" || state === "writing"}
+        title={
+          flashed
+            ? "Flashed and verified"
+            : "Preview the changes, then confirm to write them to the keyboard"
+        }
       >
-        {state === "loading" ? "Previewing…" : "⚡ Flash to keyboard"}
+        {state === "loading"
+          ? "Previewing…"
+          : state === "writing"
+          ? "Flashing…"
+          : flashed
+          ? "✓ Flashed"
+          : "⚡ Flash to keyboard"}
       </button>
 
-      {(state === "preview" || state === "error") && (
-        <div className="modal-backdrop" onClick={close}>
+      {/* Kept open through "writing" and "done". It used to render for preview|error only, so
+          confirming unmounted the whole dialog mid-write: the "do not unplug it" note and the
+          verified summary below were unreachable, and a flash finished with no signal at all.
+          The backdrop stops dismissing while a write is in flight -- there is nothing to go
+          back to, and the click would only hide the one thing worth watching. */}
+      {state !== "idle" && state !== "loading" && (
+        <div className="modal-backdrop" onClick={state === "writing" ? undefined : close}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Flash to keyboard</h3>
+            <h3>
+              {state === "writing" ? "Flashing…" : state === "done" ? "Flashed ✓" : "Flash to keyboard"}
+            </h3>
 
-            {state === "error" && <p className="modal-error">Preview failed: {error}</p>}
+            {state === "error" && (
+              <p className="modal-error">
+                {wrote ? "Flash failed" : "Preview failed"}: {error}
+              </p>
+            )}
 
-            {state === "preview" && s && (
+            {(state === "preview" || state === "writing") && s && (
               <>
-                <p className="modal-sub">
-                  Preview (dry run) — nothing is written until you confirm.
-                </p>
+                {state === "preview" && (
+                  <p className="modal-sub">
+                    Preview (dry run) — nothing is written until you confirm.
+                  </p>
+                )}
                 <ul className="flash-diff">
                   <li><b>{g.layers}</b> layer{g.layers === 1 ? "" : "s"}</li>
                   <li><b>{g.colors}</b> colour map{g.colors === 1 ? "" : "s"}</li>
@@ -160,17 +203,20 @@ export default function FlashButton({ variant = "sidebar" }) {
               </div>
             )}
             {state === "writing" && (
-              <div className="phase-note">Writing to the keyboard — do not unplug it.</div>
+              <div className="phase-note">
+                <span className="flash-spinner" aria-hidden="true" />
+                Writing to the keyboard, then reading it back to verify — do not unplug it.
+              </div>
             )}
             {state === "done" && result && (
-              <div className="phase-note">
-                Flashed and verified: {result.ops} operation(s), {result.frames} frame(s),
-                read back with no differences.
+              <div className="phase-note flash-ok">
+                <strong>Flashed and verified.</strong> {result.ops} operation(s),{" "}
+                {result.frames} frame(s), read back with no differences.
               </div>
             )}
 
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={close}>
+              <button className="btn-secondary" onClick={close} disabled={state === "writing"}>
                 {state === "done" ? "Close" : "Cancel"}
               </button>
               {state !== "done" && !readOk && !recovery && (
