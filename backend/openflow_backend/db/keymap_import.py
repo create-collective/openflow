@@ -38,6 +38,11 @@ def _import_bays(conn, profile_id, order_to_layer, read, slot_uuid, now) -> int:
     binding_location values match the bay layout we decoded from the layer data.
     """
     n = 0
+    # A bay can point at a slot holding a config we have never seen -- NayaFlow allocates its own
+    # slots, and one of ours is currently carrying a profile it created. Recording that bay would
+    # violate the foreign key and take the whole keymap read down with it, so the config has to
+    # exist here, not merely be present on the device.
+    known = {r["id"] for r in conn.execute("SELECT id FROM module_configs")}
     conn.execute("DELETE FROM module_config_bindings WHERE profile_id=?", (profile_id,))
     for order, bays in (read.get("bays") or {}).items():
         lid = order_to_layer.get(int(order))
@@ -50,7 +55,7 @@ def _import_bays(conn, profile_id, order_to_layer, read, slot_uuid, now) -> int:
                 state, cfg = "disabled", None
             else:
                 cfg = slot_uuid.get(value)
-                if cfg is None:
+                if cfg is None or cfg not in known:
                     continue          # a slot we have no config for: record nothing, invent nothing
                 state = None
             conn.execute(

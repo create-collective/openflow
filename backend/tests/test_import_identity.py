@@ -37,6 +37,10 @@ def _schema(conn):
         CREATE TABLE key_bindings (context TEXT, action_code TEXT, action_type TEXT,
                                    behavior TEXT, key_id TEXT, id TEXT,
                                    updated_at TEXT, created_at TEXT);
+        -- _import_bays checks a bay's config actually exists here before recording it,
+        -- because a bay can point at a slot holding a profile NayaFlow created that we
+        -- have never seen.
+        CREATE TABLE module_configs (id TEXT, name TEXT, type TEXT);
         CREATE TABLE module_config_bindings (profile_id TEXT, layer_id TEXT,
                                              module_config_id TEXT, binding_location TEXT,
                                              state TEXT, updated_at TEXT, created_at TEXT);
@@ -119,6 +123,10 @@ def test_bays_are_stored_and_replaced_on_reread():
     """The per-layer module bays: what the virtual board's module slots should show. A slot we
     have no config for is recorded as nothing rather than guessed at."""
     conn = sqlite3.connect(":memory:"); conn.row_factory = sqlite3.Row; _schema(conn)
+    # The bay's config has to exist here, not just on the device: module_config_bindings has a
+    # foreign key to it, and a bay pointing at a config we do not have took the entire keymap
+    # read down with an IntegrityError.
+    conn.execute("INSERT INTO module_configs VALUES ('cfg-track-left','Track Left','TRACK')")
     _run(conn, "first", slot_uuid={4: "cfg-track-left"})
     rows = {r["binding_location"]: (r["module_config_id"], r["state"]) for r in
             conn.execute("SELECT binding_location, module_config_id, state FROM module_config_bindings")}
@@ -155,3 +163,17 @@ if __name__ == "__main__":
     print("\nOK")
 
 
+
+
+def test_a_bay_pointing_at_a_config_we_do_not_have_is_skipped():
+    """NayaFlow allocates its own slots. Ours currently carries one it created, and a layer bay
+    referencing it made the read fail with a FOREIGN KEY error -- the whole keymap import lost
+    to a module profile we simply do not have a row for."""
+    conn = sqlite3.connect(":memory:"); conn.row_factory = sqlite3.Row; _schema(conn)
+    # Deliberately no module_configs row for this uuid.
+    _run(conn, "first", slot_uuid={4: "a-profile-nayaflow-made"})
+    rows = conn.execute(
+        "SELECT binding_location FROM module_config_bindings WHERE module_config_id IS NOT NULL"
+    ).fetchall()
+    assert rows == [], f"recorded a bay for a config we do not have: {[dict(r) for r in rows]}"
+    print("  a bay for an unknown config is skipped, and the read survives")
