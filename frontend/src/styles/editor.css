@@ -1711,3 +1711,15 @@
   white-space: nowrap;
   cursor: pointer;
 }
+
+/* The shared action palette on the Modules page. Additive only -- the Bindings rules above are
+   deliberately untouched, since editing a shared .palette rule is how this feature would
+   regress the keymap editor. */
+.modules-bottom {
+  display: block;
+}
+
+.modules-bottom > .palette {
+  width: 1090px;
+  max-width: 100%;
+}

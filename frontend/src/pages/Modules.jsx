@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSyncExternalStore } from "react";
 import { subscribeDeviceState, getDeviceState, setModuleRead } from "../lib/deviceState";
 import { useSearchParams } from "react-router-dom";
 import AxisControls from "../components/AxisControls";
+import ActionPalette from "../components/ActionPalette";
 import { shortcutLabel, shortcutTooltip, shortcutInfo,
          setShortcutTableFromActions } from "../lib/shortcutNames";
 import { api } from "../lib/api";
@@ -55,7 +56,7 @@ function okForKind(actionType, fieldKind) {
 // hardware -- a single "pinch + tap" -- so it is one row, not two.
 const GESTURE_LABEL = { pinch: "Pinch & Spread" };
 
-function GestureRow({ b, actions, onPick, dev, extra }) {
+function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
   // Constrain the dropdown to what this gesture's device field accepts.
   const usable = actions.filter((a) => okForKind(a.actionType, b.fieldKind));
   const known = usable.some((a) => a.code === (b.actionCode || ""));
@@ -82,7 +83,11 @@ function GestureRow({ b, actions, onPick, dev, extra }) {
     ? { cls: "axis", text: "axis", title: "Scroll/pointer routing — writing this is not confirmed yet." }
     : { cls: "dbonly", text: "app only", title: "No device field for this gesture yet — edits stay in the app until confirmed." };
   return (
-    <div className="skp-row" style={{ cursor: "default" }}>
+    <div
+      className={"skp-row" + (selected ? " selected" : "")}
+      style={onSelect ? undefined : { cursor: "default" }}
+      onClick={onSelect ? () => onSelect(b.id) : undefined}
+    >
       <span className="skp-beh" style={{ textTransform: GESTURE_LABEL[b.gesture] ? "none" : "capitalize" }}>
         {GESTURE_LABEL[b.gesture] || (b.gesture || "").replace(/_/g, " ")}
       </span>
@@ -159,6 +164,8 @@ export default function Modules() {
   const device = useSyncExternalStore(subscribeDeviceState, getDeviceState).modules;
   const [reading, setReading] = useState(false);
   const [busy, setBusy] = useState(null);   // an axis edit in flight
+  const [catalog, setCatalog] = useState(null);
+  const [selectedBindingId, setSelectedBindingId] = useState(null);
   const [variants, setVariants] = useState([]);
   const [adding, setAdding] = useState(false);      // the "add profile" dropdown
   const [renaming, setRenaming] = useState(null);   // config id being renamed
@@ -188,6 +195,7 @@ export default function Modules() {
     }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { api.actions().then(setCatalog).catch(() => {}); }, []);
 
   // Read the module configs off the keyboard and diff them against the app. Read-only:
   // the app has always shown only its own stored bindings, so until this runs there is no
@@ -313,6 +321,32 @@ export default function Modules() {
   }, [modules]);
 
   const config = modules.find((m) => m.id === selectedId) || null;
+
+  // The gesture row the palette is currently binding.
+  const selectedBinding = useMemo(
+    () => (config?.bindings || []).find((b) => b.id === selectedBindingId) || null,
+    [config, selectedBindingId]
+  );
+
+  // Only offer what this gesture's device field can actually hold. Without this the Extended tab
+  // would show TRANSPARENT and BT_DEVICE_1 on a module gesture, neither of which it can take.
+  const paletteFilter = useCallback(
+    (a) => selectedBinding ? okForKind(a.actionType, selectedBinding.fieldKind) : false,
+    [selectedBinding]
+  );
+
+  async function pickFromPalette(pick) {
+    if (!selectedBinding) return;
+    // The catalog says none is DISABLE/"none"; module_bindings stores "" for unbound. Writing
+    // the literal "DISABLE" would render as DISABLE and mean nothing to the flash encoder.
+    const actionCode = pick.actionType === "none" ? "" : pick.actionCode;
+    setBusy("bind");
+    try {
+      await api.setModuleBinding({ bindingId: selectedBinding.id, actionCode,
+                                   actionType: pick.actionType });
+      await load();
+    } catch (e) { setErr(e.message); } finally { setBusy(null); }
+  }
   // Which profile is LIVE is decided by the read's content match, not by sharing the device's
   // uuid: an edited-but-unflashed profile keeps the uuid while the board runs something else.
   const liveIds = useMemo(() => {
@@ -515,7 +549,10 @@ export default function Modules() {
                     <>
                       <div className="skp-head"><span>Gesture</span><span className="skp-arrow">→</span><span>Action</span></div>
                       {axes.map((b) => (
-                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding} dev={deviceByGesture[b.behavior]} />
+                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding}
+                          dev={deviceByGesture[b.behavior]}
+                          selected={selectedBindingId === b.id}
+                          onSelect={setSelectedBindingId} />
                       ))}
                     </>
                   )}
@@ -538,6 +575,8 @@ export default function Modules() {
                           <GestureRow key={b.id} actions={actions} onPick={pickBinding}
                             dev={deviceByGesture[b.behavior]}
                             b={{ ...b, pairedSplit: !!pair?.split }}
+                            selected={selectedBindingId === b.id}
+                            onSelect={pair?.split ? undefined : setSelectedBindingId}
                             extra={pair && (
                               <label className="split-toggle" title="Bind each direction separately.">
                                 <input type="checkbox" checked={!!pair.split} disabled={!!busy}
@@ -588,6 +627,19 @@ export default function Modules() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Rendered unconditionally and never keyed: a conditional render or a key would remount
+          the palette on every pick and reset its tab back to the virtual keyboard. */}
+      <div className="editor-bottom modules-bottom">
+        <ActionPalette
+          catalog={catalog}
+          context="module"
+          disabled={!selectedBinding}
+          disabledHint="Select a gesture above to bind it."
+          filter={paletteFilter}
+          onPick={pickFromPalette}
+        />
       </div>
     </div>
   );
