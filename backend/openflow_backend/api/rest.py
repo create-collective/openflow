@@ -605,20 +605,23 @@ def _build_entries(read: dict) -> list:
     try:
         configs = {r["id"]: dict(r) for r in
                    conn.execute("SELECT id, name, type FROM module_configs")}
-        # Keyed by behavior for plain rows and by (behavior, direction) for the per-half rows a
-        # split writes. Collapsing on behavior alone made the two halves overwrite each other,
-        # so whichever row the query happened to return last became "the" app value.
+        # Keyed by behavior for the row the UI renders, and by (behavior, direction) for the
+        # per-half rows a split writes. Collapsing on behavior alone made the two halves
+        # overwrite each other, so whichever row the query happened to return last became "the"
+        # app value -- and on a split axis that is one of the halves, not the combined row.
         bindings = {}
         for r in conn.execute("SELECT module_config_id, behavior, action_code, direction "
                               "FROM module_bindings"):
+            cfg = configs.get(r["module_config_id"])
             code = r["action_code"] or ""
             d = bindings.setdefault(r["module_config_id"], {})
-            d[r["behavior"]] = r["action_code"]
-            # A plain row also indexes under its direction, which is where the axis half of a
-            # split lives. Every ordinary row carries "+" too, so this is additive: the plain
-            # lookup keeps working and the axis loop gets the override it needs.
-            if code and " - " not in code and r["direction"] in ("-", "+"):
+            is_half = (cfg is not None
+                       and r["behavior"] in module_fields.axis_halves(cfg["type"])
+                       and code and " - " not in code and r["direction"] in ("-", "+"))
+            if is_half:
                 d[(r["behavior"], r["direction"])] = code
+            else:
+                d[r["behavior"]] = r["action_code"]
     finally:
         conn.close()
 
@@ -684,14 +687,25 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
 
     for gesture, half in sorted(module_fields.axis_halves(module_type).items()):
         names = [p.strip() for p in half["default"].split(" - ")][1:]
-        for sign, fallback in zip(("-", "+"), names + [None, None]):
+        combined = app_bindings.get(gesture)      # the single row the UI renders for the axis
+        for sign, dflt in zip(("-", "+"), names + [None, None]):
             idx = half[sign]
             typ, val = fields.get(idx, (None, b""))
             device = _decode_field(module_type, idx, typ, val)
-            # An unsplit half carries the motion the encoder writes for it, which is the
-            # gesture's own default -- the combined row's text is the app's label for the pair,
-            # not a separately encodable value.
-            app = app_bindings.get((gesture, sign)) or fallback
+            app = app_bindings.get((gesture, sign))
+            if app is None:
+                # What this half is expected to hold comes from the combined row, not from an
+                # assumed default. A profile whose axis is UNBOUND says so with an empty row,
+                # and answering "MOUSE_LEFT" for it made a capture of a board that really has
+                # nothing there differ from the board forever -- so it could never be marked
+                # live, and every read minted another copy of it.
+                if combined is None:
+                    app = dflt                                    # no row at all: stock motion
+                elif " - " in str(combined):
+                    pair = [p.strip() for p in str(combined).split(" - ")][1:]
+                    app = pair[0] if sign == "-" else (pair[1] if len(pair) > 1 else None)
+                else:
+                    app = combined or None
             same = _same_action(device, app)
             differs += 0 if same else 1
             gestures.append({"gesture": gesture, "half": sign, "field": idx, "device": device,

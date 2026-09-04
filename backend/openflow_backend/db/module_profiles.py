@@ -292,10 +292,20 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
                 rows.pop((gesture, "-"), None)
                 rows.pop((gesture, "+"), None)
                 names = [x.strip() for x in h["default"].split(" - ")][1:]
-                extra.append((gesture, "+", h["default"], "value"))
-                for sign, dflt in zip(("-", "+"), names):
-                    code = axis_seen.get((gesture, sign))
-                    if code and code != dflt:
+                got = [axis_seen.get((gesture, sign)) for sign in ("-", "+")]
+                if got == names:
+                    # Stock motion in both halves: one combined row, exactly as the app writes
+                    # an unsplit axis.
+                    extra.append((gesture, "+", h["default"], "value"))
+                    continue
+                # Anything else -- a half split onto a key, an inverted selector, or a field
+                # the board leaves EMPTY -- is recorded as it is. Writing the default pair here
+                # claimed a motion the keyboard does not have: the Touch slot really does hold
+                # nothing for 1-finger pointer motion, and a capture that said MOUSE_LEFT could
+                # never match the board it was taken from.
+                extra.append((gesture, "+", "", "none"))
+                for sign, code in zip(("-", "+"), got):
+                    if code:
                         extra.append((gesture, sign, code, "key"))
             flat = [(g, d, c, t) for (g, d), (c, t) in rows.items()] + extra
             for gesture, direction, code, atype in sorted(flat):

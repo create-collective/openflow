@@ -339,8 +339,12 @@ def test_a_capture_keeps_both_halves_and_stays_idempotent():
             "WHERE module_config_id=? AND behavior='vertical:track'", (made[0]["id"],))]
         assert ("A", "-") in rows, f"the minus half was lost: {rows}"
         assert ("B", "+") in rows, f"the plus half was lost: {rows}"
-        assert ("mouse - MOUSE_DOWN - MOUSE_UP", "+") in rows, \
-            f"no combined row, so the axis would vanish from the UI: {rows}"
+        # The axis still has a row the UI can render -- get_modules() hides half rows and
+        # renders the combined one, so an axis with only halves disappears from the page.
+        # It is EMPTY rather than the default pair: the halves are what this axis does now,
+        # and naming a motion neither half carries is what stopped a capture ever matching.
+        combined = [c for c, d in rows if d == "+" and c not in ("A", "B")]
+        assert combined == [""], f"expected one empty combined row, got {rows}"
         assert _run(conn)["captured"] == [], "a re-read must not capture the capture"
         print("  a split axis survives capture, and the capture matches on re-read")
     finally:
@@ -383,3 +387,41 @@ def test_deleting_a_profile_a_bay_still_uses_says_so_instead_of_dropping_the_con
     assert conn.execute("SELECT COUNT(*) c FROM module_configs WHERE id=?",
                         (UUID,)).fetchone()["c"] == 1, "nothing may be deleted on refusal"
     print(f"  refused with: {msg[:70]}...")
+
+
+def test_a_capture_of_an_axis_the_board_leaves_empty_can_still_be_live():
+    """The Touch slot really does hold nothing for 1-finger pointer motion -- fields 0x05-0x08
+    are type 0x07. The capture wrote the stock pair there anyway, so it claimed a motion the
+    keyboard does not have: it differed from the board it was taken FROM on every subsequent
+    read, could never be marked live, and minted another copy each time.
+
+    Modelled here on a Track, whose axes work the same way.
+    """
+    global _fields
+    keep = _fields
+
+    def _empty_axes():
+        out = [f for f in keep() if int(f["field"]) not in
+               {h[s] for h in module_fields.axis_halves(TYPE).values() for s in ("-", "+")}]
+        for h in module_fields.axis_halves(TYPE).values():
+            for sign in ("-", "+"):
+                out.append({"field": h[sign], "type": 0x07, "value": ""})
+        return out
+
+    _fields = _empty_axes
+    try:
+        conn = _db(dict(_DEVICE))
+        made = _run(conn)["captured"]
+        assert len(made) == 1, made
+        rows = [(r["action_code"], r["direction"]) for r in conn.execute(
+            "SELECT action_code, direction FROM module_bindings "
+            "WHERE module_config_id=? AND behavior='vertical:track'", (made[0]["id"],))]
+        assert rows == [("", "+")], f"an empty axis must be captured as empty: {rows}"
+
+        out = _run(conn)
+        assert out["captured"] == [], "the capture still does not match the board it came from"
+        assert out["modules"][0]["matched"] == made[0]["id"], \
+            "the capture is what the board runs, so it is the one that should read as live"
+        print("  an axis the board leaves empty is captured as empty, and reads back live")
+    finally:
+        _fields = keep
