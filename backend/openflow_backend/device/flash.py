@@ -701,3 +701,25 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
             continue
         desired.modules[slot] = cfg
     return layout
+
+
+def module_field_write(slot: int, field: int, type_byte: int, value: bytes) -> WriteOp:
+    """Write ONE module-config field, whatever record type it holds.
+
+    module_gesture_write only emits keypresses and module_button_write only mouse masks, so
+    neither can put an arbitrary record in a named field -- which is the one thing needed to test
+    what a field ACCEPTS. A gesture field is not type-locked: the same index holds a keypress or
+    a two-word record depending on the type byte, proved by a Track profile whose buttons were
+    bound to letters where stock holds mouse masks.
+
+    Sparse: only this field is sent, so the rest of the slot is left exactly as it was. The
+    caller is responsible for having read the slot first and for being able to put it back.
+    """
+    if not 0 <= field <= 0xFF:
+        raise ValueError(f"field out of range: {field}")
+    if len(value) > 0xFF:
+        raise ValueError(f"value too long for one record: {len(value)} bytes")
+    rec = R.encode_module_field(field, value, type_byte)
+    return WriteOp(R.WRITE_MODULE_CONFIG_DATA, R.encode_module_config(slot, [rec]),
+                   f"module slot {slot} field 0x{field:02x} "
+                   f"(type 0x{type_byte:02x}, {len(value)} byte(s))")
