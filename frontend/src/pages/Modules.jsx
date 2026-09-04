@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useSyncExternalStore } from "react";
 import { subscribeDeviceState, getDeviceState, setModuleRead } from "../lib/deviceState";
 import { useSearchParams } from "react-router-dom";
-import AxisControls from "../components/AxisControls";
 import ActionPalette from "../components/ActionPalette";
 import { shortcutLabel, shortcutTooltip, shortcutInfo,
          setShortcutTableFromActions } from "../lib/shortcutNames";
@@ -322,6 +321,63 @@ export default function Modules() {
 
   const config = modules.find((m) => m.id === selectedId) || null;
 
+  // An axis gesture is a direction PAIR, like the dial -- one row until split, then two.
+  // Its `split` from the server is derived from whether a half holds a key, so it cannot
+  // represent "split, nothing bound yet", which is the state you are in the instant you tick
+  // the box. Hence the open set is local, seeded from the server's view.
+  const axisFor = (behavior) => (config?.axes || []).find((a) => a.behavior === behavior);
+  const [openAxes, setOpenAxes] = useState(() => new Set());
+  useEffect(() => {
+    setOpenAxes(new Set((config?.axes || []).filter((a) => a.split).map((a) => a.behavior)));
+  }, [config]);
+
+  function toggleAxisSplit(axis, on) {
+    setOpenAxes((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(axis.behavior); else next.delete(axis.behavior);
+      return next;
+    });
+    // Closing it puts both directions back to motion. Nothing is stashed: the combined record
+    // is rebuilt from the axis category and its direction signs.
+    if (!on) {
+      setAxisHalf(axis.behavior, "-", null);
+      setAxisHalf(axis.behavior, "+", null);
+    }
+  }
+
+  const AXIS_HALF_LABEL = {
+    vertical: ["Up", "Down"], horizontal: ["Left", "Right"],
+    rotate: ["Rotate left", "Rotate right"],
+  };
+
+  function axisHalfRows(axis) {
+    const head = (axis.behavior || "").split(":")[0];
+    const [minusName, plusName] = AXIS_HALF_LABEL[head] || ["–", "+"];
+    const keyActions = actions.filter((a) => a.actionType === "key" || a.actionType === "keypress");
+    // With invert on, name the direction the half NOW drives rather than a stale label.
+    const motionOf = (side) => {
+      const d = side === "-" ? axis.defaultMinus : axis.defaultPlus;
+      const eff = axis.invert ? (side === "-" ? axis.defaultPlus : axis.defaultMinus) : d;
+      return (eff || "").replace(/_/g, " ").toLowerCase();
+    };
+    return ["-", "+"].map((side) => (
+      <div className="skp-row" key={axis.behavior + side} style={{ cursor: "default" }}>
+        <span className="skp-beh" style={{ textTransform: "none", paddingLeft: 18 }}>
+          {side === "-" ? minusName : plusName}
+        </span>
+        <span className="skp-arrow">→</span>
+        <select className="mac-input mod-action"
+          value={(side === "-" ? axis.minus : axis.plus) || ""}
+          disabled={!!busy}
+          title={`device field 0x${axis.fields[side].toString(16).padStart(2, "0")}`}
+          onChange={(e) => setAxisHalf(axis.behavior, side, e.target.value || null)}>
+          <option value="">{motionOf(side) ? `motion — ${motionOf(side)}` : "motion"}</option>
+          {keyActions.map((a) => <option key={a.code} value={a.code}>{a.label || a.code}</option>)}
+        </select>
+      </div>
+    ));
+  }
+
   // The gesture row the palette is currently binding.
   const selectedBinding = useMemo(
     () => (config?.bindings || []).find((b) => b.id === selectedBindingId) || null,
@@ -535,16 +591,6 @@ export default function Modules() {
                 <div style={{ maxWidth: 620 }}>
                   <ModuleVisual type={config.type} activeButton={curTarget} />
 
-                  {(config.axes || []).length > 0 && (
-                    <>
-                      <div className="skp-head"><span>Motion</span><span className="skp-arrow">→</span><span>Per direction</span></div>
-                      {config.axes.map((a) => (
-                        <AxisControls key={a.behavior} axis={a} actions={actions} busy={!!busy}
-                          onSetHalf={setAxisHalf} onInvert={setAxisInvert} />
-                      ))}
-                    </>
-                  )}
-
                   {axes.length > 0 && (
                     <>
                       <div className="skp-head"><span>Gesture</span><span className="skp-arrow">→</span><span>Action</span></div>
@@ -568,22 +614,30 @@ export default function Modules() {
                       </div>
                       {targetBindings.map((b) => {
                         const pair = pairFor(b.behavior);
-                        // A paired gesture is ONE row until it is split. Its two halves stay
-                        // hidden until then, and the combined row carries the toggle.
+                        const axis = axisFor(b.behavior);
+                        // A directional gesture is ONE row until it is split, whether its halves
+                        // are separate bindings (the dial) or the two ends of an axis pair
+                        // (1-finger vertical/horizontal). Same row, same checkbox either way.
                         if (isPairHalf(b.behavior) && !pairForHalf(b.behavior)?.split) return null;
+                        const isSplit = axis ? openAxes.has(b.behavior) : !!pair?.split;
                         return (
-                          <GestureRow key={b.id} actions={actions} onPick={pickBinding}
-                            dev={deviceByGesture[b.behavior]}
-                            b={{ ...b, pairedSplit: !!pair?.split }}
-                            selected={selectedBindingId === b.id}
-                            onSelect={pair?.split ? undefined : setSelectedBindingId}
-                            extra={pair && (
-                              <label className="split-toggle" title="Bind each direction separately.">
-                                <input type="checkbox" checked={!!pair.split} disabled={!!busy}
-                                  onChange={(e) => toggleSplit(pair, b, e.target.checked)} />
-                                split
-                              </label>
-                            )} />
+                          <Fragment key={b.id}>
+                            <GestureRow actions={actions} onPick={pickBinding}
+                              dev={deviceByGesture[b.behavior]}
+                              b={{ ...b, pairedSplit: isSplit }}
+                              selected={selectedBindingId === b.id}
+                              onSelect={isSplit ? undefined : setSelectedBindingId}
+                              extra={(pair || axis) && (
+                                <label className="split-toggle" title="Bind each direction separately.">
+                                  <input type="checkbox" checked={isSplit} disabled={!!busy}
+                                    onChange={(e) => axis
+                                      ? toggleAxisSplit(axis, e.target.checked)
+                                      : toggleSplit(pair, b, e.target.checked)} />
+                                  split
+                                </label>
+                              )} />
+                            {axis && isSplit && axisHalfRows(axis)}
+                          </Fragment>
                         );
                       })}
                     </>
