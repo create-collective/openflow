@@ -326,6 +326,14 @@ export default function Modules() {
   // represent "split, nothing bound yet", which is the state you are in the instant you tick
   // the box. Hence the open set is local, seeded from the server's view.
   const axisFor = (behavior) => (config?.axes || []).find((a) => a.behavior === behavior);
+  // An axis half is addressed by behavior + direction rather than by a binding id, so it needs a
+  // selection id of its own to be a palette target.
+  const axisHalfId = (behavior, side) => `axis:${behavior}:${side}`;
+  const parseAxisHalfId = (id) => {
+    if (typeof id !== "string" || !id.startsWith("axis:")) return null;
+    const side = id.slice(-1);
+    return { behavior: id.slice(5, -2), side };
+  };
   const [openAxes, setOpenAxes] = useState(() => new Set());
   useEffect(() => {
     setOpenAxes(new Set((config?.axes || []).filter((a) => a.split).map((a) => a.behavior)));
@@ -360,29 +368,46 @@ export default function Modules() {
       const eff = axis.invert ? (side === "-" ? axis.defaultPlus : axis.defaultMinus) : d;
       return (eff || "").replace(/_/g, " ").toLowerCase();
     };
-    return ["-", "+"].map((side) => (
-      <div className="skp-row" key={axis.behavior + side} style={{ cursor: "default" }}>
-        <span className="skp-beh" style={{ textTransform: "none", paddingLeft: 18 }}>
-          {side === "-" ? minusName : plusName}
-        </span>
-        <span className="skp-arrow">→</span>
-        <select className="mac-input mod-action"
-          value={(side === "-" ? axis.minus : axis.plus) || ""}
-          disabled={!!busy}
-          title={`device field 0x${axis.fields[side].toString(16).padStart(2, "0")}`}
-          onChange={(e) => setAxisHalf(axis.behavior, side, e.target.value || null)}>
-          <option value="">{motionOf(side) ? `motion — ${motionOf(side)}` : "motion"}</option>
-          {keyActions.map((a) => <option key={a.code} value={a.code}>{a.label || a.code}</option>)}
-        </select>
-      </div>
-    ));
+    return ["-", "+"].map((side) => {
+      // A half is not a binding row, so it has no binding id -- it is addressed by behavior and
+      // direction. Give it a synthetic selection id so the palette can target it like any other
+      // row, and let the dropdown stay as the quick path.
+      const selId = axisHalfId(axis.behavior, side);
+      const code = side === "-" ? axis.minus : axis.plus;
+      return (
+        <div className={"skp-row" + (selectedBindingId === selId ? " selected" : "")}
+          key={axis.behavior + side}
+          onClick={() => setSelectedBindingId(selId)}>
+          <span className="skp-beh" style={{ textTransform: "none", paddingLeft: 18 }}>
+            {side === "-" ? minusName : plusName}
+          </span>
+          <span className="skp-arrow">→</span>
+          <select className="mac-input mod-action"
+            value={code || ""}
+            disabled={!!busy}
+            title={`device field 0x${axis.fields[side].toString(16).padStart(2, "0")}`}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setAxisHalf(axis.behavior, side, e.target.value || null)}>
+            <option value="">{motionOf(side) ? `motion — ${motionOf(side)}` : "motion"}</option>
+            {keyActions.map((a) => <option key={a.code} value={a.code}>{a.label || a.code}</option>)}
+          </select>
+        </div>
+      );
+    });
   }
 
   // The gesture row the palette is currently binding.
-  const selectedBinding = useMemo(
-    () => (config?.bindings || []).find((b) => b.id === selectedBindingId) || null,
-    [config, selectedBindingId]
-  );
+  const selectedBinding = useMemo(() => {
+    const half = parseAxisHalfId(selectedBindingId);
+    if (half) {
+      // Both halves of every axis pair we have measured accept a keypress -- the C7 probe wrote
+      // one into the dial's field and it fired -- so the palette is filtered as keypress.
+      const axis = (config?.axes || []).find((a) => a.behavior === half.behavior);
+      return axis ? { axisHalf: half, fieldKind: "keypress" } : null;
+    }
+    return (config?.bindings || []).find((b) => b.id === selectedBindingId) || null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config, selectedBindingId]);
 
   // Only offer what this gesture's device field can actually hold. Without this the Extended tab
   // would show TRANSPARENT and BT_DEVICE_1 on a module gesture, neither of which it can take.
@@ -398,8 +423,16 @@ export default function Modules() {
     const actionCode = pick.actionType === "none" ? "" : pick.actionCode;
     setBusy("bind");
     try {
-      await api.setModuleBinding({ bindingId: selectedBinding.id, actionCode,
-                                   actionType: pick.actionType });
+      if (selectedBinding.axisHalf) {
+        // A half is written through the axis endpoint: it is one direction of a field pair, not
+        // a binding row, and clearing it returns that direction to motion rather than to unbound.
+        const { behavior, side } = selectedBinding.axisHalf;
+        await api.setAxisSplit({ configId: selectedId, behavior, half: side,
+                                 actionCode: actionCode || null });
+      } else {
+        await api.setModuleBinding({ bindingId: selectedBinding.id, actionCode,
+                                     actionType: pick.actionType });
+      }
       await load();
     } catch (e) { setErr(e.message); } finally { setBusy(null); }
   }
@@ -628,7 +661,11 @@ export default function Modules() {
                               selected={selectedBindingId === b.id}
                               onSelect={isSplit ? undefined : setSelectedBindingId}
                               extra={(pair || axis) && (
-                                <label className="split-toggle" title="Bind each direction separately.">
+                                // The row itself selects for the palette, so the toggle has to
+                                // stop the click reaching it -- otherwise ticking split just
+                                // selects the row.
+                                <label className="split-toggle" title="Bind each direction separately."
+                                  onClick={(e) => e.stopPropagation()}>
                                   <input type="checkbox" checked={isSplit} disabled={!!busy}
                                     onChange={(e) => axis
                                       ? toggleAxisSplit(axis, e.target.checked)
