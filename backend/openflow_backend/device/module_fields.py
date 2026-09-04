@@ -245,3 +245,24 @@ PAIRED_GESTURES = {
 def paired_gestures(module_type: str) -> dict:
     """{combined gesture: {"-": half gesture, "+": half gesture}}."""
     return PAIRED_GESTURES.get((module_type or "").upper(), {})
+
+
+def pair_halves(module_type: str) -> dict:
+    """{half gesture: (combined gesture, sign)} -- the inverse of paired_gestures."""
+    return {g: (combined, sign)
+            for combined, halves in paired_gestures(module_type).items()
+            for sign, g in halves.items()}
+
+
+def split_pair(code):
+    """The two direction values in a combined binding, as (minus, plus).
+
+    Two spellings are in use and both have to parse: a motion axis writes
+    "mouse - MOUSE_DOWN - MOUSE_UP" while the dial writes "C_VOL_DOWN - C_VOL_UP" with no
+    leading kind. Taking the LAST TWO parts handles both -- dropping the first part instead
+    reads the dial's minus value as its plus and loses the other.
+    """
+    if not code or " - " not in str(code):
+        return (None, None)
+    parts = [p.strip() for p in str(code).split(" - ")]
+    return (parts[-2], parts[-1]) if len(parts) >= 2 else (None, None)

@@ -460,3 +460,62 @@ def test_the_flashable_badge_is_false_for_an_action_that_cannot_be_encoded():
     assert module_fields.gesture_has_device_field("TUNE", beh), "the field exists"
     assert not remap.encodable("LED_BRIGHTNESS_UP"), "but the action does not encode"
     print("  field present, action unencodable -> not flashable")
+
+
+def test_a_combined_axis_row_is_still_flashable():
+    """`flashable` gained an "is this action encodable" test so LED brightness would stop
+    promising a write it never made. Applied to a COMBINED row it takes the badge off every
+    axis on every module: "mouse - SCROLL_UP - SCROLL_DOWN" is not a single action and does
+    not encode as one, but the gesture reaches the device as its two halves."""
+    from openflow_backend.device import remap
+
+    for combined in ("mouse - SCROLL_UP - SCROLL_DOWN", "mouse - MOUSE_LEFT - MOUSE_RIGHT",
+                     "C_VOL_DOWN - C_VOL_UP"):
+        assert not remap.encodable(combined), "a pair is not a single encodable action"
+        assert " - " in combined, "which is exactly why the badge must not test it as one"
+    print("  combined rows are exempt from the single-action encoding test")
+
+
+def test_the_dial_is_one_gesture_over_two_fields():
+    """0x22 (clockwise) and 0x23 (counter-clockwise) are the two halves of rotate:tune:dial,
+    and the app may hold the dial as ONE combined row, "C_VOL_DOWN - C_VOL_UP".
+
+    Two things went wrong while that was not joined up. The diff compared each half against a
+    row the profile does not have and reported the board's own volume bindings as drift on
+    every read; and the flash wrote neither field, because the halves looked empty and the
+    combined row matched no writable field -- so the stock Tune profile's dial silently never
+    reached the keyboard.
+    """
+    from openflow_backend.device import module_fields as MF
+
+    assert MF.split_pair("C_VOL_DOWN - C_VOL_UP") == ("C_VOL_DOWN", "C_VOL_UP")
+    # Both spellings must parse: a motion axis carries a leading kind, the dial does not.
+    assert MF.split_pair("mouse - MOUSE_DOWN - MOUSE_UP") == ("MOUSE_DOWN", "MOUSE_UP")
+    assert MF.split_pair("") == (None, None) and MF.split_pair("F17") == (None, None)
+
+    halves = MF.pair_halves("TUNE")
+    assert halves["clockwise_rotate:tune:dial"] == ("rotate:tune:dial", "+")
+    assert halves["counter_clockwise_rotate:tune:dial"] == ("rotate:tune:dial", "-")
+
+    # Clockwise is the PLUS half and holds the second value: C_VOL_UP, matching the board.
+    w = MF.writable_fields("TUNE")
+    assert w["clockwise_rotate:tune:dial"] == 0x22
+    assert w["counter_clockwise_rotate:tune:dial"] == 0x23
+    print("  dial halves resolve to 0x22/0x23 with clockwise as the plus half")
+
+
+def test_a_profile_holding_only_the_combined_dial_row_matches_the_board():
+    """The regression this all came from: `Naya Tune Mac/Win` carries the dial only as the
+    combined row, and read as 2 gestures adrift from the board on every single read."""
+    from openflow_backend.api import rest as R
+
+    fields = {0x22: (0x01, bytes.fromhex("e9000c00")),    # C_VOL_UP
+              0x23: (0x01, bytes.fromhex("ea000c00"))}    # C_VOL_DOWN
+    app = {"rotate:tune:dial": "C_VOL_DOWN - C_VOL_UP"}
+    rows, differs = R._compare("TUNE", fields, app)
+    dial = {g["gesture"]: g for g in rows if "rotate" in g["gesture"]}
+    assert dial["clockwise_rotate:tune:dial"]["app"] == "C_VOL_UP"
+    assert dial["counter_clockwise_rotate:tune:dial"]["app"] == "C_VOL_DOWN"
+    assert not dial["clockwise_rotate:tune:dial"]["differs"]
+    assert not dial["counter_clockwise_rotate:tune:dial"]["differs"]
+    print("  the combined row answers for both halves")

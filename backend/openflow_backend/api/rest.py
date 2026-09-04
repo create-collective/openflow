@@ -676,10 +676,19 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
     per-half overrides a split writes.
     """
     gestures, differs = [], 0
+    # The Tune dial is TWO fields (0x22 clockwise, 0x23 counter-clockwise) but the app can
+    # express it as one combined row, "C_VOL_DOWN - C_VOL_UP". Without this, a profile that
+    # only carries the combined row compared each half against nothing and reported the
+    # board's own volume bindings as drift, on every read, forever.
+    pair_of = module_fields.pair_halves(module_type)
     for gesture, idx in sorted(module_fields.writable_fields(module_type).items()):
         typ, val = fields.get(idx, (None, b""))
         device = _decode_field(module_type, idx, typ, val)
         app = app_bindings.get(gesture)
+        if not app and gesture in pair_of:
+            combined, sign = pair_of[gesture]
+            minus, plus = module_fields.split_pair(app_bindings.get(combined))
+            app = minus if sign == "-" else plus
         same = _same_action(device, app)
         differs += 0 if same else 1
         gestures.append({"gesture": gesture, "field": idx, "device": device,
@@ -702,8 +711,8 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
                 if combined is None:
                     app = dflt                                    # no row at all: stock motion
                 elif " - " in str(combined):
-                    pair = [p.strip() for p in str(combined).split(" - ")][1:]
-                    app = pair[0] if sign == "-" else (pair[1] if len(pair) > 1 else None)
+                    minus, plus = module_fields.split_pair(combined)
+                    app = minus if sign == "-" else plus
                 else:
                     app = combined or None
             same = _same_action(device, app)

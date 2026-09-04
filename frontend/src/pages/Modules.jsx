@@ -83,8 +83,11 @@ function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
     ? { cls: "dbonly", text: "experimental", title: "The Track has one field per button and no room for a hold. NayaFlow lets you set one and silently overwrites the tap; we do not." }
     : b.flashable
     ? { cls: "flashable", text: "flashable", title: "This gesture is stored on the device and can be flashed." }
-    : b.fieldKind === "axis"
-    ? { cls: "axis", text: "axis", title: "Scroll/pointer routing — writing this is not confirmed yet." }
+    // There used to be an "axis" rung here, reading "writing this is not confirmed yet". It
+    // dated from before axis writing WAS confirmed -- it has since been flashed and read back
+    // on hardware -- so it only ever fired when something else was wrong, and told the user
+    // about a field kind rather than about whether their edit reaches the keyboard. Which is
+    // the only thing the badge is for; `fieldKind` still earns its keep filtering the palette.
     : { cls: "dbonly", text: "app only", title: "No device field for this gesture yet — edits stay in the app until confirmed." };
   return (
     <div

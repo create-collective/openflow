@@ -689,8 +689,16 @@ def get_modules() -> dict:
                 # field to put it in, and an action that can be encoded into one. LED
                 # brightness has the field and no encoding -- it was badged flashable and
                 # silently never written.
-                flashable = (module_fields.gesture_has_device_field(m["type"], b["behavior"] or "")
-                             and (not b["action_code"] or remap.encodable(b["action_code"])))
+                #
+                # The encoding test applies to a SINGLE action only. A combined row --
+                # "mouse - SCROLL_UP - SCROLL_DOWN", or the dial's "C_VOL_DOWN - C_VOL_UP" --
+                # is not one action and does not encode as one, but the gesture very much
+                # reaches the device, as its two halves. Testing it as a single code took the
+                # badge off every axis row on every module.
+                code = b["action_code"] or ""
+                flashable = module_fields.gesture_has_device_field(m["type"], b["behavior"] or "")
+                if code and " - " not in code and not remap.encodable(code):
+                    flashable = False
                 bindings.append({
                     "id": b["id"],
                     "behavior": b["behavior"],

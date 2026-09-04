@@ -669,6 +669,18 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
         else:
             bindings.setdefault(cid, {})[beh] = r["action_code"]
 
+    # The Tune dial is a PAIR: two fields, and the app may hold it as one combined row
+    # ("C_VOL_DOWN - C_VOL_UP") rather than as the two half gestures. Without expanding that,
+    # the stock Tune profile wrote nothing to either dial field -- the halves looked empty and
+    # the combined row matched no writable field, so the dial silently never flashed.
+    for cid, rows in bindings.items():
+        for combined, halves in module_fields.paired_gestures(types.get(cid) or "").items():
+            minus, plus = module_fields.split_pair(rows.get(combined))
+            for sign, code in (("-", minus), ("+", plus)):
+                half = halves[sign]
+                if code and not rows.get(half):   # an explicit half wins over the pair
+                    rows[half] = code
+
     device_list = [{"slot": slot, "uuid": uuid}
                    for uuid, slot in (mod_read.get("by_uuid") or {}).items()]
     device_slots = {}
