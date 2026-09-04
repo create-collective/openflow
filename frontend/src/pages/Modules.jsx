@@ -108,14 +108,19 @@ function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
       <span className="skp-arrow" title={shortcutTooltip(b.actionCode)}>→</span>
       <select
         className="mac-input mod-action"
-        title={shortcutInfo(b.actionCode) ? shortcutTooltip(b.actionCode) : undefined}
         value={b.actionCode || ""}
-        disabled={unsupported}
+        // A split parent is disabled too: its value lives on the half rows below, so editing it
+        // here would fight them.
+        disabled={unsupported || splitParent}
+        // One title, resolved in priority order. Two `title` attributes silently kept only the
+        // last, so the shortcut tooltip was dead on every row.
         title={
-          b.pairedSplit
-            ? "Split is on — each direction is bound separately below. Untick split to set one action for the whole gesture."
+          splitParent
+            ? "Split is on — each direction is set separately below. Untick split to give the whole gesture one action."
             : unsupported
             ? "The Track cannot store a hold — setting one would overwrite the tap."
+            : shortcutInfo(b.actionCode)
+            ? shortcutTooltip(b.actionCode)
             : undefined
         }
         onChange={(e) => onPick(b.id, opts.find((o) => o.code === e.target.value))}
