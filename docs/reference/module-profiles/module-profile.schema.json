@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/traviswye/NayaOS/docs/reference/module-profiles/module-profile.schema.json",
+  "title": "OpenFlow module profile",
+  "description": "One profile for a Naya Create module (Touch, Track, Tune or Float). This is the interchange format the Modules page imports and exports; it is deliberately not the shape of the database rows. See the three examples beside this file for a real profile of each type.",
+  "type": "object",
+  "required": ["moduleType", "bindings"],
+  "properties": {
+    "format": {
+      "const": "openflow.module-profile",
+      "description": "Marks the document as a module profile. Optional so a hand-written file is not rejected for missing it, but an importer will refuse a file that claims to be something else."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Format version. 1 is the only one so far."
+    },
+    "moduleType": {
+      "enum": ["TOUCH", "TRACK", "TUNE", "FLOAT"],
+      "description": "REQUIRED. Which module this profile is for, and therefore which section of the module list it lands in. It is not inferred from the gestures: a Touch and a Tune share gesture names, so guessing would quietly misfile the profile."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name. An import that collides with an existing name is numbered rather than overwriting, so importing twice gives you two profiles to compare."
+    },
+    "variant": {
+      "type": "string",
+      "description": "Which stock map this descends from, e.g. TRACK_LEFT or TRACK_RIGHT. It matters for Track, which is physically asymmetric: flipping the module to the other side reverses the button order and the scroll direction, so left and right ship different default maps. Either variant can occupy either bay.",
+      "examples": ["TOUCH_WINDOWS", "TRACK_LEFT", "TRACK_RIGHT", "TUNE"]
+    },
+    "settings": {
+      "type": "object",
+      "description": "Module settings by their correlation id, as strings (speeds, thresholds, flags). Absent when the module has none.",
+      "additionalProperties": { "type": "string" },
+      "examples": [{ "MS-2": "50", "MS-3": "10", "MS-4": "50" }]
+    },
+    "bindings": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "One entry per gesture, keyed by the gesture's behavior string (\"tap:touch:1_finger\", \"vertical:tune:1_finger\", \"rotate:tune:dial\"). Gestures the module does not have are ignored on import; a file whose gestures ALL belong to another module type is refused, on the assumption that moduleType is wrong.",
+      "additionalProperties": { "$ref": "#/$defs/binding" }
+    }
+  },
+  "$defs": {
+    "action": {
+      "type": "object",
+      "required": ["actionType", "actionCode"],
+      "properties": {
+        "actionType": {
+          "type": "string",
+          "description": "What kind of action the code is. \"none\" for unbound, \"key\" for a keyboard or consumer usage, \"mouse\" for a button, \"value\" for a direction PAIR, \"shortcut_alias\" for a chord, \"LED\" for an action the keyboard handles internally.",
+          "examples": ["none", "key", "mouse", "value", "shortcut_alias", "LED", "keypress"]
+        },
+        "actionCode": {
+          "type": "string",
+          "description": "The action itself: \"F17\", \"C_VOL_UP\", \"M1\", \"LGUI + TAB\". A \"value\" code names BOTH directions of a pair, minus first: \"mouse - SCROLL_UP - SCROLL_DOWN\" for a motion axis, \"C_VOL_DOWN - C_VOL_UP\" for the dial (the leading kind is optional -- the last two parts are the two directions). Empty string means unbound."
+        }
+      }
+    },
+    "binding": {
+      "allOf": [{ "$ref": "#/$defs/action" }],
+      "properties": {
+        "actionType": true,
+        "actionCode": true,
+        "invert": {
+          "type": "boolean",
+          "description": "Swap the two directions of a pair. On the device this is a selector swap, not a stored flag."
+        },
+        "threshold": { "type": "integer" },
+        "mode": { "type": "integer" },
+        "split": {
+          "type": "object",
+          "description": "Present only when the two halves of a direction pair are bound INDEPENDENTLY -- an axis or the dial with each direction on its own action. The combined actionCode above still names the pair, and each half here overrides one direction of it. A gesture with no `split` uses both directions of its combined code.",
+          "properties": {
+            "-": { "$ref": "#/$defs/action", "description": "Left, up, or counter-clockwise." },
+            "+": { "$ref": "#/$defs/action", "description": "Right, down, or clockwise." }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "format": "openflow.module-profile",
+      "version": 1,
+      "moduleType": "TUNE",
+      "name": "Tune with a split dial",
+      "settings": { "pointer_accel_on": "true" },
+      "bindings": {
+        "tap:tune:1_finger": { "actionType": "key", "actionCode": "F22" },
+        "rotate:tune:dial": {
+          "actionType": "value",
+          "actionCode": "C_VOL_DOWN - C_VOL_UP",
+          "split": {
+            "-": { "actionType": "key", "actionCode": "F23" },
+            "+": { "actionType": "key", "actionCode": "F24" }
+          }
+        },
+        "vertical:tune:1_finger": {
+          "actionType": "value",
+          "actionCode": "mouse - SCROLL_UP - SCROLL_DOWN"
+        }
+      }
+    }
+  ]
+}

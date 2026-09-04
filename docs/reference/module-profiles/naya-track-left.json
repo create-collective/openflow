@@ -1,0 +1,53 @@
+{
+  "format": "openflow.module-profile",
+  "version": 1,
+  "moduleType": "TRACK",
+  "name": "Naya Track Left",
+  "bindings": {
+    "hold:track:button_1": {
+      "actionType": "none",
+      "actionCode": ""
+    },
+    "hold:track:button_2": {
+      "actionType": "none",
+      "actionCode": ""
+    },
+    "hold:track:button_3": {
+      "actionType": "none",
+      "actionCode": ""
+    },
+    "hold:track:button_4": {
+      "actionType": "none",
+      "actionCode": ""
+    },
+    "horizontal:track": {
+      "actionType": "value",
+      "actionCode": "mouse - MOUSE_LEFT - MOUSE_RIGHT"
+    },
+    "rotate:track": {
+      "actionType": "value",
+      "actionCode": "mouse - SCROLL_UP - SCROLL_DOWN"
+    },
+    "tap:track:button_1": {
+      "actionType": "mouse",
+      "actionCode": "M1"
+    },
+    "tap:track:button_2": {
+      "actionType": "mouse",
+      "actionCode": "M3"
+    },
+    "tap:track:button_3": {
+      "actionType": "mouse",
+      "actionCode": "M2"
+    },
+    "tap:track:button_4": {
+      "actionType": "mouse",
+      "actionCode": "M4"
+    },
+    "vertical:track": {
+      "actionType": "value",
+      "actionCode": "mouse - MOUSE_DOWN - MOUSE_UP"
+    }
+  },
+  "variant": "TRACK_LEFT"
+}

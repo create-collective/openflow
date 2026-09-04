@@ -31,6 +31,8 @@ export const api = {
   createModuleProfile: (variant, name) => req("POST", "/rpc/create-module-profile", { variant, name }),
   renameModuleProfile: (configId, name) => req("POST", "/rpc/rename-module-profile", { configId, name }),
   deleteModuleProfile: (configId) => req("POST", "/rpc/delete-module-profile", { configId }),
+  exportModuleProfile: (configId) => req("POST", "/rpc/export-module-profile", { configId }),
+  importModuleProfile: (profile, name) => req("POST", "/rpc/import-module-profile", { profile, name }),
   // The only call that writes to the keyboard. The confirm token is required by the
   // backend, so an accidental call cannot flash.
   flash: (body = {}) => req("POST", "/rpc/flash", { confirm: "FLASH", ...body }),

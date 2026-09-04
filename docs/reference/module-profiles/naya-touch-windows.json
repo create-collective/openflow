@@ -1,0 +1,82 @@
+{
+  "format": "openflow.module-profile",
+  "version": 1,
+  "moduleType": "TOUCH",
+  "name": "Naya Touch Windows",
+  "bindings": {
+    "horizontal:touch:1_finger": {
+      "actionType": "value",
+      "actionCode": "mouse - MOUSE_LEFT - MOUSE_RIGHT"
+    },
+    "horizontal:touch:2_fingers": {
+      "actionType": "value",
+      "actionCode": "mouse - SCROLL_LEFT - SCROLL_RIGHT"
+    },
+    "pinch:touch:2_fingers": {
+      "actionType": "none",
+      "actionCode": ""
+    },
+    "swipe_down:touch:3_fingers": {
+      "actionType": "shortcut_alias",
+      "actionCode": "LALT + ESC"
+    },
+    "swipe_down:touch:4_fingers": {
+      "actionType": "shortcut_alias",
+      "actionCode": "LALT + PG_DN"
+    },
+    "swipe_left:touch:3_fingers": {
+      "actionType": "shortcut_alias",
+      "actionCode": "LCTRL + LSHIFT + TAB"
+    },
+    "swipe_left:touch:4_fingers": {
+      "actionType": "shortcut_alias",
+      "actionCode": "LGUI + LCTRL + LEFT"
+    },
+    "swipe_right:touch:3_fingers": {
+      "actionType": "shortcut_alias",
+      "actionCode": "LCTRL + TAB"
+    },
+    "swipe_right:touch:4_fingers": {
+      "actionType": "shortcut_alias",
+      "actionCode": "LGUI + LCTRL + RIGHT"
+    },
+    "swipe_up:touch:3_fingers": {
+      "actionType": "shortcut_alias",
+      "actionCode": "LALT + LSHIFT + ESC"
+    },
+    "swipe_up:touch:4_fingers": {
+      "actionType": "shortcut_alias",
+      "actionCode": "LALT + PG_UP"
+    },
+    "tap:touch:1_finger": {
+      "actionType": "mouse",
+      "actionCode": "M1"
+    },
+    "tap:touch:2_fingers": {
+      "actionType": "mouse",
+      "actionCode": "M2"
+    },
+    "tap:touch:3_fingers": {
+      "actionType": "mouse",
+      "actionCode": "M3"
+    },
+    "tap:touch:4_fingers": {
+      "actionType": "shortcut_alias",
+      "actionCode": "LGUI + TAB"
+    },
+    "vertical:touch:1_finger": {
+      "actionType": "value",
+      "actionCode": "mouse - MOUSE_DOWN - MOUSE_UP"
+    },
+    "vertical:touch:2_fingers": {
+      "actionType": "value",
+      "actionCode": "mouse - SCROLL_UP - SCROLL_DOWN"
+    }
+  },
+  "variant": "TOUCH_WINDOWS",
+  "settings": {
+    "MS-2": "50",
+    "MS-3": "10",
+    "MS-4": "50"
+  }
+}

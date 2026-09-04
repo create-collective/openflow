@@ -170,3 +170,91 @@ if __name__ == "__main__":
         print(fn.__name__)
         fn()
     print("\nOK")
+
+
+# --- import / export --------------------------------------------------------------------
+
+def _io_db():
+    import sqlite3
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript("""
+        CREATE TABLE module_configs (name TEXT, type TEXT, size INT, order_id INT,
+                                     icon_id TEXT, variant TEXT, captured_from TEXT, id TEXT,
+                                     updated_at TEXT, created_at TEXT);
+        CREATE TABLE module_bindings (action_id TEXT, action_code TEXT, action_type TEXT,
+                                      behavior TEXT, invert INT, threshold INT, direction TEXT,
+                                      mode INT, module_config_id TEXT, id TEXT,
+                                      updated_at TEXT, created_at TEXT);
+        CREATE TABLE module_settings (module_config_id TEXT, correlation_id TEXT, value TEXT);
+    """)
+    return conn
+
+
+class _Keep:
+    def __init__(self, c): self._c = c
+    def __getattr__(self, n): return getattr(self._c, n)
+    def close(self): pass
+
+
+def test_a_split_axis_survives_export_and_import():
+    """A split axis is three DB rows, two of which share direction "+". Exported flat they read
+    as duplicates; the format nests the halves under `split` so the file says what it means."""
+    import sqlite3
+    from unittest import mock
+    from openflow_backend.db import module_io
+
+    conn = _io_db()
+    cid = "c1"
+    conn.execute("INSERT INTO module_configs (name,type,size,order_id,icon_id,variant,id,"
+                 "updated_at,created_at) VALUES ('T','TUNE',0,0,NULL,'TUNE',?,'','')", (cid,))
+    rows = [("mouse - SCROLL_UP - SCROLL_DOWN", "value", "vertical:tune:1_finger", "+"),
+            ("F18", "key", "vertical:tune:1_finger", "-"),
+            ("F17", "key", "vertical:tune:1_finger", "+"),
+            ("F22", "key", "tap:tune:1_finger", "+")]
+    for i, (code, atype, beh, d) in enumerate(rows):
+        conn.execute("INSERT INTO module_bindings (action_code,action_type,behavior,invert,"
+                     "threshold,direction,mode,module_config_id,id,updated_at,created_at) "
+                     "VALUES (?,?,?,0,0,?,0,?,?,'','')", (code, atype, beh, d, cid, f"r{i}"))
+    conn.commit()
+
+    with mock.patch.object(module_io, "connect", lambda: _Keep(conn)):
+        doc = module_io.export_profile(cid)
+        axis = doc["bindings"]["vertical:tune:1_finger"]
+        assert axis["actionCode"] == "mouse - SCROLL_UP - SCROLL_DOWN", "the combined row"
+        assert axis["split"] == {"-": {"actionType": "key", "actionCode": "F18"},
+                                 "+": {"actionType": "key", "actionCode": "F17"}}
+        assert "split" not in doc["bindings"]["tap:tune:1_finger"], "a plain gesture has no halves"
+        assert doc["moduleType"] == "TUNE" and doc["bindings"]
+
+        back = module_io.import_profile(doc)
+        got = {(r["behavior"], r["direction"]): r["action_code"] for r in conn.execute(
+            "SELECT behavior, direction, action_code FROM module_bindings WHERE module_config_id=?",
+            (back["id"],))}
+    assert got[("vertical:tune:1_finger", "-")] == "F18"
+    assert got[("vertical:tune:1_finger", "+")] in ("F17", "mouse - SCROLL_UP - SCROLL_DOWN")
+    assert got[("tap:tune:1_finger", "+")] == "F22"
+    assert back["name"] == "T 2", "an import never overwrites; the name is numbered"
+    print(f"  round-tripped; imported as {back['name']!r}")
+
+
+def test_module_type_is_required_and_checked():
+    """It decides which module the profile belongs to and cannot be inferred -- Touch and Tune
+    share gesture names, so a guess would quietly misfile the profile."""
+    from openflow_backend.db import module_io as M
+
+    for doc, expect in [
+        ({"bindings": {"tap:tune:1_finger": {"actionType": "key", "actionCode": "A"}}}, "moduleType is required"),
+        ({"moduleType": "TRACKPAD", "bindings": {"x": {}}}, "unknown moduleType"),
+        ({"moduleType": "TUNE"}, "bindings must be"),
+        ({"moduleType": "TUNE", "bindings": {}}, "bindings must be"),
+        ({"format": "something.else", "moduleType": "TUNE", "bindings": {"a": {}}}, "not a module profile"),
+        ({"moduleType": "TUNE", "bindings": {"tap:touch:4_fingers": {"actionType": "key", "actionCode": "A"}}},
+         "is moduleType right?"),
+    ]:
+        try:
+            M.import_profile(doc)
+            raise AssertionError(f"should have been refused: {doc}")
+        except M.ProfileFormatError as e:
+            assert expect in str(e), f"{expect!r} not in {e}"
+    print("  every malformed document is refused by name")

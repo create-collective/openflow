@@ -540,6 +540,29 @@ async def delete_module_profile(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=f"cannot delete this profile: {e}")
 
 
+@router.post("/rpc/export-module-profile")
+async def export_module_profile(body: dict = Body(...)) -> dict:
+    """One module profile as a portable JSON document (see db/module_io.py for the shape)."""
+    from ..db import module_io
+    try:
+        return await run_in_threadpool(module_io.export_profile, body.get("configId"))
+    except module_io.ProfileFormatError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/import-module-profile")
+async def import_module_profile(body: dict = Body(...)) -> dict:
+    """Create a module profile from an exported document. Always a NEW profile."""
+    from ..db import module_io
+    try:
+        return await run_in_threadpool(module_io.import_profile, body.get("profile"),
+                                       body.get("name"))
+    except module_io.ProfileFormatError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except sqlite3.IntegrityError as e:
+        raise HTTPException(status_code=400, detail=f"could not import this profile: {e}")
+
+
 @router.get("/api/module-gestures")
 async def module_gestures(types: str = "TUNE,TRACK,TOUCH,FLOAT") -> dict:
     """Per-module editable gestures + preset actions, for the gesture dropdowns.

@@ -6,6 +6,7 @@ import ActionPalette from "../components/ActionPalette";
 import { shortcutLabel, shortcutTooltip, shortcutInfo,
          setShortcutTableFromActions } from "../lib/shortcutNames";
 import { api } from "../lib/api";
+import { pickJSONFile } from "../lib/files";
 import useDoneFlag from "../lib/useDoneFlag";
 
 // Module configuration (Touch / Track / Tune). Grouped list on the left; the
@@ -176,6 +177,8 @@ export default function Modules() {
   const device = useSyncExternalStore(subscribeDeviceState, getDeviceState).modules;
   const [reading, setReading] = useState(false);
   const [readNote, setReadNote] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState(null);
   const [justRead, markRead] = useDoneFlag();
   const [busy, setBusy] = useState(null);   // an axis edit in flight
   const [catalog, setCatalog] = useState(null);
@@ -311,6 +314,33 @@ export default function Modules() {
       await api.setAxisInvert({ configId: selectedId, behavior, invert });
       await load();
     } catch (e) { setErr(e.message); } finally { setBusy(null); }
+  }
+
+  async function importProfile() {
+    setErr(null);
+    let doc;
+    try {
+      doc = await pickJSONFile();
+    } catch (e) {
+      setErr(e.message);
+      return;
+    }
+    if (!doc) return;                       // picker dismissed
+    setImporting(true);
+    try {
+      // An import is always a NEW profile -- never an overwrite -- so importing the same file
+      // twice leaves you two to compare rather than silently replacing what you had.
+      const r = await api.importModuleProfile(doc);
+      await load();
+      setSelectedId(r.id);
+      setReadNote(null);
+      setImported({ at: new Date(), name: r.name, type: r.type, bindings: r.bindings,
+                    skipped: (r.skipped || []).length });
+    } catch (e) {
+      setErr(`Could not import that file: ${e.message}`);
+    } finally {
+      setImporting(false);
+    }
   }
 
   async function readDevice() {
@@ -546,7 +576,13 @@ export default function Modules() {
           {/* Above the button, in space that is reserved whether or not there is a note:
               beside it, the note moved the button the moment a read finished. */}
           <div className="board-notes">
-            {readNote ? (
+            {imported ? (
+              <span className={"saved-note" + (imported.skipped ? "" : " ok")}>
+                Imported {imported.name} — {imported.type.toLowerCase()},{" "}
+                {imported.bindings} binding(s)
+                {imported.skipped > 0 && ` · ${imported.skipped} entry(s) skipped`}
+              </span>
+            ) : readNote ? (
               <span className={"saved-note" + (readNote.captured ? "" : " ok")}>
                 Read {readNote.at.toLocaleTimeString()} — {readNote.slots} module(s) on the keyboard
                 {readNote.captured > 0 &&
@@ -591,6 +627,11 @@ export default function Modules() {
                 {variants.length === 0 && <div className="palette-disabled">No stock profiles found.</div>}
               </div>
             )}
+            <button className="board-btn" onClick={importProfile} disabled={importing}
+                    title="Import a module profile from a JSON file. The file names its own
+                           module type, so it lands under the right module.">
+              {importing ? "Importing…" : "⭱  Import…"}
+            </button>
           </div>
           {TYPE_ORDER.map((type) =>
             grouped[type] ? (

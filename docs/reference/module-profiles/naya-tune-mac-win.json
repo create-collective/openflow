@@ -1,0 +1,80 @@
+{
+  "format": "openflow.module-profile",
+  "version": 1,
+  "moduleType": "TUNE",
+  "name": "Naya Tune Mac/Win",
+  "bindings": {
+    "clockwise_rotate:tune:dial": {
+      "actionType": "none",
+      "actionCode": ""
+    },
+    "counter_clockwise_rotate:tune:dial": {
+      "actionType": "none",
+      "actionCode": ""
+    },
+    "horizontal:tune:1_finger": {
+      "actionType": "value",
+      "actionCode": "mouse - SCROLL_LEFT - SCROLL_RIGHT"
+    },
+    "pinch:tune:2_fingers": {
+      "actionType": "none",
+      "actionCode": ""
+    },
+    "rotate:tune:dial": {
+      "actionType": "value",
+      "actionCode": "C_VOL_DOWN - C_VOL_UP"
+    },
+    "swipe_down:tune:2_fingers": {
+      "actionType": "key",
+      "actionCode": "C_BRIGHTNESS_DEC"
+    },
+    "swipe_down:tune:3_fingers": {
+      "actionType": "LED",
+      "actionCode": "LED_BRIGHTNESS_DOWN"
+    },
+    "swipe_left:tune:2_fingers": {
+      "actionType": "key",
+      "actionCode": "C_REWIND"
+    },
+    "swipe_left:tune:3_fingers": {
+      "actionType": "key",
+      "actionCode": "C_PREVIOUS"
+    },
+    "swipe_right:tune:2_fingers": {
+      "actionType": "key",
+      "actionCode": "C_FAST_FORWARD"
+    },
+    "swipe_right:tune:3_fingers": {
+      "actionType": "key",
+      "actionCode": "C_NEXT"
+    },
+    "swipe_up:tune:2_fingers": {
+      "actionType": "key",
+      "actionCode": "C_BRIGHTNESS_INC"
+    },
+    "swipe_up:tune:3_fingers": {
+      "actionType": "LED",
+      "actionCode": "LED_BRIGHTNESS_UP"
+    },
+    "tap:tune:1_finger": {
+      "actionType": "none",
+      "actionCode": ""
+    },
+    "tap:tune:2_fingers": {
+      "actionType": "key",
+      "actionCode": "C_PLAY_PAUSE"
+    },
+    "tap:tune:3_fingers": {
+      "actionType": "key",
+      "actionCode": "C_MUTE"
+    },
+    "vertical:tune:1_finger": {
+      "actionType": "value",
+      "actionCode": "mouse - SCROLL_UP - SCROLL_DOWN"
+    }
+  },
+  "variant": "TUNE",
+  "settings": {
+    "pointer_accel_on": "true"
+  }
+}
