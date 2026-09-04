@@ -202,8 +202,12 @@ export default function KeymapBoard(props) {
           <div className="kb-palette-row">
             {PALETTE.map((m) => (
               <div className="kb-palette-slot" key={m.key}>
-                <img src={moduleImg(m.type, m.art)} alt={m.label} draggable={false}
-                  title={`${m.label} — choose the profile this layer runs`}
+                <img src={moduleImg(m.type, m.art)} alt={m.label} draggable
+                  title={`${m.label} — drag onto a slot, or click to choose the profile this layer runs`}
+                  // An <img> is draggable by default and a DEFAULT dragstart carries the image
+                  // URL, which a bay once accepted as a module type. Setting the payload
+                  // explicitly is what makes the drag safe, not disabling it.
+                  onDragStart={(e) => e.dataTransfer.setData("text/plain", m.type)}
                   onClick={() => setOpenBay(openBay === m.key ? null : m.key)}
                   className={"kb-palette-mod" + (openBay === m.key ? " picked" : "")} />
                 {bays && (
