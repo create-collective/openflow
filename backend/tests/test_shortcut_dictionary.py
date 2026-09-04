@@ -77,3 +77,61 @@ def test_an_unknown_base_is_still_refused():
     with pytest.raises(R.RemapEncodeError):
         R.encode_keypress("shortcut_alias", "LCTRL + NOT_A_KEY")
     print("  an unknown base still raises")
+
+
+# --- the dictionary as a product surface ------------------------------------ #
+
+from openflow_backend.device import shortcuts as SC  # noqa: E402
+
+
+def test_every_shortcut_has_a_name_a_chord_and_bytes():
+    """The whole point is that a row can say what a binding DOES. A missing name silently
+    degrades to the raw code, which is what this replaced."""
+    missing = [s["code"] for s in SC.all_shortcuts()
+               if not s.get("name") or not s.get("chord") or not s.get("bytes")]
+    assert not missing, missing
+    print(f"  {len(SC.all_shortcuts())} entries, all named")
+
+
+def test_names_are_plain_english_not_the_chord_again():
+    """"Ctrl + Tab" as a NAME teaches the user nothing they could not already read."""
+    lazy = [s["code"] for s in SC.all_shortcuts()
+            if s["name"].replace(" ", "").lower() == s["chord"].replace(" ", "").lower()]
+    assert not lazy, lazy
+    assert SC.describe("LALT + LSHIFT + ESC") == "Cycle windows backwards"
+    assert SC.describe("LCTRL + LSHIFT + V") == "Paste without formatting"
+    print("  names describe the effect, not the keystroke")
+
+
+def test_an_unknown_code_falls_back_to_itself():
+    """Never invent a name. A code we cannot name stays greppable against the device."""
+    assert SC.describe("LCTRL + SOMETHING_ODD") == "LCTRL + SOMETHING_ODD"
+    assert SC.lookup("LCTRL + SOMETHING_ODD") is None
+    print("  unknown codes pass through unchanged")
+
+
+def test_the_dictionary_bytes_agree_with_the_encoder():
+    """The dictionary is a display layer, so it must not drift from what is actually written."""
+    from openflow_backend.device import remap as R
+    wrong = []
+    for s in SC.all_shortcuts():
+        try:
+            got = R.encode_keypress("shortcut_alias", s["code"]).hex()
+        except Exception as e:
+            wrong.append(f"{s['code']}: {type(e).__name__}")
+            continue
+        if got != s["bytes"]:
+            wrong.append(f"{s['code']}: dict {s['bytes']} vs encoder {got}")
+    assert not wrong, wrong
+    print("  every dictionary entry encodes to the bytes it advertises")
+
+
+def test_the_module_dropdown_shape_keeps_the_keys_visible():
+    """A dropdown that says only "Next tab" hides which keys are sent -- on a keyboard
+    configurator that is the one thing being chosen."""
+    entries = SC.as_module_actions()
+    assert entries and all(e["actionType"] == "shortcut_alias" for e in entries)
+    tab = next(e for e in entries if e["code"] == "LCTRL + TAB")
+    assert tab["label"] == "Next tab  (Ctrl + Tab)", tab["label"]
+    assert len({e["group"] for e in entries}) > 1, "should be grouped by purpose, not one bucket"
+    print(f"  {len(entries)} dropdown entries across {len(SC.groups())} groups")

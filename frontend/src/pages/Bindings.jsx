@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { readDockedModules } from "../lib/dockedModules";
 import { setModuleRead, subscribeDeviceState, getDeviceState } from "../lib/deviceState";
+import { setShortcutTable } from "../lib/shortcutNames";
 import { POS_LABEL } from "../lib/layout";
 import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import KeymapBoard from "../components/KeymapBoard";
@@ -100,6 +101,7 @@ export default function Bindings() {
         api.userdata(), api.actions(), api.macros(), api.modules()]);
       setProfiles(ud.profiles || []);
       setCatalog(acts);
+      setShortcutTable(acts.shortcuts);
       setMacros(mac.macros || []);
       setModuleProfiles(mods.modules || []);
     } catch (e) {

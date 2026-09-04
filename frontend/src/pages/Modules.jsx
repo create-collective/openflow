@@ -3,6 +3,8 @@ import { useSyncExternalStore } from "react";
 import { subscribeDeviceState, getDeviceState, setModuleRead } from "../lib/deviceState";
 import { useSearchParams } from "react-router-dom";
 import AxisControls from "../components/AxisControls";
+import { shortcutLabel, shortcutTooltip, shortcutInfo,
+         setShortcutTableFromActions } from "../lib/shortcutNames";
 import { api } from "../lib/api";
 
 // Module configuration (Touch / Track / Tune). Grouped list on the left; the
@@ -23,6 +25,9 @@ const byGesture = (a, b) => gi(a.gesture) - gi(b.gesture);
 
 function cleanCode(code) {
   if (!code) return "—";
+  // A known shortcut is shown by what it DOES, with the keys after it. Anything else falls back
+  // to the stored code, tidied only enough to read.
+  if (shortcutInfo(code)) return shortcutLabel(code, { withChord: true });
   return code.replaceAll(" - ", " / ").replaceAll("_", " ");
 }
 function targetLabel(t) {
@@ -92,9 +97,10 @@ function GestureRow({ b, actions, onPick, dev, extra }) {
           {dev.differs ? `device: ${dev.device ?? "unbound"}` : "on device"}
         </span>
       )}
-      <span className="skp-arrow">→</span>
+      <span className="skp-arrow" title={shortcutTooltip(b.actionCode)}>→</span>
       <select
         className="mac-input mod-action"
+        title={shortcutInfo(b.actionCode) ? shortcutTooltip(b.actionCode) : undefined}
         value={b.actionCode || ""}
         disabled={unsupported}
         title={
@@ -170,6 +176,7 @@ export default function Modules() {
       api.moduleVariants().then((v) => setVariants(v.variants || [])).catch(() => {});
       setModules(mods);
       setActions(r.actions || []);
+      setShortcutTableFromActions(r.actions);
       if (!selectedId && mods.length) {
         // Prefer the exact profile the caller named, then a type match, then the first.
         const exact = wantConfig && mods.find((m) => m.id === wantConfig);

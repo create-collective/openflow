@@ -301,10 +301,18 @@ def _tabs():
 
 
 def get_catalog() -> dict:
+    from . import shortcuts as _sc
+
     return {
         "tabs": _tabs(),
         "behaviorSlots": BEHAVIOR_SLOTS,
         "layerActionTypes": [
             {"frontendType": k, **v} for k, v in LAYER_ACTION_TYPES.items()
         ],
+        # code -> {name, chord, icon, group, platform}. The UI showed raw chords like
+        # "LALT + LSHIFT + ESC", which say what to press and nothing about what it does; this
+        # lets a keycap, a gesture row or a tooltip say "Cycle windows backwards" instead.
+        "shortcuts": {s["code"]: {k: s[k] for k in ("name", "chord", "icon", "group", "platform")
+                                  if k in s}
+                      for s in _sc.all_shortcuts()},
     }

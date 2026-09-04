@@ -567,6 +567,26 @@ MODULE_ACTIONS = [
     {"code": "LALT + PG_DN", "label": "Alt + Page Down", "actionType": "shortcut_alias", "group": "Shortcuts"},
 ]
 
+# The shortcut dictionary, folded in. It carries the plain-English name, the chord, a glyph and
+# the device bytes for each code -- so a dropdown can say "Next tab (Ctrl + Tab)" rather than
+# "LCTRL + TAB", and a gesture row can be labelled by what it DOES.
+#
+# Nine of these were already listed above by hand; the dictionary entry wins on a clash, because
+# its bytes are checked against a real flash capture. Grouped by purpose (Clipboard & text,
+# Tabs & browser, Windows & desktops, ...) rather than dumped into one "Shortcuts" bucket, which
+# at 82 entries would be unusable.
+def _with_shortcut_dictionary(base: list) -> list:
+    from ..device import shortcuts as _sc
+
+    entries = _sc.as_module_actions()
+    if not entries:
+        return base                                   # dictionary missing: keep the hand list
+    known = {e["code"] for e in entries}
+    return [a for a in base if a["code"] not in known] + entries
+
+
+MODULE_ACTIONS = _with_shortcut_dictionary(MODULE_ACTIONS)
+
 
 def _ensure_touch_defaults(conn) -> None:
     """Backfill the 1-finger cursor gestures NayaFlow renders implicitly for Touch
