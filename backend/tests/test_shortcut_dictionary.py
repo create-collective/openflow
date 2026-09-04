@@ -135,3 +135,51 @@ def test_the_module_dropdown_shape_keeps_the_keys_visible():
     assert tab["label"] == "Next tab  (Ctrl + Tab)", tab["label"]
     assert len({e["group"] for e in entries}) > 1, "should be grouped by purpose, not one bucket"
     print(f"  {len(entries)} dropdown entries across {len(SC.groups())} groups")
+
+
+# --- the per-platform action chord table ------------------------------------ #
+
+def _chords():
+    p = _ROOT / "docs" / "reference" / "action-chords.json"
+    if not p.exists():
+        pytest.skip("action-chords.json not generated")
+    return json.loads(p.read_text(encoding="utf-8"))["actions"]
+
+
+def test_every_chord_in_the_action_table_actually_encodes():
+    """The table exists to be flashed. A chord that will not encode would sit in a dropdown,
+    get written, and silently do nothing -- the exact failure we refused to copy from NayaFlow."""
+    bad = []
+    rows = _chords()
+    for a in rows:
+        for plat in ("win", "mac", "linux"):
+            got = a.get(plat)
+            if not got:
+                continue
+            try:
+                if R.encode_keypress("shortcut_alias", got["chord"]).hex() != got["bytes"]:
+                    bad.append(f"{a['action']}/{plat}: bytes disagree")
+            except Exception as e:
+                bad.append(f"{a['action']}/{plat}: {got['chord']} -> {type(e).__name__}")
+    assert not bad, bad[:15]
+    print(f"  every chord across {len(rows)} actions encodes to the bytes it advertises")
+
+
+def test_app_specific_actions_are_labelled():
+    """An editor binding presented as universal is a lie the user only finds out by flashing."""
+    rows = _chords()
+    vscode = [a for a in rows if a.get("context") == "vscode"]
+    assert vscode, "expected VS Code actions in the table"
+    assert all(a["appSpecific"] and a["app"] == "VS Code" for a in vscode)
+    os_rows = [a for a in rows if a.get("context") == "os"]
+    assert all(not a["appSpecific"] for a in os_rows), "OS bindings must not be app-labelled"
+    print(f"  {len(vscode)} VS Code actions labelled, {len(os_rows)} OS actions not")
+
+
+def test_hardware_actions_claim_no_chord():
+    """LED effects and Bluetooth are keyboard functions. Giving them a host chord would be
+    inventing one."""
+    bad = [a["action"] for a in _chords() if a.get("context") == "keyboard-hardware"
+           and any(a.get(p) for p in ("win", "mac", "linux"))]
+    assert not bad, bad[:10]
+    print("  keyboard-hardware actions carry no chord")

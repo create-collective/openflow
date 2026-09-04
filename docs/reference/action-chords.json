@@ -1,0 +1,8013 @@
+{
+ "_meta": {
+  "generated": "2026-09-03",
+  "source": "action names from NayaFlow's icon set; chords looked up per platform and then validated through openflow_backend.device.remap.encode_keypress -- any chord that would not encode was dropped, not shipped",
+  "fields": {
+   "action": "NayaFlow's action name, also the icon file name",
+   "win/mac/linux": "{chord, bytes} -- absent when there is no standard binding",
+   "context": "os | browser | text | vscode | terminal | file-manager | media | keyboard-hardware | null",
+   "appSpecific": "true when the binding only holds inside one application",
+   "confidence": "high | medium | low, as reported by the look-up"
+  }
+ },
+ "actions": [
+  {
+   "action": "3D_PITCH",
+   "name": "3D mouse pitch axis",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/3D_PITCH.svg"
+  },
+  {
+   "action": "3D_ROLL",
+   "name": "3D mouse roll axis",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/3D_ROLL.svg"
+  },
+  {
+   "action": "3D_X",
+   "name": "3D mouse X axis",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/3D_X.svg"
+  },
+  {
+   "action": "3D_Y",
+   "name": "3D mouse Y axis",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/3D_Y.svg"
+  },
+  {
+   "action": "3D_YAW",
+   "name": "3D mouse yaw axis",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/3D_YAW.svg"
+  },
+  {
+   "action": "3D_Z",
+   "name": "3D mouse Z axis",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/3D_Z.svg"
+  },
+  {
+   "action": "ADD_COMMENT",
+   "name": "Add comment",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/ADD_COMMENT.svg",
+   "win": {
+    "chord": "LCTRL + LALT + M",
+    "bytes": "10000705"
+   },
+   "mac": {
+    "chord": "LGUI + LALT + M",
+    "bytes": "1000070c"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + M",
+    "bytes": "10000705"
+   }
+  },
+  {
+   "action": "ADD_DESKTOP",
+   "name": "Add virtual desktop",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/ADD_DESKTOP.svg",
+   "win": {
+    "chord": "LGUI + LCTRL + D",
+    "bytes": "07000709"
+   }
+  },
+  {
+   "action": "AI",
+   "name": "Open AI assistant",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/AI.svg",
+   "win": {
+    "chord": "LGUI + C",
+    "bytes": "06000708"
+   }
+  },
+  {
+   "action": "AMPERSAND",
+   "name": "Type & (ampersand)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/AMPERSAND.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_7",
+    "bytes": "24000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_7",
+    "bytes": "24000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_7",
+    "bytes": "24000702"
+   }
+  },
+  {
+   "action": "ASTERISK",
+   "name": "Type * (asterisk)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/ASTERISK.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_8",
+    "bytes": "25000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_8",
+    "bytes": "25000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_8",
+    "bytes": "25000702"
+   }
+  },
+  {
+   "action": "AT_SIGN",
+   "name": "Type @ (at sign)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/AT_SIGN.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_2",
+    "bytes": "1f000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_2",
+    "bytes": "1f000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_2",
+    "bytes": "1f000702"
+   }
+  },
+  {
+   "action": "A_UMLAUT",
+   "name": "Type Ä/ä (A umlaut)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/A_UMLAUT.svg"
+  },
+  {
+   "action": "BACK",
+   "name": "Navigate back",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/BACK.svg",
+   "win": {
+    "chord": "LALT + LEFT",
+    "bytes": "50000704"
+   },
+   "mac": {
+    "chord": "LGUI + LEFT_BRACKET",
+    "bytes": "2f000708"
+   },
+   "linux": {
+    "chord": "LALT + LEFT",
+    "bytes": "50000704"
+   }
+  },
+  {
+   "action": "BACKSPACE_WORD",
+   "name": "Delete previous word",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/BACKSPACE_WORD.svg",
+   "win": {
+    "chord": "LCTRL + BACKSPACE",
+    "bytes": "2a000701"
+   },
+   "mac": {
+    "chord": "LALT + BACKSPACE",
+    "bytes": "2a000704"
+   },
+   "linux": {
+    "chord": "LCTRL + BACKSPACE",
+    "bytes": "2a000701"
+   }
+  },
+  {
+   "action": "BASIC",
+   "name": "Basic key type (configurator category)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/BASIC.svg"
+  },
+  {
+   "action": "BLOCK_COMMENT",
+   "name": "Toggle block comment",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/BLOCK_COMMENT.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + A",
+    "bytes": "04000706"
+   },
+   "mac": {
+    "chord": "LSHIFT + LALT + A",
+    "bytes": "04000706"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + A",
+    "bytes": "04000706"
+   }
+  },
+  {
+   "action": "BOLD",
+   "name": "Bold",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/BOLD.svg",
+   "win": {
+    "chord": "LCTRL + B",
+    "bytes": "05000701"
+   },
+   "mac": {
+    "chord": "LGUI + B",
+    "bytes": "05000708"
+   },
+   "linux": {
+    "chord": "LCTRL + B",
+    "bytes": "05000701"
+   }
+  },
+  {
+   "action": "BOOKMARK",
+   "name": "Bookmark page",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/BOOKMARK.svg",
+   "win": {
+    "chord": "LCTRL + D",
+    "bytes": "07000701"
+   },
+   "mac": {
+    "chord": "LGUI + D",
+    "bytes": "07000708"
+   },
+   "linux": {
+    "chord": "LCTRL + D",
+    "bytes": "07000701"
+   }
+  },
+  {
+   "action": "BT_CLEAR",
+   "name": "Clear Bluetooth pairing",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/BT_CLEAR.svg"
+  },
+  {
+   "action": "BT_DEVICE_1",
+   "name": "Bluetooth device slot 1",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/BT_DEVICE_1.svg"
+  },
+  {
+   "action": "BT_DEVICE_2",
+   "name": "Bluetooth device slot 2",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/BT_DEVICE_2.svg"
+  },
+  {
+   "action": "BT_DEVICE_3",
+   "name": "Bluetooth device slot 3",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/BT_DEVICE_3.svg"
+  },
+  {
+   "action": "BT_DEVICE_4",
+   "name": "Bluetooth device slot 4",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/BT_DEVICE_4.svg"
+  },
+  {
+   "action": "BT_DEVICE_5",
+   "name": "Bluetooth device slot 5",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/BT_DEVICE_5.svg"
+  },
+  {
+   "action": "CARET",
+   "name": "Type ^ (caret)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/CARET.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_6",
+    "bytes": "23000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_6",
+    "bytes": "23000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_6",
+    "bytes": "23000702"
+   }
+  },
+  {
+   "action": "CHARACTER_VIEWER",
+   "name": "Emoji / character picker",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/CHARACTER_VIEWER.svg",
+   "win": {
+    "chord": "LGUI + PERIOD",
+    "bytes": "37000708"
+   },
+   "mac": {
+    "chord": "LGUI + LCTRL + SPACE",
+    "bytes": "2c000709"
+   }
+  },
+  {
+   "action": "CHEAT_SHEET",
+   "name": "Show shortcut cheat sheet",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CHEAT_SHEET.svg"
+  },
+  {
+   "action": "CLOSE_ALL_WINDOWS",
+   "name": "Close all windows of app",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/CLOSE_ALL_WINDOWS.svg",
+   "mac": {
+    "chord": "LGUI + LALT + W",
+    "bytes": "1a00070c"
+   }
+  },
+  {
+   "action": "CLOSE_APPLICATION",
+   "name": "Close/quit application",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/CLOSE_APPLICATION.svg",
+   "win": {
+    "chord": "LALT + F4",
+    "bytes": "3d000704"
+   },
+   "mac": {
+    "chord": "LGUI + Q",
+    "bytes": "14000708"
+   },
+   "linux": {
+    "chord": "LALT + F4",
+    "bytes": "3d000704"
+   }
+  },
+  {
+   "action": "CLOSE_DESKTOP",
+   "name": "Close virtual desktop",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/CLOSE_DESKTOP.svg",
+   "win": {
+    "chord": "LGUI + LCTRL + F4",
+    "bytes": "3d000709"
+   }
+  },
+  {
+   "action": "CLOSE_FILE",
+   "name": "Close file/tab",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/CLOSE_FILE.svg",
+   "win": {
+    "chord": "LCTRL + W",
+    "bytes": "1a000701"
+   },
+   "mac": {
+    "chord": "LGUI + W",
+    "bytes": "1a000708"
+   },
+   "linux": {
+    "chord": "LCTRL + W",
+    "bytes": "1a000701"
+   }
+  },
+  {
+   "action": "CLOSE_FOLDER",
+   "name": "Close folder",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CLOSE_FOLDER.svg"
+  },
+  {
+   "action": "CLOSE_FOLDERS",
+   "name": "Close all folders",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CLOSE_FOLDERS.svg"
+  },
+  {
+   "action": "CLOSE_TAB",
+   "name": "Close tab",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/CLOSE_TAB.svg",
+   "win": {
+    "chord": "LCTRL + W",
+    "bytes": "1a000701"
+   },
+   "mac": {
+    "chord": "LGUI + W",
+    "bytes": "1a000708"
+   },
+   "linux": {
+    "chord": "LCTRL + W",
+    "bytes": "1a000701"
+   }
+  },
+  {
+   "action": "CLOSE_TABS",
+   "name": "Close all tabs (window)",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/CLOSE_TABS.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + W",
+    "bytes": "1a000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + W",
+    "bytes": "1a00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + W",
+    "bytes": "1a000703"
+   }
+  },
+  {
+   "action": "CLOSE_WINDOW",
+   "name": "Close window",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/CLOSE_WINDOW.svg",
+   "win": {
+    "chord": "LALT + F4",
+    "bytes": "3d000704"
+   },
+   "mac": {
+    "chord": "LGUI + W",
+    "bytes": "1a000708"
+   },
+   "linux": {
+    "chord": "LALT + F4",
+    "bytes": "3d000704"
+   }
+  },
+  {
+   "action": "COLON",
+   "name": "Type : (colon)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/COLON.svg",
+   "win": {
+    "chord": "LSHIFT + SEMICOLON",
+    "bytes": "33000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + SEMICOLON",
+    "bytes": "33000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + SEMICOLON",
+    "bytes": "33000702"
+   }
+  },
+  {
+   "action": "COMMAND_PALETTE",
+   "name": "Command palette",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/COMMAND_PALETTE.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + P",
+    "bytes": "13000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + P",
+    "bytes": "1300070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + P",
+    "bytes": "13000703"
+   }
+  },
+  {
+   "action": "COMMENT",
+   "name": "Toggle line comment",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/COMMENT.svg",
+   "win": {
+    "chord": "LCTRL + SLASH",
+    "bytes": "38000701"
+   },
+   "mac": {
+    "chord": "LGUI + SLASH",
+    "bytes": "38000708"
+   },
+   "linux": {
+    "chord": "LCTRL + SLASH",
+    "bytes": "38000701"
+   }
+  },
+  {
+   "action": "CONFIGURATION_BLUEPRINT",
+   "name": "Configuration blueprint",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CONFIGURATION_BLUEPRINT.svg"
+  },
+  {
+   "action": "CONFIGURATION_L_BLUEPRINT",
+   "name": "Configuration blueprint (left)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CONFIGURATION_L_BLUEPRINT.svg"
+  },
+  {
+   "action": "CONFIGURATION_R_BLUEPRINT",
+   "name": "Configuration blueprint (right)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CONFIGURATION_R_BLUEPRINT.svg"
+  },
+  {
+   "action": "COPY",
+   "name": "Copy",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/COPY.svg",
+   "win": {
+    "chord": "LCTRL + C",
+    "bytes": "06000701"
+   },
+   "mac": {
+    "chord": "LGUI + C",
+    "bytes": "06000708"
+   },
+   "linux": {
+    "chord": "LCTRL + C",
+    "bytes": "06000701"
+   }
+  },
+  {
+   "action": "COPY_LINE",
+   "name": "Copy line",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/COPY_LINE.svg",
+   "win": {
+    "chord": "LCTRL + C",
+    "bytes": "06000701"
+   },
+   "mac": {
+    "chord": "LGUI + C",
+    "bytes": "06000708"
+   },
+   "linux": {
+    "chord": "LCTRL + C",
+    "bytes": "06000701"
+   }
+  },
+  {
+   "action": "COPY_LINE_DOWN",
+   "name": "Copy line down",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/COPY_LINE_DOWN.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + DOWN",
+    "bytes": "51000706"
+   },
+   "mac": {
+    "chord": "LSHIFT + LALT + DOWN",
+    "bytes": "51000706"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + DOWN",
+    "bytes": "51000706"
+   }
+  },
+  {
+   "action": "COPY_LINE_UP",
+   "name": "Copy line up",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/COPY_LINE_UP.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + UP",
+    "bytes": "52000706"
+   },
+   "mac": {
+    "chord": "LSHIFT + LALT + UP",
+    "bytes": "52000706"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + UP",
+    "bytes": "52000706"
+   }
+  },
+  {
+   "action": "COPY_PATH",
+   "name": "Copy file path",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/COPY_PATH.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + C",
+    "bytes": "06000706"
+   },
+   "mac": {
+    "chord": "LSHIFT + LALT + C",
+    "bytes": "06000706"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + C",
+    "bytes": "06000706"
+   }
+  },
+  {
+   "action": "CUSTOM",
+   "name": "Custom key type (configurator category)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CUSTOM.svg"
+  },
+  {
+   "action": "CUT",
+   "name": "Cut",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/CUT.svg",
+   "win": {
+    "chord": "LCTRL + X",
+    "bytes": "1b000701"
+   },
+   "mac": {
+    "chord": "LGUI + X",
+    "bytes": "1b000708"
+   },
+   "linux": {
+    "chord": "LCTRL + X",
+    "bytes": "1b000701"
+   }
+  },
+  {
+   "action": "CUT_LINE",
+   "name": "Cut line",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CUT_LINE.svg",
+   "win": {
+    "chord": "LCTRL + X",
+    "bytes": "1b000701"
+   },
+   "mac": {
+    "chord": "LGUI + X",
+    "bytes": "1b000708"
+   },
+   "linux": {
+    "chord": "LCTRL + X",
+    "bytes": "1b000701"
+   }
+  },
+  {
+   "action": "CYCLE_APPS",
+   "name": "Switch applications",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/CYCLE_APPS.svg",
+   "win": {
+    "chord": "LALT + TAB",
+    "bytes": "2b000704"
+   },
+   "mac": {
+    "chord": "LGUI + TAB",
+    "bytes": "2b000708"
+   },
+   "linux": {
+    "chord": "LALT + TAB",
+    "bytes": "2b000704"
+   }
+  },
+  {
+   "action": "CYCLE_APPS_ALT",
+   "name": "Switch applications (reverse)",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/CYCLE_APPS_ALT.svg",
+   "win": {
+    "chord": "LALT + LSHIFT + TAB",
+    "bytes": "2b000706"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + TAB",
+    "bytes": "2b00070a"
+   },
+   "linux": {
+    "chord": "LALT + LSHIFT + TAB",
+    "bytes": "2b000706"
+   }
+  },
+  {
+   "action": "CYCLE_DESKTOPS",
+   "name": "Cycle virtual desktops",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/CYCLE_DESKTOPS.svg",
+   "win": {
+    "chord": "LGUI + LCTRL + RIGHT",
+    "bytes": "4f000709"
+   },
+   "mac": {
+    "chord": "LCTRL + RIGHT",
+    "bytes": "4f000701"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + RIGHT",
+    "bytes": "4f000705"
+   }
+  },
+  {
+   "action": "CYCLE_HISTORY",
+   "name": "Cycle editor tab history",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CYCLE_HISTORY.svg",
+   "win": {
+    "chord": "LCTRL + TAB",
+    "bytes": "2b000701"
+   },
+   "mac": {
+    "chord": "LCTRL + TAB",
+    "bytes": "2b000701"
+   },
+   "linux": {
+    "chord": "LCTRL + TAB",
+    "bytes": "2b000701"
+   }
+  },
+  {
+   "action": "CYCLE_SCREENS",
+   "name": "Cycle displays/monitors",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CYCLE_SCREENS.svg"
+  },
+  {
+   "action": "CYCLE_WINDOWS",
+   "name": "Cycle windows of app",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/CYCLE_WINDOWS.svg",
+   "win": {
+    "chord": "LALT + TAB",
+    "bytes": "2b000704"
+   },
+   "mac": {
+    "chord": "LGUI + GRAVE",
+    "bytes": "35000708"
+   },
+   "linux": {
+    "chord": "LALT + TAB",
+    "bytes": "2b000704"
+   }
+  },
+  {
+   "action": "CYCLE_WINDOWS_ORDER",
+   "name": "Cycle windows (reverse order)",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/CYCLE_WINDOWS_ORDER.svg",
+   "win": {
+    "chord": "LALT + LSHIFT + TAB",
+    "bytes": "2b000706"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + GRAVE",
+    "bytes": "3500070a"
+   },
+   "linux": {
+    "chord": "LALT + LSHIFT + TAB",
+    "bytes": "2b000706"
+   }
+  },
+  {
+   "action": "CYCLE_WINDOW_ORDER",
+   "name": "Cycle window order",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/CYCLE_WINDOW_ORDER.svg",
+   "win": {
+    "chord": "LALT + LSHIFT + TAB",
+    "bytes": "2b000706"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + GRAVE",
+    "bytes": "3500070a"
+   },
+   "linux": {
+    "chord": "LALT + LSHIFT + TAB",
+    "bytes": "2b000706"
+   }
+  },
+  {
+   "action": "DELETE_FOREVER",
+   "name": "Permanently delete (skip trash)",
+   "context": "file-manager",
+   "appSpecific": true,
+   "app": "File manager",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/DELETE_FOREVER.svg",
+   "win": {
+    "chord": "LSHIFT + DELETE",
+    "bytes": "4c000702"
+   },
+   "mac": {
+    "chord": "LGUI + LALT + BACKSPACE",
+    "bytes": "2a00070c"
+   },
+   "linux": {
+    "chord": "LSHIFT + DELETE",
+    "bytes": "4c000702"
+   }
+  },
+  {
+   "action": "DELETE_LINE",
+   "name": "Delete line",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/DELETE_LINE.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + K",
+    "bytes": "0e000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + K",
+    "bytes": "0e00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + K",
+    "bytes": "0e000703"
+   }
+  },
+  {
+   "action": "DELETE_WORD",
+   "name": "Delete next word",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/DELETE_WORD.svg",
+   "win": {
+    "chord": "LCTRL + DELETE",
+    "bytes": "4c000701"
+   },
+   "mac": {
+    "chord": "LALT + DELETE",
+    "bytes": "4c000704"
+   },
+   "linux": {
+    "chord": "LCTRL + DELETE",
+    "bytes": "4c000701"
+   }
+  },
+  {
+   "action": "DISABLE",
+   "name": "Disable key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DISABLE.svg"
+  },
+  {
+   "action": "DISPLAY_PREFERENCES",
+   "name": "Open display preferences",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DISPLAY_PREFERENCES.svg"
+  },
+  {
+   "action": "DISPLAY_PROPERTIES",
+   "name": "Open display properties",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DISPLAY_PROPERTIES.svg"
+  },
+  {
+   "action": "DISPLAY_SLEEP",
+   "name": "Sleep display",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DISPLAY_SLEEP.svg"
+  },
+  {
+   "action": "DOC_END",
+   "name": "Go to end of document",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/DOC_END.svg",
+   "win": {
+    "chord": "LCTRL + END",
+    "bytes": "4d000701"
+   },
+   "mac": {
+    "chord": "LGUI + DOWN",
+    "bytes": "51000708"
+   },
+   "linux": {
+    "chord": "LCTRL + END",
+    "bytes": "4d000701"
+   }
+  },
+  {
+   "action": "DOC_START",
+   "name": "Go to start of document",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/DOC_START.svg",
+   "win": {
+    "chord": "LCTRL + HOME",
+    "bytes": "4a000701"
+   },
+   "mac": {
+    "chord": "LGUI + UP",
+    "bytes": "52000708"
+   },
+   "linux": {
+    "chord": "LCTRL + HOME",
+    "bytes": "4a000701"
+   }
+  },
+  {
+   "action": "DOLLAR",
+   "name": "Type $ (dollar)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/DOLLAR.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_4",
+    "bytes": "21000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_4",
+    "bytes": "21000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_4",
+    "bytes": "21000702"
+   }
+  },
+  {
+   "action": "DOMINANT_ALL",
+   "name": "Dominant hand: all modules",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DOMINANT_ALL.svg"
+  },
+  {
+   "action": "DOMINANT_FLOAT",
+   "name": "Dominant hand: float module",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DOMINANT_FLOAT.svg"
+  },
+  {
+   "action": "DOMINANT_L",
+   "name": "Dominant hand: left",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DOMINANT_L.svg"
+  },
+  {
+   "action": "DOMINANT_R",
+   "name": "Dominant hand: right",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DOMINANT_R.svg"
+  },
+  {
+   "action": "DOMINANT_TOUCH",
+   "name": "Dominant hand: touch module",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DOMINANT_TOUCH.svg"
+  },
+  {
+   "action": "DOMINANT_TRACK",
+   "name": "Dominant hand: trackball module",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DOMINANT_TRACK.svg"
+  },
+  {
+   "action": "DOMINANT_TUNE",
+   "name": "Dominant hand: tune module",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DOMINANT_TUNE.svg"
+  },
+  {
+   "action": "DONGLE",
+   "name": "RF dongle pairing",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DONGLE.svg"
+  },
+  {
+   "action": "DOUBLE_QUOTES",
+   "name": "Type \" (double quote)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/DOUBLE_QUOTES.svg",
+   "win": {
+    "chord": "LSHIFT + SINGLE_QUOTE",
+    "bytes": "34000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + SINGLE_QUOTE",
+    "bytes": "34000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + SINGLE_QUOTE",
+    "bytes": "34000702"
+   }
+  },
+  {
+   "action": "DOWN_SCREEN",
+   "name": "Move to display below",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/DOWN_SCREEN.svg"
+  },
+  {
+   "action": "EDITOR_1",
+   "name": "Focus editor group 1",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/EDITOR_1.svg",
+   "win": {
+    "chord": "LCTRL + NUMBER_1",
+    "bytes": "1e000701"
+   },
+   "mac": {
+    "chord": "LGUI + NUMBER_1",
+    "bytes": "1e000708"
+   },
+   "linux": {
+    "chord": "LCTRL + NUMBER_1",
+    "bytes": "1e000701"
+   }
+  },
+  {
+   "action": "EDITOR_2",
+   "name": "Focus editor group 2",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/EDITOR_2.svg",
+   "win": {
+    "chord": "LCTRL + NUMBER_2",
+    "bytes": "1f000701"
+   },
+   "mac": {
+    "chord": "LGUI + NUMBER_2",
+    "bytes": "1f000708"
+   },
+   "linux": {
+    "chord": "LCTRL + NUMBER_2",
+    "bytes": "1f000701"
+   }
+  },
+  {
+   "action": "EDITOR_3",
+   "name": "Focus editor group 3",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/EDITOR_3.svg",
+   "win": {
+    "chord": "LCTRL + NUMBER_3",
+    "bytes": "20000701"
+   },
+   "mac": {
+    "chord": "LGUI + NUMBER_3",
+    "bytes": "20000708"
+   },
+   "linux": {
+    "chord": "LCTRL + NUMBER_3",
+    "bytes": "20000701"
+   }
+  },
+  {
+   "action": "EDITOR_HISTORY",
+   "name": "Navigate editor history back",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/EDITOR_HISTORY.svg",
+   "win": {
+    "chord": "LCTRL + LALT + MINUS",
+    "bytes": "2d000705"
+   },
+   "mac": {
+    "chord": "LCTRL + MINUS",
+    "bytes": "2d000701"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + MINUS",
+    "bytes": "2d000705"
+   }
+  },
+  {
+   "action": "EDITOR_LAYOUT",
+   "name": "Toggle editor group layout",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/EDITOR_LAYOUT.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + NUMBER_0",
+    "bytes": "27000706"
+   },
+   "mac": {
+    "chord": "LSHIFT + LALT + NUMBER_0",
+    "bytes": "27000706"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + NUMBER_0",
+    "bytes": "27000706"
+   }
+  },
+  {
+   "action": "EISU",
+   "name": "Eisu (JIS alphanumeric key)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/EISU.svg"
+  },
+  {
+   "action": "EXCLAMATION",
+   "name": "Type ! (exclamation)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/EXCLAMATION.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_1",
+    "bytes": "1e000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_1",
+    "bytes": "1e000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_1",
+    "bytes": "1e000702"
+   }
+  },
+  {
+   "action": "EXPAND_FOLDER",
+   "name": "Expand folder",
+   "context": "file-manager",
+   "appSpecific": true,
+   "app": "File manager",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/EXPAND_FOLDER.svg",
+   "win": {
+    "chord": "RIGHT",
+    "bytes": "4f000700"
+   },
+   "mac": {
+    "chord": "RIGHT",
+    "bytes": "4f000700"
+   },
+   "linux": {
+    "chord": "RIGHT",
+    "bytes": "4f000700"
+   }
+  },
+  {
+   "action": "EXPAND_SELECTION",
+   "name": "Expand selection",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/EXPAND_SELECTION.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + RIGHT",
+    "bytes": "4f000706"
+   },
+   "mac": {
+    "chord": "LSHIFT + LALT + RIGHT",
+    "bytes": "4f000706"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + RIGHT",
+    "bytes": "4f000706"
+   }
+  },
+  {
+   "action": "EXPOSE_APPLICATION",
+   "name": "App Exposé (show app windows)",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/EXPOSE_APPLICATION.svg",
+   "mac": {
+    "chord": "LCTRL + DOWN",
+    "bytes": "51000701"
+   }
+  },
+  {
+   "action": "EXTENDED",
+   "name": "Extended mode/layer",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/EXTENDED.svg"
+  },
+  {
+   "action": "FIND",
+   "name": "Find",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/FIND.svg",
+   "win": {
+    "chord": "LCTRL + F",
+    "bytes": "09000701"
+   },
+   "mac": {
+    "chord": "LGUI + F",
+    "bytes": "09000708"
+   },
+   "linux": {
+    "chord": "LCTRL + F",
+    "bytes": "09000701"
+   }
+  },
+  {
+   "action": "FIND_CASE",
+   "name": "Find: toggle match case",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/FIND_CASE.svg",
+   "win": {
+    "chord": "LALT + C",
+    "bytes": "06000704"
+   },
+   "mac": {
+    "chord": "LALT + C",
+    "bytes": "06000704"
+   },
+   "linux": {
+    "chord": "LALT + C",
+    "bytes": "06000704"
+   }
+  },
+  {
+   "action": "FIND_FILE",
+   "name": "Go to file (quick open)",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/FIND_FILE.svg",
+   "win": {
+    "chord": "LCTRL + P",
+    "bytes": "13000701"
+   },
+   "mac": {
+    "chord": "LGUI + P",
+    "bytes": "13000708"
+   },
+   "linux": {
+    "chord": "LCTRL + P",
+    "bytes": "13000701"
+   }
+  },
+  {
+   "action": "FIND_FOLDER",
+   "name": "Find folder",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/FIND_FOLDER.svg"
+  },
+  {
+   "action": "FIND_NEXT",
+   "name": "Find next",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/FIND_NEXT.svg",
+   "win": {
+    "chord": "F3",
+    "bytes": "3c000700"
+   },
+   "mac": {
+    "chord": "LGUI + G",
+    "bytes": "0a000708"
+   },
+   "linux": {
+    "chord": "F3",
+    "bytes": "3c000700"
+   }
+  },
+  {
+   "action": "FIND_PREV",
+   "name": "Find previous",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/FIND_PREV.svg",
+   "win": {
+    "chord": "LSHIFT + F3",
+    "bytes": "3c000702"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + G",
+    "bytes": "0a00070a"
+   },
+   "linux": {
+    "chord": "LSHIFT + F3",
+    "bytes": "3c000702"
+   }
+  },
+  {
+   "action": "FIND_REGEX",
+   "name": "Find: toggle regex",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/FIND_REGEX.svg",
+   "win": {
+    "chord": "LALT + R",
+    "bytes": "15000704"
+   },
+   "mac": {
+    "chord": "LALT + R",
+    "bytes": "15000704"
+   },
+   "linux": {
+    "chord": "LALT + R",
+    "bytes": "15000704"
+   }
+  },
+  {
+   "action": "FIND_REPLACE",
+   "name": "Find and replace",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/FIND_REPLACE.svg",
+   "win": {
+    "chord": "LCTRL + H",
+    "bytes": "0b000701"
+   },
+   "mac": {
+    "chord": "LGUI + LALT + F",
+    "bytes": "0900070c"
+   },
+   "linux": {
+    "chord": "LCTRL + H",
+    "bytes": "0b000701"
+   }
+  },
+  {
+   "action": "FIND_SELECTION",
+   "name": "Use selection for find",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/FIND_SELECTION.svg",
+   "win": {
+    "chord": "LCTRL + F3",
+    "bytes": "3c000701"
+   },
+   "mac": {
+    "chord": "LGUI + E",
+    "bytes": "08000708"
+   },
+   "linux": {
+    "chord": "LCTRL + F3",
+    "bytes": "3c000701"
+   }
+  },
+  {
+   "action": "FIND_WORD",
+   "name": "Add selection to next find match",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/FIND_WORD.svg",
+   "win": {
+    "chord": "LCTRL + D",
+    "bytes": "07000701"
+   },
+   "mac": {
+    "chord": "LGUI + D",
+    "bytes": "07000708"
+   },
+   "linux": {
+    "chord": "LCTRL + D",
+    "bytes": "07000701"
+   }
+  },
+  {
+   "action": "FLOAT",
+   "name": "Float window/module toggle",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/FLOAT.svg"
+  },
+  {
+   "action": "FOLD_ALL",
+   "name": "Fold all",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/FOLD_ALL.svg"
+  },
+  {
+   "action": "FOLD_REGION",
+   "name": "Fold region",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/FOLD_REGION.svg"
+  },
+  {
+   "action": "FOLD_SUB",
+   "name": "Fold recursively",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/FOLD_SUB.svg"
+  },
+  {
+   "action": "FORCE_CLOSE_APPLICATION",
+   "name": "Force quit application",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/FORCE_CLOSE_APPLICATION.svg",
+   "mac": {
+    "chord": "LGUI + LALT + ESC",
+    "bytes": "2900070c"
+   }
+  },
+  {
+   "action": "FORCE_LOG_OUT",
+   "name": "Force log out",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/FORCE_LOG_OUT.svg",
+   "mac": {
+    "chord": "LGUI + LSHIFT + LALT + Q",
+    "bytes": "1400070e"
+   }
+  },
+  {
+   "action": "FORCE_RESTART",
+   "name": "Force restart",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/FORCE_RESTART.svg"
+  },
+  {
+   "action": "FORCE_SHUTDOWN",
+   "name": "Force shutdown",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/FORCE_SHUTDOWN.svg"
+  },
+  {
+   "action": "FORMAT",
+   "name": "Format document",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/FORMAT.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + F",
+    "bytes": "09000706"
+   },
+   "mac": {
+    "chord": "LSHIFT + LALT + F",
+    "bytes": "09000706"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + F",
+    "bytes": "09000706"
+   }
+  },
+  {
+   "action": "FORMAT_SELECTION",
+   "name": "Format selection",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/FORMAT_SELECTION.svg"
+  },
+  {
+   "action": "FORWARD",
+   "name": "Navigate forward",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/FORWARD.svg",
+   "win": {
+    "chord": "LALT + RIGHT",
+    "bytes": "4f000704"
+   },
+   "mac": {
+    "chord": "LGUI + RIGHT_BRACKET",
+    "bytes": "30000708"
+   },
+   "linux": {
+    "chord": "LALT + RIGHT",
+    "bytes": "4f000704"
+   }
+  },
+  {
+   "action": "FULLSCREEN",
+   "name": "Toggle fullscreen",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/FULLSCREEN.svg",
+   "win": {
+    "chord": "F11",
+    "bytes": "44000700"
+   },
+   "mac": {
+    "chord": "LGUI + LCTRL + F",
+    "bytes": "09000709"
+   },
+   "linux": {
+    "chord": "F11",
+    "bytes": "44000700"
+   }
+  },
+  {
+   "action": "GO_FOLDER",
+   "name": "Go to folder",
+   "context": "file-manager",
+   "appSpecific": true,
+   "app": "File manager",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/GO_FOLDER.svg",
+   "win": {
+    "chord": "LCTRL + L",
+    "bytes": "0f000701"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + G",
+    "bytes": "0a00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + L",
+    "bytes": "0f000701"
+   }
+  },
+  {
+   "action": "GO_LAYER_DELETED",
+   "name": "Go to layer (deleted)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/GO_LAYER_DELETED.svg"
+  },
+  {
+   "action": "GO_TO_DEFINITION",
+   "name": "Go to definition",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/GO_TO_DEFINITION.svg",
+   "win": {
+    "chord": "F12",
+    "bytes": "45000700"
+   },
+   "mac": {
+    "chord": "F12",
+    "bytes": "45000700"
+   },
+   "linux": {
+    "chord": "F12",
+    "bytes": "45000700"
+   }
+  },
+  {
+   "action": "GO_TO_LINE",
+   "name": "Go to line",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/GO_TO_LINE.svg",
+   "win": {
+    "chord": "LCTRL + G",
+    "bytes": "0a000701"
+   },
+   "mac": {
+    "chord": "LGUI + G",
+    "bytes": "0a000708"
+   },
+   "linux": {
+    "chord": "LCTRL + G",
+    "bytes": "0a000701"
+   }
+  },
+  {
+   "action": "GREATER_THAN",
+   "name": "Type > (greater than)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/GREATER_THAN.svg",
+   "win": {
+    "chord": "LSHIFT + PERIOD",
+    "bytes": "37000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + PERIOD",
+    "bytes": "37000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + PERIOD",
+    "bytes": "37000702"
+   }
+  },
+  {
+   "action": "HANKAKU_ZENKAKU",
+   "name": "Hankaku/Zenkaku (JIS width toggle)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HANKAKU_ZENKAKU.svg"
+  },
+  {
+   "action": "HASH",
+   "name": "Type # (hash)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/HASH.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_3",
+    "bytes": "20000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_3",
+    "bytes": "20000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_3",
+    "bytes": "20000702"
+   }
+  },
+  {
+   "action": "HIDE_WINDOW",
+   "name": "Hide application",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/HIDE_WINDOW.svg",
+   "mac": {
+    "chord": "LGUI + H",
+    "bytes": "0b000708"
+   }
+  },
+  {
+   "action": "HIDE_WINDOWS",
+   "name": "Hide other windows / show desktop",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/HIDE_WINDOWS.svg",
+   "win": {
+    "chord": "LGUI + D",
+    "bytes": "07000708"
+   },
+   "mac": {
+    "chord": "LGUI + LALT + H",
+    "bytes": "0b00070c"
+   },
+   "linux": {
+    "chord": "LGUI + D",
+    "bytes": "07000708"
+   }
+  },
+  {
+   "action": "HIRAGANA",
+   "name": "Hiragana (JIS input key)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HIRAGANA.svg"
+  },
+  {
+   "action": "HIRA_KATA",
+   "name": "Hiragana/Katakana toggle",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HIRA_KATA.svg"
+  },
+  {
+   "action": "HOLD_CONFIGURATION_BLUEPRINT",
+   "name": "Hold configuration blueprint",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_CONFIGURATION_BLUEPRINT.svg"
+  },
+  {
+   "action": "HOLD_CONFIGURATION_L_BLUEPRINT",
+   "name": "Hold configuration blueprint (left)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_CONFIGURATION_L_BLUEPRINT.svg"
+  },
+  {
+   "action": "HOLD_CONFIGURATION_R_BLUEPRINT",
+   "name": "Hold configuration blueprint (right)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_CONFIGURATION_R_BLUEPRINT.svg"
+  },
+  {
+   "action": "HOLD_DYNAMIC_LAYER",
+   "name": "Hold dynamic layer",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_DYNAMIC_LAYER.svg"
+  },
+  {
+   "action": "HOLD_LAYER_$ID",
+   "name": "Hold layer (template)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_$ID.svg"
+  },
+  {
+   "action": "HOLD_LAYER_0",
+   "name": "Hold layer 0",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_0.svg"
+  },
+  {
+   "action": "HOLD_LAYER_1",
+   "name": "Hold layer 1",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_1.svg"
+  },
+  {
+   "action": "HOLD_LAYER_10",
+   "name": "Hold layer 10",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_10.svg"
+  },
+  {
+   "action": "HOLD_LAYER_11",
+   "name": "Hold layer 11",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_11.svg"
+  },
+  {
+   "action": "HOLD_LAYER_12",
+   "name": "Hold layer 12",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_12.svg"
+  },
+  {
+   "action": "HOLD_LAYER_13",
+   "name": "Hold layer 13",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_13.svg"
+  },
+  {
+   "action": "HOLD_LAYER_14",
+   "name": "Hold layer 14",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_14.svg"
+  },
+  {
+   "action": "HOLD_LAYER_15",
+   "name": "Hold layer 15",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_15.svg"
+  },
+  {
+   "action": "HOLD_LAYER_16",
+   "name": "Hold layer 16",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_16.svg"
+  },
+  {
+   "action": "HOLD_LAYER_17",
+   "name": "Hold layer 17",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_17.svg"
+  },
+  {
+   "action": "HOLD_LAYER_18",
+   "name": "Hold layer 18",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_18.svg"
+  },
+  {
+   "action": "HOLD_LAYER_19",
+   "name": "Hold layer 19",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_19.svg"
+  },
+  {
+   "action": "HOLD_LAYER_2",
+   "name": "Hold layer 2",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_2.svg"
+  },
+  {
+   "action": "HOLD_LAYER_20",
+   "name": "Hold layer 20",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_20.svg"
+  },
+  {
+   "action": "HOLD_LAYER_21",
+   "name": "Hold layer 21",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_21.svg"
+  },
+  {
+   "action": "HOLD_LAYER_22",
+   "name": "Hold layer 22",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_22.svg"
+  },
+  {
+   "action": "HOLD_LAYER_23",
+   "name": "Hold layer 23",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_23.svg"
+  },
+  {
+   "action": "HOLD_LAYER_24",
+   "name": "Hold layer 24",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_24.svg"
+  },
+  {
+   "action": "HOLD_LAYER_25",
+   "name": "Hold layer 25",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_25.svg"
+  },
+  {
+   "action": "HOLD_LAYER_26",
+   "name": "Hold layer 26",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_26.svg"
+  },
+  {
+   "action": "HOLD_LAYER_27",
+   "name": "Hold layer 27",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_27.svg"
+  },
+  {
+   "action": "HOLD_LAYER_28",
+   "name": "Hold layer 28",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_28.svg"
+  },
+  {
+   "action": "HOLD_LAYER_29",
+   "name": "Hold layer 29",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_29.svg"
+  },
+  {
+   "action": "HOLD_LAYER_3",
+   "name": "Hold layer 3",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_3.svg"
+  },
+  {
+   "action": "HOLD_LAYER_30",
+   "name": "Hold layer 30",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_30.svg"
+  },
+  {
+   "action": "HOLD_LAYER_31",
+   "name": "Hold layer 31",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_31.svg"
+  },
+  {
+   "action": "HOLD_LAYER_32",
+   "name": "Hold layer 32",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_32.svg"
+  },
+  {
+   "action": "HOLD_LAYER_33",
+   "name": "Hold layer 33",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_33.svg"
+  },
+  {
+   "action": "HOLD_LAYER_34",
+   "name": "Hold layer 34",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_34.svg"
+  },
+  {
+   "action": "HOLD_LAYER_35",
+   "name": "Hold layer 35",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_35.svg"
+  },
+  {
+   "action": "HOLD_LAYER_4",
+   "name": "Hold layer 4",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_4.svg"
+  },
+  {
+   "action": "HOLD_LAYER_5",
+   "name": "Hold layer 5",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_5.svg"
+  },
+  {
+   "action": "HOLD_LAYER_6",
+   "name": "Hold layer 6",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_6.svg"
+  },
+  {
+   "action": "HOLD_LAYER_7",
+   "name": "Hold layer 7",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_7.svg"
+  },
+  {
+   "action": "HOLD_LAYER_8",
+   "name": "Hold layer 8",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_8.svg"
+  },
+  {
+   "action": "HOLD_LAYER_9",
+   "name": "Hold layer 9",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_9.svg"
+  },
+  {
+   "action": "HOLD_LAYER_DELETED",
+   "name": "Hold layer (deleted)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HOLD_LAYER_DELETED.svg"
+  },
+  {
+   "action": "HORIZONTAL",
+   "name": "Horizontal orientation/scroll",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/HORIZONTAL.svg"
+  },
+  {
+   "action": "INDENT_LINE",
+   "name": "Indent line",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/INDENT_LINE.svg",
+   "win": {
+    "chord": "LCTRL + RIGHT_BRACKET",
+    "bytes": "30000701"
+   },
+   "mac": {
+    "chord": "LGUI + RIGHT_BRACKET",
+    "bytes": "30000708"
+   },
+   "linux": {
+    "chord": "LCTRL + RIGHT_BRACKET",
+    "bytes": "30000701"
+   }
+  },
+  {
+   "action": "INSERT_CURSOR",
+   "name": "Add cursor",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/INSERT_CURSOR.svg"
+  },
+  {
+   "action": "INSERT_CURSOR_ABOVE",
+   "name": "Add cursor above",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/INSERT_CURSOR_ABOVE.svg",
+   "win": {
+    "chord": "LCTRL + LALT + UP",
+    "bytes": "52000705"
+   },
+   "mac": {
+    "chord": "LGUI + LALT + UP",
+    "bytes": "5200070c"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + UP",
+    "bytes": "52000705"
+   }
+  },
+  {
+   "action": "INSERT_CURSOR_BELOW",
+   "name": "Add cursor below",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/INSERT_CURSOR_BELOW.svg",
+   "win": {
+    "chord": "LCTRL + LALT + DOWN",
+    "bytes": "51000705"
+   },
+   "mac": {
+    "chord": "LGUI + LALT + DOWN",
+    "bytes": "5100070c"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + DOWN",
+    "bytes": "51000705"
+   }
+  },
+  {
+   "action": "INSERT_CURSOR_END",
+   "name": "Add cursor to line ends",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/INSERT_CURSOR_END.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + I",
+    "bytes": "0c000706"
+   },
+   "mac": {
+    "chord": "LSHIFT + LALT + I",
+    "bytes": "0c000706"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + I",
+    "bytes": "0c000706"
+   }
+  },
+  {
+   "action": "INSERT_LINE_DOWN",
+   "name": "Insert line below",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/INSERT_LINE_DOWN.svg",
+   "win": {
+    "chord": "LCTRL + ENTER",
+    "bytes": "28000701"
+   },
+   "mac": {
+    "chord": "LGUI + ENTER",
+    "bytes": "28000708"
+   },
+   "linux": {
+    "chord": "LCTRL + ENTER",
+    "bytes": "28000701"
+   }
+  },
+  {
+   "action": "INSERT_LINE_UP",
+   "name": "Insert line above",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/INSERT_LINE_UP.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + ENTER",
+    "bytes": "28000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + ENTER",
+    "bytes": "2800070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + ENTER",
+    "bytes": "28000703"
+   }
+  },
+  {
+   "action": "INSER_CURSOR",
+   "name": "Add cursor",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/INSER_CURSOR.svg"
+  },
+  {
+   "action": "INSER_CURSOR_ABOVE",
+   "name": "Add cursor above",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/INSER_CURSOR_ABOVE.svg",
+   "win": {
+    "chord": "LCTRL + LALT + UP",
+    "bytes": "52000705"
+   },
+   "mac": {
+    "chord": "LGUI + LALT + UP",
+    "bytes": "5200070c"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + UP",
+    "bytes": "52000705"
+   }
+  },
+  {
+   "action": "INSER_CURSOR_BELOW",
+   "name": "Add cursor below",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/INSER_CURSOR_BELOW.svg",
+   "win": {
+    "chord": "LCTRL + LALT + DOWN",
+    "bytes": "51000705"
+   },
+   "mac": {
+    "chord": "LGUI + LALT + DOWN",
+    "bytes": "5100070c"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + DOWN",
+    "bytes": "51000705"
+   }
+  },
+  {
+   "action": "INSER_CURSOR_END",
+   "name": "Add cursor to line ends",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/INSER_CURSOR_END.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + I",
+    "bytes": "0c000706"
+   },
+   "mac": {
+    "chord": "LSHIFT + LALT + I",
+    "bytes": "0c000706"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + I",
+    "bytes": "0c000706"
+   }
+  },
+  {
+   "action": "INTEGRATIONS",
+   "name": "Third-party integrations",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/INTEGRATIONS.svg"
+  },
+  {
+   "action": "INTEGRATION_BLUEPRINT",
+   "name": "Integration blueprint",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/INTEGRATION_BLUEPRINT.svg"
+  },
+  {
+   "action": "ITALIC",
+   "name": "Italic",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/ITALIC.svg",
+   "win": {
+    "chord": "LCTRL + I",
+    "bytes": "0c000701"
+   },
+   "mac": {
+    "chord": "LGUI + I",
+    "bytes": "0c000708"
+   },
+   "linux": {
+    "chord": "LCTRL + I",
+    "bytes": "0c000701"
+   }
+  },
+  {
+   "action": "Integration",
+   "name": "Integration (duplicate entry)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/Integration.svg"
+  },
+  {
+   "action": "JUMP_TO_BRACKET",
+   "name": "Go to bracket",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/JUMP_TO_BRACKET.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + BACKSLASH",
+    "bytes": "31000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + BACKSLASH",
+    "bytes": "3100070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + BACKSLASH",
+    "bytes": "31000703"
+   }
+  },
+  {
+   "action": "KANA",
+   "name": "Kana (JIS input key)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/KANA.svg"
+  },
+  {
+   "action": "KATAKANA",
+   "name": "Katakana (JIS input key)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/KATAKANA.svg"
+  },
+  {
+   "action": "K_APP",
+   "name": "Application/Menu key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/K_APP.svg"
+  },
+  {
+   "action": "LANGUAGE",
+   "name": "Switch input language",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/LANGUAGE.svg",
+   "win": {
+    "chord": "LGUI + SPACE",
+    "bytes": "2c000708"
+   },
+   "mac": {
+    "chord": "LCTRL + SPACE",
+    "bytes": "2c000701"
+   },
+   "linux": {
+    "chord": "LGUI + SPACE",
+    "bytes": "2c000708"
+   }
+  },
+  {
+   "action": "LAYERS",
+   "name": "View/cycle keyboard layers",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LAYERS.svg"
+  },
+  {
+   "action": "LCMD",
+   "name": "Left Command/GUI key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LCMD.svg"
+  },
+  {
+   "action": "LED_BLUE",
+   "name": "LED color: blue",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_BLUE.svg"
+  },
+  {
+   "action": "LED_BREATHE",
+   "name": "LED effect: breathe",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_BREATHE.svg"
+  },
+  {
+   "action": "LED_BRIGHTNESS",
+   "name": "LED brightness",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_BRIGHTNESS.svg"
+  },
+  {
+   "action": "LED_BRIGHTNESS_DOWN",
+   "name": "LED brightness down",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_BRIGHTNESS_DOWN.svg"
+  },
+  {
+   "action": "LED_BRIGHTNESS_UP",
+   "name": "LED brightness up",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_BRIGHTNESS_UP.svg"
+  },
+  {
+   "action": "LED_CYAN",
+   "name": "LED color: cyan",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_CYAN.svg"
+  },
+  {
+   "action": "LED_EFFECT",
+   "name": "LED effect",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_EFFECT.svg"
+  },
+  {
+   "action": "LED_GEN",
+   "name": "LED generation 1",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_GEN.svg"
+  },
+  {
+   "action": "LED_GEN_2",
+   "name": "LED generation 2",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_GEN_2.svg"
+  },
+  {
+   "action": "LED_GREEN",
+   "name": "LED color: green",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_GREEN.svg"
+  },
+  {
+   "action": "LED_MAGENTA",
+   "name": "LED color: magenta",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_MAGENTA.svg"
+  },
+  {
+   "action": "LED_ON_OFF",
+   "name": "LED on/off toggle",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_ON_OFF.svg"
+  },
+  {
+   "action": "LED_ORANGE",
+   "name": "LED color: orange",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_ORANGE.svg"
+  },
+  {
+   "action": "LED_PINK",
+   "name": "LED color: pink",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_PINK.svg"
+  },
+  {
+   "action": "LED_RED",
+   "name": "LED color: red",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_RED.svg"
+  },
+  {
+   "action": "LED_SOLID",
+   "name": "LED effect: solid",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/LED_SOLID.svg"
+  },
+  {
+   "action": "LED_SPEC",
+   "name": "LED effect: spec / reactive",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LED_SPEC.svg"
+  },
+  {
+   "action": "LED_SPEED_DOWN",
+   "name": "LED animation speed down",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LED_SPEED_DOWN.svg"
+  },
+  {
+   "action": "LED_SPEED_UP",
+   "name": "LED animation speed up",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LED_SPEED_UP.svg"
+  },
+  {
+   "action": "LED_SWIRL",
+   "name": "LED effect: swirl",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LED_SWIRL.svg"
+  },
+  {
+   "action": "LED_WHITE",
+   "name": "LED color: white",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LED_WHITE.svg"
+  },
+  {
+   "action": "LED_YELLOW",
+   "name": "LED color: yellow",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LED_YELLOW.svg"
+  },
+  {
+   "action": "LEFT_BRACE",
+   "name": "Type { (left brace)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LEFT_BRACE.svg",
+   "win": {
+    "chord": "LSHIFT + LEFT_BRACKET",
+    "bytes": "2f000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + LEFT_BRACKET",
+    "bytes": "2f000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + LEFT_BRACKET",
+    "bytes": "2f000702"
+   }
+  },
+  {
+   "action": "LEFT_DESKTOP",
+   "name": "Switch to desktop on the left",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/LEFT_DESKTOP.svg",
+   "win": {
+    "chord": "LGUI + LCTRL + LEFT",
+    "bytes": "50000709"
+   },
+   "mac": {
+    "chord": "LCTRL + LEFT",
+    "bytes": "50000701"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + LEFT",
+    "bytes": "50000705"
+   }
+  },
+  {
+   "action": "LEFT_PARENTHESIS",
+   "name": "Type ( (left parenthesis)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LEFT_PARENTHESIS.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_9",
+    "bytes": "26000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_9",
+    "bytes": "26000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_9",
+    "bytes": "26000702"
+   }
+  },
+  {
+   "action": "LESS_THAN",
+   "name": "Type < (less than)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LESS_THAN.svg",
+   "win": {
+    "chord": "LSHIFT + COMMA",
+    "bytes": "36000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + COMMA",
+    "bytes": "36000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + COMMA",
+    "bytes": "36000702"
+   }
+  },
+  {
+   "action": "LINE_END",
+   "name": "Move to end of line",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/LINE_END.svg",
+   "win": {
+    "chord": "END",
+    "bytes": "4d000700"
+   },
+   "mac": {
+    "chord": "LGUI + RIGHT",
+    "bytes": "4f000708"
+   },
+   "linux": {
+    "chord": "END",
+    "bytes": "4d000700"
+   }
+  },
+  {
+   "action": "LINE_SCROLL_DOWN",
+   "name": "Scroll down one line (wheel emulation)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LINE_SCROLL_DOWN.svg"
+  },
+  {
+   "action": "LINE_SCROLL_DOWN_2",
+   "name": "Scroll down one line, alt binding (wheel emulation)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LINE_SCROLL_DOWN_2.svg"
+  },
+  {
+   "action": "LINE_SCROLL_UP",
+   "name": "Scroll up one line (wheel emulation)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LINE_SCROLL_UP.svg"
+  },
+  {
+   "action": "LINE_SCROLL_UP_2",
+   "name": "Scroll up one line, alt binding (wheel emulation)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LINE_SCROLL_UP_2.svg"
+  },
+  {
+   "action": "LINE_START",
+   "name": "Move to start of line",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/LINE_START.svg",
+   "win": {
+    "chord": "HOME",
+    "bytes": "4a000700"
+   },
+   "mac": {
+    "chord": "LGUI + LEFT",
+    "bytes": "50000708"
+   },
+   "linux": {
+    "chord": "HOME",
+    "bytes": "4a000700"
+   }
+  },
+  {
+   "action": "LOCK_SCREEN",
+   "name": "Lock screen",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/LOCK_SCREEN.svg",
+   "win": {
+    "chord": "LGUI + L",
+    "bytes": "0f000708"
+   },
+   "mac": {
+    "chord": "LCTRL + LGUI + Q",
+    "bytes": "14000709"
+   },
+   "linux": {
+    "chord": "LGUI + L",
+    "bytes": "0f000708"
+   }
+  },
+  {
+   "action": "LOG_OUT",
+   "name": "Log out",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/LOG_OUT.svg",
+   "mac": {
+    "chord": "LSHIFT + LGUI + Q",
+    "bytes": "1400070a"
+   }
+  },
+  {
+   "action": "LOPT",
+   "name": "Left Option key (Alt)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LOPT.svg"
+  },
+  {
+   "action": "LSHFT",
+   "name": "Left Shift key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LSHFT.svg"
+  },
+  {
+   "action": "LWIN",
+   "name": "Left Windows (GUI) key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/LWIN.svg"
+  },
+  {
+   "action": "MAC_DELETE",
+   "name": "Mac Delete key (Backspace)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MAC_DELETE.svg"
+  },
+  {
+   "action": "MAC_FORWARD_DELETE",
+   "name": "Mac Forward Delete key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MAC_FORWARD_DELETE.svg"
+  },
+  {
+   "action": "MAC_OS",
+   "name": "macOS mode (hardware OS switch)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MAC_OS.svg"
+  },
+  {
+   "action": "MAC_SHORTCUT",
+   "name": "Mac shortcut mode (hardware modifier alias)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MAC_SHORTCUT.svg"
+  },
+  {
+   "action": "MARKDOWN_SIDE",
+   "name": "Open Markdown preview to the side",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/MARKDOWN_SIDE.svg"
+  },
+  {
+   "action": "MAXIMIZE",
+   "name": "Maximize window",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/MAXIMIZE.svg",
+   "win": {
+    "chord": "LGUI + UP",
+    "bytes": "52000708"
+   },
+   "linux": {
+    "chord": "LGUI + UP",
+    "bytes": "52000708"
+   }
+  },
+  {
+   "action": "MB1",
+   "name": "Mouse button 1 (left click)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB1.svg"
+  },
+  {
+   "action": "MB10",
+   "name": "Mouse button 10",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB10.svg"
+  },
+  {
+   "action": "MB11",
+   "name": "Mouse button 11",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB11.svg"
+  },
+  {
+   "action": "MB12",
+   "name": "Mouse button 12",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB12.svg"
+  },
+  {
+   "action": "MB2",
+   "name": "Mouse button 2 (right click)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB2.svg"
+  },
+  {
+   "action": "MB3",
+   "name": "Mouse button 3 (middle click)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB3.svg"
+  },
+  {
+   "action": "MB4",
+   "name": "Mouse button 4 (back)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB4.svg"
+  },
+  {
+   "action": "MB5",
+   "name": "Mouse button 5 (forward)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB5.svg"
+  },
+  {
+   "action": "MB6",
+   "name": "Mouse button 6",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB6.svg"
+  },
+  {
+   "action": "MB7",
+   "name": "Mouse button 7",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB7.svg"
+  },
+  {
+   "action": "MB8",
+   "name": "Mouse button 8",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB8.svg"
+  },
+  {
+   "action": "MB9",
+   "name": "Mouse button 9",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MB9.svg"
+  },
+  {
+   "action": "MINIMIZE",
+   "name": "Minimize window",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/MINIMIZE.svg",
+   "win": {
+    "chord": "LGUI + DOWN",
+    "bytes": "51000708"
+   },
+   "mac": {
+    "chord": "LGUI + M",
+    "bytes": "10000708"
+   },
+   "linux": {
+    "chord": "LGUI + DOWN",
+    "bytes": "51000708"
+   }
+  },
+  {
+   "action": "MINIMIZE_ALL",
+   "name": "Minimize all windows",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/MINIMIZE_ALL.svg",
+   "win": {
+    "chord": "LGUI + M",
+    "bytes": "10000708"
+   },
+   "mac": {
+    "chord": "LALT + LGUI + M",
+    "bytes": "1000070c"
+   }
+  },
+  {
+   "action": "MODULES",
+   "name": "Modules menu",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MODULES.svg"
+  },
+  {
+   "action": "MODULE_FORCE_CHARGE",
+   "name": "Force-charge wireless module",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MODULE_FORCE_CHARGE.svg"
+  },
+  {
+   "action": "MODULE_GEN",
+   "name": "Module general function",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MODULE_GEN.svg"
+  },
+  {
+   "action": "MOUSE_DOWN",
+   "name": "Move mouse pointer down",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MOUSE_DOWN.svg"
+  },
+  {
+   "action": "MOUSE_HORIZONTAL",
+   "name": "Mouse horizontal movement mode",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MOUSE_HORIZONTAL.svg"
+  },
+  {
+   "action": "MOUSE_LEFT",
+   "name": "Move mouse pointer left",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MOUSE_LEFT.svg"
+  },
+  {
+   "action": "MOUSE_RIGHT",
+   "name": "Move mouse pointer right",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MOUSE_RIGHT.svg"
+  },
+  {
+   "action": "MOUSE_UP",
+   "name": "Move mouse pointer up",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MOUSE_UP.svg"
+  },
+  {
+   "action": "MOUSE_VERTICAL",
+   "name": "Mouse vertical movement mode",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MOUSE_VERTICAL.svg"
+  },
+  {
+   "action": "MOVE_EDITOR_GROUP_LEFT",
+   "name": "Move editor group left",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/MOVE_EDITOR_GROUP_LEFT.svg"
+  },
+  {
+   "action": "MOVE_EDITOR_GROUP_RIGHT",
+   "name": "Move editor group right",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/MOVE_EDITOR_GROUP_RIGHT.svg"
+  },
+  {
+   "action": "MOVE_EDITOR_LEFT",
+   "name": "Move editor tab left",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/MOVE_EDITOR_LEFT.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + PG_UP",
+    "bytes": "4b000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + PG_UP",
+    "bytes": "4b00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + PG_UP",
+    "bytes": "4b000703"
+   }
+  },
+  {
+   "action": "MOVE_EDITOR_RIGHT",
+   "name": "Move editor tab right",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/MOVE_EDITOR_RIGHT.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + PG_DN",
+    "bytes": "4e000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + PG_DN",
+    "bytes": "4e00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + PG_DN",
+    "bytes": "4e000703"
+   }
+  },
+  {
+   "action": "MOVE_LINE_DOWN",
+   "name": "Move line down",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MOVE_LINE_DOWN.svg",
+   "win": {
+    "chord": "LALT + DOWN",
+    "bytes": "51000704"
+   },
+   "mac": {
+    "chord": "LALT + DOWN",
+    "bytes": "51000704"
+   },
+   "linux": {
+    "chord": "LALT + DOWN",
+    "bytes": "51000704"
+   }
+  },
+  {
+   "action": "MOVE_LINE_UP",
+   "name": "Move line up",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MOVE_LINE_UP.svg",
+   "win": {
+    "chord": "LALT + UP",
+    "bytes": "52000704"
+   },
+   "mac": {
+    "chord": "LALT + UP",
+    "bytes": "52000704"
+   },
+   "linux": {
+    "chord": "LALT + UP",
+    "bytes": "52000704"
+   }
+  },
+  {
+   "action": "MOVE_SELECT_FIND_MATCHES",
+   "name": "Move selection to next find match",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/MOVE_SELECT_FIND_MATCHES.svg",
+   "win": {
+    "chord": "LCTRL + D",
+    "bytes": "07000701"
+   },
+   "mac": {
+    "chord": "LGUI + D",
+    "bytes": "07000708"
+   },
+   "linux": {
+    "chord": "LCTRL + D",
+    "bytes": "07000701"
+   }
+  },
+  {
+   "action": "MO_LAYER_$ID",
+   "name": "Momentary layer switch (parametric layer)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_$ID.svg"
+  },
+  {
+   "action": "MO_LAYER_00",
+   "name": "Momentary layer 00",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_00.svg"
+  },
+  {
+   "action": "MO_LAYER_01",
+   "name": "Momentary layer 01",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_01.svg"
+  },
+  {
+   "action": "MO_LAYER_02",
+   "name": "Momentary layer 02",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_02.svg"
+  },
+  {
+   "action": "MO_LAYER_03",
+   "name": "Momentary layer 03",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_03.svg"
+  },
+  {
+   "action": "MO_LAYER_04",
+   "name": "Momentary layer 04",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_04.svg"
+  },
+  {
+   "action": "MO_LAYER_05",
+   "name": "Momentary layer 05",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_05.svg"
+  },
+  {
+   "action": "MO_LAYER_06",
+   "name": "Momentary layer 06",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_06.svg"
+  },
+  {
+   "action": "MO_LAYER_07",
+   "name": "Momentary layer 07",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_07.svg"
+  },
+  {
+   "action": "MO_LAYER_08",
+   "name": "Momentary layer 08",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_08.svg"
+  },
+  {
+   "action": "MO_LAYER_09",
+   "name": "Momentary layer 09",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_09.svg"
+  },
+  {
+   "action": "MO_LAYER_10",
+   "name": "Momentary layer 10",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_10.svg"
+  },
+  {
+   "action": "MO_LAYER_11",
+   "name": "Momentary layer 11",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_11.svg"
+  },
+  {
+   "action": "MO_LAYER_12",
+   "name": "Momentary layer 12",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_12.svg"
+  },
+  {
+   "action": "MO_LAYER_13",
+   "name": "Momentary layer 13",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_13.svg"
+  },
+  {
+   "action": "MO_LAYER_14",
+   "name": "Momentary layer 14",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_14.svg"
+  },
+  {
+   "action": "MO_LAYER_15",
+   "name": "Momentary layer 15",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_15.svg"
+  },
+  {
+   "action": "MO_LAYER_16",
+   "name": "Momentary layer 16",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_16.svg"
+  },
+  {
+   "action": "MO_LAYER_17",
+   "name": "Momentary layer 17",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_17.svg"
+  },
+  {
+   "action": "MO_LAYER_18",
+   "name": "Momentary layer 18",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_18.svg"
+  },
+  {
+   "action": "MO_LAYER_19",
+   "name": "Momentary layer 19",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_19.svg"
+  },
+  {
+   "action": "MO_LAYER_20",
+   "name": "Momentary layer 20",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_20.svg"
+  },
+  {
+   "action": "MO_LAYER_21",
+   "name": "Momentary layer 21",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_21.svg"
+  },
+  {
+   "action": "MO_LAYER_22",
+   "name": "Momentary layer 22",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_22.svg"
+  },
+  {
+   "action": "MO_LAYER_23",
+   "name": "Momentary layer 23",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_23.svg"
+  },
+  {
+   "action": "MO_LAYER_24",
+   "name": "Momentary layer 24",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_24.svg"
+  },
+  {
+   "action": "MO_LAYER_25",
+   "name": "Momentary layer 25",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_25.svg"
+  },
+  {
+   "action": "MO_LAYER_26",
+   "name": "Momentary layer 26",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_26.svg"
+  },
+  {
+   "action": "MO_LAYER_27",
+   "name": "Momentary layer 27",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_27.svg"
+  },
+  {
+   "action": "MO_LAYER_28",
+   "name": "Momentary layer 28",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_28.svg"
+  },
+  {
+   "action": "MO_LAYER_29",
+   "name": "Momentary layer 29",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_29.svg"
+  },
+  {
+   "action": "MO_LAYER_30",
+   "name": "Momentary layer 30",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_30.svg"
+  },
+  {
+   "action": "MO_LAYER_31",
+   "name": "Momentary layer 31",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_31.svg"
+  },
+  {
+   "action": "MO_LAYER_32",
+   "name": "Momentary layer 32",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_32.svg"
+  },
+  {
+   "action": "MO_LAYER_33",
+   "name": "Momentary layer 33",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_33.svg"
+  },
+  {
+   "action": "MO_LAYER_34",
+   "name": "Momentary layer 34",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_34.svg"
+  },
+  {
+   "action": "MO_LAYER_35",
+   "name": "Momentary layer 35",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/MO_LAYER_35.svg"
+  },
+  {
+   "action": "NEW_FILE",
+   "name": "New file",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/NEW_FILE.svg",
+   "win": {
+    "chord": "LCTRL + N",
+    "bytes": "11000701"
+   },
+   "mac": {
+    "chord": "LGUI + N",
+    "bytes": "11000708"
+   },
+   "linux": {
+    "chord": "LCTRL + N",
+    "bytes": "11000701"
+   }
+  },
+  {
+   "action": "NEW_FOLDER",
+   "name": "New folder",
+   "context": "file-manager",
+   "appSpecific": true,
+   "app": "File manager",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/NEW_FOLDER.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + N",
+    "bytes": "11000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + N",
+    "bytes": "1100070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + N",
+    "bytes": "11000703"
+   }
+  },
+  {
+   "action": "NEW_FOLDER_SELECTION",
+   "name": "New folder from selection",
+   "context": "file-manager",
+   "appSpecific": true,
+   "app": "File manager",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/NEW_FOLDER_SELECTION.svg"
+  },
+  {
+   "action": "NEW_TAB",
+   "name": "New tab",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/NEW_TAB.svg",
+   "win": {
+    "chord": "LCTRL + T",
+    "bytes": "17000701"
+   },
+   "mac": {
+    "chord": "LGUI + T",
+    "bytes": "17000708"
+   },
+   "linux": {
+    "chord": "LCTRL + T",
+    "bytes": "17000701"
+   }
+  },
+  {
+   "action": "NEW_TERMINAL",
+   "name": "Create new terminal",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/NEW_TERMINAL.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + GRAVE",
+    "bytes": "35000703"
+   },
+   "mac": {
+    "chord": "LCTRL + LSHIFT + GRAVE",
+    "bytes": "35000703"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + GRAVE",
+    "bytes": "35000703"
+   }
+  },
+  {
+   "action": "NEW_WINDOW",
+   "name": "New window",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/NEW_WINDOW.svg",
+   "win": {
+    "chord": "LCTRL + N",
+    "bytes": "11000701"
+   },
+   "mac": {
+    "chord": "LGUI + N",
+    "bytes": "11000708"
+   },
+   "linux": {
+    "chord": "LCTRL + N",
+    "bytes": "11000701"
+   }
+  },
+  {
+   "action": "NEXT_APP",
+   "name": "Switch to next application",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/NEXT_APP.svg",
+   "win": {
+    "chord": "LALT + TAB",
+    "bytes": "2b000704"
+   },
+   "mac": {
+    "chord": "LGUI + TAB",
+    "bytes": "2b000708"
+   },
+   "linux": {
+    "chord": "LALT + TAB",
+    "bytes": "2b000704"
+   }
+  },
+  {
+   "action": "NEXT_EDITOR",
+   "name": "Open next editor tab",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/NEXT_EDITOR.svg",
+   "win": {
+    "chord": "LCTRL + PG_DN",
+    "bytes": "4e000701"
+   },
+   "mac": {
+    "chord": "LCTRL + PG_DN",
+    "bytes": "4e000701"
+   },
+   "linux": {
+    "chord": "LCTRL + PG_DN",
+    "bytes": "4e000701"
+   }
+  },
+  {
+   "action": "NEXT_FILE",
+   "name": "Next file",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/NEXT_FILE.svg"
+  },
+  {
+   "action": "NEXT_PARAGRAPH",
+   "name": "Move to next paragraph",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/NEXT_PARAGRAPH.svg",
+   "win": {
+    "chord": "LCTRL + DOWN",
+    "bytes": "51000701"
+   },
+   "mac": {
+    "chord": "LALT + DOWN",
+    "bytes": "51000704"
+   },
+   "linux": {
+    "chord": "LCTRL + DOWN",
+    "bytes": "51000701"
+   }
+  },
+  {
+   "action": "NEXT_PROBLEM",
+   "name": "Go to next problem/error",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/NEXT_PROBLEM.svg",
+   "win": {
+    "chord": "F8",
+    "bytes": "41000700"
+   },
+   "mac": {
+    "chord": "F8",
+    "bytes": "41000700"
+   },
+   "linux": {
+    "chord": "F8",
+    "bytes": "41000700"
+   }
+  },
+  {
+   "action": "NEXT_SCREEN",
+   "name": "Move window to next display",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/NEXT_SCREEN.svg",
+   "win": {
+    "chord": "LGUI + LSHIFT + RIGHT",
+    "bytes": "4f00070a"
+   }
+  },
+  {
+   "action": "NEXT_TAB",
+   "name": "Next tab",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/NEXT_TAB.svg",
+   "win": {
+    "chord": "LCTRL + TAB",
+    "bytes": "2b000701"
+   },
+   "mac": {
+    "chord": "LCTRL + TAB",
+    "bytes": "2b000701"
+   },
+   "linux": {
+    "chord": "LCTRL + TAB",
+    "bytes": "2b000701"
+   }
+  },
+  {
+   "action": "NEXT_WINDOW",
+   "name": "Cycle to next window of app",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/NEXT_WINDOW.svg",
+   "mac": {
+    "chord": "LGUI + GRAVE",
+    "bytes": "35000708"
+   },
+   "linux": {
+    "chord": "LGUI + GRAVE",
+    "bytes": "35000708"
+   }
+  },
+  {
+   "action": "NEXT_WINDOW_ORDER",
+   "name": "Cycle window order forward",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/NEXT_WINDOW_ORDER.svg"
+  },
+  {
+   "action": "NEXT_WORD",
+   "name": "Move to next word",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/NEXT_WORD.svg",
+   "win": {
+    "chord": "LCTRL + RIGHT",
+    "bytes": "4f000701"
+   },
+   "mac": {
+    "chord": "LALT + RIGHT",
+    "bytes": "4f000704"
+   },
+   "linux": {
+    "chord": "LCTRL + RIGHT",
+    "bytes": "4f000701"
+   }
+  },
+  {
+   "action": "OPEN_CONTEXT",
+   "name": "Open context menu",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/OPEN_CONTEXT.svg",
+   "win": {
+    "chord": "LSHIFT + F10",
+    "bytes": "43000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + F10",
+    "bytes": "43000702"
+   }
+  },
+  {
+   "action": "OPEN_FILE",
+   "name": "Open file",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/OPEN_FILE.svg",
+   "win": {
+    "chord": "LCTRL + O",
+    "bytes": "12000701"
+   },
+   "mac": {
+    "chord": "LGUI + O",
+    "bytes": "12000708"
+   },
+   "linux": {
+    "chord": "LCTRL + O",
+    "bytes": "12000701"
+   }
+  },
+  {
+   "action": "OPEN_FOLDER",
+   "name": "Open folder",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/OPEN_FOLDER.svg"
+  },
+  {
+   "action": "OPEN_MARKDOWN",
+   "name": "Open markdown preview",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/OPEN_MARKDOWN.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + V",
+    "bytes": "19000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + V",
+    "bytes": "1900070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + V",
+    "bytes": "19000703"
+   }
+  },
+  {
+   "action": "OPEN_TERMINAL",
+   "name": "Toggle integrated terminal",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/OPEN_TERMINAL.svg",
+   "win": {
+    "chord": "LCTRL + GRAVE",
+    "bytes": "35000701"
+   },
+   "mac": {
+    "chord": "LCTRL + GRAVE",
+    "bytes": "35000701"
+   },
+   "linux": {
+    "chord": "LCTRL + GRAVE",
+    "bytes": "35000701"
+   }
+  },
+  {
+   "action": "OPEN_WINDOW",
+   "name": "Open new window",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/OPEN_WINDOW.svg"
+  },
+  {
+   "action": "OUTDENT_LINE",
+   "name": "Outdent line",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/OUTDENT_LINE.svg",
+   "win": {
+    "chord": "LCTRL + LEFT_BRACKET",
+    "bytes": "2f000701"
+   },
+   "mac": {
+    "chord": "LGUI + LEFT_BRACKET",
+    "bytes": "2f000708"
+   },
+   "linux": {
+    "chord": "LCTRL + LEFT_BRACKET",
+    "bytes": "2f000701"
+   }
+  },
+  {
+   "action": "OUTPUT",
+   "name": "Toggle Output panel",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/OUTPUT.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + U",
+    "bytes": "18000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + U",
+    "bytes": "1800070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + U",
+    "bytes": "18000703"
+   }
+  },
+  {
+   "action": "O_UMLAUT",
+   "name": "Type ö (o umlaut)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/O_UMLAUT.svg"
+  },
+  {
+   "action": "PARAMETER_HINTS",
+   "name": "Trigger parameter hints",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PARAMETER_HINTS.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + SPACE",
+    "bytes": "2c000703"
+   },
+   "mac": {
+    "chord": "LCTRL + LSHIFT + SPACE",
+    "bytes": "2c000703"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + SPACE",
+    "bytes": "2c000703"
+   }
+  },
+  {
+   "action": "PASTE",
+   "name": "Paste",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PASTE.svg",
+   "win": {
+    "chord": "LCTRL + V",
+    "bytes": "19000701"
+   },
+   "mac": {
+    "chord": "LGUI + V",
+    "bytes": "19000708"
+   },
+   "linux": {
+    "chord": "LCTRL + V",
+    "bytes": "19000701"
+   }
+  },
+  {
+   "action": "PASTE_PLAIN",
+   "name": "Paste as plain text",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/PASTE_PLAIN.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + V",
+    "bytes": "19000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + V",
+    "bytes": "1900070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + V",
+    "bytes": "19000703"
+   }
+  },
+  {
+   "action": "PASTE_TERMINAL",
+   "name": "Paste in terminal",
+   "context": "terminal",
+   "appSpecific": true,
+   "app": "Terminal",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/PASTE_TERMINAL.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + V",
+    "bytes": "19000703"
+   },
+   "mac": {
+    "chord": "LGUI + V",
+    "bytes": "19000708"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + V",
+    "bytes": "19000703"
+   }
+  },
+  {
+   "action": "PEEK_DEFINITION",
+   "name": "Peek definition",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PEEK_DEFINITION.svg",
+   "win": {
+    "chord": "LALT + F12",
+    "bytes": "45000704"
+   },
+   "mac": {
+    "chord": "LALT + F12",
+    "bytes": "45000704"
+   },
+   "linux": {
+    "chord": "LALT + F12",
+    "bytes": "45000704"
+   }
+  },
+  {
+   "action": "PERCENT",
+   "name": "Type % (percent)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PERCENT.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_5",
+    "bytes": "22000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_5",
+    "bytes": "22000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_5",
+    "bytes": "22000702"
+   }
+  },
+  {
+   "action": "PG_DN",
+   "name": "Page Down key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PG_DN.svg"
+  },
+  {
+   "action": "PG_UP",
+   "name": "Page Up key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PG_UP.svg"
+  },
+  {
+   "action": "PIPE",
+   "name": "Type | (pipe)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PIPE.svg",
+   "win": {
+    "chord": "LSHIFT + BACKSLASH",
+    "bytes": "31000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + BACKSLASH",
+    "bytes": "31000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + BACKSLASH",
+    "bytes": "31000702"
+   }
+  },
+  {
+   "action": "PIPE2",
+   "name": "Type | (pipe), alternate key location",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/PIPE2.svg",
+   "win": {
+    "chord": "LSHIFT + BACKSLASH",
+    "bytes": "31000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + BACKSLASH",
+    "bytes": "31000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + BACKSLASH",
+    "bytes": "31000702"
+   }
+  },
+  {
+   "action": "PLACEHOLDER",
+   "name": "Placeholder (no action)",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PLACEHOLDER.svg"
+  },
+  {
+   "action": "PLAY",
+   "name": "Play/Pause media",
+   "context": "media",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/PLAY.svg"
+  },
+  {
+   "action": "PLUS",
+   "name": "Type + (plus)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PLUS.svg",
+   "win": {
+    "chord": "LSHIFT + EQUAL",
+    "bytes": "2e000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + EQUAL",
+    "bytes": "2e000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + EQUAL",
+    "bytes": "2e000702"
+   }
+  },
+  {
+   "action": "PREV_APP",
+   "name": "Switch to previous application",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PREV_APP.svg",
+   "win": {
+    "chord": "LALT + LSHIFT + TAB",
+    "bytes": "2b000706"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + TAB",
+    "bytes": "2b00070a"
+   },
+   "linux": {
+    "chord": "LALT + LSHIFT + TAB",
+    "bytes": "2b000706"
+   }
+  },
+  {
+   "action": "PREV_EDITOR",
+   "name": "Open previous editor tab",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/PREV_EDITOR.svg",
+   "win": {
+    "chord": "LCTRL + PG_UP",
+    "bytes": "4b000701"
+   },
+   "mac": {
+    "chord": "LCTRL + PG_UP",
+    "bytes": "4b000701"
+   },
+   "linux": {
+    "chord": "LCTRL + PG_UP",
+    "bytes": "4b000701"
+   }
+  },
+  {
+   "action": "PREV_FILE",
+   "name": "Previous file",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/PREV_FILE.svg"
+  },
+  {
+   "action": "PREV_PARAGRAPH",
+   "name": "Move to previous paragraph",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/PREV_PARAGRAPH.svg",
+   "win": {
+    "chord": "LCTRL + UP",
+    "bytes": "52000701"
+   },
+   "mac": {
+    "chord": "LALT + UP",
+    "bytes": "52000704"
+   },
+   "linux": {
+    "chord": "LCTRL + UP",
+    "bytes": "52000701"
+   }
+  },
+  {
+   "action": "PREV_PROBLEM",
+   "name": "Go to previous problem/error",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PREV_PROBLEM.svg",
+   "win": {
+    "chord": "LSHIFT + F8",
+    "bytes": "41000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + F8",
+    "bytes": "41000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + F8",
+    "bytes": "41000702"
+   }
+  },
+  {
+   "action": "PREV_SCREEN",
+   "name": "Move window to previous display",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/PREV_SCREEN.svg",
+   "win": {
+    "chord": "LGUI + LSHIFT + LEFT",
+    "bytes": "5000070a"
+   }
+  },
+  {
+   "action": "PREV_TAB",
+   "name": "Previous tab",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PREV_TAB.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + TAB",
+    "bytes": "2b000703"
+   },
+   "mac": {
+    "chord": "LCTRL + LSHIFT + TAB",
+    "bytes": "2b000703"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + TAB",
+    "bytes": "2b000703"
+   }
+  },
+  {
+   "action": "PREV_WINDOW",
+   "name": "Cycle to previous window of app",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/PREV_WINDOW.svg",
+   "mac": {
+    "chord": "LGUI + LSHIFT + GRAVE",
+    "bytes": "3500070a"
+   },
+   "linux": {
+    "chord": "LGUI + LSHIFT + GRAVE",
+    "bytes": "3500070a"
+   }
+  },
+  {
+   "action": "PREV_WINDOW_ORDER",
+   "name": "Cycle window order backward",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/PREV_WINDOW_ORDER.svg"
+  },
+  {
+   "action": "PREV_WORD",
+   "name": "Move to previous word",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PREV_WORD.svg",
+   "win": {
+    "chord": "LCTRL + LEFT",
+    "bytes": "50000701"
+   },
+   "mac": {
+    "chord": "LALT + LEFT",
+    "bytes": "50000704"
+   },
+   "linux": {
+    "chord": "LCTRL + LEFT",
+    "bytes": "50000701"
+   }
+  },
+  {
+   "action": "PRINT",
+   "name": "Print",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/PRINT.svg",
+   "win": {
+    "chord": "LCTRL + P",
+    "bytes": "13000701"
+   },
+   "mac": {
+    "chord": "LGUI + P",
+    "bytes": "13000708"
+   },
+   "linux": {
+    "chord": "LCTRL + P",
+    "bytes": "13000701"
+   }
+  },
+  {
+   "action": "QUESTION",
+   "name": "Type ? (question mark)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/QUESTION.svg",
+   "win": {
+    "chord": "LSHIFT + SLASH",
+    "bytes": "38000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + SLASH",
+    "bytes": "38000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + SLASH",
+    "bytes": "38000702"
+   }
+  },
+  {
+   "action": "QUICK_FIX",
+   "name": "Quick Fix",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/QUICK_FIX.svg",
+   "win": {
+    "chord": "LCTRL + PERIOD",
+    "bytes": "37000701"
+   },
+   "mac": {
+    "chord": "LCTRL + PERIOD",
+    "bytes": "37000701"
+   },
+   "linux": {
+    "chord": "LCTRL + PERIOD",
+    "bytes": "37000701"
+   }
+  },
+  {
+   "action": "RCMD",
+   "name": "Right Command key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/RCMD.svg"
+  },
+  {
+   "action": "RECENT_TAB",
+   "name": "Reopen closed tab",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/RECENT_TAB.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + T",
+    "bytes": "17000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + T",
+    "bytes": "1700070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + T",
+    "bytes": "17000703"
+   }
+  },
+  {
+   "action": "REDO",
+   "name": "Redo",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/REDO.svg",
+   "win": {
+    "chord": "LCTRL + Y",
+    "bytes": "1c000701"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + Z",
+    "bytes": "1d00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + Z",
+    "bytes": "1d000703"
+   }
+  },
+  {
+   "action": "REFRESH_FILE",
+   "name": "Refresh file listing",
+   "context": "file-manager",
+   "appSpecific": true,
+   "app": "File manager",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/REFRESH_FILE.svg",
+   "win": {
+    "chord": "F5",
+    "bytes": "3e000700"
+   },
+   "mac": {
+    "chord": "LGUI + R",
+    "bytes": "15000708"
+   },
+   "linux": {
+    "chord": "F5",
+    "bytes": "3e000700"
+   }
+  },
+  {
+   "action": "REFRESH_TAB",
+   "name": "Reload page",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/REFRESH_TAB.svg",
+   "win": {
+    "chord": "LCTRL + R",
+    "bytes": "15000701"
+   },
+   "mac": {
+    "chord": "LGUI + R",
+    "bytes": "15000708"
+   },
+   "linux": {
+    "chord": "LCTRL + R",
+    "bytes": "15000701"
+   }
+  },
+  {
+   "action": "REFRESH_WINDOW",
+   "name": "Refresh window",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/REFRESH_WINDOW.svg",
+   "win": {
+    "chord": "F5",
+    "bytes": "3e000700"
+   },
+   "mac": {
+    "chord": "LGUI + R",
+    "bytes": "15000708"
+   },
+   "linux": {
+    "chord": "F5",
+    "bytes": "3e000700"
+   }
+  },
+  {
+   "action": "REMOVE_COMMENT",
+   "name": "Toggle line comment",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/REMOVE_COMMENT.svg",
+   "win": {
+    "chord": "LCTRL + SLASH",
+    "bytes": "38000701"
+   },
+   "mac": {
+    "chord": "LGUI + SLASH",
+    "bytes": "38000708"
+   },
+   "linux": {
+    "chord": "LCTRL + SLASH",
+    "bytes": "38000701"
+   }
+  },
+  {
+   "action": "RENAME",
+   "name": "Rename",
+   "context": "file-manager",
+   "appSpecific": true,
+   "app": "File manager",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/RENAME.svg",
+   "win": {
+    "chord": "F2",
+    "bytes": "3b000700"
+   },
+   "mac": {
+    "chord": "ENTER",
+    "bytes": "28000700"
+   },
+   "linux": {
+    "chord": "F2",
+    "bytes": "3b000700"
+   }
+  },
+  {
+   "action": "RESTART",
+   "name": "Restart",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/RESTART.svg"
+  },
+  {
+   "action": "RETURN",
+   "name": "Return (Enter) key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/RETURN.svg"
+  },
+  {
+   "action": "RETURN_LAYER",
+   "name": "Return to previous layer",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/RETURN_LAYER.svg"
+  },
+  {
+   "action": "RF_DEVICE",
+   "name": "RF wireless device (dongle)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/RF_DEVICE.svg"
+  },
+  {
+   "action": "RIGHT_BRACE",
+   "name": "Type } (right brace)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/RIGHT_BRACE.svg",
+   "win": {
+    "chord": "LSHIFT + RIGHT_BRACKET",
+    "bytes": "30000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + RIGHT_BRACKET",
+    "bytes": "30000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + RIGHT_BRACKET",
+    "bytes": "30000702"
+   }
+  },
+  {
+   "action": "RIGHT_DESKTOP",
+   "name": "Switch to desktop on the right",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/RIGHT_DESKTOP.svg",
+   "win": {
+    "chord": "LGUI + LCTRL + RIGHT",
+    "bytes": "4f000709"
+   },
+   "mac": {
+    "chord": "LCTRL + RIGHT",
+    "bytes": "4f000701"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + RIGHT",
+    "bytes": "4f000705"
+   }
+  },
+  {
+   "action": "RIGHT_PARENTHESIS",
+   "name": "Type ) (right parenthesis)",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/RIGHT_PARENTHESIS.svg",
+   "win": {
+    "chord": "LSHIFT + NUMBER_0",
+    "bytes": "27000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + NUMBER_0",
+    "bytes": "27000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + NUMBER_0",
+    "bytes": "27000702"
+   }
+  },
+  {
+   "action": "ROPT",
+   "name": "Right Option key (Alt)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/ROPT.svg"
+  },
+  {
+   "action": "RSHFT",
+   "name": "Right Shift key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/RSHFT.svg"
+  },
+  {
+   "action": "RWIN",
+   "name": "Right Windows (GUI) key",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/RWIN.svg"
+  },
+  {
+   "action": "SAVE",
+   "name": "Save",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SAVE.svg",
+   "win": {
+    "chord": "LCTRL + S",
+    "bytes": "16000701"
+   },
+   "mac": {
+    "chord": "LGUI + S",
+    "bytes": "16000708"
+   },
+   "linux": {
+    "chord": "LCTRL + S",
+    "bytes": "16000701"
+   }
+  },
+  {
+   "action": "SAVE_AS",
+   "name": "Save as",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SAVE_AS.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + S",
+    "bytes": "16000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + S",
+    "bytes": "1600070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + S",
+    "bytes": "16000703"
+   }
+  },
+  {
+   "action": "SCREENSHOT",
+   "name": "Take a screenshot",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SCREENSHOT.svg",
+   "win": {
+    "chord": "LGUI + LSHIFT + S",
+    "bytes": "1600070a"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + NUMBER_3",
+    "bytes": "2000070a"
+   },
+   "linux": {
+    "chord": "LGUI + LSHIFT + S",
+    "bytes": "1600070a"
+   }
+  },
+  {
+   "action": "SCREENSHOT_DIALOG",
+   "name": "Open screenshot options dialog",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SCREENSHOT_DIALOG.svg",
+   "win": {
+    "chord": "LGUI + LSHIFT + S",
+    "bytes": "1600070a"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + NUMBER_5",
+    "bytes": "2200070a"
+   }
+  },
+  {
+   "action": "SCREENSHOT_SECTION",
+   "name": "Capture selected screen section",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SCREENSHOT_SECTION.svg",
+   "win": {
+    "chord": "LGUI + LSHIFT + S",
+    "bytes": "1600070a"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + NUMBER_4",
+    "bytes": "2100070a"
+   },
+   "linux": {
+    "chord": "LGUI + LSHIFT + S",
+    "bytes": "1600070a"
+   }
+  },
+  {
+   "action": "SCROLL_DIRECTION_L",
+   "name": "Set scroll direction: left",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_DIRECTION_L.svg"
+  },
+  {
+   "action": "SCROLL_DIRECTION_R",
+   "name": "Set scroll direction: right",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_DIRECTION_R.svg"
+  },
+  {
+   "action": "SCROLL_DOWN",
+   "name": "Scroll down (wheel emulation)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_DOWN.svg"
+  },
+  {
+   "action": "SCROLL_HORIZONTAL",
+   "name": "Horizontal scroll mode",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_HORIZONTAL.svg"
+  },
+  {
+   "action": "SCROLL_LEFT",
+   "name": "Scroll left (wheel emulation)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_LEFT.svg"
+  },
+  {
+   "action": "SCROLL_MODE",
+   "name": "Scroll mode toggle",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_MODE.svg"
+  },
+  {
+   "action": "SCROLL_MODE_L",
+   "name": "Scroll mode: left",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_MODE_L.svg"
+  },
+  {
+   "action": "SCROLL_MODE_R",
+   "name": "Scroll mode: right",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_MODE_R.svg"
+  },
+  {
+   "action": "SCROLL_RIGHT",
+   "name": "Scroll right (wheel emulation)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_RIGHT.svg"
+  },
+  {
+   "action": "SCROLL_UP",
+   "name": "Scroll up (wheel emulation)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_UP.svg"
+  },
+  {
+   "action": "SCROLL_VERTICAL",
+   "name": "Vertical scroll mode",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SCROLL_VERTICAL.svg"
+  },
+  {
+   "action": "SEARCH_DETAILS",
+   "name": "Search details / advanced search",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/SEARCH_DETAILS.svg"
+  },
+  {
+   "action": "SELECT_ALL",
+   "name": "Select all",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_ALL.svg",
+   "win": {
+    "chord": "LCTRL + A",
+    "bytes": "04000701"
+   },
+   "mac": {
+    "chord": "LGUI + A",
+    "bytes": "04000708"
+   },
+   "linux": {
+    "chord": "LCTRL + A",
+    "bytes": "04000701"
+   }
+  },
+  {
+   "action": "SELECT_ALL_OCCURRENCES",
+   "name": "Select all occurrences of find match",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_ALL_OCCURRENCES.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + L",
+    "bytes": "0f000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + L",
+    "bytes": "0f00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + L",
+    "bytes": "0f000703"
+   }
+  },
+  {
+   "action": "SELECT_ALL_TEXT",
+   "name": "Select all text",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SELECT_ALL_TEXT.svg",
+   "win": {
+    "chord": "LCTRL + A",
+    "bytes": "04000701"
+   },
+   "mac": {
+    "chord": "LGUI + A",
+    "bytes": "04000708"
+   },
+   "linux": {
+    "chord": "LCTRL + A",
+    "bytes": "04000701"
+   }
+  },
+  {
+   "action": "SELECT_ALL_WORD_OCCURRENCES",
+   "name": "Select all occurrences of current word",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/SELECT_ALL_WORD_OCCURRENCES.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + L",
+    "bytes": "0f000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + L",
+    "bytes": "0f00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + L",
+    "bytes": "0f000703"
+   }
+  },
+  {
+   "action": "SELECT_FIND_MATCHES",
+   "name": "Select all find matches",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SELECT_FIND_MATCHES.svg",
+   "win": {
+    "chord": "LALT + ENTER",
+    "bytes": "28000704"
+   },
+   "mac": {
+    "chord": "LALT + ENTER",
+    "bytes": "28000704"
+   },
+   "linux": {
+    "chord": "LALT + ENTER",
+    "bytes": "28000704"
+   }
+  },
+  {
+   "action": "SELECT_LINE",
+   "name": "Expand selection to line",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SELECT_LINE.svg",
+   "win": {
+    "chord": "LCTRL + L",
+    "bytes": "0f000701"
+   },
+   "mac": {
+    "chord": "LGUI + L",
+    "bytes": "0f000708"
+   },
+   "linux": {
+    "chord": "LCTRL + L",
+    "bytes": "0f000701"
+   }
+  },
+  {
+   "action": "SELECT_LINE_END",
+   "name": "Select to end of line",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_LINE_END.svg",
+   "win": {
+    "chord": "LSHIFT + END",
+    "bytes": "4d000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + LGUI + RIGHT",
+    "bytes": "4f00070a"
+   },
+   "linux": {
+    "chord": "LSHIFT + END",
+    "bytes": "4d000702"
+   }
+  },
+  {
+   "action": "SELECT_LINE_START",
+   "name": "Select to start of line",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_LINE_START.svg",
+   "win": {
+    "chord": "LSHIFT + HOME",
+    "bytes": "4a000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + LGUI + LEFT",
+    "bytes": "5000070a"
+   },
+   "linux": {
+    "chord": "LSHIFT + HOME",
+    "bytes": "4a000702"
+   }
+  },
+  {
+   "action": "SELECT_NEXT_CHAR",
+   "name": "Extend selection right one character",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_NEXT_CHAR.svg",
+   "win": {
+    "chord": "LSHIFT + RIGHT",
+    "bytes": "4f000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + RIGHT",
+    "bytes": "4f000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + RIGHT",
+    "bytes": "4f000702"
+   }
+  },
+  {
+   "action": "SELECT_NEXT_LINE",
+   "name": "Extend selection down one line",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_NEXT_LINE.svg",
+   "win": {
+    "chord": "LSHIFT + DOWN",
+    "bytes": "51000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + DOWN",
+    "bytes": "51000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + DOWN",
+    "bytes": "51000702"
+   }
+  },
+  {
+   "action": "SELECT_NEXT_PAGE",
+   "name": "Extend selection down one page",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_NEXT_PAGE.svg",
+   "win": {
+    "chord": "LSHIFT + PG_DN",
+    "bytes": "4e000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + PG_DN",
+    "bytes": "4e000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + PG_DN",
+    "bytes": "4e000702"
+   }
+  },
+  {
+   "action": "SELECT_NEXT_PARAGRAPH",
+   "name": "Extend selection to next paragraph",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SELECT_NEXT_PARAGRAPH.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + DOWN",
+    "bytes": "51000703"
+   },
+   "mac": {
+    "chord": "LALT + LSHIFT + DOWN",
+    "bytes": "51000706"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + DOWN",
+    "bytes": "51000703"
+   }
+  },
+  {
+   "action": "SELECT_NEXT_WORD",
+   "name": "Extend selection to next word",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_NEXT_WORD.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + RIGHT",
+    "bytes": "4f000703"
+   },
+   "mac": {
+    "chord": "LALT + LSHIFT + RIGHT",
+    "bytes": "4f000706"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + RIGHT",
+    "bytes": "4f000703"
+   }
+  },
+  {
+   "action": "SELECT_PREV_CHAR",
+   "name": "Extend selection left one character",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_PREV_CHAR.svg",
+   "win": {
+    "chord": "LSHIFT + LEFT",
+    "bytes": "50000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + LEFT",
+    "bytes": "50000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + LEFT",
+    "bytes": "50000702"
+   }
+  },
+  {
+   "action": "SELECT_PREV_LINE",
+   "name": "Extend selection up one line",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_PREV_LINE.svg",
+   "win": {
+    "chord": "LSHIFT + UP",
+    "bytes": "52000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + UP",
+    "bytes": "52000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + UP",
+    "bytes": "52000702"
+   }
+  },
+  {
+   "action": "SELECT_PREV_PAGE",
+   "name": "Extend selection up one page",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_PREV_PAGE.svg",
+   "win": {
+    "chord": "LSHIFT + PG_UP",
+    "bytes": "4b000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + PG_UP",
+    "bytes": "4b000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + PG_UP",
+    "bytes": "4b000702"
+   }
+  },
+  {
+   "action": "SELECT_PREV_PARAGRAPH",
+   "name": "Extend selection to previous paragraph",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SELECT_PREV_PARAGRAPH.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + UP",
+    "bytes": "52000703"
+   },
+   "mac": {
+    "chord": "LALT + LSHIFT + UP",
+    "bytes": "52000706"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + UP",
+    "bytes": "52000703"
+   }
+  },
+  {
+   "action": "SELECT_PREV_WORD",
+   "name": "Extend selection to previous word",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SELECT_PREV_WORD.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + LEFT",
+    "bytes": "50000703"
+   },
+   "mac": {
+    "chord": "LALT + LSHIFT + LEFT",
+    "bytes": "50000706"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + LEFT",
+    "bytes": "50000703"
+   }
+  },
+  {
+   "action": "SELECT_TEXT_END",
+   "name": "Select to end of document",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SELECT_TEXT_END.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + END",
+    "bytes": "4d000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + DOWN",
+    "bytes": "5100070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + END",
+    "bytes": "4d000703"
+   }
+  },
+  {
+   "action": "SELECT_TEXT_START",
+   "name": "Select to start of document",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SELECT_TEXT_START.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + HOME",
+    "bytes": "4a000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + UP",
+    "bytes": "5200070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + HOME",
+    "bytes": "4a000703"
+   }
+  },
+  {
+   "action": "SETTINGS",
+   "name": "Open settings/preferences",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SETTINGS.svg",
+   "win": {
+    "chord": "LGUI + I",
+    "bytes": "0c000708"
+   },
+   "mac": {
+    "chord": "LGUI + COMMA",
+    "bytes": "36000708"
+   }
+  },
+  {
+   "action": "SHOW_AT",
+   "name": "Show at (unclear function)",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/SHOW_AT.svg"
+  },
+  {
+   "action": "SHOW_DEBUG",
+   "name": "Toggle Debug view",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SHOW_DEBUG.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + D",
+    "bytes": "07000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + D",
+    "bytes": "0700070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + D",
+    "bytes": "07000703"
+   }
+  },
+  {
+   "action": "SHOW_DESKTOP",
+   "name": "Show desktop",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SHOW_DESKTOP.svg",
+   "win": {
+    "chord": "LGUI + D",
+    "bytes": "07000708"
+   },
+   "mac": {
+    "chord": "F11",
+    "bytes": "44000700"
+   },
+   "linux": {
+    "chord": "LCTRL + LALT + D",
+    "bytes": "07000705"
+   }
+  },
+  {
+   "action": "SHOW_EXPLORER",
+   "name": "Show explorer",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SHOW_EXPLORER.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + E",
+    "bytes": "08000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + E",
+    "bytes": "0800070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + E",
+    "bytes": "08000703"
+   }
+  },
+  {
+   "action": "SHOW_EXTENSIONS",
+   "name": "Show extensions",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SHOW_EXTENSIONS.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + X",
+    "bytes": "1b000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + X",
+    "bytes": "1b00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + X",
+    "bytes": "1b000703"
+   }
+  },
+  {
+   "action": "SHOW_FILE",
+   "name": "Show file (reveal in folder)",
+   "context": "file-manager",
+   "appSpecific": true,
+   "app": "File manager",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/SHOW_FILE.svg"
+  },
+  {
+   "action": "SHOW_HOVER",
+   "name": "Show hover",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/SHOW_HOVER.svg"
+  },
+  {
+   "action": "SHOW_PASSWORD",
+   "name": "Show password",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/SHOW_PASSWORD.svg"
+  },
+  {
+   "action": "SHOW_PROBLEMS",
+   "name": "Show problems panel",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SHOW_PROBLEMS.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + M",
+    "bytes": "10000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + M",
+    "bytes": "1000070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + M",
+    "bytes": "10000703"
+   }
+  },
+  {
+   "action": "SHOW_REFERENCES",
+   "name": "Show references",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SHOW_REFERENCES.svg",
+   "win": {
+    "chord": "LSHIFT + F12",
+    "bytes": "45000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + F12",
+    "bytes": "45000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + F12",
+    "bytes": "45000702"
+   }
+  },
+  {
+   "action": "SHOW_SEARCH",
+   "name": "Show search",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SHOW_SEARCH.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + F",
+    "bytes": "09000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + F",
+    "bytes": "0900070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + F",
+    "bytes": "09000703"
+   }
+  },
+  {
+   "action": "SHOW_SOURCE_CONTROL",
+   "name": "Show source control",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SHOW_SOURCE_CONTROL.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + G",
+    "bytes": "0a000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + G",
+    "bytes": "0a00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + G",
+    "bytes": "0a000703"
+   }
+  },
+  {
+   "action": "SHOW_SYMBOLS",
+   "name": "Show symbols",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SHOW_SYMBOLS.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + O",
+    "bytes": "12000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + O",
+    "bytes": "1200070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + O",
+    "bytes": "12000703"
+   }
+  },
+  {
+   "action": "SHRINK_SELECTION",
+   "name": "Shrink selection",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SHRINK_SELECTION.svg",
+   "win": {
+    "chord": "LSHIFT + LALT + LEFT",
+    "bytes": "50000706"
+   },
+   "mac": {
+    "chord": "LCTRL + LSHIFT + LGUI + LEFT",
+    "bytes": "5000070b"
+   },
+   "linux": {
+    "chord": "LSHIFT + LALT + LEFT",
+    "bytes": "50000706"
+   }
+  },
+  {
+   "action": "SHUTDOWN",
+   "name": "Shut down",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/SHUTDOWN.svg"
+  },
+  {
+   "action": "SIDE_DEFINITION",
+   "name": "Open definition to the side",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/SIDE_DEFINITION.svg"
+  },
+  {
+   "action": "SINGLE_QUOTE",
+   "name": "Single quote",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SINGLE_QUOTE.svg",
+   "win": {
+    "chord": "SINGLE_QUOTE",
+    "bytes": "34000700"
+   },
+   "mac": {
+    "chord": "SINGLE_QUOTE",
+    "bytes": "34000700"
+   },
+   "linux": {
+    "chord": "SINGLE_QUOTE",
+    "bytes": "34000700"
+   }
+  },
+  {
+   "action": "SLEEP",
+   "name": "Sleep",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/SLEEP.svg"
+  },
+  {
+   "action": "SPLIT_EDITOR",
+   "name": "Split editor",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SPLIT_EDITOR.svg",
+   "win": {
+    "chord": "LCTRL + BACKSLASH",
+    "bytes": "31000701"
+   },
+   "mac": {
+    "chord": "LGUI + BACKSLASH",
+    "bytes": "31000708"
+   },
+   "linux": {
+    "chord": "LCTRL + BACKSLASH",
+    "bytes": "31000701"
+   }
+  },
+  {
+   "action": "STATIC_TAB",
+   "name": "Static tab (layer)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STATIC_TAB.svg"
+  },
+  {
+   "action": "STEP_INTO",
+   "name": "Step into (debug)",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STEP_INTO.svg",
+   "win": {
+    "chord": "F11",
+    "bytes": "44000700"
+   },
+   "mac": {
+    "chord": "F11",
+    "bytes": "44000700"
+   },
+   "linux": {
+    "chord": "F11",
+    "bytes": "44000700"
+   }
+  },
+  {
+   "action": "STEP_OUT",
+   "name": "Step out (debug)",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STEP_OUT.svg",
+   "win": {
+    "chord": "LSHIFT + F11",
+    "bytes": "44000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + F11",
+    "bytes": "44000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + F11",
+    "bytes": "44000702"
+   }
+  },
+  {
+   "action": "STEP_OVER",
+   "name": "Step over (debug)",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STEP_OVER.svg",
+   "win": {
+    "chord": "F10",
+    "bytes": "43000700"
+   },
+   "mac": {
+    "chord": "F10",
+    "bytes": "43000700"
+   },
+   "linux": {
+    "chord": "F10",
+    "bytes": "43000700"
+   }
+  },
+  {
+   "action": "STICKY_DYNAMIC_LAYER",
+   "name": "Sticky dynamic layer",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_DYNAMIC_LAYER.svg"
+  },
+  {
+   "action": "STICKY_LAYER_$ID",
+   "name": "Sticky layer (parameterized)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_$ID.svg"
+  },
+  {
+   "action": "STICKY_LAYER_0",
+   "name": "Sticky layer 0",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_0.svg"
+  },
+  {
+   "action": "STICKY_LAYER_00",
+   "name": "Sticky layer 0",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_00.svg"
+  },
+  {
+   "action": "STICKY_LAYER_01",
+   "name": "Sticky layer 1",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_01.svg"
+  },
+  {
+   "action": "STICKY_LAYER_02",
+   "name": "Sticky layer 2",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_02.svg"
+  },
+  {
+   "action": "STICKY_LAYER_03",
+   "name": "Sticky layer 3",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_03.svg"
+  },
+  {
+   "action": "STICKY_LAYER_04",
+   "name": "Sticky layer 4",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_04.svg"
+  },
+  {
+   "action": "STICKY_LAYER_05",
+   "name": "Sticky layer 5",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_05.svg"
+  },
+  {
+   "action": "STICKY_LAYER_06",
+   "name": "Sticky layer 6",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_06.svg"
+  },
+  {
+   "action": "STICKY_LAYER_07",
+   "name": "Sticky layer 7",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_07.svg"
+  },
+  {
+   "action": "STICKY_LAYER_08",
+   "name": "Sticky layer 8",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_08.svg"
+  },
+  {
+   "action": "STICKY_LAYER_09",
+   "name": "Sticky layer 9",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_09.svg"
+  },
+  {
+   "action": "STICKY_LAYER_1",
+   "name": "Sticky layer 1",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_1.svg"
+  },
+  {
+   "action": "STICKY_LAYER_10",
+   "name": "Sticky layer 10",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_10.svg"
+  },
+  {
+   "action": "STICKY_LAYER_11",
+   "name": "Sticky layer 11",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_11.svg"
+  },
+  {
+   "action": "STICKY_LAYER_12",
+   "name": "Sticky layer 12",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_12.svg"
+  },
+  {
+   "action": "STICKY_LAYER_13",
+   "name": "Sticky layer 13",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_13.svg"
+  },
+  {
+   "action": "STICKY_LAYER_14",
+   "name": "Sticky layer 14",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_14.svg"
+  },
+  {
+   "action": "STICKY_LAYER_15",
+   "name": "Sticky layer 15",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_15.svg"
+  },
+  {
+   "action": "STICKY_LAYER_16",
+   "name": "Sticky layer 16",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_16.svg"
+  },
+  {
+   "action": "STICKY_LAYER_17",
+   "name": "Sticky layer 17",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_17.svg"
+  },
+  {
+   "action": "STICKY_LAYER_18",
+   "name": "Sticky layer 18",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_18.svg"
+  },
+  {
+   "action": "STICKY_LAYER_19",
+   "name": "Sticky layer 19",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_19.svg"
+  },
+  {
+   "action": "STICKY_LAYER_2",
+   "name": "Sticky layer 2",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_2.svg"
+  },
+  {
+   "action": "STICKY_LAYER_20",
+   "name": "Sticky layer 20",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_20.svg"
+  },
+  {
+   "action": "STICKY_LAYER_21",
+   "name": "Sticky layer 21",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_21.svg"
+  },
+  {
+   "action": "STICKY_LAYER_22",
+   "name": "Sticky layer 22",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_22.svg"
+  },
+  {
+   "action": "STICKY_LAYER_23",
+   "name": "Sticky layer 23",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_23.svg"
+  },
+  {
+   "action": "STICKY_LAYER_24",
+   "name": "Sticky layer 24",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_24.svg"
+  },
+  {
+   "action": "STICKY_LAYER_25",
+   "name": "Sticky layer 25",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_25.svg"
+  },
+  {
+   "action": "STICKY_LAYER_26",
+   "name": "Sticky layer 26",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_26.svg"
+  },
+  {
+   "action": "STICKY_LAYER_27",
+   "name": "Sticky layer 27",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_27.svg"
+  },
+  {
+   "action": "STICKY_LAYER_28",
+   "name": "Sticky layer 28",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_28.svg"
+  },
+  {
+   "action": "STICKY_LAYER_29",
+   "name": "Sticky layer 29",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_29.svg"
+  },
+  {
+   "action": "STICKY_LAYER_3",
+   "name": "Sticky layer 3",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_3.svg"
+  },
+  {
+   "action": "STICKY_LAYER_30",
+   "name": "Sticky layer 30",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_30.svg"
+  },
+  {
+   "action": "STICKY_LAYER_31",
+   "name": "Sticky layer 31",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_31.svg"
+  },
+  {
+   "action": "STICKY_LAYER_32",
+   "name": "Sticky layer 32",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_32.svg"
+  },
+  {
+   "action": "STICKY_LAYER_33",
+   "name": "Sticky layer 33",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_33.svg"
+  },
+  {
+   "action": "STICKY_LAYER_34",
+   "name": "Sticky layer 34",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_34.svg"
+  },
+  {
+   "action": "STICKY_LAYER_35",
+   "name": "Sticky layer 35",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_35.svg"
+  },
+  {
+   "action": "STICKY_LAYER_4",
+   "name": "Sticky layer 4",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_4.svg"
+  },
+  {
+   "action": "STICKY_LAYER_5",
+   "name": "Sticky layer 5",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_5.svg"
+  },
+  {
+   "action": "STICKY_LAYER_6",
+   "name": "Sticky layer 6",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_6.svg"
+  },
+  {
+   "action": "STICKY_LAYER_7",
+   "name": "Sticky layer 7",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_7.svg"
+  },
+  {
+   "action": "STICKY_LAYER_8",
+   "name": "Sticky layer 8",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_8.svg"
+  },
+  {
+   "action": "STICKY_LAYER_9",
+   "name": "Sticky layer 9",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_9.svg"
+  },
+  {
+   "action": "STICKY_LAYER_DELETED",
+   "name": "Sticky layer (deleted)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/STICKY_LAYER_DELETED.svg"
+  },
+  {
+   "action": "STOP",
+   "name": "Stop (debug)",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/STOP.svg",
+   "win": {
+    "chord": "LSHIFT + F5",
+    "bytes": "3e000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + F5",
+    "bytes": "3e000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + F5",
+    "bytes": "3e000702"
+   }
+  },
+  {
+   "action": "STRIKETHROUGH",
+   "name": "Strikethrough",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/STRIKETHROUGH.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + X",
+    "bytes": "1b000703"
+   },
+   "mac": {
+    "chord": "LGUI + LSHIFT + X",
+    "bytes": "1b00070a"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + X",
+    "bytes": "1b000703"
+   }
+  },
+  {
+   "action": "SUGGESTED_ACTION",
+   "name": "Suggested action (quick fix)",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SUGGESTED_ACTION.svg",
+   "win": {
+    "chord": "LCTRL + PERIOD",
+    "bytes": "37000701"
+   },
+   "mac": {
+    "chord": "LGUI + PERIOD",
+    "bytes": "37000708"
+   },
+   "linux": {
+    "chord": "LCTRL + PERIOD",
+    "bytes": "37000701"
+   }
+  },
+  {
+   "action": "SUGGESTION",
+   "name": "Trigger suggestion",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/SUGGESTION.svg",
+   "win": {
+    "chord": "LCTRL + SPACE",
+    "bytes": "2c000701"
+   },
+   "mac": {
+    "chord": "LCTRL + SPACE",
+    "bytes": "2c000701"
+   },
+   "linux": {
+    "chord": "LCTRL + SPACE",
+    "bytes": "2c000701"
+   }
+  },
+  {
+   "action": "SYSTEM_MONITOR",
+   "name": "System monitor / task manager",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/SYSTEM_MONITOR.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + ESC",
+    "bytes": "29000703"
+   }
+  },
+  {
+   "action": "TASK_VIEW",
+   "name": "Task view",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/TASK_VIEW.svg",
+   "win": {
+    "chord": "LGUI + TAB",
+    "bytes": "2b000708"
+   },
+   "mac": {
+    "chord": "LCTRL + UP",
+    "bytes": "52000701"
+   }
+  },
+  {
+   "action": "TERMINAL",
+   "name": "Toggle terminal",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/TERMINAL.svg",
+   "win": {
+    "chord": "LCTRL + GRAVE",
+    "bytes": "35000701"
+   },
+   "mac": {
+    "chord": "LGUI + GRAVE",
+    "bytes": "35000708"
+   },
+   "linux": {
+    "chord": "LCTRL + GRAVE",
+    "bytes": "35000701"
+   }
+  },
+  {
+   "action": "TERMINAL_SCROLL_DOWN_1",
+   "name": "Terminal scroll down (line)",
+   "context": "terminal",
+   "appSpecific": true,
+   "app": "Terminal",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/TERMINAL_SCROLL_DOWN_1.svg",
+   "win": {
+    "chord": "LCTRL + DOWN",
+    "bytes": "51000701"
+   },
+   "mac": {
+    "chord": "LGUI + DOWN",
+    "bytes": "51000708"
+   },
+   "linux": {
+    "chord": "LCTRL + DOWN",
+    "bytes": "51000701"
+   }
+  },
+  {
+   "action": "TERMINAL_SCROLL_DOWN_2",
+   "name": "Terminal scroll down (page)",
+   "context": "terminal",
+   "appSpecific": true,
+   "app": "Terminal",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/TERMINAL_SCROLL_DOWN_2.svg",
+   "win": {
+    "chord": "LSHIFT + PG_DN",
+    "bytes": "4e000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + PG_DN",
+    "bytes": "4e000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + PG_DN",
+    "bytes": "4e000702"
+   }
+  },
+  {
+   "action": "TERMINAL_SCROLL_END",
+   "name": "Terminal scroll to bottom",
+   "context": "terminal",
+   "appSpecific": true,
+   "app": "Terminal",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/TERMINAL_SCROLL_END.svg",
+   "win": {
+    "chord": "LCTRL + END",
+    "bytes": "4d000701"
+   },
+   "mac": {
+    "chord": "LGUI + END",
+    "bytes": "4d000708"
+   },
+   "linux": {
+    "chord": "LCTRL + END",
+    "bytes": "4d000701"
+   }
+  },
+  {
+   "action": "TERMINAL_SCROLL_START",
+   "name": "Terminal scroll to top",
+   "context": "terminal",
+   "appSpecific": true,
+   "app": "Terminal",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/TERMINAL_SCROLL_START.svg",
+   "win": {
+    "chord": "LCTRL + HOME",
+    "bytes": "4a000701"
+   },
+   "mac": {
+    "chord": "LGUI + HOME",
+    "bytes": "4a000708"
+   },
+   "linux": {
+    "chord": "LCTRL + HOME",
+    "bytes": "4a000701"
+   }
+  },
+  {
+   "action": "TERMINAL_SCROLL_UP_1",
+   "name": "Terminal scroll up (line)",
+   "context": "terminal",
+   "appSpecific": true,
+   "app": "Terminal",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/TERMINAL_SCROLL_UP_1.svg",
+   "win": {
+    "chord": "LCTRL + UP",
+    "bytes": "52000701"
+   },
+   "mac": {
+    "chord": "LGUI + UP",
+    "bytes": "52000708"
+   },
+   "linux": {
+    "chord": "LCTRL + UP",
+    "bytes": "52000701"
+   }
+  },
+  {
+   "action": "TERMINAL_SCROLL_UP_2",
+   "name": "Terminal scroll up (page)",
+   "context": "terminal",
+   "appSpecific": true,
+   "app": "Terminal",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/TERMINAL_SCROLL_UP_2.svg",
+   "win": {
+    "chord": "LSHIFT + PG_UP",
+    "bytes": "4b000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + PG_UP",
+    "bytes": "4b000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + PG_UP",
+    "bytes": "4b000702"
+   }
+  },
+  {
+   "action": "TILDE",
+   "name": "Tilde",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/TILDE.svg",
+   "win": {
+    "chord": "LSHIFT + GRAVE",
+    "bytes": "35000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + GRAVE",
+    "bytes": "35000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + GRAVE",
+    "bytes": "35000702"
+   }
+  },
+  {
+   "action": "TILDE2",
+   "name": "Tilde (alternate)",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/TILDE2.svg",
+   "win": {
+    "chord": "LSHIFT + GRAVE",
+    "bytes": "35000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + GRAVE",
+    "bytes": "35000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + GRAVE",
+    "bytes": "35000702"
+   }
+  },
+  {
+   "action": "TOGGLE_BREAKPOINT",
+   "name": "Toggle breakpoint",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_BREAKPOINT.svg",
+   "win": {
+    "chord": "F9",
+    "bytes": "42000700"
+   },
+   "mac": {
+    "chord": "F9",
+    "bytes": "42000700"
+   },
+   "linux": {
+    "chord": "F9",
+    "bytes": "42000700"
+   }
+  },
+  {
+   "action": "TOGGLE_DYNAMIC_LAYER",
+   "name": "Toggle dynamic layer",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_DYNAMIC_LAYER.svg"
+  },
+  {
+   "action": "TOGGLE_FULLSCREEN",
+   "name": "Toggle fullscreen",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_FULLSCREEN.svg",
+   "win": {
+    "chord": "F11",
+    "bytes": "44000700"
+   },
+   "mac": {
+    "chord": "LCTRL + LGUI + F",
+    "bytes": "09000709"
+   },
+   "linux": {
+    "chord": "F11",
+    "bytes": "44000700"
+   }
+  },
+  {
+   "action": "TOGGLE_LAYER_$ID",
+   "name": "Toggle layer (parameterized)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_$ID.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_0",
+   "name": "Toggle layer 0",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_0.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_00",
+   "name": "Toggle layer 0",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_00.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_01",
+   "name": "Toggle layer 1",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_01.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_02",
+   "name": "Toggle layer 2",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_02.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_03",
+   "name": "Toggle layer 3",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_03.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_04",
+   "name": "Toggle layer 4",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_04.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_05",
+   "name": "Toggle layer 5",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_05.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_06",
+   "name": "Toggle layer 6",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_06.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_07",
+   "name": "Toggle layer 7",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_07.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_08",
+   "name": "Toggle layer 8",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_08.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_09",
+   "name": "Toggle layer 9",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_09.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_1",
+   "name": "Toggle layer 1",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_1.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_10",
+   "name": "Toggle layer 10",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_10.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_11",
+   "name": "Toggle layer 11",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_11.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_12",
+   "name": "Toggle layer 12",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_12.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_13",
+   "name": "Toggle layer 13",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_13.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_14",
+   "name": "Toggle layer 14",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_14.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_15",
+   "name": "Toggle layer 15",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_15.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_16",
+   "name": "Toggle layer 16",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_16.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_17",
+   "name": "Toggle layer 17",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_17.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_18",
+   "name": "Toggle layer 18",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_18.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_19",
+   "name": "Toggle layer 19",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_19.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_2",
+   "name": "Toggle layer 2",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_2.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_20",
+   "name": "Toggle layer 20",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_20.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_21",
+   "name": "Toggle layer 21",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_21.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_22",
+   "name": "Toggle layer 22",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_22.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_23",
+   "name": "Toggle layer 23",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_23.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_24",
+   "name": "Toggle layer 24",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_24.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_25",
+   "name": "Toggle layer 25",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_25.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_26",
+   "name": "Toggle layer 26",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_26.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_27",
+   "name": "Toggle layer 27",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_27.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_28",
+   "name": "Toggle layer 28",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_28.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_29",
+   "name": "Toggle layer 29",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_29.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_3",
+   "name": "Toggle layer 3",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_3.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_30",
+   "name": "Toggle layer 30",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_30.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_31",
+   "name": "Toggle layer 31",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_31.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_32",
+   "name": "Toggle layer 32",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_32.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_33",
+   "name": "Toggle layer 33",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_33.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_34",
+   "name": "Toggle layer 34",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_34.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_35",
+   "name": "Toggle layer 35",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_35.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_4",
+   "name": "Toggle layer 4",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_4.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_5",
+   "name": "Toggle layer 5",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_5.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_6",
+   "name": "Toggle layer 6",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_6.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_7",
+   "name": "Toggle layer 7",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_7.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_8",
+   "name": "Toggle layer 8",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_8.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_9",
+   "name": "Toggle layer 9",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_9.svg"
+  },
+  {
+   "action": "TOGGLE_LAYER_DELETED",
+   "name": "Toggle layer (deleted)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_LAYER_DELETED.svg"
+  },
+  {
+   "action": "TOGGLE_SIDEBAR",
+   "name": "Toggle sidebar",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOGGLE_SIDEBAR.svg",
+   "win": {
+    "chord": "LCTRL + B",
+    "bytes": "05000701"
+   },
+   "mac": {
+    "chord": "LGUI + B",
+    "bytes": "05000708"
+   },
+   "linux": {
+    "chord": "LCTRL + B",
+    "bytes": "05000701"
+   }
+  },
+  {
+   "action": "TOGGLE_TAB_FOCUS",
+   "name": "Toggle tab key moves focus",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/TOGGLE_TAB_FOCUS.svg",
+   "win": {
+    "chord": "LCTRL + M",
+    "bytes": "10000701"
+   },
+   "mac": {
+    "chord": "LCTRL + LSHIFT + M",
+    "bytes": "10000703"
+   },
+   "linux": {
+    "chord": "LCTRL + M",
+    "bytes": "10000701"
+   }
+  },
+  {
+   "action": "TOUCH",
+   "name": "Touch (trackpad/trackball)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TOUCH.svg"
+  },
+  {
+   "action": "TO_LAYER_$ID",
+   "name": "Go to layer (parameterized)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_$ID.svg"
+  },
+  {
+   "action": "TO_LAYER_00",
+   "name": "Go to layer 0",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_00.svg"
+  },
+  {
+   "action": "TO_LAYER_01",
+   "name": "Go to layer 1",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_01.svg"
+  },
+  {
+   "action": "TO_LAYER_02",
+   "name": "Go to layer 2",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_02.svg"
+  },
+  {
+   "action": "TO_LAYER_03",
+   "name": "Go to layer 3",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_03.svg"
+  },
+  {
+   "action": "TO_LAYER_04",
+   "name": "Go to layer 4",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_04.svg"
+  },
+  {
+   "action": "TO_LAYER_05",
+   "name": "Go to layer 5",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_05.svg"
+  },
+  {
+   "action": "TO_LAYER_06",
+   "name": "Go to layer 6",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_06.svg"
+  },
+  {
+   "action": "TO_LAYER_07",
+   "name": "Go to layer 7",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_07.svg"
+  },
+  {
+   "action": "TO_LAYER_08",
+   "name": "Go to layer 8",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_08.svg"
+  },
+  {
+   "action": "TO_LAYER_09",
+   "name": "Go to layer 9",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_09.svg"
+  },
+  {
+   "action": "TO_LAYER_10",
+   "name": "Go to layer 10",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_10.svg"
+  },
+  {
+   "action": "TO_LAYER_11",
+   "name": "Go to layer 11",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_11.svg"
+  },
+  {
+   "action": "TO_LAYER_12",
+   "name": "Go to layer 12",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_12.svg"
+  },
+  {
+   "action": "TO_LAYER_13",
+   "name": "Go to layer 13",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_13.svg"
+  },
+  {
+   "action": "TO_LAYER_14",
+   "name": "Go to layer 14",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_14.svg"
+  },
+  {
+   "action": "TO_LAYER_15",
+   "name": "Go to layer 15",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_15.svg"
+  },
+  {
+   "action": "TO_LAYER_16",
+   "name": "Go to layer 16",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_16.svg"
+  },
+  {
+   "action": "TO_LAYER_17",
+   "name": "Go to layer 17",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_17.svg"
+  },
+  {
+   "action": "TO_LAYER_18",
+   "name": "Go to layer 18",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_18.svg"
+  },
+  {
+   "action": "TO_LAYER_19",
+   "name": "Go to layer 19",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_19.svg"
+  },
+  {
+   "action": "TO_LAYER_20",
+   "name": "Go to layer 20",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_20.svg"
+  },
+  {
+   "action": "TO_LAYER_21",
+   "name": "Go to layer 21",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_21.svg"
+  },
+  {
+   "action": "TO_LAYER_22",
+   "name": "Go to layer 22",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_22.svg"
+  },
+  {
+   "action": "TO_LAYER_23",
+   "name": "Go to layer 23",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_23.svg"
+  },
+  {
+   "action": "TO_LAYER_24",
+   "name": "Go to layer 24",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_24.svg"
+  },
+  {
+   "action": "TO_LAYER_25",
+   "name": "Go to layer 25",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_25.svg"
+  },
+  {
+   "action": "TO_LAYER_26",
+   "name": "Go to layer 26",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_26.svg"
+  },
+  {
+   "action": "TO_LAYER_27",
+   "name": "Go to layer 27",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_27.svg"
+  },
+  {
+   "action": "TO_LAYER_28",
+   "name": "Go to layer 28",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_28.svg"
+  },
+  {
+   "action": "TO_LAYER_29",
+   "name": "Go to layer 29",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_29.svg"
+  },
+  {
+   "action": "TO_LAYER_30",
+   "name": "Go to layer 30",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_30.svg"
+  },
+  {
+   "action": "TO_LAYER_31",
+   "name": "Go to layer 31",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_31.svg"
+  },
+  {
+   "action": "TO_LAYER_32",
+   "name": "Go to layer 32",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_32.svg"
+  },
+  {
+   "action": "TO_LAYER_33",
+   "name": "Go to layer 33",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_33.svg"
+  },
+  {
+   "action": "TO_LAYER_34",
+   "name": "Go to layer 34",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_34.svg"
+  },
+  {
+   "action": "TO_LAYER_35",
+   "name": "Go to layer 35",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_35.svg"
+  },
+  {
+   "action": "TO_LAYER_DELETED",
+   "name": "Go to layer (deleted)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TO_LAYER_DELETED.svg"
+  },
+  {
+   "action": "TRACK",
+   "name": "Track (trackball tracking)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TRACK.svg"
+  },
+  {
+   "action": "TRANSPARENT",
+   "name": "Transparent (layer passthrough)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TRANSPARENT.svg"
+  },
+  {
+   "action": "TRIGGER_MACRO_$ID",
+   "name": "Trigger macro (parameterized)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TRIGGER_MACRO_$ID.svg"
+  },
+  {
+   "action": "TRIM_WHITESPACE",
+   "name": "Trim trailing whitespace",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/TRIM_WHITESPACE.svg"
+  },
+  {
+   "action": "TUNE",
+   "name": "Tune (pointer tuning)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TUNE.svg"
+  },
+  {
+   "action": "TUNE_MODE_L",
+   "name": "Tune mode (left)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TUNE_MODE_L.svg"
+  },
+  {
+   "action": "TUNE_MODE_R",
+   "name": "Tune mode (right)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/TUNE_MODE_R.svg"
+  },
+  {
+   "action": "UNDERLINE",
+   "name": "Underline",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/UNDERLINE.svg",
+   "win": {
+    "chord": "LCTRL + U",
+    "bytes": "18000701"
+   },
+   "mac": {
+    "chord": "LGUI + U",
+    "bytes": "18000708"
+   },
+   "linux": {
+    "chord": "LCTRL + U",
+    "bytes": "18000701"
+   }
+  },
+  {
+   "action": "UNDERSCORE",
+   "name": "Underscore",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/UNDERSCORE.svg",
+   "win": {
+    "chord": "LSHIFT + MINUS",
+    "bytes": "2d000702"
+   },
+   "mac": {
+    "chord": "LSHIFT + MINUS",
+    "bytes": "2d000702"
+   },
+   "linux": {
+    "chord": "LSHIFT + MINUS",
+    "bytes": "2d000702"
+   }
+  },
+  {
+   "action": "UNDO",
+   "name": "Undo",
+   "context": "text",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/UNDO.svg",
+   "win": {
+    "chord": "LCTRL + Z",
+    "bytes": "1d000701"
+   },
+   "mac": {
+    "chord": "LGUI + Z",
+    "bytes": "1d000708"
+   },
+   "linux": {
+    "chord": "LCTRL + Z",
+    "bytes": "1d000701"
+   }
+  },
+  {
+   "action": "UNDO_CURSOR",
+   "name": "Cursor undo (soft undo)",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/UNDO_CURSOR.svg",
+   "win": {
+    "chord": "LCTRL + U",
+    "bytes": "18000701"
+   },
+   "mac": {
+    "chord": "LGUI + U",
+    "bytes": "18000708"
+   },
+   "linux": {
+    "chord": "LCTRL + U",
+    "bytes": "18000701"
+   }
+  },
+  {
+   "action": "UNFOLD_ALL",
+   "name": "Unfold all",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/UNFOLD_ALL.svg"
+  },
+  {
+   "action": "UNFOLD_REGION",
+   "name": "Unfold region",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/UNFOLD_REGION.svg",
+   "win": {
+    "chord": "LCTRL + LSHIFT + RIGHT_BRACKET",
+    "bytes": "30000703"
+   },
+   "mac": {
+    "chord": "LGUI + LALT + RIGHT_BRACKET",
+    "bytes": "3000070c"
+   },
+   "linux": {
+    "chord": "LCTRL + LSHIFT + RIGHT_BRACKET",
+    "bytes": "30000703"
+   }
+  },
+  {
+   "action": "UNFOLD_SUB",
+   "name": "Unfold recursively",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/UNFOLD_SUB.svg"
+  },
+  {
+   "action": "UP_SCREEN",
+   "name": "Move to screen above",
+   "context": "os",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/UP_SCREEN.svg"
+  },
+  {
+   "action": "USB_DEVICE",
+   "name": "USB device",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/USB_DEVICE.svg"
+  },
+  {
+   "action": "U_UMLAUT",
+   "name": "U umlaut",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/U_UMLAUT.svg"
+  },
+  {
+   "action": "VERTICAL",
+   "name": "Vertical (scroll/pointer orientation)",
+   "context": "keyboard-hardware",
+   "appSpecific": false,
+   "app": null,
+   "confidence": "high",
+   "iconPath": "assets/icons/action/VERTICAL.svg"
+  },
+  {
+   "action": "VS_CODE_SHORTCUT",
+   "name": "VS Code shortcut (category)",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/VS_CODE_SHORTCUT.svg"
+  },
+  {
+   "action": "WIN_OS",
+   "name": "Windows OS (category)",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/WIN_OS.svg"
+  },
+  {
+   "action": "WIN_SHORTCUT",
+   "name": "Windows shortcut (category)",
+   "context": null,
+   "appSpecific": false,
+   "app": null,
+   "confidence": "low",
+   "iconPath": "assets/icons/action/WIN_SHORTCUT.svg"
+  },
+  {
+   "action": "WRAP",
+   "name": "Toggle word wrap",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/WRAP.svg",
+   "win": {
+    "chord": "LALT + Z",
+    "bytes": "1d000704"
+   },
+   "mac": {
+    "chord": "LALT + Z",
+    "bytes": "1d000704"
+   },
+   "linux": {
+    "chord": "LALT + Z",
+    "bytes": "1d000704"
+   }
+  },
+  {
+   "action": "ZEN_MODE",
+   "name": "Zen mode",
+   "context": "vscode",
+   "appSpecific": true,
+   "app": "VS Code",
+   "confidence": "low",
+   "iconPath": "assets/icons/action/ZEN_MODE.svg"
+  },
+  {
+   "action": "ZOOM",
+   "name": "Reset zoom",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "medium",
+   "iconPath": "assets/icons/action/ZOOM.svg",
+   "win": {
+    "chord": "LCTRL + NUMBER_0",
+    "bytes": "27000701"
+   },
+   "mac": {
+    "chord": "LGUI + NUMBER_0",
+    "bytes": "27000708"
+   },
+   "linux": {
+    "chord": "LCTRL + NUMBER_0",
+    "bytes": "27000701"
+   }
+  },
+  {
+   "action": "ZOOM_IN",
+   "name": "Zoom in",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/ZOOM_IN.svg",
+   "win": {
+    "chord": "LCTRL + EQUAL",
+    "bytes": "2e000701"
+   },
+   "mac": {
+    "chord": "LGUI + EQUAL",
+    "bytes": "2e000708"
+   },
+   "linux": {
+    "chord": "LCTRL + EQUAL",
+    "bytes": "2e000701"
+   }
+  },
+  {
+   "action": "ZOOM_OUT",
+   "name": "Zoom out",
+   "context": "browser",
+   "appSpecific": true,
+   "app": "Browser",
+   "confidence": "high",
+   "iconPath": "assets/icons/action/ZOOM_OUT.svg",
+   "win": {
+    "chord": "LCTRL + MINUS",
+    "bytes": "2d000701"
+   },
+   "mac": {
+    "chord": "LGUI + MINUS",
+    "bytes": "2d000708"
+   },
+   "linux": {
+    "chord": "LCTRL + MINUS",
+    "bytes": "2d000701"
+   }
+  }
+ ]
+}
