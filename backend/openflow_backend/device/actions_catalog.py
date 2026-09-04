@@ -54,10 +54,18 @@ BEHAVIOR_SLOTS = [
 ]
 
 
-def _a(code, label, action_type="key", coming_soon=False):
+def _a(code, label, action_type="key", coming_soon=False, name=None):
+    """One palette entry.
+
+    `label` is the keycap legend and stays terse -- a palette button is a 44px grid cell that
+    clips "Left Click" where "L Click" fits. `name` is the optional sentence-case form for
+    tooltips and for anywhere the value is shown as prose rather than on a key.
+    """
     d = {"code": code, "label": label, "actionType": action_type}
     if coming_soon:
         d["comingSoon"] = True
+    if name:
+        d["name"] = name
     return d
 
 
@@ -270,16 +278,25 @@ def _shortcuts(pairs):
     return [_a(code, label, "shortcut_alias") for code, label in pairs]
 
 
+# Where a tab may appear. "key" is the Bindings keymap editor, "module" is a module gesture.
+# A tab with no `contexts` is treated as both, so an author who forgets is visible rather than
+# silently hidden -- but tests/test_actions_catalog.py fails on an undeclared tab, so it does
+# not stay that way.
+KEY, MODULE = "key", "module"
+
+
 def _tabs():
     return [
-        {"id": "basic", "label": "B", "title": "Basic keys", "categories": [
+        {"id": "basic", "label": "B", "title": "Basic keys", "contexts": [KEY, MODULE],
+         "categories": [
             {"name": "Letters", "actions": _letters()},
             {"name": "Numbers", "actions": _numbers()},
             {"name": "Modifiers", "actions": _modifiers()},
             {"name": "Control", "actions": _control()},
             {"name": "Symbols", "actions": _symbols()},
         ]},
-        {"id": "extended", "label": "+", "title": "Extended", "categories": [
+        {"id": "extended", "label": "+", "title": "Extended", "contexts": [KEY, MODULE],
+         "categories": [
             {"name": "Empty", "actions": _empty()},
             {"name": "Mouse", "actions": _mouse()},
             {"name": "Connection", "actions": _connection()},
@@ -291,8 +308,10 @@ def _tabs():
             {"name": "Locks", "actions": _locks()},
             {"name": "Function Keys", "actions": _function()},
         ]},
-        {"id": "layers", "label": "✦", "title": "Layers", "categories": []},
-        {"id": "shortcuts", "label": "↗", "title": "Shortcuts", "categories": [
+        {"id": "layers", "label": "✦", "title": "Layers", "contexts": [KEY],
+         "categories": []},
+        {"id": "shortcuts", "label": "↗", "title": "Shortcuts", "contexts": [KEY, MODULE],
+         "categories": [
             {"name": "MacOS", "actions": _shortcuts(_MAC)},
             {"name": "Windows", "actions": _shortcuts(_WIN)},
             {"name": "VS Code Presets", "actions": _shortcuts(_VSCODE)},
