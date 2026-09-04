@@ -539,26 +539,32 @@ export default function Modules() {
         </div>
         {/* Reading is a whole-device action: one read tells us which of these profiles the
             keyboard is actually carrying. Per-profile reads invited mismatch confusion. */}
-        <div className="board-actions">
-          <button
-            className={"board-btn primary" + (justRead ? " btn-done" : "")}
-            onClick={readDevice}
-            disabled={reading}
-            title="Read the keyboard and mark which profiles are on it"
-          >
-            {reading ? "Reading…" : justRead ? "✓ Read" : "⌨  Read from keyboard"}
-          </button>
-          {readNote ? (
-            <span className={"saved-note" + (readNote.captured ? "" : " ok")}>
-              Read {readNote.at.toLocaleTimeString()} — {readNote.slots} module(s) on the keyboard
-              {readNote.captured > 0 &&
-                ` · captured ${readNote.captured} profile(s) the board was running`}
-            </span>
-          ) : device ? (
-            <span className="saved-note">
-              {Object.keys(device).length} profile(s) on the keyboard
-            </span>
-          ) : null}
+        <div className="board-actions-stack">
+          {/* Above the button, in space that is reserved whether or not there is a note:
+              beside it, the note moved the button the moment a read finished. */}
+          <div className="board-notes">
+            {readNote ? (
+              <span className={"saved-note" + (readNote.captured ? "" : " ok")}>
+                Read {readNote.at.toLocaleTimeString()} — {readNote.slots} module(s) on the keyboard
+                {readNote.captured > 0 &&
+                  ` · captured ${readNote.captured} profile(s) the board was running`}
+              </span>
+            ) : device ? (
+              <span className="saved-note">
+                {Object.keys(device).length} profile(s) on the keyboard
+              </span>
+            ) : null}
+          </div>
+          <div className="board-actions">
+            <button
+              className={"board-btn primary" + (justRead ? " btn-done" : "")}
+              onClick={readDevice}
+              disabled={reading}
+              title="Read the keyboard and mark which profiles are on it"
+            >
+              {reading ? "Reading…" : justRead ? "✓ Read" : "⌨  Read from keyboard"}
+            </button>
+          </div>
         </div>
       </div>
       {err && <div className="card"><div className="phase-note">{err}</div></div>}

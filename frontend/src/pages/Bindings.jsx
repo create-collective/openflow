@@ -411,31 +411,37 @@ export default function Bindings() {
             <div>
               <strong>{layer?.name}</strong>
             </div>
-            <div className="board-actions">
-              <button
-                className={"board-btn primary" + (justRead ? " btn-done" : "")}
-                onClick={readFromKeyboard}
-                disabled={!!busy}
-                title="Read the map currently on the connected keyboard into a new profile"
-              >
-                {busy === "read" ? "Reading…" : justRead ? "✓ Read" : "⌨  Read from keyboard"}
-              </button>
-              <button className="board-btn" onClick={saveMap} disabled={!!busy}
-                title="Snapshot this profile to a backup file. Edits are saved as you make them —
-this is for keeping a restore point.">
-                {busy === "save" ? "Backing up…" : "⭳  Back up"}
-              </button>
-              <FlashButton variant="toolbar" />
-              {saved && <span className="saved-note">Backed up {saved.toLocaleTimeString()}</span>}
-              {/* Stays after the badge fades: "have I read the board yet, and when?" is the
-                  question the flash gate turns on, so the answer should not be transient. */}
-              {readNote && (
-                <span className={"saved-note" + (readNote.warnings ? "" : " ok")}>
-                  Read {readNote.at.toLocaleTimeString()} — {readNote.text}
-                  {readNote.warnings > 0 &&
-                    ` · ${readNote.warnings} key(s) need review (BT/LED/other)`}
-                </span>
-              )}
+            <div className="board-actions-stack">
+              {/* Above the buttons rather than beside them: as a sibling in the flex row a
+                  note pushed every button left the moment a read finished. */}
+              <div className="board-notes">
+                {readNote && (
+                  <span className={"saved-note" + (readNote.warnings ? "" : " ok")}>
+                    Read {readNote.at.toLocaleTimeString()} — {readNote.text}
+                    {readNote.warnings > 0 &&
+                      ` · ${readNote.warnings} key(s) need review (BT/LED/other)`}
+                  </span>
+                )}
+                {saved && (
+                  <span className="saved-note">Backed up {saved.toLocaleTimeString()}</span>
+                )}
+              </div>
+              <div className="board-actions">
+                <button
+                  className={"board-btn primary" + (justRead ? " btn-done" : "")}
+                  onClick={readFromKeyboard}
+                  disabled={!!busy}
+                  title="Read the map currently on the connected keyboard into a new profile"
+                >
+                  {busy === "read" ? "Reading…" : justRead ? "✓ Read" : "⌨  Read from keyboard"}
+                </button>
+                <button className="board-btn" onClick={saveMap} disabled={!!busy}
+                  title="Snapshot this profile to a backup file. Edits are saved as you make them —
+  this is for keeping a restore point.">
+                  {busy === "save" ? "Backing up…" : "⭳  Back up"}
+                </button>
+                <FlashButton variant="toolbar" />
+              </div>
             </div>
           </div>
           <KeymapBoard

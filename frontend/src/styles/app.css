@@ -318,3 +318,22 @@
 @media (prefers-reduced-motion: reduce) {
   .flash-spinner { animation: none; border-top-color: var(--accent); }
 }
+
+/* --- Read/backup notes: above the buttons, in reserved space ---------------
+   These used to sit inside .board-actions, which is a flex row, so a note
+   appearing after a read shoved every button left. The row is now stacked and
+   the note line keeps its height whether or not there is a note in it, so
+   nothing moves when one arrives. Additive -- .board-actions is untouched. */
+.board-actions-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.board-notes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 15px;      /* reserved, so the buttons never jump */
+  line-height: 15px;
+}
