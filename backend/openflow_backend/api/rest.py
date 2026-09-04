@@ -730,6 +730,14 @@ def _same_action(device, app) -> bool:
         return not device and not app
     if device == app:
         return True
+    # An action with no HID record -- LED brightness is the one in the stock profiles -- is
+    # stored by the board as an empty keypress. Comparing the decoded strings called that a
+    # difference on every single read, which no flash could ever resolve: the app said
+    # LED_BRIGHTNESS_UP, the board said an empty keypress, and there is no third state to
+    # move to. It permanently blocked the profile from reading as live and minted a fresh
+    # capture each time. The board is carrying what this action looks like on the board.
+    if device == remap.EMPTY_KEYPRESS and not remap.encodable(app):
+        return True
     parts = lambda v: sorted(t.strip().upper() for t in str(v).split("+"))
     return parts(device) == parts(app)
 

@@ -260,6 +260,32 @@ def encode_mouse_button(code: str) -> bytes:
     return encode_two_word(MOUSE_CATEGORY, MOUSE_MASK[code])
 
 
+# A KEY_PRESS record whose payload is all zeros: page 0, usage 0, no modifiers, which is to
+# say a keypress that presses nothing. The board carries it on the two Tune gestures NayaFlow
+# labels LED Brightness Up/Down -- and it is NOT the same as an unbound field, which has record
+# type NONE and no payload at all. It reads as a claimed gesture with no HID output, which is
+# what an action the keyboard handles internally looks like from out here.
+EMPTY_KEYPRESS = "RAW_p00:00m00"
+
+
+def encodable(action_code: str) -> bool:
+    """Can this action_code be written into a module gesture field at all?
+
+    Mouse buttons and anything that resolves to a keypress can. LED brightness cannot: it is in
+    the action list because NayaFlow offers it, but there is no HID record for "turn the
+    keyboard's own LEDs up", and the board stores EMPTY_KEYPRESS for it.
+    """
+    if not action_code:
+        return False
+    if action_code in MOUSE_MASK:
+        return True
+    try:
+        encode_keypress("key", action_code)
+        return True
+    except Exception:
+        return False
+
+
 def decode_mouse_button(value: bytes) -> str:
     category, mask = decode_two_word(value)
     if category != MOUSE_CATEGORY:

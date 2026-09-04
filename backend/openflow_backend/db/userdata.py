@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 
 from .database import connect
 from ..device import module_fields
+from ..device import remap
 
 UNSET_COLOR = "#xxxxxx"
 
@@ -684,7 +685,12 @@ def get_modules() -> dict:
                 # An axis gesture has no single field, so writable_fields does not list it -- but
                 # it very much reaches the device, as two. And a Track hold has a row in the app
                 # and nowhere on the board at all.
-                flashable = module_fields.gesture_has_device_field(m["type"], b["behavior"] or "")
+                # Flashable means the edit REACHES the keyboard, which needs two things: a
+                # field to put it in, and an action that can be encoded into one. LED
+                # brightness has the field and no encoding -- it was badged flashable and
+                # silently never written.
+                flashable = (module_fields.gesture_has_device_field(m["type"], b["behavior"] or "")
+                             and (not b["action_code"] or remap.encodable(b["action_code"])))
                 bindings.append({
                     "id": b["id"],
                     "behavior": b["behavior"],

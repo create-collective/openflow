@@ -246,10 +246,12 @@ def _encode_gesture(idx, code):
     """
     if code in R.MOUSE_MASK:
         return (R.TWO_WORD, R.encode_two_word(R.MOUSE_CATEGORY, R.MOUSE_MASK[code]))
-    try:
-        return (R.KEY_PRESS, R.encode_keypress("key", code))
-    except Exception:
+    if not R.encodable(code):
+        # LED brightness and friends. The board already carries an empty keypress on those
+        # gestures, and the template passes it through untouched -- writing something of our
+        # own invention over it would be a guess about firmware we have not seen.
         return None
+    return (R.KEY_PRESS, R.encode_keypress("key", code))
 
 
 def _uuid16(cid):
