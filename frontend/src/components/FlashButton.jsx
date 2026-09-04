@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { invalidateDeviceState } from "../lib/deviceState";
+import useDoneFlag from "../lib/useDoneFlag";
 import { api } from "../lib/api.js";
 
 // "Flash to keyboard" — previews the diff (dry-run) first, then requires an explicit
@@ -48,20 +49,12 @@ export default function FlashButton({ variant = "sidebar" }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [recovery, setRecovery] = useState(false);
-  const [flashed, setFlashed] = useState(false);
   const [wrote, setWrote] = useState(false);   // did this attempt reach the device?
-  const timer = useRef(null);
   const readOk = hasReadDevice();
 
   // The dialog reports the result, but it gets closed. A flash is slow, irreversible and easy
   // to be unsure about, so the button carries the answer for a few seconds afterwards too.
-  useEffect(() => () => clearTimeout(timer.current), []);
-
-  function markFlashed() {
-    setFlashed(true);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => setFlashed(false), 5000);
-  }
+  const [flashed, markFlashed] = useDoneFlag();
 
   async function openPreview() {
     setState("loading");
@@ -118,7 +111,7 @@ export default function FlashButton({ variant = "sidebar" }) {
       <button
         className={
           (variant === "toolbar" ? "board-btn primary" : "flash-btn") +
-          (flashed ? " flashed" : "")
+          (flashed ? " btn-done" : "")
         }
         onClick={openPreview}
         disabled={state === "loading" || state === "writing"}

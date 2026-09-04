@@ -39,6 +39,8 @@ export default function Bindings() {
   const [activeSlot, setActiveSlot] = useState("tap");
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(null);
+  const [readNote, setReadNote] = useState(null);
+  const [justRead, markRead] = useDoneFlag();
   const [saved, setSaved] = useState(null);
   const [pickedModule, setPickedModule] = useState(null);
   const [moduleAssign, setModuleAssign] = useState(() => {
@@ -300,6 +302,7 @@ export default function Bindings() {
   async function readFromKeyboard() {
     setBusy("read");
     setErr(null);
+    setReadNote(null);
     try {
       const r = await api.readKeyboard();
       await load();
@@ -316,9 +319,15 @@ export default function Bindings() {
       // Flashing is gated on this: until the board has been read, the app's idea of the keymap
       // may not match what is on the keyboard, and edits would be flashed over an unknown state.
       try { sessionStorage.setItem("openflow.deviceRead", String(Date.now())); } catch { /* ignore */ }
-      if (r.warnings?.length) {
-        setErr(`Read ${r.bindings} bindings across ${r.layers} layers — ${r.warnings.length} key(s) need review (BT/LED/other).`);
-      }
+      // A read that worked used to say nothing at all, so the only way to tell it apart from
+      // a read that silently failed was to go looking at the data. The warning case went out
+      // through setErr, which put a successful read behind an error-shaped message.
+      markRead();
+      setReadNote({
+        at: new Date(),
+        text: `${r.bindings} binding(s) across ${r.layers} layer(s)`,
+        warnings: r.warnings?.length || 0,
+      });
     } catch (e) {
       const noDev = /device|found|503|connect/i.test(e.message);
       setErr(noDev ? "No keyboard found. Connect the Create over USB and close NayaFlow." : e.message);
@@ -402,9 +411,13 @@ export default function Bindings() {
               <strong>{layer?.name}</strong>
             </div>
             <div className="board-actions">
-              <button className="board-btn primary" onClick={readFromKeyboard} disabled={!!busy}
-                title="Read the map currently on the connected keyboard into a new profile">
-                {busy === "read" ? "Reading…" : "⌨  Read from keyboard"}
+              <button
+                className={"board-btn primary" + (justRead ? " btn-done" : "")}
+                onClick={readFromKeyboard}
+                disabled={!!busy}
+                title="Read the map currently on the connected keyboard into a new profile"
+              >
+                {busy === "read" ? "Reading…" : justRead ? "✓ Read" : "⌨  Read from keyboard"}
               </button>
               <button className="board-btn" onClick={saveMap} disabled={!!busy}
                 title="Snapshot this profile to a backup file. Edits are saved as you make them —
@@ -413,6 +426,15 @@ this is for keeping a restore point.">
               </button>
               <FlashButton variant="toolbar" />
               {saved && <span className="saved-note">Backed up {saved.toLocaleTimeString()}</span>}
+              {/* Stays after the badge fades: "have I read the board yet, and when?" is the
+                  question the flash gate turns on, so the answer should not be transient. */}
+              {readNote && (
+                <span className={"saved-note" + (readNote.warnings ? "" : " ok")}>
+                  Read {readNote.at.toLocaleTimeString()} — {readNote.text}
+                  {readNote.warnings > 0 &&
+                    ` · ${readNote.warnings} key(s) need review (BT/LED/other)`}
+                </span>
+              )}
             </div>
           </div>
           <KeymapBoard

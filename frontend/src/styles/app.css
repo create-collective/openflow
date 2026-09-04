@@ -284,13 +284,19 @@
    started, so it finished with no signal at all. These are the two places that
    now say what happened: the note inside the dialog, and the button for five
    seconds after it closes. Additive only -- nothing above is modified. */
-.flash-btn.flashed,
-.board-btn.primary.flashed {
+.flash-btn.btn-done,
+.board-btn.btn-done,
+.board-btn.primary.btn-done {
   background: var(--ok);
+  border-color: var(--ok);
   color: #06281c;
 }
-.flash-btn.flashed:hover,
-.board-btn.primary.flashed:hover { background: var(--ok); }
+.flash-btn.btn-done:hover,
+.board-btn.btn-done:hover:not(:disabled),
+.board-btn.primary.btn-done:hover { background: var(--ok); }
+
+/* The note beside the button, for the detail the badge has no room for. */
+.saved-note.ok { color: var(--ok); }
 
 .phase-note.flash-ok {
   border-left-color: var(--ok);

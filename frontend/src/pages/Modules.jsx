@@ -6,6 +6,7 @@ import ActionPalette from "../components/ActionPalette";
 import { shortcutLabel, shortcutTooltip, shortcutInfo,
          setShortcutTableFromActions } from "../lib/shortcutNames";
 import { api } from "../lib/api";
+import useDoneFlag from "../lib/useDoneFlag";
 
 // Module configuration (Touch / Track / Tune). Grouped list on the left; the
 // selected config's bindings (module visual + always-on gestures + per-target
@@ -171,6 +172,8 @@ export default function Modules() {
   // costs a COM-port round trip and is a whole-app fact, not this page's state.
   const device = useSyncExternalStore(subscribeDeviceState, getDeviceState).modules;
   const [reading, setReading] = useState(false);
+  const [readNote, setReadNote] = useState(null);
+  const [justRead, markRead] = useDoneFlag();
   const [busy, setBusy] = useState(null);   // an axis edit in flight
   const [catalog, setCatalog] = useState(null);
   const [selectedBindingId, setSelectedBindingId] = useState(null);
@@ -310,11 +313,23 @@ export default function Modules() {
   async function readDevice() {
     setReading(true);
     setErr(null);
+    setReadNote(null);
     try {
       const r = await api.readModules();
       const byUuid = {};
       for (const m of r.modules || []) byUuid[m.uuid] = m;
       setModuleRead(byUuid);
+      // A read that captures a profile has CHANGED the profile list, and one that finds the
+      // board unchanged has not -- both used to look identical, which is to say like nothing
+      // had happened at all.
+      const captured = (r.captured || []).length;
+      if (captured) await load();
+      markRead();
+      setReadNote({
+        at: new Date(),
+        slots: (r.modules || []).filter((m) => !m.unknown).length,
+        captured,
+      });
     } catch (e) {
       setErr(`Could not read the keyboard: ${e.message}`);
     } finally {
@@ -525,15 +540,25 @@ export default function Modules() {
         {/* Reading is a whole-device action: one read tells us which of these profiles the
             keyboard is actually carrying. Per-profile reads invited mismatch confusion. */}
         <div className="board-actions">
-          <button className="board-btn primary" onClick={readDevice} disabled={reading}
-                  title="Read the keyboard and mark which profiles are on it">
-            {reading ? "Reading…" : "⌨  Read from keyboard"}
+          <button
+            className={"board-btn primary" + (justRead ? " btn-done" : "")}
+            onClick={readDevice}
+            disabled={reading}
+            title="Read the keyboard and mark which profiles are on it"
+          >
+            {reading ? "Reading…" : justRead ? "✓ Read" : "⌨  Read from keyboard"}
           </button>
-          {device && (
+          {readNote ? (
+            <span className={"saved-note" + (readNote.captured ? "" : " ok")}>
+              Read {readNote.at.toLocaleTimeString()} — {readNote.slots} module(s) on the keyboard
+              {readNote.captured > 0 &&
+                ` · captured ${readNote.captured} profile(s) the board was running`}
+            </span>
+          ) : device ? (
             <span className="saved-note">
               {Object.keys(device).length} profile(s) on the keyboard
             </span>
-          )}
+          ) : null}
         </div>
       </div>
       {err && <div className="card"><div className="phase-note">{err}</div></div>}
