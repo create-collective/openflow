@@ -119,3 +119,53 @@ def test_no_function_references_a_name_the_module_lost():
                     dangling.append(f"{mod.__name__}.{name} -> {ref}")
     assert not dangling, dangling
     print("  no function references a constant its module does not define")
+
+
+def test_a_split_axis_still_renders_as_one_gesture_row():
+    """Splitting an axis INSERTS a per-half row sharing the parent's behavior. Emitting those as
+    gesture rows rendered a duplicate "Vertical", and with two rows for one gesture the wrong one
+    took the binding. The halves belong on `axes` as minus/plus, not in the row list."""
+    import sqlite3
+    from unittest import mock
+    from openflow_backend.db import userdata as ud
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript("""
+        CREATE TABLE module_configs (id TEXT, name TEXT, type TEXT, size INT, order_id INT,
+                                     icon_id TEXT, variant TEXT, captured_from TEXT,
+                                     updated_at TEXT, created_at TEXT);
+        CREATE TABLE module_bindings (id TEXT, module_config_id TEXT, behavior TEXT,
+                                      action_type TEXT, action_code TEXT, invert INT,
+                                      threshold INT, direction TEXT, mode INT,
+                                      updated_at TEXT, created_at TEXT);
+        CREATE TABLE module_settings (module_config_id TEXT, correlation_id TEXT, value TEXT);
+    """)
+    conn.execute("INSERT INTO module_configs (id,name,type,size,order_id) "
+                 "VALUES ('c','T','TUNE',0,0)")
+    B = "vertical:tune:1_finger"
+    rows = [("r1", B, "value", "mouse - SCROLL_UP - SCROLL_DOWN", "+"),   # the combined row
+            ("r2", B, "key", "A", "-"),                                   # a split half
+            ("r3", B, "key", "B", "+")]                                   # the other half
+    for rid, beh, at, code, d in rows:
+        conn.execute("INSERT INTO module_bindings (id,module_config_id,behavior,action_type,"
+                     "action_code,invert,threshold,direction,mode) VALUES (?,'c',?,?,?,0,0,?,0)",
+                     (rid, beh, at, code, d))
+    conn.commit()
+
+    class Keep:
+        def __init__(self, c): self._c = c
+        def __getattr__(self, n): return getattr(self._c, n)
+        def close(self): pass
+
+    with mock.patch.object(ud, "connect", lambda: Keep(conn)), \
+         mock.patch.object(ud, "_ensure_gesture_slots", lambda c: None), \
+         mock.patch.object(ud, "_ensure_touch_defaults", lambda c: None):
+        mod = ud.get_modules()["modules"][0]
+
+    shown = [b for b in mod["bindings"] if b["behavior"] == B]
+    assert len(shown) == 1, f"expected one gesture row, got {[b['actionCode'] for b in shown]}"
+    assert shown[0]["actionCode"] == "mouse - SCROLL_UP - SCROLL_DOWN", "the combined row must win"
+    axis = next(a for a in mod["axes"] if a["behavior"] == B)
+    assert axis["minus"] == "A" and axis["plus"] == "B", "the halves belong on the axis entry"
+    print("  one row for a split axis; halves carried on `axes`")

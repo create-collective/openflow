@@ -652,11 +652,31 @@ def get_modules() -> dict:
             "ORDER BY type, order_id"
         ):
             bindings = []
-            for b in conn.execute(
+            # Splitting an axis INSERTS a per-half row sharing the parent's behavior, so a
+            # split gesture has two or three rows for one gesture. Only the combined row is a
+            # gesture row -- the halves are already carried on `axes` as minus/plus, and
+            # emitting them here renders a duplicate row that then competes for the binding.
+            axis_behaviors = set(module_fields.axis_halves(m["type"]))
+            module_rows = list(conn.execute(
                 "SELECT id, behavior, action_type, action_code, invert, threshold, "
                 "direction, mode FROM module_bindings WHERE module_config_id = ?",
                 (m["id"],),
-            ):
+            ))
+            combined = {}
+            for r in module_rows:
+                if r["behavior"] in axis_behaviors and " - " in (r["action_code"] or ""):
+                    combined[r["behavior"]] = r["id"]
+            for b in module_rows:
+                if b["behavior"] in axis_behaviors:
+                    # Keep the combined row; if the profile somehow has none, keep the first so
+                    # the gesture never vanishes entirely.
+                    keep = combined.get(b["behavior"])
+                    if keep is not None and b["id"] != keep:
+                        continue
+                    if keep is None and any(
+                            r["behavior"] == b["behavior"] and r["id"] < b["id"]
+                            for r in module_rows):
+                        continue
                 parts = (b["behavior"] or "").split(":")
                 # Data-backed flashability: does this gesture have a device field, and what
                 # action kinds can it hold? (from the recovered module field map)
