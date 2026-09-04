@@ -146,10 +146,16 @@ AXIS_HALVES = {
 }
 
 
-# Only Track earns the two-direction control: its one physical surface drives all three axes, so
-# "which way did I move" is the useful question. Touch names its 1- and 2-finger motions
-# separately already, and a Tune dial is one rotation with one target.
-SPLITTABLE_TYPES = {"TRACK"}
+# Which modules get the per-direction control on their axis rows.
+#
+# Track: one physical surface drives all three axes, so "which way did I move" is the whole
+# question. Tune: its 1-finger swipes are the only motion it has that is not already split --
+# the 2- and 3-finger gestures are separate swipe_up/down/left/right bindings by default, so
+# left-vs-right and up-vs-down is the one thing missing there.
+#
+# Touch is deliberately excluded: it already names 1-finger and 2-finger motion as separate
+# gestures, so a split control would show two horizontals and two verticals for no gain.
+SPLITTABLE_TYPES = {"TRACK", "TUNE"}
 
 # Rendering order: the order the module is actually used in, not alphabetical.
 AXIS_ORDER = ["vertical", "horizontal", "rotate"]
