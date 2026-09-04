@@ -84,3 +84,38 @@ def test_the_module_action_list_is_unchanged_by_the_move():
     assert ud.MODULE_ACTIONS[0] == {"code": "", "label": "None", "actionType": "none", "group": ""}
     assert len(ud.MODULE_ACTIONS) > 90
     print(f"  {len(ud.MODULE_ACTIONS)} module actions, re-exported unchanged")
+
+
+def test_no_function_references_a_name_the_module_lost():
+    """Moving MODULE_ACTIONS out of db/userdata.py took _CURSOR_V and _CURSOR_H with it and left
+    _ensure_touch_defaults referencing them -- /api/modules returned 500 while the whole suite
+    stayed green, because nothing here calls it.
+
+    So: for every function in the modules involved, check each global name it references actually
+    resolves. This catches a dangling reference from ANY future move, not just that one.
+    """
+    import builtins
+    import types
+
+    from openflow_backend.db import userdata as ud
+    from openflow_backend.device import actions_catalog as acat
+    from openflow_backend.device import module_actions as ma
+
+    dangling = []
+    for mod in (ud, acat, ma):
+        ns = vars(mod)
+        for name, fn in list(ns.items()):
+            if not isinstance(fn, types.FunctionType) or fn.__module__ != mod.__name__:
+                continue
+            # A function-level `from x import Y` binds Y as a LOCAL, so it shows up in
+            # co_names but is not a global -- exclude anything the function binds itself.
+            local = set(fn.__code__.co_varnames) | set(fn.__code__.co_cellvars)
+            for ref in fn.__code__.co_names:
+                if ref in ns or ref in local or hasattr(builtins, ref):
+                    continue
+                # co_names also holds attribute names (conn.execute -> "execute"), which are not
+                # globals. Only flag a bare name that looks like a module-level constant.
+                if ref.isupper() or (ref.startswith("_") and ref[1:2].isupper()):
+                    dangling.append(f"{mod.__name__}.{name} -> {ref}")
+    assert not dangling, dangling
+    print("  no function references a constant its module does not define")

@@ -523,7 +523,11 @@ def set_module_setting(config_id: str, field_id: str, value) -> dict:
 
 # The module gesture vocabulary moved to device/module_actions.py -- see the note there on
 # why it lives under device/. Re-exported so get_modules() is unchanged.
-from ..device.module_actions import MODULE_ACTIONS  # noqa: E402,F401
+# _CURSOR_V/_CURSOR_H come along because _ensure_touch_defaults writes those exact
+# compound axis codes when backfilling the Touch 1-finger cursor gestures.
+from ..device.module_actions import (  # noqa: E402,F401
+    MODULE_ACTIONS, _CURSOR_H, _CURSOR_V,
+)
 
 
 def _ensure_touch_defaults(conn) -> None:
