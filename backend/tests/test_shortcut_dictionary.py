@@ -183,3 +183,41 @@ def test_hardware_actions_claim_no_chord():
            and any(a.get(p) for p in ("win", "mac", "linux"))]
     assert not bad, bad[:10]
     print("  keyboard-hardware actions carry no chord")
+
+
+# --- the imported app shortcut dataset -------------------------------------- #
+
+def _apps():
+    p = _ROOT / "docs" / "reference" / "app-shortcuts.json"
+    if not p.exists():
+        pytest.skip("app-shortcuts.json not generated")
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def test_every_imported_app_chord_encodes_to_its_stated_bytes():
+    """5,000+ chords from an external dataset, all of which we claim can be flashed. If the key
+    vocabulary drifts, this is what catches it."""
+    d = _apps()
+    bad, checked = [], 0
+    for app, v in d["apps"].items():
+        for action, rec in v["actions"].items():
+            for plat in ("windows", "mac", "linux"):
+                got = rec.get(plat)
+                if not got:
+                    continue
+                checked += 1
+                try:
+                    if R.encode_keypress("shortcut_alias", got["chord"]).hex() != got["bytes"]:
+                        bad.append(f"{app}/{action}/{plat}")
+                except Exception as e:
+                    bad.append(f"{app}/{action}/{plat}: {type(e).__name__}")
+    assert not bad, bad[:10]
+    print(f"  {checked} chords across {len(d['apps'])} apps all encode correctly")
+
+
+def test_the_import_records_its_source_and_licence():
+    """It is someone else's data under MIT. Shipping it without saying so is not acceptable."""
+    meta = _apps()["_meta"]
+    assert "ShortcutMapper" in meta["source"]
+    assert "MIT" in meta["license"]
+    print("  source and licence recorded")
