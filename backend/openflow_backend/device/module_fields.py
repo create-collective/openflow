@@ -185,6 +185,23 @@ def axis_halves(module_type: str) -> dict:
     return AXIS_HALVES.get((module_type or "").upper(), {})
 
 
+def motion_name(module_type: str, field: int, category: int, selector: int):
+    """The action_code a two-word MOTION record in an axis field stands for, or None.
+
+    An axis half's default record is (category, +/-1) and the pair's two names live in the
+    gesture's `default` string as "mouse - <minus> - <plus>". Decoding through that keeps one
+    source of truth: the names the encoder writes are the names the reader gives back.
+    """
+    for h in axis_halves(module_type).values():
+        if field not in (h["-"], h["+"]) or category != h["category"]:
+            continue
+        names = [p.strip() for p in h["default"].split(" - ")][1:]
+        if len(names) != 2:
+            return None
+        return names[0] if selector < 0 else names[1]
+    return None
+
+
 def axis_fields(module_type: str) -> dict:
     """{field index: (gesture, half)} -- the inverse, for decoding a slot."""
     out = {}

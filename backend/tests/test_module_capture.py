@@ -41,14 +41,30 @@ UUID = "11111111-1111-1111-1111-111111111111"
 
 
 def _fields():
-    """A device slot's raw fields for the Track button gestures, as the read returns them."""
-    idx = module_fields.writable_fields(TYPE)
+    """A device slot's raw fields, as the read returns them: the button gestures plus the
+    motion records for all three axes.
+
+    The axes are here because the diff inspects them. A Track slot really does carry six axis
+    fields, and a fixture that omitted them described a module whose ball does nothing -- so
+    "the device matches this profile" was being asserted against a slot no board would hold.
+    """
+    from openflow_backend.device import remap as R
     out = []
-    for gesture, i in sorted(idx.items()):
+    for gesture, i in sorted(module_fields.writable_fields(TYPE).items()):
         code = _DEVICE.get(gesture)
         if code is None:
             continue
         out.append({"field": i, "type": 0x0F, "value": _encode(code)})
+    for gesture, h in module_fields.axis_halves(TYPE).items():
+        for sign in ("-", "+"):
+            code = _DEVICE_AXES.get((gesture, sign))
+            if code is not None:                       # a half split onto a key
+                out.append({"field": h[sign], "type": R.KEY_PRESS,
+                            "value": R.encode_keypress("key", code).hex()})
+            else:                                      # the stock motion for that direction
+                out.append({"field": h[sign], "type": R.TWO_WORD,
+                            "value": R.encode_two_word(h["category"],
+                                                       -1 if sign == "-" else 1).hex()})
     return out
 
 
@@ -59,6 +75,8 @@ def _encode(code):
 
 # What the board is running.
 _DEVICE = {f"tap:track:button_{i}": c for i, c in zip((1, 2, 3, 4), ("M1", "M3", "M2", "M4"))}
+# Axis halves the board has split onto a key; anything absent carries its stock motion.
+_DEVICE_AXES: dict = {}
 
 
 def _db(app_bindings):
@@ -244,3 +262,85 @@ def test_a_capture_keeps_gestures_the_device_read_cannot_report():
     assert got["vertical:track"] == "mouse - MOUSE_DOWN - MOUSE_UP", "kept from the source"
     assert got["tap:track:button_1"] == "M1", "the device value still wins where it was read"
     print(f"  capture has {len(got)} bindings: axes kept, read values applied")
+
+
+# --- split axes -------------------------------------------------------------------------
+#
+# A live flash of a Tune profile with both 1-finger swipes split onto F17-F20 looked like it had
+# only written the RIGHT and DOWN halves: the captured profile showed the plus half and nothing
+# for left/up. Reading the slot's raw bytes showed all four halves were on the board exactly as
+# authored. Every part of the failure was on the READ side, and there were three of them:
+#
+#   1. the diff walked writable_fields, which deliberately excludes the axis halves, so fields
+#      0x0a-0x0d were never looked at;
+#   2. _decode_field dispatched on the field's nominal kind, so a half holding a KEY_PRESS
+#      decoded as RAW even once it was read;
+#   3. the capture keyed rows by gesture alone and wrote them all with direction "+", so the
+#      two halves overwrote each other before reaching the database.
+#
+# Each of these on its own is enough to make a correct write look like a broken one.
+
+def _split_db():
+    """The app profile: stock buttons, plus vertical split onto A (up) and B (down)."""
+    conn = _db(dict(_DEVICE))
+    for code, direction in (("mouse - MOUSE_DOWN - MOUSE_UP", "+"), ("A", "-"), ("B", "+")):
+        atype = "value" if " - " in code else "key"
+        conn.execute("INSERT INTO module_bindings (action_id,action_code,action_type,behavior,"
+                     "invert,threshold,direction,mode,module_config_id,id,updated_at,created_at)"
+                     " VALUES (NULL,?,?,'vertical:track',0,0,?,0,?,?,'','')",
+                     (code, atype, direction, UUID, f"v{direction}{code[:1]}"))
+    conn.commit()
+    return conn
+
+
+def test_both_halves_of_a_split_axis_are_read_back():
+    _DEVICE_AXES.update({("vertical:track", "-"): "A", ("vertical:track", "+"): "B"})
+    try:
+        conn = _split_db()
+        out = _run(conn)
+        halves = {g["half"]: g for g in out["modules"][0]["gestures"]
+                  if g["gesture"] == "vertical:track" and g.get("half")}
+        assert set(halves) == {"-", "+"}, "the diff never looked at the axis halves"
+        assert halves["-"]["device"] == "A", halves["-"]
+        assert halves["+"]["device"] == "B", halves["+"]
+        assert not halves["-"]["differs"] and not halves["+"]["differs"]
+        assert out["modules"][0]["differs"] == 0, "a matching split axis must not read as drift"
+        assert out["captured"] == [], "nothing drifted, so nothing to capture"
+        print("  both halves read back, and a matching split is not drift")
+    finally:
+        _DEVICE_AXES.clear()
+
+
+def test_an_axis_half_holding_a_key_is_not_decoded_as_raw():
+    """The field map calls 0x05/0x06 an axis, but a gesture field is not type-locked -- the
+    record TYPE decides. Dispatching on the map's kind turned a real binding into RAW_...."""
+    _DEVICE_AXES[("vertical:track", "-")] = "A"
+    try:
+        conn = _split_db()
+        g = next(x for x in _run(conn)["modules"][0]["gestures"]
+                 if x["gesture"] == "vertical:track" and x.get("half") == "-")
+        assert g["device"] == "A", f"decoded as {g['device']!r}"
+        print("  a keypress in an axis field decodes as the key")
+    finally:
+        _DEVICE_AXES.clear()
+
+
+def test_a_capture_keeps_both_halves_and_stays_idempotent():
+    """The capture must round-trip a split: the combined row the UI renders, plus a row per half
+    that actually diverges -- and reading again must not mint a second copy."""
+    _DEVICE_AXES.update({("vertical:track", "-"): "A", ("vertical:track", "+"): "B"})
+    try:
+        conn = _db(dict(_DEVICE))            # app has NO axis rows -> the board has drifted
+        made = _run(conn)["captured"]
+        assert len(made) == 1, made
+        rows = [(r["action_code"], r["direction"]) for r in conn.execute(
+            "SELECT action_code, direction FROM module_bindings "
+            "WHERE module_config_id=? AND behavior='vertical:track'", (made[0]["id"],))]
+        assert ("A", "-") in rows, f"the minus half was lost: {rows}"
+        assert ("B", "+") in rows, f"the plus half was lost: {rows}"
+        assert ("mouse - MOUSE_DOWN - MOUSE_UP", "+") in rows, \
+            f"no combined row, so the axis would vanish from the UI: {rows}"
+        assert _run(conn)["captured"] == [], "a re-read must not capture the capture"
+        print("  a split axis survives capture, and the capture matches on re-read")
+    finally:
+        _DEVICE_AXES.clear()

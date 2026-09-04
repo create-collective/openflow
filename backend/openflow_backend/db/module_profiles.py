@@ -21,6 +21,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ..device import module_fields
 from .database import connect
 
 # Packaged with the backend rather than resolved through the repo layout, so it ships.
@@ -231,18 +232,55 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
             # and rotate, and the new profile came out unable to express them at all. So the
             # capture starts as a copy of the profile it drifted from, and only the gestures
             # the device actually reported are overwritten.
-            seen = {g["gesture"]: g.get("device") for g in (e.get("gestures") or [])}
-            rows = {r["behavior"]: (r["action_code"], r["action_type"]) for r in conn.execute(
-                "SELECT behavior, action_code, action_type FROM module_bindings "
+            # Rows are keyed by (gesture, DIRECTION), not by gesture alone. An axis is two
+            # fields and a split binds them independently, so a capture keyed on the behavior
+            # collapsed all three rows -- the combined one and both halves -- into whichever
+            # came last, and then wrote it back with a hardcoded "+". The captured profile
+            # showed the plus half twice and lost the minus half entirely, which made it look
+            # like the flash had not written the left/up directions when in fact the capture
+            # could not represent them.
+            rows = {(r["behavior"], r["direction"] or "+"):
+                    (r["action_code"], r["action_type"]) for r in conn.execute(
+                "SELECT behavior, action_code, action_type, direction FROM module_bindings "
                 "WHERE module_config_id=?", (e["uuid"],))}
-            for gesture, device in seen.items():
-                rows[gesture] = (device or "", "keypress" if device else "none")
-            for gesture, (code, atype) in sorted(rows.items()):
+
+            halves = module_fields.axis_halves(e["type"])
+            seen, axis_seen = {}, {}
+            for g in (e.get("gestures") or []):
+                if g["gesture"] in halves and g.get("half"):
+                    axis_seen[(g["gesture"], g["half"])] = g.get("device")
+                else:
+                    seen[(g["gesture"], g.get("half") or "+")] = g.get("device")
+            for key, device in seen.items():
+                rows[key] = (device or "", "keypress" if device else "none")
+
+            # An axis is stored the way the app stores it, not as two loose halves: a COMBINED
+            # row naming the pair, plus per-half rows only when a half has actually been split
+            # off onto something else. Writing halves unconditionally would make every capture
+            # look split, and -- because get_modules() hides half rows and renders the combined
+            # one -- an axis with no combined row disappears from the UI entirely.
+            # A split axis is THREE rows in the app -- the combined one and both halves -- and
+            # two of them share direction "+", so the axis rows are built as a list rather than
+            # keyed like the rest.
+            extra = []
+            for gesture, h in halves.items():
+                if not any(k[0] == gesture for k in axis_seen):
+                    continue                      # the read said nothing about this axis
+                rows.pop((gesture, "-"), None)
+                rows.pop((gesture, "+"), None)
+                names = [x.strip() for x in h["default"].split(" - ")][1:]
+                extra.append((gesture, "+", h["default"], "value"))
+                for sign, dflt in zip(("-", "+"), names):
+                    code = axis_seen.get((gesture, sign))
+                    if code and code != dflt:
+                        extra.append((gesture, sign, code, "key"))
+            flat = [(g, d, c, t) for (g, d), (c, t) in rows.items()] + extra
+            for gesture, direction, code, atype in sorted(flat):
                 conn.execute(
                     "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
                     "invert, threshold, direction, mode, module_config_id, id, updated_at, "
                     "created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (None, code or "", atype or "none", gesture, 0, 0, "+", 0,
+                    (None, code or "", atype or "none", gesture, 0, 0, direction, 0,
                      cid, str(uuid.uuid4()), now, now))
             made.append({"id": cid, "name": label, "type": e["type"],
                          "capturedFrom": e["uuid"], "slot": e["slot"]})

@@ -598,9 +598,20 @@ def _build_entries(read: dict) -> list:
     try:
         configs = {r["id"]: dict(r) for r in
                    conn.execute("SELECT id, name, type FROM module_configs")}
+        # Keyed by behavior for plain rows and by (behavior, direction) for the per-half rows a
+        # split writes. Collapsing on behavior alone made the two halves overwrite each other,
+        # so whichever row the query happened to return last became "the" app value.
         bindings = {}
-        for r in conn.execute("SELECT module_config_id, behavior, action_code FROM module_bindings"):
-            bindings.setdefault(r["module_config_id"], {})[r["behavior"]] = r["action_code"]
+        for r in conn.execute("SELECT module_config_id, behavior, action_code, direction "
+                              "FROM module_bindings"):
+            code = r["action_code"] or ""
+            d = bindings.setdefault(r["module_config_id"], {})
+            d[r["behavior"]] = r["action_code"]
+            # A plain row also indexes under its direction, which is where the axis half of a
+            # split lives. Every ordinary row carries "+" too, so this is additive: the plain
+            # lookup keeps working and the axis loop gets the override it needs.
+            if code and " - " not in code and r["direction"] in ("-", "+"):
+                d[(r["behavior"], r["direction"])] = code
     finally:
         conn.close()
 
@@ -639,7 +650,21 @@ def _build_entries(read: dict) -> list:
 
 
 def _compare(module_type: str, fields: dict, app_bindings: dict):
-    """Device fields vs one app profile's bindings -> (per-gesture rows, count that differ)."""
+    """Device fields vs one app profile's bindings -> (per-gesture rows, count that differ).
+
+    Covers BOTH kinds of gesture field:
+
+    * single-field gestures (taps, swipes, the dial), one field each;
+    * axis halves, TWO fields each, which `writable_fields` deliberately does not list.
+
+    Leaving the halves out is what made a split axis unverifiable: the diff never looked at
+    fields 0x0a-0x0d on a Tune, so `differs` could not see a motion change, a profile could be
+    declared content-matched while its axes disagreed, and a capture taken from the read had no
+    device truth for them and silently kept a copy of the source profile instead.
+
+    `app_bindings` is {gesture: code} for the plain rows and {(gesture, sign): code} for the
+    per-half overrides a split writes.
+    """
     gestures, differs = [], 0
     for gesture, idx in sorted(module_fields.writable_fields(module_type).items()):
         typ, val = fields.get(idx, (None, b""))
@@ -649,6 +674,21 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
         differs += 0 if same else 1
         gestures.append({"gesture": gesture, "field": idx, "device": device,
                          "app": app, "differs": not same})
+
+    for gesture, half in sorted(module_fields.axis_halves(module_type).items()):
+        names = [p.strip() for p in half["default"].split(" - ")][1:]
+        for sign, fallback in zip(("-", "+"), names + [None, None]):
+            idx = half[sign]
+            typ, val = fields.get(idx, (None, b""))
+            device = _decode_field(module_type, idx, typ, val)
+            # An unsplit half carries the motion the encoder writes for it, which is the
+            # gesture's own default -- the combined row's text is the app's label for the pair,
+            # not a separately encodable value.
+            app = app_bindings.get((gesture, sign)) or fallback
+            same = _same_action(device, app)
+            differs += 0 if same else 1
+            gestures.append({"gesture": gesture, "half": sign, "field": idx, "device": device,
+                             "app": app, "differs": not same})
     return gestures, differs
 
 
@@ -674,15 +714,24 @@ def _same_action(device, app) -> bool:
 
 
 def _decode_field(module_type: str, idx: int, typ, val: bytes):
-    """One device field -> the app's action_code vocabulary, or None if unbound."""
+    """One device field -> the app's action_code vocabulary, or None if unbound.
+
+    Dispatches on the record TYPE, not on the field's nominal kind. A gesture field is not
+    type-locked -- a split axis half bound to a key is a KEY_PRESS sitting in a field the map
+    calls "axis", and a Track button bound to a letter is the same story. Reading the kind
+    first decoded both as RAW.
+    """
     if typ is None or typ == remap.NONE_BEH or not val:
         return None
-    kind = module_fields.field_map(module_type).get(f"0x{idx:02x}", {}).get("kind")
     try:
-        if kind == "mouse_button":
-            return remap.decode_mouse_button(val)
-        if kind == "keypress":
+        if typ == remap.KEY_PRESS:
             return keymap_read.decode_keypress(val)[1]
+        if typ == remap.TWO_WORD:
+            category, selector = remap.decode_two_word(val)
+            if category == remap.MOUSE_CATEGORY:
+                return remap.MOUSE_MASK_REV.get(selector) or f"RAW_{val.hex()}"
+            return (module_fields.motion_name(module_type, idx, category, selector)
+                    or f"RAW_{val.hex()}")
     except Exception:
         return f"RAW_{val.hex()}"
     return f"RAW_{val.hex()}"
