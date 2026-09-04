@@ -73,7 +73,11 @@ function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
   // A Track hold has no device field at all: the capture showed NayaFlow writing the hold value
   // over the tap and the tap never reaching the board. Offering it as editable would be
   // offering to lose the tap, so it renders disabled.
-  const unsupported = /^hold:track:button_/.test(b.behavior || "") || b.pairedSplit;
+  // A Track hold has no device field at all. A split parent is different: it is supported,
+  // its value simply lives on the two half rows -- so it is disabled but must not wear the
+  // "experimental" badge, which is specifically about a binding the hardware cannot store.
+  const unsupported = /^hold:track:button_/.test(b.behavior || "");
+  const splitParent = !!b.pairedSplit;
   const badge = unsupported
     ? { cls: "dbonly", text: "experimental", title: "The Track has one field per button and no room for a hold. NayaFlow lets you set one and silently overwrites the tap; we do not." }
     : b.flashable
@@ -389,6 +393,12 @@ export default function Modules() {
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => setAxisHalf(axis.behavior, side, e.target.value || null)}>
             <option value="">{motionOf(side) ? `motion — ${motionOf(side)}` : "motion"}</option>
+            {code && !keyActions.some((a) => a.code === code) && (
+              // Bound from the palette to something outside the module vocabulary. Without
+              // this the select has no matching option, silently falls back to showing its
+              // FIRST entry, and a save that worked reads as one that did nothing.
+              <option value={code}>{cleanCode(code)}</option>
+            )}
             {keyActions.map((a) => <option key={a.code} value={a.code}>{a.label || a.code}</option>)}
           </select>
         </div>
@@ -411,8 +421,11 @@ export default function Modules() {
 
   // Only offer what this gesture's device field can actually hold. Without this the Extended tab
   // would show TRANSPARENT and BT_DEVICE_1 on a module gesture, neither of which it can take.
+  // With nothing selected this must NOT reject everything: the palette drops categories that
+  // filter empty and then tabs that lose all their categories, so a blanket false left it with
+  // no tabs and it rendered nothing at all. "Nothing selected" is what `disabled` is for.
   const paletteFilter = useCallback(
-    (a) => selectedBinding ? okForKind(a.actionType, selectedBinding.fieldKind) : false,
+    (a) => !selectedBinding || okForKind(a.actionType, selectedBinding.fieldKind),
     [selectedBinding]
   );
 
