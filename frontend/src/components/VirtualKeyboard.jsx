@@ -9,7 +9,10 @@ const w = (u) => Math.max(0, u * UNIT - 2); // inner width; 2px goes to the 1px 
 // the canonical key dictionary. Select a key on the mapper, toggle any of the 5 held
 // modifiers, then click a key here to bind it. Shift alone yields the shifted glyph
 // (9 -> "("); any other modifier yields a shortcut_alias (C with Ctrl -> "LCTRL + C").
-export default function VirtualKeyboard({ disabled, onPick }) {
+// `disabledHint` is threaded from the palette rather than hard-coded here: this component is
+// shared with module gestures, where "select a key on the map" is the wrong instruction.
+export default function VirtualKeyboard({ disabled, onPick,
+                                          disabledHint = "Select a key on the map first." }) {
   const [mods, setMods] = useState({});
   const [fmore, setFmore] = useState(false);
   const [mac, setMac] = useState(false);
@@ -89,7 +92,7 @@ export default function VirtualKeyboard({ disabled, onPick }) {
 
   return (
     <div className="vk">
-      {disabled && <div className="palette-disabled">Select a key on the map first.</div>}
+      {disabled && <div className="palette-disabled">{disabledHint}</div>}
       <div className="vk-boards">
         {renderBlock(MAIN_ROWS, "vk-main")}
         {renderBlock(NAV_ROWS, "vk-nav")}

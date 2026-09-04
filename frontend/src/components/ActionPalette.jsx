@@ -1,23 +1,69 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { formatCombo } from "../lib/combo";
 import LayersIcon from "./LayersIcon";
 import VirtualKeyboard from "./VirtualKeyboard";
 
-// The keybind selector (bottom-right). Tabs come from the backend catalog:
-// B (basic), + (extended), ✦ (layers), ↗ (shortcuts), plus a virtual keyboard and
-// macros. Picking an action calls onPick with what set-key-binding needs.
-export default function ActionPalette({ catalog, layers, macros = [], disabled, onPick }) {
-  const [tabId, setTabId] = useState("keyboard");
-  if (!catalog) return null;
-  const tabs = [
-    { id: "keyboard", label: "⌨", title: "Virtual keyboard" },
-    ...(catalog.tabs || []),
-    { id: "macros", label: "⚡", title: "Macros" },
-  ];
+// The action selector, shared by the keymap editor and by module gestures.
+//
+// Tabs come from the backend catalog -- B (basic), + (extended), ✦ (layers), ↗ (shortcuts) --
+// plus a virtual keyboard and macros synthesized here. Picking calls onPick with exactly what a
+// binding write needs, and that contract is deliberately frozen: both call sites depend on it.
+//
+// WHICH tabs appear is decided by the tab, not by the caller. Each catalog tab declares the
+// contexts it belongs in, and this filters on `context`. That is an allowlist on purpose -- with
+// a hide-list, every tab added later would show up in the keymap editor until somebody
+// remembered to exclude it.
+export default function ActionPalette({
+  catalog,
+  layers = [],
+  macros = [],
+  disabled,
+  onPick,
+  context = "key",
+  tabIds,                 // explicit ordered allowlist; overrides `context` when given
+  defaultTab = "keyboard",
+  filter,                 // (action, tabId) => boolean, for per-action-type constraints
+  disabledHint = "Select a key on the map first.",
+  className = "",
+}) {
+  const [tabId, setTabId] = useState(defaultTab);
+
+  // Tab list and per-tab filtering, recomputed only when the inputs actually change.
+  const tabs = useMemo(() => {
+    if (!catalog) return [];
+    const inContext = (t) =>
+      tabIds ? tabIds.includes(t.id) : (t.contexts || ["key", "module"]).includes(context);
+
+    const fromCatalog = (catalog.tabs || [])
+      .filter(inContext)
+      .map((t) => {
+        if (!filter) return t;
+        // Drop actions the caller rejects, then categories that empty out -- an empty category
+        // renders a bare heading with a count of 0.
+        const categories = (t.categories || [])
+          .map((c) => ({ ...c, actions: (c.actions || []).filter((a) => filter(a, t.id)) }))
+          .filter((c) => c.actions.length);
+        return { ...t, categories };
+      })
+      // ...and tabs whose categories all emptied out. `layers` is exempt: its categories are
+      // synthesized here from the caller's layer list, so an empty array is normal.
+      .filter((t) => t.id === "layers" || !filter || (t.categories || []).length);
+
+    return [
+      ...(inContext({ id: "keyboard", contexts: ["key", "module"] })
+        ? [{ id: "keyboard", label: "⌨", title: "Virtual keyboard" }] : []),
+      ...fromCatalog,
+      // Macros are a keymap concept; there is no evidence a module gesture can hold one.
+      ...(inContext({ id: "macros", contexts: ["key"] })
+        ? [{ id: "macros", label: "⚡", title: "Macros" }] : []),
+    ];
+  }, [catalog, context, tabIds, filter]);
+
+  if (!catalog || !tabs.length) return null;
   const tab = tabs.find((t) => t.id === tabId) || tabs[0];
 
   return (
-    <div className="palette">
+    <div className={"palette" + (className ? " " + className : "")}>
       <div className="palette-tabs">
         {tabs.map((t) => (
           <button
@@ -33,11 +79,11 @@ export default function ActionPalette({ catalog, layers, macros = [], disabled, 
 
       <div className="palette-body">
         {disabled && tab?.id !== "keyboard" && (
-          <div className="palette-disabled">Select a key on the map first.</div>
+          <div className="palette-disabled">{disabledHint}</div>
         )}
 
         {tab?.id === "keyboard" ? (
-          <VirtualKeyboard disabled={disabled} onPick={onPick} />
+          <VirtualKeyboard disabled={disabled} onPick={onPick} disabledHint={disabledHint} />
         ) : tab?.id === "macros" ? (
           <div className="palette-cat">
             <div className="palette-cat-title">Macros <span className="palette-count">{macros.length}</span></div>
@@ -60,7 +106,7 @@ export default function ActionPalette({ catalog, layers, macros = [], disabled, 
             )}
           </div>
         ) : tab?.id === "layers"
-          ? catalog.layerActionTypes.map((lt) => (
+          ? (catalog.layerActionTypes || []).map((lt) => (
               <div key={lt.frontendType} className="palette-cat">
                 <div className="palette-cat-title">{lt.label}</div>
                 <div className="palette-grid">
@@ -80,7 +126,9 @@ export default function ActionPalette({ catalog, layers, macros = [], disabled, 
                 </div>
               </div>
             ))
-          : tab?.categories.map((cat) => (
+          // `tab.categories` is guarded, not just `tab`: the synthetic keyboard tab has no
+          // categories at all, and under filtering `tabs[0]` can become it.
+          : (tab?.categories || []).map((cat) => (
               <div key={cat.name} className="palette-cat">
                 <div className="palette-cat-title">{cat.name} <span className="palette-count">{cat.actions.length}</span></div>
                 <div className={"palette-grid" + (tab.id === "shortcuts" ? " combo" : "")}>
@@ -89,7 +137,7 @@ export default function ActionPalette({ catalog, layers, macros = [], disabled, 
                       key={a.code + "-" + i}
                       className={"palette-key" + (a.comingSoon ? " soon" : "")}
                       disabled={disabled || a.comingSoon}
-                      title={tab.id === "shortcuts" ? `${a.label}  (${a.code})` : (a.comingSoon ? `${a.label} (coming soon)` : `${a.label} (${a.code})`)}
+                      title={tab.id === "shortcuts" ? `${a.name || a.label}  (${a.code})` : (a.comingSoon ? `${a.label} (coming soon)` : `${a.name || a.label} (${a.code})`)}
                       onClick={() => onPick({ actionCode: a.code, actionType: a.actionType })}
                     >
                       {tab.id === "shortcuts" ? formatCombo(a.code) : a.label}
