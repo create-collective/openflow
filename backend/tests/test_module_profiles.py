@@ -40,6 +40,13 @@ def _db():
                                       mode INT, module_config_id TEXT, id TEXT,
                                       updated_at TEXT, created_at TEXT);
         CREATE TABLE module_settings (module_config_id TEXT, correlation_id TEXT, value TEXT);
+        -- delete() checks this before removing a profile: a bay names the profile a
+        -- layer runs, and dropping one underneath it is a foreign-key violation.
+        CREATE TABLE module_config_bindings (profile_id TEXT, layer_id TEXT,
+                                             module_config_id TEXT, binding_location TEXT,
+                                             state TEXT, updated_at TEXT, created_at TEXT);
+        CREATE TABLE profiles (id TEXT PRIMARY KEY, name TEXT);
+        CREATE TABLE layers (id TEXT PRIMARY KEY, name TEXT, order_id INT, profile_id TEXT);
     """)
     conn.commit()
     return conn

@@ -9,6 +9,8 @@ not-implemented status rather than 404 so the UI can surface state cleanly.
 
 from __future__ import annotations
 
+import sqlite3
+
 import platform
 
 from fastapi import APIRouter, Body, File, HTTPException, UploadFile
@@ -531,6 +533,11 @@ async def delete_module_profile(body: dict = Body(...)) -> dict:
         return await run_in_threadpool(mprof.delete, body.get("configId"))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except sqlite3.IntegrityError as e:
+        # A constraint we did not anticipate must still come back as a readable message.
+        # Unhandled, it is a 500 that uvicorn answers by dropping the connection, and the
+        # browser turns that into "failed to fetch" -- which says nothing about the cause.
+        raise HTTPException(status_code=400, detail=f"cannot delete this profile: {e}")
 
 
 @router.get("/api/module-gestures")

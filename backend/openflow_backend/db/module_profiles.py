@@ -159,6 +159,29 @@ def delete(config_id: str) -> dict:
             raise ValueError(
                 f"{row['name']!r} is the only {row['type']} profile. A module with no profile "
                 "cannot be driven -- add another before removing this one.")
+
+        # A bay names the profile a layer RUNS, and module_config_bindings has a foreign key
+        # onto this row. Deleting underneath it raised IntegrityError, which is not a
+        # ValueError, so it escaped the endpoint's handler as an unhandled 500 -- and uvicorn
+        # drops the connection on those, which the browser reports as "failed to fetch". Say
+        # what is actually in the way instead, naming the layers so it can be acted on.
+        used = list(conn.execute(
+            "SELECT p.name AS profile, l.order_id AS ord, l.name AS layer "
+            "FROM module_config_bindings b "
+            "LEFT JOIN profiles p ON p.id = b.profile_id "
+            "LEFT JOIN layers l ON l.id = b.layer_id "
+            "WHERE b.module_config_id = ? ORDER BY p.name, l.order_id", (config_id,)))
+        if used:
+            def _where(u):
+                layer = u["layer"] or "layer %s" % u["ord"]
+                return "%s / %s" % (u["profile"] or "a keymap profile", layer)
+            where = sorted({_where(u) for u in used})
+            raise ValueError(
+                f"{row['name']!r} is still assigned to a module bay on "
+                + ", ".join(where)
+                + ". Point those layers at another profile first -- deleting it here would "
+                  "silently change what those layers run.")
+
         conn.execute("DELETE FROM module_bindings WHERE module_config_id=?", (config_id,))
         conn.execute("DELETE FROM module_settings WHERE module_config_id=?", (config_id,))
         conn.execute("DELETE FROM module_configs WHERE id=?", (config_id,))

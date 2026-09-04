@@ -93,6 +93,7 @@ def _db(app_bindings):
         CREATE TABLE module_config_bindings (profile_id TEXT, layer_id TEXT,
                                              module_config_id TEXT, binding_location TEXT,
                                              state TEXT, updated_at TEXT, created_at TEXT);
+        CREATE TABLE module_settings (module_config_id TEXT, correlation_id TEXT, value TEXT);
     """)
     conn.execute("INSERT INTO module_configs (name,type,size,order_id,icon_id,variant,id,"
                  "updated_at,created_at) VALUES ('Naya Track Left',?,0,0,NULL,'TRACK_LEFT',?,'','')",
@@ -344,3 +345,41 @@ def test_a_capture_keeps_both_halves_and_stays_idempotent():
         print("  a split axis survives capture, and the capture matches on re-read")
     finally:
         _DEVICE_AXES.clear()
+
+
+def test_deleting_a_profile_a_bay_still_uses_says_so_instead_of_dropping_the_connection():
+    """module_config_bindings has a foreign key onto module_configs, so deleting a profile a
+    layer still runs raised IntegrityError -- not a ValueError, so it escaped the endpoint's
+    handler as an unhandled 500. Uvicorn answers those by closing the connection, and the
+    browser renders that as "failed to fetch", which names neither the profile nor the cause."""
+    import sqlite3
+    conn = _db(dict(_DEVICE))
+    conn.executescript("""
+        CREATE TABLE profiles (id TEXT PRIMARY KEY, name TEXT);
+        CREATE TABLE layers (id TEXT PRIMARY KEY, name TEXT, order_id INT, profile_id TEXT);
+    """)
+    other = "22222222-2222-2222-2222-222222222222"
+    conn.execute("INSERT INTO module_configs (name,type,size,order_id,icon_id,variant,id,"
+                 "updated_at,created_at) VALUES ('Spare',?,0,1,NULL,NULL,?,'','')", (TYPE, other))
+    conn.execute("INSERT INTO profiles VALUES ('p1','Read from keyboard')")
+    conn.execute("INSERT INTO layers VALUES ('l1','Layer 1',1,'p1')")
+    conn.execute("INSERT INTO module_config_bindings (profile_id,layer_id,module_config_id,"
+                 "binding_location,state,updated_at,created_at) "
+                 "VALUES ('p1','l1',?,'track:keyboard_left',NULL,'','')", (UUID,))
+    conn.commit()
+
+    with mock.patch.object(mp, "connect", lambda: KeepOpen(conn)):
+        try:
+            mp.delete(UUID)
+            raise AssertionError("the delete should have been refused")
+        except sqlite3.IntegrityError:
+            raise AssertionError("still raising IntegrityError -- the endpoint returns 500")
+        except ValueError as e:
+            msg = str(e)
+        # the unreferenced profile still deletes cleanly
+        assert mp.delete(other)["ok"]
+
+    assert "Read from keyboard" in msg and "Layer 1" in msg, msg
+    assert conn.execute("SELECT COUNT(*) c FROM module_configs WHERE id=?",
+                        (UUID,)).fetchone()["c"] == 1, "nothing may be deleted on refusal"
+    print(f"  refused with: {msg[:70]}...")
