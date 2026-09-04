@@ -169,3 +169,43 @@ def test_a_split_axis_still_renders_as_one_gesture_row():
     axis = next(a for a in mod["axes"] if a["behavior"] == B)
     assert axis["minus"] == "A" and axis["plus"] == "B", "the halves belong on the axis entry"
     print("  one row for a split axis; halves carried on `axes`")
+
+
+def test_clearing_a_split_half_cannot_delete_the_gesture():
+    """set_axis_split deletes non-compound rows for the behavior+direction it is writing. If the
+    axis's last remaining row was a plain one, that deleted the gesture outright and it vanished
+    from the UI -- there was nothing left to render. It must fall back to the motion default."""
+    import sqlite3
+    from unittest import mock
+    from openflow_backend.db import userdata as ud
+    from openflow_backend.device import module_fields as MF
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript("""
+        CREATE TABLE module_configs (id TEXT, name TEXT, type TEXT);
+        CREATE TABLE module_bindings (action_id TEXT, action_code TEXT, action_type TEXT,
+                                      behavior TEXT, invert INT, threshold INT, direction TEXT,
+                                      mode INT, module_config_id TEXT, id TEXT,
+                                      updated_at TEXT, created_at TEXT);
+    """)
+    conn.execute("INSERT INTO module_configs VALUES ('c','T','TUNE')")
+    B = "vertical:tune:1_finger"
+    # The damaging shape: one row, NOT compound, so the delete does not spare it.
+    conn.execute("INSERT INTO module_bindings (action_code, action_type, behavior, invert, "
+                 "threshold, direction, mode, module_config_id, id, updated_at, created_at) "
+                 "VALUES ('','none',?,0,0,'+',0,'c','r1','','')", (B,))
+    conn.commit()
+
+    class Keep:
+        def __init__(self, c): self._c = c
+        def __getattr__(self, n): return getattr(self._c, n)
+        def close(self): pass
+
+    with mock.patch.object(ud, "connect", lambda: Keep(conn)):
+        ud.set_axis_split("c", B, "+", None)
+
+    left = conn.execute("SELECT action_code FROM module_bindings WHERE behavior=?", (B,)).fetchall()
+    assert len(left) == 1, f"the gesture lost its row: {left}"
+    assert left[0]["action_code"] == MF.axis_halves("TUNE")[B]["default"]
+    print("  clearing a half restores the motion default instead of deleting the gesture")

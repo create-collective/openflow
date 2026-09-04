@@ -129,19 +129,28 @@ def label_fields(module_type: str, parsed_fields: list[tuple[int, int, bytes]]) 
 # Touch carries two cat-4 pairs and only one of them is the 2-finger scroll.
 AXIS_HALVES = {
     "TRACK": {
-        "vertical:track":   {"-": 0x05, "+": 0x06, "category": 1},
-        "horizontal:track": {"-": 0x07, "+": 0x08, "category": 0},
-        "rotate:track":     {"-": 0x0A, "+": 0x09, "category": 4},
+        "vertical:track":   {"-": 0x05, "+": 0x06, "category": 1,
+                             "default": "mouse - MOUSE_DOWN - MOUSE_UP"},
+        "horizontal:track": {"-": 0x07, "+": 0x08, "category": 0,
+                             "default": "mouse - MOUSE_LEFT - MOUSE_RIGHT"},
+        "rotate:track":     {"-": 0x0A, "+": 0x09, "category": 4,
+                             "default": "mouse - SCROLL_UP - SCROLL_DOWN"},
     },
     "TUNE": {
-        "horizontal:tune:1_finger": {"-": 0x0A, "+": 0x0B, "category": 4},
-        "vertical:tune:1_finger":   {"-": 0x0C, "+": 0x0D, "category": 6},
+        "horizontal:tune:1_finger": {"-": 0x0A, "+": 0x0B, "category": 4,
+                                    "default": "mouse - SCROLL_LEFT - SCROLL_RIGHT"},
+        "vertical:tune:1_finger":   {"-": 0x0C, "+": 0x0D, "category": 6,
+                                    "default": "mouse - SCROLL_UP - SCROLL_DOWN"},
     },
     "TOUCH": {
-        "vertical:touch:1_finger":    {"-": 0x05, "+": 0x06, "category": 1},
-        "horizontal:touch:1_finger":  {"-": 0x07, "+": 0x08, "category": 0},
-        "horizontal:touch:2_fingers": {"-": 0x0D, "+": 0x0E, "category": 4},
-        "vertical:touch:2_fingers":   {"-": 0x0F, "+": 0x10, "category": 6},
+        "vertical:touch:1_finger":    {"-": 0x05, "+": 0x06, "category": 1,
+                                      "default": "mouse - MOUSE_DOWN - MOUSE_UP"},
+        "horizontal:touch:1_finger":  {"-": 0x07, "+": 0x08, "category": 0,
+                                      "default": "mouse - MOUSE_LEFT - MOUSE_RIGHT"},
+        "horizontal:touch:2_fingers": {"-": 0x0D, "+": 0x0E, "category": 4,
+                                      "default": "mouse - SCROLL_LEFT - SCROLL_RIGHT"},
+        "vertical:touch:2_fingers":   {"-": 0x0F, "+": 0x10, "category": 6,
+                                      "default": "mouse - SCROLL_UP - SCROLL_DOWN"},
     },
 }
 

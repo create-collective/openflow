@@ -888,6 +888,14 @@ def set_axis_split(config_id: str, behavior: str, half: str, action_code: str | 
                 "invert, threshold, direction, mode, module_config_id, id, updated_at, created_at)"
                 " VALUES (NULL,?,?,?,0,0,?,0,?,?,?,?)",
                 (action_code, "key", behavior, half, config_id, str(uuid.uuid4()), now, now))
+        if conn.execute("SELECT 1 FROM module_bindings WHERE module_config_id=? AND behavior=?",
+                        (config_id, behavior)).fetchone() is None:
+            spec = axis_halves(row["type"]).get(behavior) or {}
+            conn.execute(
+                "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
+                "invert, threshold, direction, mode, module_config_id, id, updated_at, created_at)"
+                " VALUES (NULL,?,'value',?,0,0,'+',0,?,?,?,?)",
+                (spec.get("default", ""), behavior, config_id, str(uuid.uuid4()), now, now))
         conn.commit()
         return {"ok": True, "behavior": behavior, "half": half, "actionCode": action_code}
     finally:
