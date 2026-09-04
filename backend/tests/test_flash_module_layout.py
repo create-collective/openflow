@@ -345,3 +345,40 @@ def test_a_track_hold_binding_cannot_reach_the_device():
                      {"tap:track:button_1": "D", "hold:track:button_1": "A"})
     assert cfg[0x0B][1].hex() == "07000700", "the TAP must win the field, not the hold"
     print("  hold is unbacked; the tap keeps its field")
+
+
+def test_a_profile_already_on_the_board_is_still_written_when_it_differs():
+    """The bug this exists for. A slot already carrying the profile's uuid was marked "keep" and
+    left completely alone, on the theory it must already be correct. It is not: the board had
+    Touch's 1- and 2-finger tap cleared while the app had M1/M2, and flashing silently refused to
+    push them -- the user's own binding never reached the keyboard."""
+    bays = dict(BASE, **{"touch:keyboard_left": TOUCH})
+    conn = _db({0: bays})
+    # The app wants tap-to-click; the device slot has those fields empty.
+    for g, code in (("tap:touch:1_finger", "M1"), ("tap:touch:2_fingers", "M2")):
+        conn.execute("INSERT INTO module_bindings (module_config_id,behavior,action_code) "
+                     "VALUES (?,?,?)", (TOUCH, g, code))
+    conn.commit()
+    d = F.DesiredState()
+    d.profile_id = PID
+    d.layers[0], d.leds[0] = {}, {}
+    layout = F.apply_module_layout(d, conn, MOD_READ)
+    conn.close()
+
+    assert TOUCH in layout["kept"], "Touch is already on the board"
+    slot = layout["slot_for"][TOUCH]
+    assert slot in d.modules, "a kept slot that differs must still be written"
+    from openflow_backend.device import module_fields as MF
+    for gesture, code in (("tap:touch:1_finger", "M1"), ("tap:touch:2_fingers", "M2")):
+        idx = MF.mouse_button_fields("TOUCH")[gesture]
+        assert d.modules[slot][idx] == (
+            R.TWO_WORD, R.encode_two_word(R.MOUSE_CATEGORY, R.MOUSE_MASK[code])), gesture
+    print(f"  kept slot {slot} rewritten with the app's tap bindings")
+
+
+def test_a_kept_slot_that_matches_still_sends_nothing():
+    """The other half: writing a slot back unchanged on every flash would be pure churn."""
+    d, layout = _desired({0: BASE, 1: {}, 2: {}})
+    assert set(layout["kept"]) == set(layout["slot_for"]), "all four are already on the board"
+    assert d.modules == {}, f"unchanged profiles must send no data: {sorted(d.modules)}"
+    print("  four kept slots, all matching, zero config writes")

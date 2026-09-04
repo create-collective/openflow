@@ -91,13 +91,20 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
         taken.add(n)
         allocated.append(cid)
 
-    # A new slot needs a structurally complete config, which only an existing one can supply.
+    # Every referenced profile is templated, not just newly placed ones.
+    #
+    # A slot already carrying this uuid used to be left completely alone, on the theory that it
+    # was already correct. It is not: the app's copy drifts from the board (an edit that was
+    # never flashed, a field the device has cleared), and skipping it meant a flash silently
+    # refused to push your own bindings. The caller compares the overlay against the slot and
+    # writes only when it actually differs, so an unchanged profile still sends nothing.
     claimed = [cid for cid in slot_for
                if cid not in existing and cid not in allocated]
+    kept = [cid for cid in slot_for if cid in existing]
     templates = {}
-    for cid in allocated + claimed:
+    for cid in allocated + claimed + kept:
         typ = config_types.get(cid)
-        if cid in claimed:
+        if cid in claimed or cid in kept:
             # A capture already IS the config in the slot it is claiming, so it templates from
             # that slot rather than from some other profile of the same type. If its bindings
             # still match, the overlay comes out identical and no config write is needed.
@@ -105,10 +112,16 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
         else:
             src = _template_slot(typ, config_types, existing, device_slots)
         if src is None:
-            raise LayoutError(
-                "cannot add a %s profile: nothing of that type is on the keyboard to copy a "
-                "complete config from. Dock the module and read the keyboard first."
-                % (typ or "module"))
+            if cid in allocated:
+                # A genuinely new slot cannot be written without a complete config to copy: a
+                # partial write leaves the module missing fields we do not model.
+                raise LayoutError(
+                    "cannot add a %s profile: nothing of that type is on the keyboard to copy a "
+                    "complete config from. Dock the module and read the keyboard first."
+                    % (typ or "module"))
+            # A slot already on the board whose contents we could not read: leave it exactly as
+            # it is rather than writing a config assembled from nothing.
+            continue
         templates[cid] = src
 
     list_entries = []
@@ -121,7 +134,7 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
 
     return {"slot_for": slot_for, "list_entries": list_entries, "templates": templates,
             "bays": _bays(bays_by_layer, base, slot_for, base_order), "allocated": allocated,
-            "claimed": claimed}
+            "claimed": claimed, "kept": kept}
 
 
 def _bays(bays_by_layer, base, slot_for, base_order):

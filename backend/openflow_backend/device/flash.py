@@ -690,14 +690,16 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
 
     desired.module_list = {slot: (lid, code, uuid16)
                            for slot, lid, code, uuid16 in layout["list_entries"]}
-    for cid in layout["allocated"] + layout["claimed"]:
+    for cid in layout["allocated"] + layout["claimed"] + layout["kept"]:
+        if cid not in layout["templates"]:
+            continue                      # slot contents unreadable: leave it alone
         slot = layout["slot_for"][cid]
         cfg = ml.overlay(layout["templates"][cid], types[cid], bindings.get(cid, {}),
                          axes.get(cid, {}))
-        # A claimed slot whose overlay comes out identical needs no data write -- only its list
-        # entry changes, to name the capture instead of the profile it drifted from. Sending
-        # the bytes back unchanged would be pure churn on every flash.
-        if cid in layout["claimed"] and cfg == layout["templates"][cid]:
+        # Anything templated from its OWN slot and coming out identical needs no data write --
+        # sending the same bytes back would be churn on every flash. A difference means the app
+        # and the board genuinely disagree, and the flash is what resolves that.
+        if cid not in layout["allocated"] and cfg == layout["templates"][cid]:
             continue
         desired.modules[slot] = cfg
     return layout
