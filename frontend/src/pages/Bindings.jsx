@@ -42,8 +42,14 @@ export default function Bindings() {
   const [saved, setSaved] = useState(null);
   const [pickedModule, setPickedModule] = useState(null);
   const [moduleAssign, setModuleAssign] = useState(() => {
+    // Only module types are valid here. A stray value -- a native image drag once wrote an
+    // image URL into a bay -- persists in storage and renders as a broken image forever, so
+    // it is discarded on read rather than trusted.
+    const TYPES = ["track", "touch", "tune", "float"];
+    const clean = (v) => (TYPES.includes(v) ? v : null);
     try {
-      return JSON.parse(localStorage.getItem("openflow.moduleAssign")) || { left: null, right: null };
+      const saved = JSON.parse(localStorage.getItem("openflow.moduleAssign")) || {};
+      return { left: clean(saved.left), right: clean(saved.right) };
     } catch {
       return { left: null, right: null };
     }

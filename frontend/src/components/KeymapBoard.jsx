@@ -165,7 +165,14 @@ function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosit
       title={assigned ? `${assigned} module on the ${id} — open the profile this layer runs` : `${id} slot — drag or click-place a module`}
       onClick={() => { if (pickedModule && onAssignModule) onAssignModule(id, paletteType(pickedModule)); else if (assigned && onSelectModule) onSelectModule(assigned, id); }}
       onDragOver={(e) => { if (onAssignModule) e.preventDefault(); }}
-      onDrop={(e) => { if (!onAssignModule) return; e.preventDefault(); const t = e.dataTransfer.getData("text/plain"); if (t) onAssignModule(id, t); }}
+      onDrop={(e) => {
+        if (!onAssignModule) return;
+        e.preventDefault();
+        // Only a known module type. A native image drag carries a URL, and accepting that put
+        // "/modules/track4-right.png" into the bay, which then rendered as a broken image.
+        const t = e.dataTransfer.getData("text/plain");
+        if (t && Object.prototype.hasOwnProperty.call(MODULE_IMG, t)) onAssignModule(id, t);
+      }}
     >
       {assigned ? <img src={moduleImg(assigned, id)} alt={assigned} className="kb-module-img" />
         : <><span className="kb-module-icon">◉</span><span className="kb-module-label">{id}</span></>}
@@ -195,7 +202,7 @@ export default function KeymapBoard(props) {
           <div className="kb-palette-row">
             {PALETTE.map((m) => (
               <div className="kb-palette-slot" key={m.key}>
-                <img src={moduleImg(m.type, m.art)} alt={m.label}
+                <img src={moduleImg(m.type, m.art)} alt={m.label} draggable={false}
                   title={`${m.label} — choose the profile this layer runs`}
                   onClick={() => setOpenBay(openBay === m.key ? null : m.key)}
                   className={"kb-palette-mod" + (openBay === m.key ? " picked" : "")} />
