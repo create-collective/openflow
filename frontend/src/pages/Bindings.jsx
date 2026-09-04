@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import FlashButton from "../components/FlashButton.jsx";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
+import useDoneFlag from "../lib/useDoneFlag";
 import { readDockedModules } from "../lib/dockedModules";
 import { setModuleRead, subscribeDeviceState, getDeviceState } from "../lib/deviceState";
 import { setShortcutTable } from "../lib/shortcutNames";
