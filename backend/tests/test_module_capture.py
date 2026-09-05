@@ -519,3 +519,59 @@ def test_a_profile_holding_only_the_combined_dial_row_matches_the_board():
     assert not dial["clockwise_rotate:tune:dial"]["differs"]
     assert not dial["counter_clockwise_rotate:tune:dial"]["differs"]
     print("  the combined row answers for both halves")
+
+
+def test_the_tune_scroll_axes_are_paired_the_other_way_round():
+    """Established on hardware by binding F17-F20 to the four Tune 1-finger halves and swiping
+    each direction: UP fired the key in 0x0a, DOWN 0x0b, LEFT 0x0c, RIGHT 0x0d.
+
+    So 0x0a/0x0b are the VERTICAL pair and 0x0c/0x0d the HORIZONTAL one -- the axes were
+    swapped, not the directions -- and the two scroll categories were named backwards with
+    them: category 4 is vertical scroll, 6 is horizontal.
+
+    The first report of this read like a simple inversion, and swapping the directions within
+    each axis was tried first. It could not work: no arrangement of signs inside the wrong axis
+    pairing can send an up-swipe to the horizontal fields. Hence this test names the FIELD each
+    physical direction reaches, which is the thing that was actually measured.
+    """
+    from openflow_backend.device import module_fields as MF
+    h = MF.axis_halves("TUNE")
+    assert h["vertical:tune:1_finger"]["-"] == 0x0A, "a swipe UP fires 0x0a"
+    assert h["vertical:tune:1_finger"]["+"] == 0x0B, "a swipe DOWN fires 0x0b"
+    assert h["vertical:tune:1_finger"]["category"] == 4, "category 4 is VERTICAL scroll"
+    assert h["horizontal:tune:1_finger"]["-"] == 0x0C, "a swipe LEFT fires 0x0c"
+    assert h["horizontal:tune:1_finger"]["+"] == 0x0D, "a swipe RIGHT fires 0x0d"
+    assert h["horizontal:tune:1_finger"]["category"] == 6, "category 6 is HORIZONTAL scroll"
+    # The pointer axes are untouched: cursor motion was verified on hardware long ago and
+    # nobody has reported it wrong.
+    assert MF.axis_halves("TRACK")["vertical:track"] == {
+        "-": 0x05, "+": 0x06, "category": 1, "default": "mouse - MOUSE_DOWN - MOUSE_UP"}
+    print("  0x0a/0x0b vertical, 0x0c/0x0d horizontal; pointer axes untouched")
+
+
+def test_pairing_the_axes_correctly_changes_no_flashed_bytes():
+    """With the axes paired right the signs are the ordinary ones, so an UNSPLIT axis still
+    encodes exactly what the board and NayaFlow carry: 0x0a = cat 4 sel -1, 0x0b = +1,
+    0x0c = cat 6 sel -1, 0x0d = +1. Fixing a mapping must not rewrite every Tune profile."""
+    from openflow_backend.device import module_layout as ml, remap as R
+
+    got = {}
+    for gesture in ("vertical:tune:1_finger", "horizontal:tune:1_finger"):
+        for idx, (typ, val) in ml.encode_axis("TUNE", gesture, {"minus": None, "plus": None}).items():
+            assert typ == R.TWO_WORD, (gesture, hex(idx))
+            got[idx] = R.decode_two_word(val)
+    assert got == {0x0A: (4, -1), 0x0B: (4, 1), 0x0C: (6, -1), 0x0D: (6, 1)}, got
+    print("  unsplit Tune axes still encode the board's own motion records")
+
+
+def test_each_direction_reaches_the_field_that_fires_on_it():
+    from openflow_backend.device import module_layout as ml, keymap_read as KR
+    key = lambda out, idx: KR.decode_keypress(out[idx][1])[1]
+
+    out = ml.encode_axis("TUNE", "vertical:tune:1_finger", {"minus": "F18", "plus": "F17"})
+    assert key(out, 0x0A) == "F18", "up -> 0x0a"
+    assert key(out, 0x0B) == "F17", "down -> 0x0b"
+    out = ml.encode_axis("TUNE", "horizontal:tune:1_finger", {"minus": "F20", "plus": "F19"})
+    assert key(out, 0x0C) == "F20", "left -> 0x0c"
+    assert key(out, 0x0D) == "F19", "right -> 0x0d"
+    print("  up/down/left/right each land in the field that fires on them")

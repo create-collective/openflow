@@ -232,7 +232,12 @@ def encode_axis(module_type, gesture, spec):
             if rec is not None:
                 out[idx] = rec
                 continue
-        selector = (1 if sign == "+" else -1) * (-1 if invert else 1)
+        # The selector belongs to the HALF, not to the sign. On the Tune scroll axes the half
+        # that fires on a right swipe is the one holding -1, so deriving the selector from the
+        # sign would rewrite the board's motion records the moment a direction label was fixed.
+        selector = module_fields.half_selector(half, sign)
+        if invert:
+            selector = -selector
         out[idx] = (R.TWO_WORD, R.encode_two_word(category, selector))
     return out
 

@@ -137,10 +137,20 @@ AXIS_HALVES = {
                              "default": "mouse - SCROLL_UP - SCROLL_DOWN"},
     },
     "TUNE": {
-        "horizontal:tune:1_finger": {"-": 0x0A, "+": 0x0B, "category": 4,
-                                    "default": "mouse - SCROLL_LEFT - SCROLL_RIGHT"},
-        "vertical:tune:1_finger":   {"-": 0x0C, "+": 0x0D, "category": 6,
+        # THE AXES ARE THE OTHER WAY ROUND from the field order: 0x0a/0x0b are VERTICAL and
+        # 0x0c/0x0d are HORIZONTAL. Which means the two scroll categories were named backwards
+        # too -- category 4 is vertical scroll and category 6 is horizontal, not the reverse.
+        #
+        # Established on hardware 2026-09-04 by binding F17-F20 to the four halves and swiping
+        # each direction: up fired the key in 0x0a, down 0x0b, left 0x0c, right 0x0d. The first
+        # report of this read like a simple inversion and a straight direction swap was tried
+        # first; it did not fix it, because swapping directions within the wrong axis pairing
+        # cannot. Once the axes are paired correctly the SIGNS are the ordinary ones -- minus is
+        # up and left -- so the encoding is unchanged from stock: 0x0a keeps selector -1.
+        "vertical:tune:1_finger":   {"-": 0x0A, "+": 0x0B, "category": 4,
                                     "default": "mouse - SCROLL_UP - SCROLL_DOWN"},
+        "horizontal:tune:1_finger": {"-": 0x0C, "+": 0x0D, "category": 6,
+                                    "default": "mouse - SCROLL_LEFT - SCROLL_RIGHT"},
     },
     "TOUCH": {
         "vertical:touch:1_finger":    {"-": 0x05, "+": 0x06, "category": 1,
@@ -195,11 +205,24 @@ def motion_name(module_type: str, field: int, category: int, selector: int):
     for h in axis_halves(module_type).values():
         if field not in (h["-"], h["+"]) or category != h["category"]:
             continue
-        names = [p.strip() for p in h["default"].split(" - ")][1:]
-        if len(names) != 2:
+        names = split_pair(h["default"])
+        if None in names:
             return None
-        return names[0] if selector < 0 else names[1]
+        for i, sign in enumerate(("-", "+")):
+            if half_selector(h, sign) == selector:
+                return names[i]
+        return None
     return None
+
+
+def half_selector(half: dict, sign: str) -> int:
+    """The motion selector the DEVICE stores for one half of an axis.
+
+    Usually the sign itself, but not always: on the Tune scroll axes the half that fires on a
+    right swipe is the one holding selector -1. Keeping this separate from the sign is what lets
+    a direction label be corrected without changing a single byte of what gets flashed.
+    """
+    return (half.get("selectors") or {}).get(sign, -1 if sign == "-" else 1)
 
 
 def axis_fields(module_type: str) -> dict:
