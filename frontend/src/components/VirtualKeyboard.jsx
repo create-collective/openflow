@@ -18,8 +18,12 @@ export default function VirtualKeyboard({ disabled, onPick,
   const [mac, setMac] = useState(false);
   const shift = !!mods.shift;
   const toggle = (id) => setMods((m) => ({ ...m, [id]: !m[id] }));
+  const held = VK_MODIFIERS.filter((m) => mods[m.id]).map((m) => m.code);
   const click = (k) => { if (!disabled && k?.code) onPick(resolveVirtualKey(k.code, mods)); };
-  const pickF = (code) => { setFmore(false); if (!disabled) onPick({ actionCode: code, actionType: "key" }); };
+  // Through resolveVirtualKey like every other key. It used to emit the bare F-key whatever
+  // was held, and since F13-F24 live ONLY in this dropdown, "modifier + F13" was the one
+  // combination the keyboard could not produce at all.
+  const pickF = (code) => { setFmore(false); if (!disabled) onPick(resolveVirtualKey(code, mods)); };
   // A key's secondary legend: its shifted symbol, or its Mac label — whichever it
   // has — and whether that legend is currently the active one.
   // LGUI/RGUI show the real Windows logo instead of the dictionary's maths glyph -- except in
@@ -111,6 +115,15 @@ export default function VirtualKeyboard({ disabled, onPick,
           <input type="checkbox" checked={mac} onChange={() => setMac((v) => !v)} />
           Mac
         </label>
+        {/* Say what the next click will actually bind. Held modifiers DO build a chord, but
+            nothing on screen said so -- they read as a display toggle, like Mac beside them --
+            so there was no way to tell chording from relabelling without binding one and
+            looking at the result. */}
+        {held.length > 0 && (
+          <span className="vk-combo-hint" title="The next key you pick will be bound as this chord">
+            binds <code>{held.join(" + ")} + <span className="vk-combo-key">key</span></code>
+          </span>
+        )}
       </div>
     </div>
   );

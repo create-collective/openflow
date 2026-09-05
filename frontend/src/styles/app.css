@@ -337,3 +337,20 @@
   min-height: 15px;      /* reserved, so the buttons never jump */
   line-height: 15px;
 }
+
+/* The virtual keyboard's held-modifier hint. The checkboxes build a chord, but they sit next
+   to a "Mac" box that only relabels, so they read as a display toggle unless something says
+   otherwise. */
+.vk-combo-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.vk-combo-hint code {
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--neutral10);
+  color: var(--accent);
+}
+.vk-combo-hint .vk-combo-key { opacity: 0.6; font-style: italic; }
