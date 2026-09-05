@@ -354,3 +354,7 @@
   color: var(--accent);
 }
 .vk-combo-hint .vk-combo-key { opacity: 0.6; font-style: italic; }
+
+/* A setting the flash cannot place a device field for. Everything on that page used to look
+   applied; the ones that still are not should say so. */
+.setting-apponly { color: var(--err); opacity: 0.85; }

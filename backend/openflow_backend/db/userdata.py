@@ -731,7 +731,11 @@ def get_modules() -> dict:
                         cur = int(cur)
                     except (TypeError, ValueError):
                         cur = f["default"]
-                settings_schema.append({**f, "value": cur})
+                # Say which sliders actually reach the keyboard. Every one of them used to
+                # look applied; the ones we cannot place a field for still do not write, and
+                # the UI should admit that rather than imply otherwise.
+                settings_schema.append({**f, "value": cur,
+                                        "writable": module_fields.setting_is_writable(m["type"], f["id"])})
             halves = module_fields.splittable_axes(m["type"])
             axes = []
             for gesture, spec in halves.items():   # already in display order

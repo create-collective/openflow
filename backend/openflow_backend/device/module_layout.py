@@ -184,7 +184,25 @@ def _template_slot(module_type, config_types, existing, device_slots):
     return best
 
 
-def overlay(template, module_type, bindings, axes=None):
+def encode_setting(value) -> tuple:
+    """(type, value) for a settings field.
+
+    These are ONE byte with record type 0x01 -- the same type byte a keypress uses, with a
+    different length. Read straight off a stock module: 0x00 = 0a (pointer speed 10), 0x07 = 01
+    (ticks on). Writing four bytes here because "type 0x01 means keypress" would be writing a
+    keypress into a speed field.
+    """
+    if isinstance(value, bool):
+        n = 1 if value else 0
+    elif isinstance(value, str):
+        v = value.strip().lower()
+        n = 1 if v == "true" else 0 if v == "false" else int(float(v))
+    else:
+        n = int(value)
+    return (R.KEY_PRESS, bytes([max(0, min(255, n))]))
+
+
+def overlay(template, module_type, bindings, axes=None, settings=None):
     """A complete config: the template's fields with the profile's gestures written over it.
 
     `bindings` is {gesture: action_code} for single-field gestures.
@@ -204,6 +222,18 @@ def overlay(template, module_type, bindings, axes=None):
     for gesture, spec in (axes or {}).items():
         for idx, rec in encode_axis(module_type, gesture, spec).items():
             out[idx] = rec
+    # Settings were never written at all: set_module_setting stored them in the app and the
+    # overlay copied the device's own values straight back, so every slider on the Modules page
+    # silently did nothing to the keyboard.
+    fields = module_fields.setting_fields(module_type)
+    for sid, value in (settings or {}).items():
+        idx = fields.get(sid)
+        if idx is None:
+            continue                    # not one we can place; see SETTING_FIELDS
+        try:
+            out[idx] = encode_setting(value)
+        except (TypeError, ValueError):
+            continue                    # a value we cannot make a byte of: leave the board's
     return out
 
 

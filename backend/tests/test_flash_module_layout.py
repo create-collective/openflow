@@ -55,6 +55,11 @@ def _db(bays_per_layer):
     conn.executescript("""
         CREATE TABLE layers (id TEXT, order_id INT, profile_id TEXT);
         CREATE TABLE module_configs (id TEXT, name TEXT, type TEXT, captured_from TEXT);
+        -- Real schema has this; the flash reads it to write speeds and tick feedback
+        -- into the module's setting fields.
+        CREATE TABLE IF NOT EXISTS module_settings (module_config_id TEXT,
+                                      correlation_id TEXT, value TEXT, type TEXT,
+                                      updated_at TEXT, created_at TEXT);
         CREATE TABLE module_bindings (module_config_id TEXT, behavior TEXT, action_code TEXT,
                                       direction TEXT DEFAULT "+", invert INT DEFAULT 0);
         CREATE TABLE module_config_bindings (profile_id TEXT, layer_id TEXT,
@@ -382,3 +387,59 @@ def test_a_kept_slot_that_matches_still_sends_nothing():
     assert set(layout["kept"]) == set(layout["slot_for"]), "all four are already on the board"
     assert d.modules == {}, f"unchanged profiles must send no data: {sorted(d.modules)}"
     print("  four kept slots, all matching, zero config writes")
+
+
+def test_module_settings_reach_the_device():
+    """set_module_setting stored a slider in the app and the overlay copied the DEVICE's own
+    setting fields straight back, so every slider on the Modules page silently did nothing to
+    the keyboard. Same shape as the Track hold and the modifier chords: it looked applied.
+
+    The record format is read off a stock module, not invented: ONE byte with type 0x01 (the
+    same type byte a keypress uses, at a different length). 0x00 = 0a is pointer speed 10.
+    """
+    from openflow_backend.device import module_layout as ml, remap as R, module_fields as MF
+
+    template = {i: (R.KEY_PRESS, bytes([v])) for i, v in
+                {0x00: 10, 0x01: 10, 0x02: 50, 0x03: 1, 0x06: 75, 0x07: 1}.items()}
+    out = ml.overlay(dict(template), "TUNE", {}, {},
+                     {"scroll_speed": "100", "pointer_speed": 25,
+                      "toggle_ticks": "false", "tick_strength": 0})
+
+    assert out[0x01] == (R.KEY_PRESS, bytes([100])), "scroll_speed -> 0x01, one byte"
+    assert out[0x00] == (R.KEY_PRESS, bytes([25]))
+    assert out[0x07] == (R.KEY_PRESS, bytes([0])), "a toggle is 1/0"
+    assert out[0x06] == (R.KEY_PRESS, bytes([0])), "0 is a real value, not 'unset'"
+    assert out[0x02] == template[0x02], "a setting not being changed is left alone"
+    for _, val in out.values():
+        assert len(val) == 1, "a settings field is one byte; four would be a keypress"
+    print("  settings land in their fields as single bytes")
+
+
+def test_a_setting_we_cannot_place_is_left_on_the_board():
+    """Only settings whose device field is actually established get written. ticks_per_rotation
+    is the one that is not: it was mapped to 0x05, but that defaults to 72 and bottoms out at 5
+    while the device stores 5, and setting it to 100 made the detents softer and further apart
+    -- so 0x05 reads as tick SPACING, not a count. Writing 72 there would be a guess the user
+    feels in the dial."""
+    from openflow_backend.device import module_layout as ml, remap as R, module_fields as MF
+
+    template = {0x05: (R.KEY_PRESS, bytes([5]))}
+    out = ml.overlay(dict(template), "TUNE", {}, {}, {"ticks_per_rotation": 72})
+    assert out[0x05] == template[0x05], "0x05 must be left exactly as the board has it"
+    assert not MF.setting_is_writable("TUNE", "ticks_per_rotation")
+    assert MF.setting_is_writable("TUNE", "scroll_speed")
+    assert "ticks_per_rotation" not in MF.setting_fields("TUNE")
+    print("  an unplaceable setting changes nothing on the device")
+
+
+def test_a_garbage_setting_value_cannot_corrupt_a_field():
+    from openflow_backend.device import module_layout as ml, remap as R
+
+    template = {0x01: (R.KEY_PRESS, bytes([10]))}
+    for bad in ("", "fast", None, "12x"):
+        out = ml.overlay(dict(template), "TUNE", {}, {}, {"scroll_speed": bad})
+        assert out[0x01] == template[0x01], f"{bad!r} must leave the board's value"
+    # ...and a value past a byte is clamped rather than wrapping to something unrelated.
+    out = ml.overlay(dict(template), "TUNE", {}, {}, {"scroll_speed": 4000})
+    assert out[0x01] == (R.KEY_PRESS, bytes([255]))
+    print("  a bad value leaves the field alone; an out-of-range one clamps")

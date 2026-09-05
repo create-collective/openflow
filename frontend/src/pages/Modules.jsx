@@ -793,7 +793,14 @@ export default function Modules() {
                           <span className="setting-val">{f.value}</span>
                         )}
                       </div>
-                      <div className="setting-desc">{f.desc}</div>
+                      <div className="setting-desc">
+                        {f.desc}
+                        {f.writable === false && (
+                          <span className="setting-apponly" title="We have not established which device field holds this, so writing it would be a guess. It is stored in the app and left alone on the keyboard.">
+                            {" "}· app only
+                          </span>
+                        )}
+                      </div>
                       {f.kind === "slider" && (
                         <input
                           type="range"

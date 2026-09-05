@@ -681,6 +681,11 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
                 if code and not rows.get(half):   # an explicit half wins over the pair
                     rows[half] = code
 
+    # Module settings -- speeds, acceleration, tick feedback. Stored per config by schema id.
+    settings: dict[str, dict] = {}
+    for r in conn.execute("SELECT module_config_id, correlation_id, value FROM module_settings"):
+        settings.setdefault(r["module_config_id"], {})[r["correlation_id"]] = r["value"]
+
     device_list = [{"slot": slot, "uuid": uuid}
                    for uuid, slot in (mod_read.get("by_uuid") or {}).items()]
     device_slots = {}
@@ -707,7 +712,7 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
             continue                      # slot contents unreadable: leave it alone
         slot = layout["slot_for"][cid]
         cfg = ml.overlay(layout["templates"][cid], types[cid], bindings.get(cid, {}),
-                         axes.get(cid, {}))
+                         axes.get(cid, {}), settings.get(cid, {}))
         # Anything templated from its OWN slot and coming out identical needs no data write --
         # sending the same bytes back would be churn on every flash. A difference means the app
         # and the board genuinely disagree, and the flash is what resolves that.

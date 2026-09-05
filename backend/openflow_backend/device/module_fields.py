@@ -195,6 +195,43 @@ def axis_halves(module_type: str) -> dict:
     return AXIS_HALVES.get((module_type or "").upper(), {})
 
 
+# Settings that reach the device, as {schema id: field index}.
+#
+# Only the ones whose identity is actually established are here, because a settings field is
+# written blind -- there is no gesture to press and see. The three speeds carry their schema id
+# as their label in the field map, and the two tick fields match their schema DEFAULT exactly
+# on a stock module (0x06 = 75 = tick_strength, 0x07 = 1 = toggle_ticks), which is decent
+# corroboration for a value we did not choose.
+#
+# Deliberately absent:
+#   0x04  an unmapped flag sitting at 0. No idea what it does; a candidate for the 2-finger
+#         repeat behaviour, and worth a probe rather than a guess.
+#   0x05  identity uncertain. It was mapped as ticks_per_rotation, but that defaults to 72 and
+#         bottoms out at 5 while the device stores 5 -- an odd floor. Setting it to 100 made the
+#         detents SOFTER and further apart, so it reads as tick spacing, not a count. Writing a
+#         "ticks per rotation" of 72 into a spacing field would be a guess with a feel penalty.
+SETTING_FIELDS = {
+    "TOUCH": {"pointer_speed": 0x00, "scroll_speed": 0x01, "pointer_accel": 0x02,
+              "pointer_accel_on": 0x03},
+    "TRACK": {"pointer_speed": 0x00, "scroll_speed": 0x01, "pointer_accel": 0x02,
+              "pointer_accel_on": 0x03},
+    "TUNE": {"pointer_speed": 0x00, "scroll_speed": 0x01, "pointer_accel": 0x02,
+             "pointer_accel_on": 0x03, "tick_strength": 0x06, "toggle_ticks": 0x07},
+}
+
+# Settings the app shows but cannot yet write, so the UI can say so instead of implying it did.
+UNWRITABLE_SETTINGS = {"TUNE": {"ticks_per_rotation"}}
+
+
+def setting_fields(module_type: str) -> dict:
+    """{schema id: field index} for the settings a flash can actually write."""
+    return SETTING_FIELDS.get((module_type or "").upper(), {})
+
+
+def setting_is_writable(module_type: str, setting_id: str) -> bool:
+    return setting_id in setting_fields(module_type)
+
+
 def motion_name(module_type: str, field: int, category: int, selector: int):
     """The action_code a two-word MOTION record in an axis field stands for, or None.
 
