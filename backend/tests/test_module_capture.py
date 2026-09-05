@@ -575,3 +575,36 @@ def test_each_direction_reaches_the_field_that_fires_on_it():
     assert key(out, 0x0C) == "F20", "left -> 0x0c"
     assert key(out, 0x0D) == "F19", "right -> 0x0d"
     print("  up/down/left/right each land in the field that fires on them")
+
+
+def test_a_modifier_chord_can_be_bound_to_a_module_gesture():
+    """The virtual keyboard has produced {"LCTRL + F13", shortcut_alias} all along, and
+    encode_keypress has had a shortcut_alias branch all along -- but _encode_gesture passed a
+    hardcoded action_type of "key", so a chord never reached that branch. It stored in the app,
+    badged, and was silently dropped by the flash.
+
+    The board carries such records already, which is what makes this checkable rather than
+    hopeful: a stock Touch has LSHIFT + LALT + ESC in 0x15 as 29000706.
+    """
+    from openflow_backend.device import module_layout as ml, remap as R, keymap_read as KR
+
+    rec = ml._encode_gesture(0x08, "LSHIFT + LALT + ESC")
+    assert rec[1].hex() == "29000706", "must match the record the stock Touch actually carries"
+
+    for code, want in (("LCTRL + F13", "68000701"), ("LSHIFT + F17", "6c000702"),
+                       ("LGUI + F24", "73000708"), ("LCTRL + LSHIFT + F19", "6e000703")):
+        rec = ml._encode_gesture(0x08, code)
+        assert rec is not None and rec[0] == R.KEY_PRESS, code
+        assert rec[1].hex() == want, f"{code}: {rec[1].hex()} != {want}"
+        assert KR.decode_keypress(rec[1])[1] == code, "and it must read back as itself"
+        assert R.encodable(code), "so the flashable badge tells the truth about it"
+    print("  modifier + F13-F24 encodes, round-trips, and matches a real device record")
+
+
+def test_the_encoder_branch_is_chosen_from_the_code_not_hardcoded():
+    from openflow_backend.device import remap as R
+    assert R.keypress_type("LCTRL + F13") == "shortcut_alias"
+    assert R.keypress_type("LCTRL") == "modifier"
+    assert R.keypress_type("F13") == "key"
+    assert R.encodable("LCTRL") and R.encodable("F13") and R.encodable("LALT + CLICK")
+    print("  chord / modifier / plain key each route to their own branch")

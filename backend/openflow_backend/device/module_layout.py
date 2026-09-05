@@ -256,7 +256,11 @@ def _encode_gesture(idx, code):
         # gestures, and the template passes it through untouched -- writing something of our
         # own invention over it would be a guess about firmware we have not seen.
         return None
-    return (R.KEY_PRESS, R.encode_keypress("key", code))
+    # The branch is chosen from the shape of the code, not hardcoded to "key". Hardcoding it
+    # meant a chord never reached the shortcut_alias branch, so no modifier could be bound to
+    # any module gesture -- while the board itself carries such records (stock Touch 0x15 is
+    # LSHIFT + LALT + ESC).
+    return (R.KEY_PRESS, R.encode_keypress(R.keypress_type(code), code))
 
 
 def _uuid16(cid):

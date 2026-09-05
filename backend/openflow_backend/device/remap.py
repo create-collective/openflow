@@ -268,6 +268,23 @@ def encode_mouse_button(code: str) -> bytes:
 EMPTY_KEYPRESS = "RAW_p00:00m00"
 
 
+def keypress_type(action_code: str) -> str:
+    """Which encode_keypress() branch an action_code belongs in.
+
+    A module gesture field stores an action_code and nothing else -- the action_type lives in
+    the app's row, not on the device -- so the encoder has to read the shape of the code. A
+    chord is the case that matters: "LCTRL + F13" has to go through the shortcut_alias branch,
+    and forcing every module gesture through the plain-key branch is why a modifier could not
+    be bound to one at all, despite the board carrying such records already (a stock Touch has
+    LSHIFT + LALT + ESC in 0x15).
+    """
+    if " + " in (action_code or ""):
+        return "shortcut_alias"
+    if action_code in MODIFIER_REV:
+        return "modifier"
+    return "key"
+
+
 def encodable(action_code: str) -> bool:
     """Can this action_code be written into a module gesture field at all?
 
@@ -280,7 +297,7 @@ def encodable(action_code: str) -> bool:
     if action_code in MOUSE_MASK:
         return True
     try:
-        encode_keypress("key", action_code)
+        encode_keypress(keypress_type(action_code), action_code)
         return True
     except Exception:
         return False
