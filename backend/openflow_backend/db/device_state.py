@@ -22,21 +22,36 @@ from datetime import datetime, timezone
 from .database import connect
 
 KEY = "openflow.device_state"
+# Half status -- firmware, battery, what is docked. A different read from the module configs,
+# and one Device Manager used to fire on every single mount, so navigating away and back
+# re-opened the port to ask the same questions.
+KEY_STATUS = "openflow.device_status"
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _write(conn, payload: dict) -> None:
+def _write(conn, payload: dict, key: str = KEY) -> None:
     now = _now()
     blob = json.dumps(payload)
-    if conn.execute("SELECT 1 FROM settings WHERE correlation_id=?", (KEY,)).fetchone():
+    if conn.execute("SELECT 1 FROM settings WHERE correlation_id=?", (key,)).fetchone():
         conn.execute("UPDATE settings SET value=?, updated_at=? WHERE correlation_id=?",
-                     (blob, now, KEY))
+                     (blob, now, key))
     else:
         conn.execute("INSERT INTO settings (value, correlation_id, type, created_at, updated_at) "
-                     "VALUES (?,?,?,?,?)", (blob, KEY, "json", now, now))
+                     "VALUES (?,?,?,?,?)", (blob, key, "json", now, now))
+
+
+def _read(conn, key: str) -> dict:
+    row = conn.execute("SELECT value FROM settings WHERE correlation_id=?", (key,)).fetchone()
+    if row is None or not row["value"]:
+        return {}
+    try:
+        got = json.loads(row["value"])
+    except (TypeError, ValueError):
+        return {}
+    return got if isinstance(got, dict) else {}
 
 
 def save(modules: list, source: str = "read") -> dict:
@@ -81,5 +96,27 @@ def load() -> dict:
         mods = got.get("modules")
         return {"modules": mods if isinstance(mods, list) else None,
                 "at": got.get("at"), "source": got.get("source")}
+    finally:
+        conn.close()
+
+
+def save_status(halves: list) -> dict:
+    """Record the half status Device Manager shows, so the page can paint from cache."""
+    payload = {"halves": halves, "at": _now()}
+    conn = connect()
+    try:
+        _write(conn, payload, KEY_STATUS)
+        conn.commit()
+        return payload
+    finally:
+        conn.close()
+
+
+def load_status() -> dict:
+    conn = connect()
+    try:
+        got = _read(conn, KEY_STATUS)
+        halves = got.get("halves")
+        return {"halves": halves if isinstance(halves, list) else None, "at": got.get("at")}
     finally:
         conn.close()

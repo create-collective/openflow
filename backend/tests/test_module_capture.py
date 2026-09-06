@@ -686,3 +686,36 @@ def test_an_inverted_axis_is_not_read_as_drift():
     assert len(v) == 2 and not any(g["differs"] for g in v), \
         f"inverted app + inverted board must agree: {[(g['half'], g['device'], g['app']) for g in v]}"
     print("  invert compares against the known default instead of reading a flag that does not exist")
+
+
+def test_half_status_is_cached_under_its_own_key():
+    """Device Manager fired a USB read on every mount, so navigating away and back asked the
+    keyboard the same questions again. It caches now -- under a separate key, because it is a
+    different read from the module configs and one must not clobber the other."""
+    import sqlite3
+    from unittest import mock
+    from openflow_backend.db import device_state as ds
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE settings (value TEXT, correlation_id TEXT, type TEXT, "
+                 "created_at TEXT, updated_at TEXT)")
+    conn.commit()
+
+    class Keep:
+        def __init__(self, c): self._c = c
+        def __getattr__(self, n): return getattr(self._c, n)
+        def close(self): pass
+
+    with mock.patch.object(ds, "connect", lambda: Keep(conn)):
+        assert ds.load_status() == {"halves": None, "at": None}
+        ds.save([{"uuid": "u1"}], "read")
+        saved = ds.save_status([{"side": "left", "battery": 87}])
+        assert ds.load_status()["halves"][0]["battery"] == 87
+        assert ds.load_status()["at"] == saved["at"]
+        # The two live side by side: a status read must not wipe the module state or vice versa.
+        assert ds.load()["modules"] == [{"uuid": "u1"}]
+        ds.clear("flash")
+        assert ds.load_status()["halves"], "clearing the module state must not clear status"
+        assert ds.KEY != ds.KEY_STATUS
+    print("  half status caches under its own key, independent of the module state")

@@ -5,13 +5,18 @@ export default function DeviceManagement() {
   const [halves, setHalves] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
+  const [at, setAt] = useState(null);
+  const [live, setLive] = useState(false);   // read in this session, not restored from cache
 
+  // A USB read, on purpose. Everything below is what the keyboard said at `at`.
   const refresh = useCallback(async () => {
     setLoading(true);
     setErr(null);
     try {
       const res = await api.status();
       setHalves(res.halves || []);
+      setAt(res.at ? new Date(res.at + "Z") : new Date());
+      setLive(true);
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -19,9 +24,22 @@ export default function DeviceManagement() {
     }
   }, []);
 
+  // Paint what we already know first. This used to fire a fresh USB read on every mount, so
+  // navigating away and back asked the keyboard the same questions again -- even immediately
+  // after a read that had just answered them. Battery and firmware do not change while you
+  // switch pages; saying WHEN we looked is more honest than pretending every mount is live.
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const last = await api.statusLast();
+        if (cancelled || !last?.halves?.length) return;
+        setHalves(last.halves);
+        setAt(last.at ? new Date(last.at + "Z") : null);
+      } catch { /* nothing cached: the Refresh button is right there */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   async function led(side, action, value) {
     try {
@@ -35,13 +53,22 @@ export default function DeviceManagement() {
     <div>
       <h1 className="page-title">Device Manager</h1>
       <p className="page-sub">
-        Live status for connected halves and modules, read over USB CDC.
+        Status for connected halves and modules, read over USB CDC.
       </p>
 
-      <div className="btn-row" style={{ marginBottom: 16 }}>
+      <div className="btn-row" style={{ marginBottom: 16, alignItems: "center" }}>
         <button className="btn" onClick={refresh} disabled={loading}>
           {loading ? "Reading…" : "Refresh status"}
         </button>
+        {/* Says which of the two this is. Restored from the last read, it is a record with a
+            time on it; read just now, it is what the keyboard says. The page no longer reads
+            on mount, so without this there is nothing to tell them apart. */}
+        {at && (
+          <span className={"saved-note" + (live ? " ok" : "")}>
+            {live ? "Read" : "As of"} {at.toLocaleTimeString()}
+            {!live && " — cached, refresh for live values"}
+          </span>
+        )}
       </div>
 
       {err && <div className="card"><div className="phase-note">{err}</div></div>}

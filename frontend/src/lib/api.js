@@ -24,6 +24,7 @@ export const api = {
   uiState: () => req("GET", "/api/ui/state"),
   devices: () => req("GET", "/api/devices"),
   status: () => req("GET", "/api/status"),
+  statusLast: () => req("GET", "/api/status/last"),
   diagnostics: () => req("GET", "/api/diagnostics/report"),
   readKeyboard: (body = {}) => req("POST", "/rpc/read-keyboard", body),
   readModules: (body = {}) => req("POST", "/rpc/read-modules", body),

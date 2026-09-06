@@ -62,8 +62,23 @@ async def devices() -> dict:
 
 @router.get("/api/status")
 async def status(verbose: bool = False) -> dict:
+    """Query the halves over USB. Persists the result so the page can paint from cache next
+    time rather than re-opening the port on every mount."""
     svc = get_service()
-    return {"halves": await run_in_threadpool(svc.status_all, verbose)}
+    halves = await run_in_threadpool(svc.status_all, verbose)
+    saved = await run_in_threadpool(dstate.save_status, halves)
+    return {"halves": halves, "at": saved["at"]}
+
+
+@router.get("/api/status/last")
+async def status_last() -> dict:
+    """The last half status we read, and when. Touches no hardware.
+
+    Device Manager fired a fresh USB read on every mount, so navigating away and back asked the
+    keyboard the same questions again -- even right after a read that had just told us. It now
+    paints this immediately and says "as of", and re-reading is a deliberate click.
+    """
+    return await run_in_threadpool(dstate.load_status)
 
 
 @router.post("/rpc/read-keyboard")
