@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import useDoneFlag from "../lib/useDoneFlag";
 import { readDockedModules } from "../lib/dockedModules";
-import { setModuleRead, subscribeDeviceState, getDeviceState } from "../lib/deviceState";
+import { setModuleRead, subscribeDeviceState, getDeviceState,
+         deviceHasBeenRead } from "../lib/deviceState";
 import { setShortcutTable } from "../lib/shortcutNames";
 import { POS_LABEL } from "../lib/layout";
 import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
@@ -456,9 +457,11 @@ export default function Bindings() {
             pickedModule={pickedModule}
             onPickModule={setPickedModule}
             bays={bayUI}
-            // Before the first read the board cannot know what is docked, so placing a module
-            // by hand is useful. After one it is not: a read replaces the whole assignment.
-            allowModuleDrag={!deviceRead}
+            // Before the board has EVER been read, placing a module by hand is useful --
+            // nothing else can know what is docked. After that it is not: a read replaces the
+            // whole assignment. Gated on "ever read" rather than "currently known", because a
+            // flash clears the detail and that would switch dragging back on after every one.
+            allowModuleDrag={!deviceHasBeenRead()}
             onSelectModule={(type, bay) => {
               const id = liveConfigForBay(type, bay);
               navigate(id ? `/module-configuration?config=${id}` : `/module-configuration?type=${type}`);

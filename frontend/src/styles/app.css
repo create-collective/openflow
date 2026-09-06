@@ -358,3 +358,15 @@
 /* A setting the flash cannot place a device field for. Everything on that page used to look
    applied; the ones that still are not should say so. */
 .setting-apponly { color: var(--err); opacity: 0.85; }
+
+/* No image is a drag source unless it explicitly says it is.
+   An <img> is draggable by default, so every picture we add is a potential native drag that
+   carries its own URL. When such a drag starts and nothing accepts the drop, Chrome can be left
+   with a drag it never finishes: the cursor sticks and the page stops responding to clicks
+   entirely. That has now been reported twice, from two different images.
+   Opting IN per element (draggable="true") is the safe direction; this makes the default match
+   the intent, including for images added later. */
+img:not([draggable="true"]) {
+  -webkit-user-drag: none;
+  user-drag: none;
+}

@@ -178,7 +178,13 @@ function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosit
         if (t && Object.prototype.hasOwnProperty.call(MODULE_IMG, t)) onAssignModule(id, t);
       }}
     >
-      {assigned ? <img src={moduleImg(assigned, id)} alt={assigned} className="kb-module-img" />
+      {/* draggable={false} is load-bearing, not decoration. An <img> is a native drag source
+          unless told otherwise, so this picture could start a drag carrying its own URL --
+          which the drop handler then rejects, leaving Chrome with a drag it cannot finish, a
+          stuck cursor and a page that swallows every click. The payload half of this was fixed
+          before; the drag never should have started at all. */}
+      {assigned ? <img src={moduleImg(assigned, id)} alt={assigned} className="kb-module-img"
+                       draggable={false} />
         : <><span className="kb-module-icon">◉</span><span className="kb-module-label">{id}</span></>}
     </button>
   );

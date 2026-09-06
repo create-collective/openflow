@@ -19,6 +19,9 @@
 let state = { modules: null, at: 0 };
 const listeners = new Set();
 let hydrated = false;
+// Has this keyboard EVER been read? Distinct from `state.modules` being set: a
+// flash clears what we know but does not un-know that we have talked to the board.
+let everRead = false;
 
 function emit() {
   for (const l of listeners) l();
@@ -36,7 +39,13 @@ export function getDeviceState() {
 /** Record a module read: { [moduleConfigUuid]: {...} }. */
 export function setModuleRead(byUuid) {
   state = { modules: byUuid, at: Date.now() };
+  everRead = true;
   emit();
+}
+
+/** Whether the board has been read at all, ever -- including before a flash cleared the detail. */
+export function deviceHasBeenRead() {
+  return everRead;
 }
 
 /**
@@ -60,8 +69,12 @@ export async function hydrateDeviceState(api) {
   hydrated = true;
   try {
     const r = await api.deviceState();
+    // `at` is set even when a flash has cleared the detail, and it is what says we have talked
+    // to this keyboard before. Recording that separately matters: gating anything on
+    // "do we currently know" would flip it back on after every flash.
+    if (r && r.at) everRead = true;
     if (state.modules !== null) return;             // a live read beat us to it
-    if (!r || !Array.isArray(r.modules) || !r.modules.length) return;
+    if (!r || !Array.isArray(r.modules) || !r.modules.length) { emit(); return; }
     const byUuid = {};
     for (const m of r.modules) if (m && m.uuid) byUuid[m.uuid] = m;
     state = { modules: byUuid, at: r.at ? Date.parse(r.at + "Z") || 0 : 0, from: "stored" };
