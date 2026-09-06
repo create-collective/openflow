@@ -648,7 +648,7 @@ def _build_entries(read: dict) -> list:
         # overwrite each other, so whichever row the query happened to return last became "the"
         # app value -- and on a split axis that is one of the halves, not the combined row.
         bindings = {}
-        for r in conn.execute("SELECT module_config_id, behavior, action_code, direction "
+        for r in conn.execute("SELECT module_config_id, behavior, action_code, direction, invert "
                               "FROM module_bindings"):
             cfg = configs.get(r["module_config_id"])
             code = r["action_code"] or ""
@@ -660,6 +660,10 @@ def _build_entries(read: dict) -> list:
                 d[(r["behavior"], r["direction"])] = code
             else:
                 d[r["behavior"]] = r["action_code"]
+            # Invert is not a flag on the device -- it is a SELECTOR SWAP, so the only way to
+            # see it on a read is to compare against the motion we know each half defaults to.
+            if r["invert"]:
+                d[(r["behavior"], "invert")] = True
     finally:
         conn.close()
 
@@ -733,26 +737,33 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
                          "app": app, "differs": not same})
 
     for gesture, half in sorted(module_fields.axis_halves(module_type).items()):
-        names = [p.strip() for p in half["default"].split(" - ")][1:]
         combined = app_bindings.get(gesture)      # the single row the UI renders for the axis
-        for sign, dflt in zip(("-", "+"), names + [None, None]):
+        # What each half is expected to drive, minus first. The combined row wins over the
+        # gesture default; an EMPTY combined row means the axis is unbound and neither applies.
+        pair = module_fields.split_pair(combined)
+        base = list(module_fields.split_pair(half["default"]))
+        for i in (0, 1):
+            if pair[i]:
+                base[i] = pair[i]
+        # An inverted axis drives the OTHER motion from each half. Nothing on the board says so
+        # -- there is no invert bit, which is why NayaFlow's own checkbox writes nothing -- so
+        # the app's flag plus the default we know is the only way to tell "inverted, and
+        # matching" from "drifted". Without it, ticking invert made the axis read as two
+        # differences forever: the board held exactly what was asked for and still reported as
+        # adrift, and no flash could resolve it.
+        if app_bindings.get((gesture, "invert")):
+            base = base[::-1]
+        for sign, dflt in zip(("-", "+"), base):
             idx = half[sign]
             typ, val = fields.get(idx, (None, b""))
             device = _decode_field(module_type, idx, typ, val)
             app = app_bindings.get((gesture, sign))
             if app is None:
-                # What this half is expected to hold comes from the combined row, not from an
-                # assumed default. A profile whose axis is UNBOUND says so with an empty row,
-                # and answering "MOUSE_LEFT" for it made a capture of a board that really has
-                # nothing there differ from the board forever -- so it could never be marked
-                # live, and every read minted another copy of it.
-                if combined is None:
-                    app = dflt                                    # no row at all: stock motion
-                elif " - " in str(combined):
-                    minus, plus = module_fields.split_pair(combined)
-                    app = minus if sign == "-" else plus
-                else:
-                    app = combined or None
+                # A profile whose axis is UNBOUND says so with an empty row, and answering
+                # "MOUSE_LEFT" for it made a capture of a board that really has nothing there
+                # differ from the board forever -- so it could never be marked live, and every
+                # read minted another copy of it.
+                app = dflt if (combined is None or " - " in str(combined)) else (combined or None)
             same = _same_action(device, app)
             differs += 0 if same else 1
             gestures.append({"gesture": gesture, "half": sign, "field": idx, "device": device,

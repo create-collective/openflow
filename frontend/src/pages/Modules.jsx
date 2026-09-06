@@ -58,6 +58,23 @@ function okForKind(actionType, fieldKind) {
 // hardware -- a single "pinch + tap" -- so it is one row, not two.
 const GESTURE_LABEL = { pinch: "Pinch & Spread" };
 
+// What the keyboard has for one gesture, or one half of one. Shared, because the axis halves
+// were hand-built rows that simply never rendered it -- so a split Tune axis showed no ON DEVICE
+// mark while the dial (whose halves are separate behaviors, and so go through GestureRow) did.
+function DeviceBadge({ dev }) {
+  if (!dev) return null;
+  return (
+    <span
+      className={"gesture-badge " + (dev.differs ? "dbonly" : "flashable")}
+      title={dev.differs
+        ? `On the keyboard this is ${dev.device ?? "unbound"}; the app has ${dev.app || "nothing"}. Flash to make them match.`
+        : `Matches what is on the keyboard (field ${"0x" + (dev.field ?? 0).toString(16)}).`}
+    >
+      {dev.differs ? `device: ${dev.device ?? "unbound"}` : "on device"}
+    </span>
+  );
+}
+
 function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
   // Constrain the dropdown to what this gesture's device field accepts.
   const usable = actions.filter((a) => okForKind(a.actionType, b.fieldKind));
@@ -101,16 +118,7 @@ function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
         {GESTURE_LABEL[b.gesture] || (b.gesture || "").replace(/_/g, " ")}
       </span>
       <span className={"gesture-badge " + badge.cls} title={badge.title}>{badge.text}</span>
-      {dev && (
-        <span
-          className={"gesture-badge " + (dev.differs ? "dbonly" : "flashable")}
-          title={dev.differs
-            ? `On the keyboard this is ${dev.device ?? "unbound"}; the app has ${dev.app || "nothing"}. Flash to make them match.`
-            : `Matches what is on the keyboard (field ${"0x" + dev.field.toString(16)}).`}
-        >
-          {dev.differs ? `device: ${dev.device ?? "unbound"}` : "on device"}
-        </span>
-      )}
+      <DeviceBadge dev={dev} />
       <span className="skp-arrow" title={shortcutTooltip(b.actionCode)}>→</span>
       <select
         className="mac-input mod-action"
@@ -454,6 +462,7 @@ export default function Modules() {
           <span className="skp-beh" style={{ textTransform: "none", paddingLeft: 18 }}>
             {side === "-" ? minusName : plusName}
           </span>
+          <DeviceBadge dev={deviceByGesture[`${axis.behavior}:${side}`]} />
           <span className="skp-arrow">→</span>
           <select className="mac-input mod-action"
             value={code || ""}
@@ -535,9 +544,15 @@ export default function Modules() {
   // compare the board against the original; matchedGestures compares it against the capture.
   const isCapture = !!onDevice && onDevice.matched === config?.id && onDevice.uuid !== config?.id;
   const deviceGestures = isCapture ? (onDevice.matchedGestures || []) : (onDevice?.gestures || []);
+  // Keyed by gesture AND by "gesture:half". An axis reports TWO rows under one gesture name,
+  // so keying on the name alone let the plus half overwrite the minus half -- the surviving
+  // one then stood in for the whole axis, and neither half could be looked up at all.
   const deviceByGesture = useMemo(() => {
     const g = {};
-    for (const x of deviceGestures) g[x.gesture] = x;
+    for (const x of deviceGestures) {
+      if (x.half) g[`${x.gesture}:${x.half}`] = x;
+      else g[x.gesture] = x;
+    }
     return g;
   }, [onDevice, isCapture]);
 
@@ -574,16 +589,31 @@ export default function Modules() {
           selected={selectedBindingId === b.id}
           onSelect={isSplit ? undefined : setSelectedBindingId}
           extra={(pair || axis) && (
-            // The row itself selects for the palette, so the toggle has to stop the click
-            // reaching it -- otherwise ticking split just selects the row.
-            <label className="split-toggle" title="Bind each direction separately."
-              onClick={(e) => e.stopPropagation()}>
-              <input type="checkbox" checked={isSplit} disabled={!!busy}
-                onChange={(e) => axis
-                  ? toggleAxisSplit(axis, e.target.checked)
-                  : toggleSplit(pair, b, e.target.checked)} />
-              split
-            </label>
+            // The row itself selects for the palette, so a toggle has to stop the click
+            // reaching it -- otherwise ticking one just selects the row.
+            <>
+              {/* Track only. Its axes are the ones you hold in your hand and can have
+                  backwards; a Tune's scroll direction is a preference the OS already owns.
+                  Invert is not a flag on the device -- it swaps which selector each half
+                  carries -- so this is the app's record of a decision, and a read compares
+                  the board against it rather than reading it back. */}
+              {axis && config?.type === "TRACK" && !isSplit && (
+                <label className="split-toggle" title="Swap which direction each end of this axis drives."
+                  onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={!!axis.invert} disabled={!!busy}
+                    onChange={(e) => setAxisInvert(b.behavior, e.target.checked)} />
+                  invert
+                </label>
+              )}
+              <label className="split-toggle" title="Bind each direction separately."
+                onClick={(e) => e.stopPropagation()}>
+                <input type="checkbox" checked={isSplit} disabled={!!busy}
+                  onChange={(e) => axis
+                    ? toggleAxisSplit(axis, e.target.checked)
+                    : toggleSplit(pair, b, e.target.checked)} />
+                split
+              </label>
+            </>
           )} />
         {axis && isSplit && axisHalfRows(axis)}
       </Fragment>

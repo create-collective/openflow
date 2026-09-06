@@ -1747,3 +1747,16 @@
   grid-column: 2;
   margin-top: 4px;
 }
+
+/* Add profile and Import sit side by side. They were stacked full-width with no gap, which read
+   as one control split in two; they are two peers that both open something, so they get equal
+   halves and a gap. The dropdown still spans the whole rail (it is absolutely positioned to
+   .module-add), so a long profile name is not squeezed into half the width. */
+.module-add {
+  display: flex;
+  gap: 8px;
+}
+.module-add > .board-btn {
+  flex: 1 1 0;
+  min-width: 0;
+}

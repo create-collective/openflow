@@ -656,3 +656,33 @@ def test_device_state_survives_but_says_when():
         conn.execute("UPDATE settings SET value=? WHERE correlation_id=?", ('{"modules":7}', ds.KEY))
         assert ds.load()["modules"] is None, "modules must be a list or nothing"
     print("  device state persists with a timestamp, one row, and survives a garbled blob")
+
+
+def test_an_inverted_axis_is_not_read_as_drift():
+    """Invert is not a flag on the device -- it swaps which SELECTOR each half carries, which is
+    why NayaFlow's own invert checkbox produces zero writes and why nothing can be read back
+    directly. What CAN be done is what the device owner suggested: compare the board against the
+    default motion we know each half should carry, and let the app's flag say which way round it
+    is meant to be.
+
+    Without that, ticking invert made the axis read as two differences forever -- the board
+    would hold exactly what the app asked for and still be reported as drifted.
+    """
+    from openflow_backend.api import rest as R
+    from openflow_backend.device import remap as rm
+
+    # A Track vertical pair written INVERTED: 0x05 holds +1, 0x06 holds -1.
+    fields = {0x05: (rm.TWO_WORD, rm.encode_two_word(1, 1)),
+              0x06: (rm.TWO_WORD, rm.encode_two_word(1, -1))}
+
+    plain = {"vertical:track": "mouse - MOUSE_DOWN - MOUSE_UP"}
+    rows, differs = R._compare("TRACK", fields, plain)
+    v = [g for g in rows if g["gesture"] == "vertical:track" and g.get("half")]
+    assert all(g["differs"] for g in v), "an inverted board vs a non-inverted app IS drift"
+
+    inverted = {**plain, ("vertical:track", "invert"): True}
+    rows, differs = R._compare("TRACK", fields, inverted)
+    v = [g for g in rows if g["gesture"] == "vertical:track" and g.get("half")]
+    assert len(v) == 2 and not any(g["differs"] for g in v), \
+        f"inverted app + inverted board must agree: {[(g['half'], g['device'], g['app']) for g in v]}"
+    print("  invert compares against the known default instead of reading a flag that does not exist")
