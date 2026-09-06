@@ -540,20 +540,54 @@ export default function Modules() {
     return g;
   }, [onDevice, isCapture]);
 
-  // Anything without a button/finger target that is NOT an axis gesture -- the axes have their
-  // own two-direction control above.
-  const axes = useMemo(() => {
-    const handled = new Set((config?.axes || []).map((a) => a.behavior));
-    return (config?.bindings || [])
-      .filter((b) => !b.target && !handled.has(b.behavior))
-      .sort(byGesture);
-  }, [config]);
+  // Every gesture with no button/finger target. These used to exclude anything in
+  // `config.axes`, on the grounds that "the axes have their own two-direction control above" --
+  // true when AxisControls existed, and silently wrong after it was deleted and the axis rows
+  // moved into the target tabs. A Tune axis is `vertical:tune:1_finger`, so it HAS a target and
+  // renders there; a Track axis is `vertical:track` with no third segment, so it had no target
+  // and was excluded from here as well. The Track's vertical, horizontal and rotate rows
+  // rendered nowhere at all.
+  const untargeted = useMemo(
+    () => (config?.bindings || []).filter((b) => !b.target).sort(byGesture),
+    [config]);
   const targets = useMemo(() => {
     const t = [];
     for (const b of config?.bindings || []) if (b.target && !t.includes(b.target)) t.push(b.target);
     return t.sort();
   }, [config]);
   const curTarget = activeTarget && targets.includes(activeTarget) ? activeTarget : targets[0];
+
+  // Shared by the untargeted rows and the per-target ones. A directional gesture is ONE row
+  // until it is split, whether its halves are separate bindings (the dial) or the two ends of
+  // an axis pair -- same row, same checkbox either way.
+  function renderGestureRow(b) {
+    const pair = pairFor(b.behavior);
+    const axis = axisFor(b.behavior);
+    if (isPairHalf(b.behavior) && !pairForHalf(b.behavior)?.split) return null;
+    const isSplit = axis ? openAxes.has(b.behavior) : !!pair?.split;
+    return (
+      <Fragment key={b.id}>
+        <GestureRow actions={actions} onPick={pickBinding}
+          dev={deviceByGesture[b.behavior]}
+          b={{ ...b, pairedSplit: isSplit }}
+          selected={selectedBindingId === b.id}
+          onSelect={isSplit ? undefined : setSelectedBindingId}
+          extra={(pair || axis) && (
+            // The row itself selects for the palette, so the toggle has to stop the click
+            // reaching it -- otherwise ticking split just selects the row.
+            <label className="split-toggle" title="Bind each direction separately."
+              onClick={(e) => e.stopPropagation()}>
+              <input type="checkbox" checked={isSplit} disabled={!!busy}
+                onChange={(e) => axis
+                  ? toggleAxisSplit(axis, e.target.checked)
+                  : toggleSplit(pair, b, e.target.checked)} />
+              split
+            </label>
+          )} />
+        {axis && isSplit && axisHalfRows(axis)}
+      </Fragment>
+    );
+  }
   const targetBindings = (config?.bindings || [])
     .filter((b) => b.target === curTarget)
     .sort(byGesture);
@@ -734,15 +768,10 @@ export default function Modules() {
                 <div style={{ maxWidth: 620 }}>
                   <ModuleVisual type={config.type} activeButton={curTarget} />
 
-                  {axes.length > 0 && (
+                  {untargeted.length > 0 && (
                     <>
                       <div className="skp-head"><span>Gesture</span><span className="skp-arrow">→</span><span>Action</span></div>
-                      {axes.map((b) => (
-                        <GestureRow key={b.id} b={b} actions={actions} onPick={pickBinding}
-                          dev={deviceByGesture[b.behavior]}
-                          selected={selectedBindingId === b.id}
-                          onSelect={setSelectedBindingId} />
-                      ))}
+                      {untargeted.map(renderGestureRow)}
                     </>
                   )}
 
@@ -755,38 +784,7 @@ export default function Modules() {
                           </button>
                         ))}
                       </div>
-                      {targetBindings.map((b) => {
-                        const pair = pairFor(b.behavior);
-                        const axis = axisFor(b.behavior);
-                        // A directional gesture is ONE row until it is split, whether its halves
-                        // are separate bindings (the dial) or the two ends of an axis pair
-                        // (1-finger vertical/horizontal). Same row, same checkbox either way.
-                        if (isPairHalf(b.behavior) && !pairForHalf(b.behavior)?.split) return null;
-                        const isSplit = axis ? openAxes.has(b.behavior) : !!pair?.split;
-                        return (
-                          <Fragment key={b.id}>
-                            <GestureRow actions={actions} onPick={pickBinding}
-                              dev={deviceByGesture[b.behavior]}
-                              b={{ ...b, pairedSplit: isSplit }}
-                              selected={selectedBindingId === b.id}
-                              onSelect={isSplit ? undefined : setSelectedBindingId}
-                              extra={(pair || axis) && (
-                                // The row itself selects for the palette, so the toggle has to
-                                // stop the click reaching it -- otherwise ticking split just
-                                // selects the row.
-                                <label className="split-toggle" title="Bind each direction separately."
-                                  onClick={(e) => e.stopPropagation()}>
-                                  <input type="checkbox" checked={isSplit} disabled={!!busy}
-                                    onChange={(e) => axis
-                                      ? toggleAxisSplit(axis, e.target.checked)
-                                      : toggleSplit(pair, b, e.target.checked)} />
-                                  split
-                                </label>
-                              )} />
-                            {axis && isSplit && axisHalfRows(axis)}
-                          </Fragment>
-                        );
-                      })}
+                      {targetBindings.map(renderGestureRow)}
                     </>
                   )}
                 </div>
