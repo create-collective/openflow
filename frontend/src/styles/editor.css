@@ -1723,3 +1723,27 @@
   width: 1090px;
   max-width: 100%;
 }
+
+/* Modules: the profile rail runs the full height of the page.
+   The palette used to be a sibling AFTER .module-layout, so it spanned the full width and the
+   rail stopped where the gesture list ended, leaving a tall empty column. Putting the palette
+   in the grid's second column and spanning the rail down both rows fills that space and gives
+   the profile list room to grow. Additive: .module-layout's columns and .modules-bottom are
+   unchanged, so nothing else that uses them moves. */
+.module-layout {
+  /* Wider than the original 240px: the rail now carries a third row action (export) and the
+     palette no longer needs the full page width, so the space is better spent stopping profile
+     names wrapping onto two lines. */
+  grid-template-columns: 288px 1fr;
+  grid-template-rows: auto auto;
+  align-items: start;
+}
+.module-layout > .module-list {
+  grid-row: 1 / span 2;
+  position: sticky;
+  top: 16px;
+}
+.module-layout > .modules-bottom {
+  grid-column: 2;
+  margin-top: 4px;
+}

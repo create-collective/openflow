@@ -6,7 +6,7 @@ import ActionPalette from "../components/ActionPalette";
 import { shortcutLabel, shortcutTooltip, shortcutInfo,
          setShortcutTableFromActions } from "../lib/shortcutNames";
 import { api } from "../lib/api";
-import { pickJSONFile } from "../lib/files";
+import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import useDoneFlag from "../lib/useDoneFlag";
 
 // Module configuration (Touch / Track / Tune). Grouped list on the left; the
@@ -316,6 +316,21 @@ export default function Modules() {
     } catch (e) { setErr(e.message); } finally { setBusy(null); }
   }
 
+  async function exportProfile(m) {
+    setErr(null);
+    try {
+      // The document names its own module type, so a file can be imported anywhere without
+      // the user having to remember which module it came from.
+      const doc = await api.exportModuleProfile(m.id);
+      downloadJSON(`${safeName(m.name)}.json`, doc);
+      setImported({ at: new Date(), name: m.name, type: m.type,
+                    bindings: Object.keys(doc.bindings || {}).length, skipped: 0,
+                    verb: "Exported" });
+    } catch (e) {
+      setErr(`Could not export ${m.name}: ${e.message}`);
+    }
+  }
+
   async function importProfile() {
     setErr(null);
     let doc;
@@ -578,7 +593,7 @@ export default function Modules() {
           <div className="board-notes">
             {imported ? (
               <span className={"saved-note" + (imported.skipped ? "" : " ok")}>
-                Imported {imported.name} — {imported.type.toLowerCase()},{" "}
+                {imported.verb || "Imported"} {imported.name} — {imported.type.toLowerCase()},{" "}
                 {imported.bindings} binding(s)
                 {imported.skipped > 0 && ` · ${imported.skipped} entry(s) skipped`}
               </span>
@@ -675,6 +690,8 @@ export default function Modules() {
                         </span>
                       )}
                     </button>
+                    <button className="module-item-x" title="Export this profile to a JSON file"
+                            onClick={() => exportProfile(m)}>⭳</button>
                     <button className="module-item-x" title="Rename" onClick={() => startRename(m)}>✎</button>
                     <button className="module-item-x" title="Delete this profile"
                             onClick={() => removeProfile(m)}>✕</button>
@@ -818,19 +835,22 @@ export default function Modules() {
             </>
           )}
         </div>
-      </div>
 
-      {/* Rendered unconditionally and never keyed: a conditional render or a key would remount
-          the palette on every pick and reset its tab back to the virtual keyboard. */}
-      <div className="editor-bottom modules-bottom">
-        <ActionPalette
-          catalog={catalog}
-          context="module"
-          disabled={!selectedBinding}
-          disabledHint="Select a gesture above to bind it."
-          filter={paletteFilter}
-          onPick={pickFromPalette}
-        />
+        {/* Inside the layout grid, in the SAME column as the module content, so the profile
+            rail beside it can run the full height of the page instead of stopping where the
+            gesture list ends. Rendered unconditionally and never keyed: a conditional render
+            or a key would remount the palette on every pick and reset its tab back to the
+            virtual keyboard. */}
+        <div className="editor-bottom modules-bottom">
+          <ActionPalette
+            catalog={catalog}
+            context="module"
+            disabled={!selectedBinding}
+            disabledHint="Select a gesture above to bind it."
+            filter={paletteFilter}
+            onPick={pickFromPalette}
+          />
+        </div>
       </div>
     </div>
   );
