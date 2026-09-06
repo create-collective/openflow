@@ -768,9 +768,12 @@
   transform: scale(1.08);
 }
 
-.kb-palette-mod:active {
-  cursor: grabbing;
-}
+/* No `:active { cursor: grabbing }` here, deliberately. Starting an HTML5 drag from an element
+   sends the mouseup to the drag machinery instead of the element, so Chrome leaves :active
+   stuck on it -- the cursor then stays a grabbing hand after the drag ends, anywhere on the
+   page, until something else clears it. The rule bought nothing either: during a real drag the
+   OS draws its own cursor, so the only time it was visible was the moment before the drag
+   started, and the only time it persisted was the bug. */
 
 .kb-palette-mod.picked {
   opacity: 1;
