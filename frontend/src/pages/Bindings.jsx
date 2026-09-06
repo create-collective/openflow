@@ -456,6 +456,9 @@ export default function Bindings() {
             pickedModule={pickedModule}
             onPickModule={setPickedModule}
             bays={bayUI}
+            // Before the first read the board cannot know what is docked, so placing a module
+            // by hand is useful. After one it is not: a read replaces the whole assignment.
+            allowModuleDrag={!deviceRead}
             onSelectModule={(type, bay) => {
               const id = liveConfigForBay(type, bay);
               navigate(id ? `/module-configuration?config=${id}` : `/module-configuration?type=${type}`);

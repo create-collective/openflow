@@ -757,7 +757,9 @@
   width: 46px;
   height: 46px;
   object-fit: contain;
-  cursor: grab;
+  /* Only the draggable state gets the grab hand -- see the [draggable] rules below. Clicking
+     opens the profile picker, which is a pointer affordance, not a grab one. */
+  cursor: pointer;
   border-radius: 8px;
   opacity: 0.85;
   transition: opacity 0.12s, transform 0.12s;
@@ -767,6 +769,8 @@
   opacity: 1;
   transform: scale(1.08);
 }
+
+.kb-palette-mod[draggable="true"] { cursor: grab; }
 
 /* No `:active { cursor: grabbing }` here, deliberately. Starting an HTML5 drag from an element
    sends the mouseup to the drag machinery instead of the element, so Chrome leaves :active

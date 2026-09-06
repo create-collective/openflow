@@ -164,7 +164,11 @@ function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosit
       className={"kb-module" + (assigned ? " filled" : "") + ((assigned || onAssignModule) ? " clickable" : "") + (pickedModule ? " droptarget" : "")}
       title={assigned ? `${assigned} module on the ${id} — open the profile this layer runs` : `${id} slot — drag or click-place a module`}
       onClick={() => { if (pickedModule && onAssignModule) onAssignModule(id, paletteType(pickedModule)); else if (assigned && onSelectModule) onSelectModule(assigned, id); }}
-      onDragOver={(e) => { if (onAssignModule) e.preventDefault(); }}
+      onDragOver={(e) => {
+        if (!onAssignModule) return;
+        e.dataTransfer.dropEffect = "copy";
+        e.preventDefault();
+      }}
       onDrop={(e) => {
         if (!onAssignModule) return;
         e.preventDefault();
@@ -185,6 +189,7 @@ export default function KeymapBoard(props) {
     keysByPosition = {}, mode = "bindings", selectedPosition = null, onSelectKey = () => {},
     onSelectModule = null, moduleAssign = {}, showModulePalette = false, onAssignModule = null,
     pickedModule = null, onPickModule = null, layerMap = {}, bays = null,
+    allowModuleDrag = true,
   } = props;
   const [openBay, setOpenBay] = useState(null);
   const kp = { keysByPosition, mode, selectedPosition, onSelectKey, layerMap };
@@ -202,12 +207,27 @@ export default function KeymapBoard(props) {
           <div className="kb-palette-row">
             {PALETTE.map((m) => (
               <div className="kb-palette-slot" key={m.key}>
-                <img src={moduleImg(m.type, m.art)} alt={m.label} draggable
-                  title={`${m.label} — drag onto a slot, or click to choose the profile this layer runs`}
+                <img src={moduleImg(m.type, m.art)} alt={m.label}
+                  // Drag only matters BEFORE the board has been read. It writes the docked-module
+                  // picture and nothing else -- not which profile the layer runs -- and a read
+                  // overwrites the whole assignment from the device, so after one it is an action
+                  // the next read silently undoes. Clicking (the profile picker) is the useful
+                  // interaction either way.
+                  draggable={allowModuleDrag}
+                  title={allowModuleDrag
+                    ? `${m.label} — drag onto a slot, or click to choose the profile this layer runs`
+                    : `${m.label} — click to choose the profile this layer runs. The board shows what is actually docked, read from the keyboard.`}
                   // An <img> is draggable by default and a DEFAULT dragstart carries the image
                   // URL, which a bay once accepted as a module type. Setting the payload
                   // explicitly is what makes the drag safe, not disabling it.
-                  onDragStart={(e) => e.dataTransfer.setData("text/plain", m.type)}
+                  //
+                  // effectAllowed/dropEffect are set on BOTH ends deliberately. Left undefined,
+                  // Chrome picks its own and the rejected-drop feedback can outlive the drag.
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = "copy";
+                    e.dataTransfer.setData("text/plain", m.type);
+                  }}
+                  onDragEnd={(e) => { e.currentTarget.blur(); }}
                   onClick={() => setOpenBay(openBay === m.key ? null : m.key)}
                   className={"kb-palette-mod" + (openBay === m.key ? " picked" : "")} />
                 {bays && (
