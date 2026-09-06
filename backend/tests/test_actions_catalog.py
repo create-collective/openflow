@@ -209,3 +209,32 @@ def test_clearing_a_split_half_cannot_delete_the_gesture():
     assert len(left) == 1, f"the gesture lost its row: {left}"
     assert left[0]["action_code"] == MF.axis_halves("TUNE")[B]["default"]
     print("  clearing a half restores the motion default instead of deleting the gesture")
+
+
+def test_the_module_tab_is_module_only_and_carries_the_gesture_vocabulary():
+    """The 102 module actions were reachable only through the per-gesture dropdown: one flat
+    list, no grouping. They now have a palette tab -- and it must NOT appear on Bindings, since
+    a keycap has no field for a scroll pair or an LED action."""
+    cat = ac.get_catalog()
+    tab = next((t for t in cat["tabs"] if t["id"] == "module"), None)
+    assert tab is not None, "no module tab in the catalog"
+    assert tab["contexts"] == ["module"], "must not leak into the keymap editor"
+    assert "module" not in KEY_TABS and _visible("key") == KEY_TABS
+    assert "module" in _visible("module")
+
+    from openflow_backend.device.module_actions import MODULE_ACTIONS
+    in_tab = {a["code"] for c in tab["categories"] for a in c["actions"]}
+    expected = {a["code"] for a in MODULE_ACTIONS if a.get("code")}
+    assert in_tab == expected, "every module action with a code should be reachable"
+    assert "" not in in_tab, "the None entry is the row's own control, not a palette button"
+    print(f"  module tab: {len(tab['categories'])} groups, {len(in_tab)} actions, module-only")
+
+
+def test_the_module_groups_lead_with_what_a_gesture_is_usually_bound_to():
+    """13 groups sorted alphabetically buries Clicks and Scroll under 'App navigation'."""
+    tab = next(t for t in ac.get_catalog()["tabs"] if t["id"] == "module")
+    names = [c["name"] for c in tab["categories"]]
+    assert names[0] == "Clicks", names
+    assert names.index("Cursor") < names.index("Caret & selection"), names
+    assert len(names) == len(set(names)), "a group must not appear twice"
+    print(f"  group order: {', '.join(names[:4])}...")

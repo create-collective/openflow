@@ -131,7 +131,11 @@ export default function ActionPalette({
           : (tab?.categories || []).map((cat) => (
               <div key={cat.name} className="palette-cat">
                 <div className="palette-cat-title">{cat.name} <span className="palette-count">{cat.actions.length}</span></div>
-                <div className={"palette-grid" + (tab.id === "shortcuts" ? " combo" : "")}>
+                {/* Module action labels are sentences with the chord in them ("Cycle windows
+                    backwards (Alt + Shift + Tab)"), so the 44px key grid truncates them to
+                    nonsense. `wide` is the same treatment macros already get. */}
+                <div className={"palette-grid" + (tab.id === "shortcuts" ? " combo"
+                  : tab.id === "module" ? " wide" : "")}>
                   {cat.actions.map((a, i) => (
                     <button
                       key={a.code + "-" + i}

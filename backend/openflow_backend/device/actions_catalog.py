@@ -285,6 +285,38 @@ def _shortcuts(pairs):
 KEY, MODULE = "key", "module"
 
 
+# Display order for the module-action groups. The list carries 13 groups and a bare
+# alphabetical sort buries the ones you reach for -- clicks and motion are what a gesture is
+# usually bound to, and caret editing is the biggest group but the most specialised.
+_MODULE_GROUP_ORDER = [
+    "Clicks", "Cursor", "Scroll", "Media", "Tabs & browser", "Windows & desktops",
+    "App navigation", "Clipboard & text", "Caret & selection", "Find", "Function keys",
+    "Display & LED",
+]
+
+
+def _module_categories():
+    """The module action vocabulary, bucketed by the group each action already carries.
+
+    These 102 actions were only ever reachable through the per-gesture dropdown -- one flat
+    list, no grouping, no tooltips. They are the vocabulary that is actually about a module
+    (scroll, cursor, media, window management), so they belong in the palette beside the
+    keyboard tabs rather than hidden in a select.
+    """
+    from .module_actions import MODULE_ACTIONS
+
+    buckets: dict[str, list] = {}
+    for a in MODULE_ACTIONS:
+        if not a.get("code"):
+            continue                        # the "None" entry: the row's own control clears it
+        buckets.setdefault(a.get("group") or "Other", []).append(
+            {"code": a["code"], "label": a["label"], "actionType": a["actionType"],
+             "name": a.get("name") or a["label"]})
+    ordered = [g for g in _MODULE_GROUP_ORDER if g in buckets]
+    ordered += sorted(g for g in buckets if g not in _MODULE_GROUP_ORDER)
+    return [{"name": g, "actions": buckets[g]} for g in ordered]
+
+
 def _tabs():
     return [
         {"id": "basic", "label": "B", "title": "Basic keys", "contexts": [KEY, MODULE],
@@ -295,6 +327,10 @@ def _tabs():
             {"name": "Control", "actions": _control()},
             {"name": "Symbols", "actions": _symbols()},
         ]},
+        # Module-only: these are gesture actions, and offering them on a keycap would be
+        # offering bindings the keymap encoder has no field for.
+        {"id": "module", "label": "◎", "title": "Module actions", "contexts": [MODULE],
+         "categories": _module_categories()},
         {"id": "extended", "label": "+", "title": "Extended", "contexts": [KEY, MODULE],
          "categories": [
             {"name": "Empty", "actions": _empty()},
