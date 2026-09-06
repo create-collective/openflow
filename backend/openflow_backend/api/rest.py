@@ -20,6 +20,7 @@ from .. import __version__
 from ..db import backup as bak
 from ..db import keymap_import as kmi
 from ..db import macros as mac
+from ..db import device_state as dstate
 from ..db import module_profiles as mprof
 from ..db import profiles as prof
 from ..db import settings as settings_db
@@ -540,6 +541,17 @@ async def delete_module_profile(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=f"cannot delete this profile: {e}")
 
 
+@router.get("/api/device-state")
+async def device_state() -> dict:
+    """What we last saw on the keyboard, and when.
+
+    Seeded into the app at startup so the live tags and blue dots survive a reload. `at` is the
+    point of the endpoint as much as `modules` are: the caller must present it as "as of", not
+    as the board's current state. `modules` is null after a flash.
+    """
+    return await run_in_threadpool(dstate.load)
+
+
 @router.post("/rpc/export-module-profile")
 async def export_module_profile(body: dict = Body(...)) -> dict:
     """One module profile as a portable JSON document (see db/module_io.py for the shape)."""
@@ -618,8 +630,11 @@ def _module_diff(read: dict, profile_id: str | None = None) -> dict:
     # Bays follow what the board runs -- but only for the profile that REPRESENTS the board.
     # /rpc/read-modules imports nothing, so it names no profile and moves no bays.
     repointed = mprof.repoint_bays([(e.get("uuid"), e.get("matched")) for e in out], profile_id)
+    # Persisted so a page reload does not throw away what we just learned. Stored WITH the time
+    # it was taken -- the UI shows "as of HH:MM" rather than claiming it is current truth.
+    saved = dstate.save(out, "read")
     return {"modules": out, "slotMap": read["by_uuid"], "captured": captured,
-            "repointedBays": repointed}
+            "repointedBays": repointed, "at": saved["at"]}
 
 
 def _build_entries(read: dict) -> list:
@@ -908,6 +923,9 @@ async def flash_write(body: dict = Body(default={})) -> dict:
         )
         result["mode"] = mode
         result["profileId"] = desired.profile_id
+        # We have just changed the device, so whatever we believed it held is stale. Clearing
+        # rather than updating: the flash knows what it SENT, not what the board now reports.
+        dstate.clear("flash")
         result["modules"] = _layout_summary(layout)
         result["backup"] = None if before is None else {
             "layers": {str(i): [[p, t, bytes(v).hex()] for p, t, v in recs]

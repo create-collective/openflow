@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useSyncExternalStore } from "react";
-import { subscribeDeviceState, getDeviceState, setModuleRead } from "../lib/deviceState";
+import { subscribeDeviceState, getDeviceState, setModuleRead, deviceStateAt,
+         deviceStateIsStored } from "../lib/deviceState";
 import { useSearchParams } from "react-router-dom";
 import ActionPalette from "../components/ActionPalette";
 import { shortcutLabel, shortcutTooltip, shortcutInfo,
@@ -638,8 +639,14 @@ export default function Modules() {
                   ` · captured ${readNote.captured} profile(s) the board was running`}
               </span>
             ) : device ? (
+              /* Hydrated from the backend's record of the last read. It says AS OF,
+                  because that is all it can honestly claim -- the board may have been
+                  unplugged or flashed by NayaFlow since. */
               <span className="saved-note">
-                {Object.keys(device).length} profile(s) on the keyboard
+                {Object.keys(device).length} module(s) on the keyboard
+                {deviceStateIsStored() && deviceStateAt()
+                  ? ` · as of ${deviceStateAt().toLocaleTimeString()}`
+                  : ""}
               </span>
             ) : null}
           </div>

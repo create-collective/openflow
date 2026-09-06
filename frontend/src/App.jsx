@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { invalidateDeviceState } from "./lib/deviceState";
+import { hydrateDeviceState, invalidateDeviceState } from "./lib/deviceState";
+import { api } from "./lib/api";
 import { useSSE } from "./lib/useSSE";
 import Hub from "./pages/Hub.jsx";
 import DeviceManagement from "./pages/DeviceManagement.jsx";
@@ -30,6 +31,9 @@ function Sidebar() {
   useEffect(() => {
     if (!connected) invalidateDeviceState("disconnected");
   }, [connected]);
+  // Seed from the last read the backend recorded, so a reload does not drop the live marks.
+  // It is a belief with a timestamp, not a claim about the board right now -- see deviceState.
+  useEffect(() => { hydrateDeviceState(api); }, []);
   const deviceCount = data?.devices?.length ?? 0;
   return (
     <nav className="sidebar">

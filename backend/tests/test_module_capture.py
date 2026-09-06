@@ -608,3 +608,51 @@ def test_the_encoder_branch_is_chosen_from_the_code_not_hardcoded():
     assert R.keypress_type("F13") == "key"
     assert R.encodable("LCTRL") and R.encodable("F13") and R.encodable("LALT + CLICK")
     print("  chord / modifier / plain key each route to their own branch")
+
+
+def test_device_state_survives_but_says_when():
+    """The live tags and blue dots used to vanish on every page reload, which looked like a
+    broken read twice in one session. The state is persisted now -- but with the time it was
+    taken, because "what the keyboard holds" is a belief, not a fact we can refresh for free."""
+    import sqlite3
+    from unittest import mock
+    from openflow_backend.db import device_state as ds
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE settings (value TEXT, correlation_id TEXT, type TEXT, "
+                 "created_at TEXT, updated_at TEXT)")
+    conn.commit()
+
+    class Keep:
+        def __init__(self, c): self._c = c
+        def __getattr__(self, n): return getattr(self._c, n)
+        def close(self): pass
+
+    with mock.patch.object(ds, "connect", lambda: Keep(conn)):
+        assert ds.load() == {"modules": None, "at": None, "source": None}, "nothing read yet"
+
+        saved = ds.save([{"uuid": "u1", "slot": 3}], "read")
+        got = ds.load()
+        assert got["modules"] == [{"uuid": "u1", "slot": 3}]
+        assert got["at"] == saved["at"] and got["source"] == "read"
+
+        # Saving twice must not accumulate rows -- this is one belief, not a log.
+        ds.save([{"uuid": "u2", "slot": 4}], "read")
+        n = conn.execute("SELECT COUNT(*) c FROM settings WHERE correlation_id=?",
+                         (ds.KEY,)).fetchone()["c"]
+        assert n == 1, f"{n} rows for one key"
+        assert ds.load()["modules"][0]["uuid"] == "u2"
+
+        # A flash makes it stale: the flash knows what it SENT, not what the board now reports.
+        ds.clear("flash")
+        after = ds.load()
+        assert after["modules"] is None and after["source"] == "flash"
+        assert after["at"], "a cleared state still records when it was cleared"
+
+        # A blob that is not the shape save() writes must not reach the UI as one.
+        conn.execute("UPDATE settings SET value=? WHERE correlation_id=?", ("not json", ds.KEY))
+        assert ds.load()["modules"] is None
+        conn.execute("UPDATE settings SET value=? WHERE correlation_id=?", ('{"modules":7}', ds.KEY))
+        assert ds.load()["modules"] is None, "modules must be a list or nothing"
+    print("  device state persists with a timestamp, one row, and survives a garbled blob")

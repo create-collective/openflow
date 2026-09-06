@@ -40,6 +40,7 @@ export const api = {
   userdata: () => req("GET", "/api/userdata"),
   actions: () => req("GET", "/api/actions"),
   modules: () => req("GET", "/api/modules"),
+  deviceState: () => req("GET", "/api/device-state"),
   setModuleSetting: (body) => req("POST", "/rpc/set-module-setting", body),
   setModuleBinding: (body) => req("POST", "/rpc/set-module-binding", body),
   setAxisSplit: (body) => req("POST", "/rpc/set-axis-split", body),
