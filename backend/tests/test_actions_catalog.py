@@ -12,6 +12,7 @@ No hardware.
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from openflow_backend.device import actions_catalog as ac  # noqa: E402
 
 # Every tab the KEYMAP editor may show. Adding a tab here is a deliberate act; a new tab that
 # should not appear on Bindings simply is not listed.
-KEY_TABS = {"basic", "extended", "layers", "shortcuts"}
+KEY_TABS = {"basic", "extended", "layers", "shortcuts", "apps"}
 
 
 def _visible(context: str) -> set:
@@ -238,3 +239,16 @@ def test_the_module_groups_lead_with_what_a_gesture_is_usually_bound_to():
     assert names.index("Cursor") < names.index("Caret & selection"), names
     assert len(names) == len(set(names)), "a group must not appear twice"
     print(f"  group order: {', '.join(names[:4])}...")
+
+
+def test_the_apps_tab_carries_no_categories_and_that_is_deliberate():
+    """5,311 chords across 20 applications cannot be a grid of buttons, so the tab has its own
+    render branch -- an app selector, a search box and a paged list. It ships with categories
+    EMPTY, which the palette has to tolerate the same way it tolerates the layers tab (whose
+    categories are synthesized client side)."""
+    tab = next((t for t in ac.get_catalog()["tabs"] if t["id"] == "apps"), None)
+    assert tab is not None and tab["categories"] == []
+    assert set(tab["contexts"]) == {"key", "module"}, "a chord binds on a keycap or a gesture"
+    # And the payload stays small: the 1.2 MB of app data must NOT ride along on the catalog.
+    assert len(json.dumps(ac.get_catalog())) < 400_000, "catalog got fat -- is app data in it?"
+    print("  apps tab present, both contexts, catalog still small")

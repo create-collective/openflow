@@ -1767,3 +1767,53 @@
   flex: 1 1 0;
   min-width: 0;
 }
+
+/* --- Application shortcuts tab -------------------------------------------------------------
+   Not a .palette-grid: 5,311 entries need choose-an-app-then-search, not a wall of 44px keys. */
+.apps-pane { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+
+.apps-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.apps-controls > select { flex: 0 1 240px; }
+.apps-search { flex: 1 1 auto; min-width: 0; }
+.apps-platform { display: flex; gap: 4px; }
+.apps-platform .board-btn { padding: 5px 10px; }
+
+.apps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  max-height: 380px;      /* the palette is capped; this scrolls inside it rather than past it */
+}
+
+.apps-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--neutral10);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.apps-row:hover:not(:disabled) { border-color: var(--accent); background: var(--neutral17); }
+.apps-row:disabled { opacity: 0.5; cursor: default; }
+
+.apps-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.apps-row-ctx { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.apps-row-chord {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.apps-more { padding: 6px 10px; color: var(--text-dim); font-size: 11px; }

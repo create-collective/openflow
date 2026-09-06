@@ -40,6 +40,11 @@ export const api = {
 
   userdata: () => req("GET", "/api/userdata"),
   actions: () => req("GET", "/api/actions"),
+  // Per-app chords are fetched on demand: the file is 1.2 MB and must not ride along on
+  // /api/actions, which every page loads. No args = just the application list.
+  appShortcuts: (p) => req("GET", "/api/app-shortcuts" + (p
+    ? "?" + new URLSearchParams(Object.entries(p).filter(([, v]) => v !== "" && v != null)).toString()
+    : "")),
   modules: () => req("GET", "/api/modules"),
   deviceState: () => req("GET", "/api/device-state"),
   setModuleSetting: (body) => req("POST", "/rpc/set-module-setting", body),

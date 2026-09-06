@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { formatCombo } from "../lib/combo";
 import LayersIcon from "./LayersIcon";
+import AppShortcutPicker from "./AppShortcutPicker";
 import VirtualKeyboard from "./VirtualKeyboard";
 
 // The action selector, shared by the keymap editor and by module gestures.
@@ -47,7 +48,10 @@ export default function ActionPalette({
       })
       // ...and tabs whose categories all emptied out. `layers` is exempt: its categories are
       // synthesized here from the caller's layer list, so an empty array is normal.
-      .filter((t) => t.id === "layers" || !filter || (t.categories || []).length);
+      // `layers` and `apps` both ship with empty categories on purpose -- one is synthesized
+      // from the caller's layer list, the other has its own render branch -- so an empty array
+      // is normal for them and must not be read as "filtered to nothing".
+      .filter((t) => t.id === "layers" || t.id === "apps" || !filter || (t.categories || []).length);
 
     return [
       ...(inContext({ id: "keyboard", contexts: ["key", "module"] })
@@ -78,11 +82,13 @@ export default function ActionPalette({
       </div>
 
       <div className="palette-body">
-        {disabled && tab?.id !== "keyboard" && (
+        {disabled && tab?.id !== "keyboard" && tab?.id !== "apps" && (
           <div className="palette-disabled">{disabledHint}</div>
         )}
 
-        {tab?.id === "keyboard" ? (
+        {tab?.id === "apps" ? (
+          <AppShortcutPicker disabled={disabled} onPick={onPick} disabledHint={disabledHint} />
+        ) : tab?.id === "keyboard" ? (
           <VirtualKeyboard disabled={disabled} onPick={onPick} disabledHint={disabledHint} />
         ) : tab?.id === "macros" ? (
           <div className="palette-cat">

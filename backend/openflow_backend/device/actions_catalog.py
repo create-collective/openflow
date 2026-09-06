@@ -327,6 +327,12 @@ def _tabs():
             {"name": "Control", "actions": _control()},
             {"name": "Symbols", "actions": _symbols()},
         ]},
+        # 5,311 chords across 20 applications. No categories: it has its own render branch,
+        # because a searchable list of five thousand entries is not a grid of buttons. Visible
+        # in BOTH contexts -- an app shortcut is just a chord, and a keycap can hold one as
+        # readily as a gesture can.
+        {"id": "apps", "label": "⌘", "title": "Application shortcuts",
+         "contexts": [KEY, MODULE], "categories": []},
         # Module-only: these are gesture actions, and offering them on a keycap would be
         # offering bindings the keymap encoder has no field for.
         {"id": "module", "label": "◎", "title": "Module actions", "contexts": [MODULE],

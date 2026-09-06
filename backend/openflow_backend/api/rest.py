@@ -556,6 +556,22 @@ async def delete_module_profile(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=f"cannot delete this profile: {e}")
 
 
+@router.get("/api/app-shortcuts")
+async def app_shortcuts(app: str = "", platform: str = "windows", q: str = "",
+                        limit: int = 200, offset: int = 0) -> dict:
+    """Per-application chords, on demand.
+
+    Without `app`, returns just the application list -- 20 names and their counts. WITH one,
+    returns that app's chords, filtered and paged. The file is 1.2 MB, so it deliberately does
+    not ride along on /api/actions the way the 82-entry shortcut dictionary does.
+    """
+    from ..device import app_shortcuts as apps_mod
+    if not app:
+        return {"apps": await run_in_threadpool(apps_mod.apps),
+                "platforms": list(apps_mod.PLATFORMS)}
+    return await run_in_threadpool(apps_mod.search, app, platform, q, limit, offset)
+
+
 @router.get("/api/device-state")
 async def device_state() -> dict:
     """What we last saw on the keyboard, and when.
