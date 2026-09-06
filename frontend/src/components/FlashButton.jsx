@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { invalidateDeviceState } from "../lib/deviceState";
+import { invalidateDeviceState, setModuleRead } from "../lib/deviceState";
 import useDoneFlag from "../lib/useDoneFlag";
 import { api } from "../lib/api.js";
 
@@ -82,6 +82,14 @@ export default function FlashButton({ variant = "sidebar" }) {
           ? { mode: "recovery", acknowledgeRecovery: true, profileId: activeProfileId() }
           : { full: false, profileId: activeProfileId() });
       setResult(res);
+      // The flash reads the modules back on success, so publish that rather than making the
+      // user read again to see the result of a write we just checked. If the follow-up read
+      // failed the state stays invalidated, which is the honest fallback.
+      if (res.moduleState?.modules) {
+        const byUuid = {};
+        for (const m of res.moduleState.modules) if (m?.uuid) byUuid[m.uuid] = m;
+        setModuleRead(byUuid);
+      }
       // "verified" = every ack was good AND the read-back matched. Anything else is a
       // problem the user needs to see, not a success with a caveat.
       setState(res.status === "verified" ? "done" : "error");

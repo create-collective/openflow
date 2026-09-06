@@ -934,9 +934,27 @@ async def flash_write(body: dict = Body(default={})) -> dict:
         )
         result["mode"] = mode
         result["profileId"] = desired.profile_id
-        # We have just changed the device, so whatever we believed it held is stale. Clearing
-        # rather than updating: the flash knows what it SENT, not what the board now reports.
+        # Read the MODULES back and publish them, so the live tags and blue dots are right the
+        # moment a flash finishes.
+        #
+        # The flash already verifies -- but its verify reader is read_keymap, which covers
+        # layers and LEDs and never touches the module configs. So clearing on its own threw
+        # away what we knew and replaced it with nothing, and the user had to read again to see
+        # the result of a write that had just been checked. This is the read they were going to
+        # do anyway, on a port that is already open.
+        #
+        # A recovery flash is exempt: it targets a board we could not read in the first place.
         dstate.clear("flash")
+        if mode != "recovery" and result.get("status") == "verified":
+            try:
+                after = _module_diff(svc.read_module_configs(side), desired.profile_id)
+                result["moduleState"] = after
+                result["deviceStateAt"] = dstate.save(after["modules"], "flash-verify")["at"]
+            except Exception as e:
+                # Never fail a good flash because the follow-up read did not work. The state
+                # stays cleared, which is the honest fallback: we know we wrote, not what is
+                # there now.
+                result["moduleStateError"] = f"{type(e).__name__}: {e}"
         result["modules"] = _layout_summary(layout)
         result["backup"] = None if before is None else {
             "layers": {str(i): [[p, t, bytes(v).hex()] for p, t, v in recs]
