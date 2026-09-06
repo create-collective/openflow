@@ -426,18 +426,32 @@ def _led_payload(idx: int, leds: dict[int, tuple[int, int]]) -> bytes:
     return R.encode_led_map(idx, recs)
 
 
-def compute_plan(desired: DesiredState, current: DesiredState | None = None, *, full: bool | None = None) -> list[WriteOp]:
+def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
+                 full: bool | None = None, collect_orphans: bool = False,
+                 device_slots: set[int] | None = None) -> list[WriteOp]:
     """Ordered write ops. full=True (or current=None) => rewrite everything; otherwise diff and
-    emit only changed layers/leds (sparse per-record diffs are a Phase-C refinement)."""
+    emit only changed layers/leds (sparse per-record diffs are a Phase-C refinement).
+
+    `collect_orphans` removes module slots the board carries that this profile does not
+    reference. It is OFF by default and deliberately separate from `full`: deleting a config
+    is the one destructive thing a flash can do, so it is something the user asks for, not
+    something a routine flash decides.
+
+    `device_slots` is which slots the board actually holds. It has to be passed in because
+    `current` comes from a KEYMAP read, whose `modules` is empty -- so collecting orphans from
+    `current.modules` alone found nothing, every time, which is why this never did anything
+    even on a full flash.
+    """
     full = full if full is not None else current is None
     ops: list[WriteOp] = []
-    # --- garbage collection, only when the app actually manages the module set -----------
+    # --- garbage collection, only when asked and only when we know what is there -----------
     # NayaFlow's own removal sequence, captured 2026-09-03: point the bays away first, then
     # delete the list entry, then blank the slot. Doing it in that order means nothing ever
     # references a slot that is being emptied.
     orphans: list[int] = []
-    if full and current is not None and desired.module_list is not None:
-        orphans = sorted(set(current.modules) - set(desired.module_list))
+    have = set(device_slots) if device_slots is not None else set(current.modules) if current else set()
+    if collect_orphans and current is not None and desired.module_list is not None:
+        orphans = sorted(have - set(desired.module_list))
         if orphans:
             gone = set(orphans)
             for idx, poss in desired.layers.items():
@@ -531,12 +545,14 @@ def module_gesture_write(slot: int, module_type: str,
 # --------------------------------------------------------------------------- #
 
 def flash(desired: DesiredState, *, transport=None, dest: int = 0x50, current: DesiredState | None = None,
-          full: bool | None = None, dry_run: bool = True, reader=None) -> dict:
+          full: bool | None = None, dry_run: bool = True, reader=None,
+          collect_orphans: bool = False, device_slots: set[int] | None = None) -> dict:
     """Compute + (optionally) send. dry_run=True (default) sends NOTHING — returns the plan,
     the rendered frames, and a summary. dry_run=False requires a connected transport and is the
     only path that touches the device (ack-checked per frame, then verified via `reader`, a
     callable returning a fresh device read as a DesiredState)."""
-    plan = compute_plan(desired, current, full=full)
+    plan = compute_plan(desired, current, full=full,
+                        collect_orphans=collect_orphans, device_slots=device_slots)
     rendered = render_frames(plan, dest)
     summary = {
         "dest": f"0x{dest:02x}",

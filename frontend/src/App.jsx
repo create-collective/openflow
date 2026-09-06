@@ -14,12 +14,16 @@ import Modules from "./pages/Modules.jsx";
 import Macros from "./pages/Macros.jsx";
 
 // Routes mirror the recovered NayaFlow renderer.
+// Ordered by how often a page is reached for, not by how it was built: the three that shape
+// what the keyboard DOES (bindings, LEDs, modules) come first and together, then macros, then
+// the device and app pages. The routes are NayaFlow's own and are left alone -- renaming a
+// label is free, renaming a URL breaks every link anyone has saved.
 const NAV = [
   { to: "/", label: "Hub", end: true },
   { to: "/layer-management", label: "Bindings" },
-  { to: "/colormapping", label: "Color" },
-  { to: "/macro", label: "Macros" },
+  { to: "/colormapping", label: "LED Map" },
   { to: "/module-configuration", label: "Modules" },
+  { to: "/macro", label: "Macros" },
   { to: "/device-management", label: "Device Manager" },
   { to: "/information", label: "Information" },
   { to: "/settings", label: "Settings" },

@@ -50,6 +50,7 @@ export default function FlashButton({ variant = "sidebar" }) {
   const [error, setError] = useState("");
   const [recovery, setRecovery] = useState(false);
   const [wrote, setWrote] = useState(false);   // did this attempt reach the device?
+  const [collectOrphans, setCollectOrphans] = useState(false);
   const readOk = hasReadDevice();
 
   // The dialog reports the result, but it gets closed. A flash is slow, irreversible and easy
@@ -60,6 +61,7 @@ export default function FlashButton({ variant = "sidebar" }) {
     setState("loading");
     setError("");
     setWrote(false);
+    setCollectOrphans(false);      // never carried over from a previous preview
     try {
       const res = await api.flashPreview({ profileId: activeProfileId() });
       setPreview(res);
@@ -80,7 +82,7 @@ export default function FlashButton({ variant = "sidebar" }) {
       const res = await api.flash(
         recovery
           ? { mode: "recovery", acknowledgeRecovery: true, profileId: activeProfileId() }
-          : { full: false, profileId: activeProfileId() });
+          : { full: false, profileId: activeProfileId(), collectOrphans });
       setResult(res);
       // The flash reads the modules back on success, so publish that rather than making the
       // user read again to see the result of a write we just checked. If the follow-up read
@@ -188,6 +190,25 @@ export default function FlashButton({ variant = "sidebar" }) {
                   </table>
                 </details>
               </>
+            )}
+
+            {/* Module slots the board carries that this profile does not reference. They are
+                invisible otherwise -- one has sat on the reference board for weeks reading back
+                as "unknown" -- and removing one drops a list entry and blanks a slot, so it is
+                asked for per flash rather than done quietly as part of "write everything". */}
+            {state === "preview" && preview?.orphans?.length > 0 && (
+              <div className="phase-note">
+                <label className="split-toggle" style={{ marginBottom: 4 }}>
+                  <input type="checkbox" checked={collectOrphans}
+                    onChange={(e) => setCollectOrphans(e.target.checked)} />
+                  Also remove {preview.orphans.length} unused module slot
+                  {preview.orphans.length === 1 ? "" : "s"}
+                </label>
+                <div style={{ fontSize: 11, opacity: 0.8 }}>
+                  {preview.orphans.map((o) => `slot ${o.slot}${o.name ? ` (${o.name})` : ""}`).join(", ")}
+                  {" — on the keyboard, not used by this profile. Removing is permanent."}
+                </div>
+              </div>
             )}
 
             {!readOk && !recovery && (

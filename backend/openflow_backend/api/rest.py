@@ -839,6 +839,18 @@ def _decode_field(module_type: str, idx: int, typ, val: bytes):
     return f"RAW_{val.hex()}"
 
 
+def _device_slots(mod_read) -> set | None:
+    """Which module slots the board actually holds.
+
+    Passed to the planner separately because `current` is built from a KEYMAP read, whose
+    `.modules` is empty -- so orphan collection looking at `current.modules` found nothing,
+    every time. None means we did not read the modules and must not guess.
+    """
+    if not mod_read:
+        return None
+    return {int(s) for s in (mod_read.get("slots") or {})}
+
+
 def _flash_preview(profile_id: str | None = None, side: str = "left") -> dict:
     # The module layout needs to know what the board already carries -- which profiles have
     # slots and what a new slot can be templated from. Without that read the preview can still
@@ -858,7 +870,28 @@ def _flash_preview(profile_id: str | None = None, side: str = "left") -> dict:
     out = flash_mod.flash(desired, dry_run=True, full=True)
     out["profileId"] = desired.profile_id
     out["modules"] = _layout_summary(layout)
+    # What removing the unreferenced slots WOULD do, reported but never done here. The preview
+    # is how the user finds out these exist at all: an orphan is invisible otherwise, and slot 5
+    # on the reference board has sat there unreferenced for weeks reading back as "unknown".
+    slots = _device_slots(mod_read)
+    if slots is not None and desired.module_list is not None:
+        gone = sorted(slots - set(desired.module_list))
+        out["orphans"] = [{"slot": n, "name": _slot_name(n, mod_read)} for n in gone]
     return out
+
+
+def _slot_name(slot: int, mod_read) -> str | None:
+    """The profile a slot holds, if the app knows it. An orphan NayaFlow created has no name
+    here, and saying so is better than inventing one."""
+    uuid = next((u for u, s in (mod_read.get("by_uuid") or {}).items() if int(s) == slot), None)
+    if uuid is None:
+        return None
+    conn = db_connect()
+    try:
+        row = conn.execute("SELECT name FROM module_configs WHERE id=?", (uuid,)).fetchone()
+        return row["name"] if row else None
+    finally:
+        conn.close()
 
 
 def _layout_summary(layout) -> dict | None:
@@ -942,6 +975,11 @@ async def flash_write(body: dict = Body(default={})) -> dict:
         result = flash_mod.flash(
             desired, transport=transport, dest=dest, current=current, full=full,
             dry_run=False,
+            # Removing a module slot the board carries and this profile does not reference.
+            # Opt-in per flash: it drops a list entry and blanks a slot, which is the one
+            # destructive thing a flash can do, so the caller asks rather than us deciding.
+            collect_orphans=bool(body.get("collectOrphans")),
+            device_slots=_device_slots(mod_read),
             # A recovery flash targets a board we could not read, so do not claim a verify we
             # cannot trust; report it as sent-unverified and let the caller re-read if it can.
             reader=(None if mode == "recovery"

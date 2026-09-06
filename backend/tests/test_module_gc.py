@@ -52,7 +52,7 @@ def test_nothing_is_collected_unless_the_app_manages_modules():
     would otherwise look unwanted."""
     current = _device([1, 2, 3, 4])
     desired = F.DesiredState(layers={0: {}})          # module_list stays None
-    plan = F.compute_plan(desired, current, full=True)
+    plan = F.compute_plan(desired, current, full=True, collect_orphans=True)
     assert not any("blank" in l or "drop" in l for l in _labels(plan)), _labels(plan)
     print("  module_list=None -> no slot is blanked and no list entry dropped")
 
@@ -60,7 +60,7 @@ def test_nothing_is_collected_unless_the_app_manages_modules():
 def test_an_orphan_is_dropped_then_blanked_in_that_order():
     current = _device([1, 2, 5])
     desired = _wanted([1, 2])
-    plan = F.compute_plan(desired, current, full=True)
+    plan = F.compute_plan(desired, current, full=True, collect_orphans=True)
     labels = _labels(plan)
     drop = next(i for i, l in enumerate(labels) if l == "drop module list entry 5")
     blank = next(i for i, l in enumerate(labels) if l == "blank module slot 5")
@@ -77,7 +77,7 @@ def test_bays_pointing_at_an_orphan_are_disabled_first():
     bays = {0x4C: (5, b""), 0x4D: (1, b"")}
     current = _device([1, 5], bays)
     desired = _wanted([1], bays)
-    plan = F.compute_plan(desired, current, full=True)
+    plan = F.compute_plan(desired, current, full=True, collect_orphans=True)
     layer = next(op for op in plan if op.sub == R.WRITE_LAYER_DATA)
     written = {p: t for p, t, v in kr.parse_records(layer.payload[1:])}
     assert written[0x4C] == 0, "a bay still points at the slot being blanked"
@@ -91,7 +91,7 @@ def test_bays_pointing_at_an_orphan_are_disabled_first():
 def test_kept_slots_are_not_touched_by_collection():
     current = _device([1, 2, 5])
     desired = _wanted([1, 2])
-    plan = F.compute_plan(desired, current, full=True)
+    plan = F.compute_plan(desired, current, full=True, collect_orphans=True)
     for slot in (1, 2):
         assert f"blank module slot {slot}" not in _labels(plan)
         assert f"drop module list entry {slot}" not in _labels(plan)
@@ -101,7 +101,7 @@ def test_kept_slots_are_not_touched_by_collection():
 def test_the_list_is_rewritten_with_what_remains():
     current = _device([1, 5])
     desired = _wanted([1])
-    plan = F.compute_plan(desired, current, full=True)
+    plan = F.compute_plan(desired, current, full=True, collect_orphans=True)
     lst = next(op for op in plan if op.sub == R.WRITE_MODULE_CONFIG_LIST
                and not op.label.startswith("drop"))
     entries = R.parse_module_config_list(lst.payload)
@@ -118,3 +118,41 @@ if __name__ == "__main__":
         print(fn.__name__)
         fn()
     print("\nOK")
+
+
+def test_a_full_flash_does_not_collect_orphans_on_its_own():
+    """Collecting is now asked for explicitly rather than implied by `full`.
+
+    Deleting a module config is the one destructive thing a flash can do -- it drops a list
+    entry and blanks a slot -- and a routine "write everything" should not decide to do it. The
+    old gate also included `full`, which meant the normal flash (full=False) never collected at
+    all, so this has never actually run against a board.
+    """
+    current, desired = _device([1, 2, 5]), _wanted([1, 2])
+    plan = F.compute_plan(desired, current, full=True)
+    labels = [op.label for op in plan]
+    assert not any("drop module list entry" in l or "blank module slot" in l for l in labels), labels
+
+    plan = F.compute_plan(desired, current, full=True, collect_orphans=True)
+    labels = [op.label for op in plan]
+    assert any("drop module list entry" in l for l in labels), labels
+    print("  full alone collects nothing; collect_orphans=True does")
+
+
+def test_orphans_are_found_from_the_device_slots_not_from_a_keymap_read():
+    """`current` is built from a KEYMAP read, whose `.modules` is empty. So collecting from
+    `current.modules` found nothing every time -- the reason this never removed anything even
+    when it was wired to `full`. The slots the board really holds have to be passed in."""
+    current, desired = _device([1, 2, 5]), _wanted([1, 2])
+    orphan_slots = set(current.modules)
+    current.modules = {}                     # what a keymap read actually gives us
+
+    plan = F.compute_plan(desired, current, full=True, collect_orphans=True)
+    assert not any("blank module slot" in op.label for op in plan), \
+        "with no device slots there is nothing to collect, and guessing would be worse"
+
+    plan = F.compute_plan(desired, current, full=True, collect_orphans=True,
+                          device_slots=orphan_slots)
+    assert any("blank module slot" in op.label for op in plan), \
+        "given the real slots, the orphan is found"
+    print("  orphans come from the module read, not from the (empty) keymap one")

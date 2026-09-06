@@ -164,7 +164,7 @@ export default function Color() {
   }
 
   if (!profile) {
-    return <div><h1 className="page-title">Color</h1><div className="card"><div className="empty">{err || "Loading…"}</div></div></div>;
+    return <div><h1 className="page-title">LED Map</h1><div className="card"><div className="empty">{err || "Loading…"}</div></div></div>;
   }
 
   return (
