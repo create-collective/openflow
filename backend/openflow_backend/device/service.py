@@ -48,6 +48,37 @@ def _first_payload(responses) -> bytes | None:
     return None
 
 
+# Cell voltages arrive in TWO different units, and mixing them up is exactly what went wrong:
+# SYS_GET_KB_BATTERY_LEVEL reports millivolts (4152 = 4.152 V), while MODULE_GET_BATTERY reports
+# tenths of a millivolt (41520). MODULE_GET_PRECISE_BATTERY reports plain MILLIVOLTS despite the
+# name, and its value used to be fed straight into the 0.1 mV maths -- which clamped every module
+# to the 3.3 V floor, so a fully charged module read as 1%.
+#
+# Confirmed on module firmware 2.3.3 by sending both commands back to back to the same module:
+#     Track   PRECISE 0x1038 = 4152 mV     GET_BATTERY 0xA1CF = 41423 (0.1 mV)
+#     Tune    PRECISE 0x108C = 4236 mV     GET_BATTERY 0xA64C = 42572 (0.1 mV)
+#
+# The unit is SNIFFED rather than blindly scaled: no real cell reads below 1.0 V, so anything
+# under 10000 is unambiguously millivolts. That keeps this correct either way if some module
+# firmware turns out to report the precise value in 0.1 mV after all.
+_MILLIVOLT_LIMIT = 10000
+
+
+def _to_millivolts(raw: int) -> int:
+    """Any reported cell voltage -> millivolts, whichever unit the command answered in."""
+    return raw if 0 < raw < _MILLIVOLT_LIMIT else raw // 10
+
+
+def _battery_percent(millivolts: int) -> int:
+    """Map a cell voltage in mV onto 1-100% across the 3.3 V - 4.2 V window.
+
+    One helper for both the keyboard and its modules; they were separate copies of the same
+    curve written at different scales, which is how the units drifted apart.
+    """
+    clamped = max(3300, min(4200, millivolts))
+    return max(1, min(100, ((clamped - 3300) * 100) // 900))
+
+
 class DeviceService:
     """Owns serial connections to connected halves and exposes structured ops."""
 
@@ -150,9 +181,8 @@ class DeviceService:
                 volts.append((p[0] << 8) | p[1])
         if volts:
             volts.sort()
-            mv = volts[len(volts) // 2]
-            clamped = max(3300, min(4200, mv))
-            info["batteryPercent"] = max(1, min(100, ((clamped - 3300) * 100) // 900))
+            mv = _to_millivolts(volts[len(volts) // 2])
+            info["batteryPercent"] = _battery_percent(mv)
             info["batteryMillivolts"] = mv
 
         payload = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_ADDRESS))
@@ -184,9 +214,10 @@ class DeviceService:
                 voltage = (mp[0] << 8) | mp[1]
                 valid = (mp[2] == 0) if len(mp) >= 3 else True
                 if valid and voltage > 0:
-                    module["voltage"] = voltage
-                    clamped = max(33000, min(42000, voltage))
-                    module["batteryPercent"] = max(1, min(100, ((clamped - 33000) * 100) // 9000))
+                    mv = _to_millivolts(voltage)
+                    module["voltage"] = voltage          # raw, exactly as the device reported it
+                    module["batteryMillivolts"] = mv
+                    module["batteryPercent"] = _battery_percent(mv)
             info["module"] = module
 
         return info
