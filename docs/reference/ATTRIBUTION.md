@@ -28,3 +28,22 @@ is copied into this repository -- the artwork is Naya's own work and is not ours
 carries no LICENSE file, which under default copyright means all rights reserved regardless of
 how the accompanying extension is distributed. VS Code itself is MIT, so its defaults should be
 taken from the product or from `microsoft/vscode`, not from an unlicensed third-party copy.
+
+## app-shortcuts.json (regenerated 2026-09-06)
+
+150 applications, 19,853 chords. A MERGE of two sources, not a replacement -- the second is
+broader, the first is deeper on what they share:
+
+* **ShortcutMapper** (waldobronchart, MIT) -- the original 20-application import, which remains
+  the deepest source for the applications it covers (Blender alone contributes 741).
+* **CreateCompanion's curated catalog** -- 134 further applications with per-app `sources` and
+  hand-authored defaults, plus a category for each, which is what makes 150 applications
+  navigable.
+
+Regenerate with `tools/import_companion_catalog.py --write`. It merges into whatever is already
+in the file and keeps the existing chord where both sources name the same action.
+
+Every chord is translated from human notation into the device vocabulary and validated through
+`remap.encode_keypress`. Dropped rather than shipped: multi-step `sequence` entries (one binding
+is one record; a sequence is a macro) and anything using `Fn` (not a HID modifier). A palette
+entry that cannot be flashed is worse than a missing one, because it looks bound.

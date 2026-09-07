@@ -48,6 +48,16 @@ export default function AppShortcutPicker({ disabled, onPick, disabledHint }) {
     return () => { dead = true; clearTimeout(t); };
   }, [app, platform, q]);
 
+  const grouped = useMemo(() => {
+    const by = new Map();
+    for (const a of apps) {
+      const c = a.category || "Other";
+      if (!by.has(c)) by.set(c, []);
+      by.get(c).push(a);
+    }
+    return [...by.entries()].sort((x, y) => x[0].localeCompare(y[0]));
+  }, [apps]);
+
   const shown = res?.items || [];
   const more = useMemo(
     () => (res ? Math.max(0, res.total - shown.length) : 0), [res, shown.length]);
@@ -55,10 +65,16 @@ export default function AppShortcutPicker({ disabled, onPick, disabledHint }) {
   return (
     <div className="apps-pane">
       <div className="apps-controls">
+        {/* Grouped by category. Flat and alphabetical, 150 applications put Ableton Live next
+            to Acrobat and Affinity Designer, which tells you nothing about which you want. */}
         <select className="mac-input" value={app} disabled={!apps.length}
           onChange={(e) => { setApp(e.target.value); setQ(""); }}>
-          {apps.map((a) => (
-            <option key={a.name} value={a.name}>{a.name} ({a.actions})</option>
+          {grouped.map(([cat, list]) => (
+            <optgroup key={cat} label={cat}>
+              {list.map((a) => (
+                <option key={a.name} value={a.name}>{a.name} ({a.actions})</option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <input className="mac-input apps-search" type="search" value={q} placeholder="Search actions…"

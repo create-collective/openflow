@@ -30,8 +30,14 @@ def _data() -> dict:
 
 
 def apps() -> list[dict]:
-    """The application list for the picker: name and how many chords each has."""
-    return [{"name": n, "actions": len(v.get("actions") or {})}
+    """The application list for the picker: name, category, and how many chords each has.
+
+    The category is what makes 150 applications navigable -- a flat alphabetical list puts
+    Ableton Live next to Acrobat and Affinity Designer, which tells you nothing about which one
+    you want.
+    """
+    return [{"name": n, "category": v.get("category") or "Other",
+             "actions": len(v.get("actions") or {})}
             for n, v in sorted(_data().items())]
 
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatCombo } from "../lib/combo";
+import CursorIcon from "./CursorIcon";
 import LayersIcon from "./LayersIcon";
 import AppShortcutPicker from "./AppShortcutPicker";
 import VirtualKeyboard from "./VirtualKeyboard";
@@ -55,7 +56,7 @@ export default function ActionPalette({
       .filter((t) => ["layers", "apps", "mouse"].includes(t.id) || !filter
                      || (t.categories || []).length);
 
-    return [
+    const all = [
       ...(inContext({ id: "keyboard", contexts: ["key", "module"] })
         ? [{ id: "keyboard", label: "⌨", title: "Virtual keyboard" }] : []),
       ...fromCatalog,
@@ -63,6 +64,13 @@ export default function ActionPalette({
       ...(inContext({ id: "macros", contexts: ["key"] })
         ? [{ id: "macros", label: "⚡", title: "Macros" }] : []),
     ];
+    // Ordered here rather than left to whatever the catalog happens to list, because the strip
+    // is what a person scans first: the two pickers you point at, then the vocabularies, then
+    // the long tail. Anything not named falls to the end rather than disappearing.
+    const ORDER = ["keyboard", "mouse", "module", "basic", "apps", "shortcuts", "extended",
+                   "layers", "macros"];
+    const rank = (id) => (ORDER.indexOf(id) === -1 ? ORDER.length : ORDER.indexOf(id));
+    return all.slice().sort((a, b) => rank(a.id) - rank(b.id));
   }, [catalog, context, tabIds, filter]);
 
   if (!catalog || !tabs.length) return null;
@@ -78,7 +86,9 @@ export default function ActionPalette({
             className={"palette-tab" + (tab?.id === t.id ? " active" : "")}
             onClick={() => setTabId(t.id)}
           >
-            {t.id === "layers" ? <LayersIcon size={16} /> : t.label}
+            {t.id === "layers" ? <LayersIcon size={16} />
+              : t.id === "mouse" ? <CursorIcon size={15} />
+              : t.label}
           </button>
         ))}
       </div>
