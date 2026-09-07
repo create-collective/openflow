@@ -200,6 +200,15 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
 
     if at in ("key", "modifier", "shortcut_alias"):
         return R.KEY_PRESS, R.encode_keypress(at, code)
+    if at == "mouse":
+        # A key takes the SAME two-word record a module gesture does: [cat 3][button mask].
+        # Measured, not assumed -- writing 0f 08 03000000 01000000 to a key position and
+        # pressing it produces a real left click (tools/c9_key_record_probe.py, mouse-twoword).
+        # The ZMK shape (a bare mask) was the other candidate and is not what this firmware wants.
+        try:
+            return R.TWO_WORD, R.encode_mouse_button(code)
+        except R.RemapEncodeError:
+            return None
     if at == "bluetooth":
         prof = R.BT_PROFILE_REV.get(code)
         if prof is not None:
@@ -214,7 +223,7 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
     if at in ("layer_polite_toggle",):
         order = _target_order(code, layer_order)
         return None if order is None else (R.LAYER_TOGGLE, R.encode_layer_param(order))
-    return None   # macros, LED-system, mouse, unknown -> not encoded here (see plan)
+    return None   # macros, LED-system, unknown -> not encoded here (see plan)
 
 
 def _second_bank_record(rows: list, term: int, flavour: int) -> tuple[int, bytes] | None:

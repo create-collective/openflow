@@ -258,7 +258,7 @@ def decode_two_word(value: bytes) -> tuple[int, int]:
 
 
 def encode_mouse_button(code: str) -> bytes:
-    """'M1'..'M4' -> the type-0x0f value binding a Track button / Touch tap to that click."""
+    """'M1'..'M5' -> the type-0x0f value binding a click to a Track button, Touch tap, or KEY."""
     if code not in MOUSE_MASK:
         raise RemapEncodeError(f"unknown mouse button {code!r} (expected one of {sorted(MOUSE_MASK)})")
     return encode_two_word(MOUSE_CATEGORY, MOUSE_MASK[code])
