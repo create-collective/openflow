@@ -116,6 +116,14 @@ export default function Troubleshooting() {
   const [out, setOut] = useState("");
   const [busy, setBusy] = useState(false);
   const [live, setLive] = useState(false);   // read in this session, not restored from cache
+  const [now, setNow] = useState(() => Date.now());
+
+  // Tick so the age stays true while the page sits open, rather than freezing at whatever it
+  // said on mount.
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true); setErr(null);
@@ -154,6 +162,20 @@ export default function Troubleshooting() {
     finally { setBusy(false); }
   }
 
+  // How old the reading is, shown rather than used to throw it away. Nothing here expires on a
+  // clock: firmware, hardware ids and BLE addresses do not change while you look at them, and
+  // blanking the page after N minutes would recreate the "it went empty" problem the cache was
+  // added to fix. Battery and pairing DO drift, so the age is stated and goes amber once it is
+  // old enough that a reading is worth repeating.
+  const ageMs = at ? Math.max(0, now - at.getTime()) : null;
+  const STALE_MS = 10 * 60 * 1000;
+  const stale = ageMs != null && ageMs > STALE_MS;
+  const ageText = ageMs == null ? null
+    : ageMs < 60000 ? "just now"
+    : ageMs < 3600000 ? `${Math.floor(ageMs / 60000)} min ago`
+    : ageMs < 86400000 ? `${Math.floor(ageMs / 3600000)} h ago`
+    : `${Math.floor(ageMs / 86400000)} d ago`;
+
   const connectedSides = halves.filter((h) => h.connected).map((h) => h.side);
   const p = pairing && PAIRING[pairing.state];
 
@@ -170,9 +192,9 @@ export default function Troubleshooting() {
           <button className="btn primary" onClick={refresh} disabled={loading}>
             {loading ? "Reading…" : at ? "Read again" : "Read device info"}
           </button>
-          <span className="saved-note">
+          <span className={"saved-note" + (stale ? " stale" : "")}>
             {at
-              ? `${live ? "read" : "as of"} ${at.toLocaleTimeString()}${live ? "" : " (cached)"}`
+              ? `${live ? "read" : "as of"} ${at.toLocaleTimeString()} · ${ageText}`
               : "Reads over USB. Nothing is written."}
           </span>
         </div>
@@ -210,12 +232,6 @@ export default function Troubleshooting() {
               own, so one can be reached even when the other cannot see it.
             </div>
           )}
-        </div>
-      )}
-
-      {halves.length > 0 && (
-        <div className="info-halves">
-          {halves.map((h) => <HalfCard key={h.port} h={h} reference={sys?.reference} />)}
         </div>
       )}
 
@@ -280,6 +296,19 @@ export default function Troubleshooting() {
           </button>
         </div>
       </div>
+
+      {stale && halves.length > 0 && (
+        <div className="info-stale-note">
+          This reading is {ageText}. Firmware and addresses will not have changed, but battery
+          and pairing may have — read again for those.
+        </div>
+      )}
+
+      {halves.length > 0 && (
+        <div className="info-halves">
+          {halves.map((h) => <HalfCard key={h.port} h={h} reference={sys?.reference} />)}
+        </div>
+      )}
 
       {out && (
         <div className="card">

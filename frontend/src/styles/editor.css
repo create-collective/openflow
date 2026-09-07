@@ -2032,6 +2032,12 @@
 .seg-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .info-btn-wrap { flex-wrap: wrap; gap: 8px; }
+.saved-note.stale { color: #eab308; }
+.info-stale-note {
+  font-size: 12px; color: var(--text-dim); background: var(--neutral17);
+  border-left: 2px solid #eab308; border-radius: 0 6px 6px 0;
+  padding: 10px 14px; margin-bottom: 16px;
+}
 .info-out {
   white-space: pre-wrap; font-family: var(--font-mono); font-size: 12px;
   margin: 0; max-height: 340px; overflow: auto; color: var(--text-muted);
