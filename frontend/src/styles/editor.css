@@ -1949,3 +1949,16 @@
   width: 72px; text-align: right; font-family: var(--font-mono);
   padding: 2px 6px; margin-right: 4px;
 }
+
+/* Macro recorder: the captured keystrokes, shown as they arrive. */
+.rec-strip {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 10px;
+  background: var(--neutral17); border-radius: 8px; max-height: 160px; overflow-y: auto;
+}
+.rec-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 12px;
+  background: var(--neutral20); color: var(--text);
+  padding: 3px 8px; border-radius: 6px; white-space: nowrap;
+}
+.rec-gap { color: var(--text-dim); font-size: 10px; }

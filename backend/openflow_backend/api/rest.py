@@ -247,9 +247,35 @@ async def add_macro_step(body: dict = Body(...)) -> dict:
             mac.add_step, body["macroId"], body["kind"],
             action_code=body.get("actionCode"), state=body.get("state", "tap"),
             input=body.get("input", ""), delay=int(body.get("delay", 30)),
+            program=body.get("program", ""), args=body.get("args") or [],
         )
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/add-macro-steps")
+async def add_macro_steps(body: dict = Body(...)) -> dict:
+    """Append several steps at once -- what the recorder produces.
+
+    One call rather than one per keystroke: a recording is a unit, and adding it key by key
+    would leave a half-recorded macro behind if the page navigated mid-flight.
+    """
+    macro_id = body.get("macroId")
+    steps = body.get("steps") or []
+    if not macro_id or not isinstance(steps, list):
+        raise HTTPException(status_code=400, detail="macroId and steps[] are required")
+    added = []
+    try:
+        for st in steps:
+            r = await run_in_threadpool(
+                mac.add_step, macro_id, st.get("kind", "key"),
+                action_code=st.get("actionCode"), state=st.get("state", "tap"),
+                input=st.get("input", ""), delay=int(st.get("delay", 30)),
+                program=st.get("program", ""), args=st.get("args") or [])
+            added.append(r["id"])
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True, "added": added}
 
 
 @router.post("/rpc/delete-macro-step")
@@ -278,7 +304,8 @@ async def update_macro_step(body: dict = Body(...)) -> dict:
         return await run_in_threadpool(
             mac.update_step, body["stepId"],
             delay=body.get("delay"), action_code=body.get("actionCode"),
-            state=body.get("state"), input=body.get("input"))
+            state=body.get("state"), input=body.get("input"),
+            program=body.get("program"))
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 

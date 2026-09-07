@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 import { actionText } from "../lib/keylabels";
+import MacroRecorder from "../components/MacroRecorder";
 
 // Macro editor. Naya never shipped one; ZMK supports macros and the schema is
 // ready, so we build a working editor: create macros, add ordered steps
@@ -12,6 +13,9 @@ function StepRow({ step, index, count, onDelete, onMove, onDelay }) {
   if (step.kind === "key") label = `Key: ${step.actionCode || "?"} (${step.state})`;
   else if (step.kind === "text") label = `Text: "${step.input}"`;
   else if (step.kind === "wait") label = "Wait for release";
+  else if (step.kind === "launch") {
+    label = `Launch: ${step.program}${(step.args || []).length ? " " + step.args.join(" ") : ""}`;
+  } else if (step.kind === "command") label = `Run: ${step.program}`;
   else label = step.kind;
   return (
     <div className="skp-row" style={{ cursor: "default" }}>
@@ -46,6 +50,9 @@ export default function Macros() {
   const [textVal, setTextVal] = useState("");
   const [delay, setDelay] = useState(30);
   const [renaming, setRenaming] = useState(null);
+  const [program, setProgram] = useState("");
+  const [argsText, setArgsText] = useState("");
+  const [recording, setRecording] = useState(false);
 
   async function load() {
     try {
@@ -85,8 +92,15 @@ export default function Macros() {
       body.actionCode = keyCode; body.state = keyState;
     }
     if (stepKind === "text") body.input = textVal;
+    if (stepKind === "launch" || stepKind === "command") {
+      if (!program.trim()) { setErr("Enter a program to run."); return; }
+      body.program = program.trim();
+      if (stepKind === "launch") body.args = argsText.split(/\s+/).filter(Boolean);
+    }
     await api.addMacroStep(body);
     setTextVal("");
+    setProgram("");
+    setArgsText("");
     await load();
   }
 
@@ -181,12 +195,21 @@ export default function Macros() {
                 />
               ))}
 
+              <MacroRecorder
+                onCommit={async (steps) => {
+                  if (!steps.length) return;
+                  try { await api.addMacroSteps(macro.id, steps); await load(); }
+                  catch (e) { setErr(e.message); }
+                }}
+              />
+
               <div className="card" style={{ marginTop: 20, maxWidth: 620 }}>
                 <h3>Add step</h3>
                 <div className="btn-row" style={{ marginBottom: 12 }}>
-                  {["key", "text", "wait"].map((k) => (
+                  {["key", "text", "wait", "launch", "command"].map((k) => (
                     <button key={k} className={"btn" + (stepKind === k ? " primary" : "")} onClick={() => setStepKind(k)}>
-                      {k === "key" ? "Key" : k === "text" ? "Text" : "Wait"}
+                      {{ key: "Key", text: "Text", wait: "Wait",
+                         launch: "Launch app", command: "Run command" }[k]}
                     </button>
                   ))}
                 </div>
@@ -214,6 +237,32 @@ export default function Macros() {
                       disabledHint=""
                     />
                   </>
+                )}
+                {stepKind === "launch" && (
+                  <div style={{ marginBottom: 12 }}>
+                    <input className="mac-input" style={{ width: "100%", marginBottom: 8 }}
+                      value={program} onChange={(e) => setProgram(e.target.value)}
+                      placeholder="Program, e.g. C:\Windows\System32\notepad.exe or firefox" />
+                    <input className="mac-input" style={{ width: "100%" }}
+                      value={argsText} onChange={(e) => setArgsText(e.target.value)}
+                      placeholder="Arguments, space separated (optional)" />
+                    <div className="setting-desc" style={{ marginTop: 6 }}>
+                      Started directly, with no shell. Arguments are passed as a list, so quoting
+                      and metacharacters cannot turn into a second command.
+                    </div>
+                  </div>
+                )}
+                {stepKind === "command" && (
+                  <div style={{ marginBottom: 12 }}>
+                    <input className="mac-input" style={{ width: "100%" }}
+                      value={program} onChange={(e) => setProgram(e.target.value)}
+                      placeholder="Shell command, e.g. git status" />
+                    <div className="phase-note" style={{ marginTop: 8 }}>
+                      This runs through a shell, so it can do anything your account can. Prefer
+                      &ldquo;Launch app&rdquo; unless you genuinely need shell features like pipes
+                      or redirection.
+                    </div>
+                  </div>
                 )}
                 {stepKind === "text" && (
                   <div style={{ marginBottom: 12 }}>

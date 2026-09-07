@@ -49,11 +49,40 @@ _ADDED_COLUMNS = [
 ]
 
 
+# Tables OpenFlow adds that NayaFlow's recovered schema has no equivalent for. Created on every
+# open, not just a fresh install, so an existing database picks them up -- schema.sql only runs
+# when the DB is empty.
+_ADDED_TABLES = [
+    # Launch/run steps. NayaFlow's schema has five step tables (standard, text, wait, mouse,
+    # loop) and none of them can hold "start this program", so this is ours.
+    #
+    # `shell` is the whole safety story, and it mirrors Create Companion's split between
+    # Action::Launch { program, args } and Action::Command { command }: a launch is argv with no
+    # shell involved, so a program name containing metacharacters cannot become a second
+    # command. Only a step the user explicitly created as a shell command sets shell=1.
+    ("launch_action_macro_steps", """
+        CREATE TABLE launch_action_macro_steps (
+          id TEXT PRIMARY KEY,
+          updated_at TEXT, created_at TEXT,
+          order_id INTEGER, delay INTEGER,
+          macro_id TEXT,
+          program TEXT,        -- the executable, or the full command line when shell=1
+          args TEXT,           -- JSON array; empty when shell=1
+          shell INTEGER DEFAULT 0
+        )"""),
+]
+
+
 def _apply_added_columns(conn) -> None:
     for table, column, decl in _ADDED_COLUMNS:
         cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
         if column not in cols:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+    for name, ddl in _ADDED_TABLES:
+        exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()
+        if exists is None:
+            conn.executescript(ddl)
 
 
 def init_db(path: Path | None = None) -> None:

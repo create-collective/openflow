@@ -56,6 +56,9 @@ def _db():
         conn.execute(f"""CREATE TABLE {extra} (
             id TEXT PRIMARY KEY, updated_at TEXT, created_at TEXT, order_id INTEGER,
             delay INTEGER, macro_id TEXT)""")
+    conn.execute("""CREATE TABLE launch_action_macro_steps (
+        id TEXT PRIMARY KEY, updated_at TEXT, created_at TEXT, order_id INTEGER,
+        delay INTEGER, macro_id TEXT, program TEXT, args TEXT, shell INTEGER DEFAULT 0)""")
     return conn
 
 
@@ -164,3 +167,77 @@ def test_unknown_step_raises():
         except ValueError:
             return
     raise AssertionError("editing a step that does not exist should raise")
+
+
+# --- launch / command steps ------------------------------------------------------------------
+# These exist because a macro is executed HOST-side (the keyboard has no macro table), so
+# "start a program" is a thing the runner can actually do. Their shape matches Create
+# Companion's Action enum so an exported macro needs no translation.
+
+
+def test_a_launch_step_keeps_its_args_as_a_list():
+    """argv, not a string. A program path with a space must not become two arguments, and a
+    metacharacter in an argument must not be able to start a second command."""
+    conn = _db()
+    with _patched(conn):
+        m = mac.create_macro("run")
+        mac.add_step(m["id"], "launch", program="C:/Program Files/app.exe",
+                     args=["--flag", "a b", "x;y"], delay=10)
+    s = _steps(conn, m["id"])[0]
+    assert s["kind"] == "launch" and s["shell"] is False, s
+    assert s["program"] == "C:/Program Files/app.exe"
+    assert s["args"] == ["--flag", "a b", "x;y"], s["args"]
+
+
+def test_a_command_step_is_marked_as_shell():
+    conn = _db()
+    with _patched(conn):
+        m = mac.create_macro("run")
+        mac.add_step(m["id"], "command", program="git status | head", delay=0)
+    s = _steps(conn, m["id"])[0]
+    assert s["kind"] == "command" and s["shell"] is True, s
+    assert s["args"] == [], "a shell command has no argv of its own"
+
+
+def test_launch_requires_a_program():
+    conn = _db()
+    with _patched(conn):
+        m = mac.create_macro("run")
+        for bad in ("", "   "):
+            try:
+                mac.add_step(m["id"], "launch", program=bad)
+            except ValueError:
+                continue
+            raise AssertionError(f"accepted {bad!r} as a program")
+
+
+def test_launch_steps_order_alongside_the_others():
+    """One flat list: a launch step must interleave with keys, not sort to the end."""
+    conn = _db()
+    with _patched(conn):
+        m = mac.create_macro("mixed")
+        mac.add_step(m["id"], "key", action_code="A")
+        mac.add_step(m["id"], "launch", program="app.exe")
+        mac.add_step(m["id"], "text", input="hi")
+    assert [s["kind"] for s in _steps(conn, m["id"])] == ["key", "launch", "text"]
+
+
+def test_deleting_a_macro_takes_its_launch_steps_with_it():
+    """delete_macro had its own hardcoded table list, which would have orphaned these."""
+    conn = _db()
+    with _patched(conn):
+        m = mac.create_macro("run")
+        mac.add_step(m["id"], "launch", program="app.exe")
+        mac.delete_macro(m["id"])
+    left = conn.execute("SELECT COUNT(*) c FROM launch_action_macro_steps").fetchone()["c"]
+    assert left == 0, f"{left} orphaned launch step(s)"
+
+
+def test_a_launch_step_can_be_repointed():
+    conn = _db()
+    with _patched(conn):
+        m = mac.create_macro("run")
+        sid = mac.add_step(m["id"], "launch", program="old.exe")["id"]
+        mac.update_step(sid, program="new.exe", delay=5)
+    s = _steps(conn, m["id"])[0]
+    assert s["program"] == "new.exe" and s["delay"] == 5, s

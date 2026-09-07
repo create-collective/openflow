@@ -61,6 +61,7 @@ export const api = {
   addMacroStep: (body) => req("POST", "/rpc/add-macro-step", body),
   deleteMacroStep: (stepId) => req("POST", "/rpc/delete-macro-step", { stepId }),
   reorderMacroSteps: (macroId, orderedIds) => req("POST", "/rpc/reorder-macro-steps", { macroId, orderedIds }),
+  addMacroSteps: (macroId, steps) => req("POST", "/rpc/add-macro-steps", { macroId, steps }),
   renameMacro: (macroId, name) => req("POST", "/rpc/rename-macro", { macroId, name }),
   updateMacroStep: (stepId, patch) => req("POST", "/rpc/update-macro-step", { stepId, ...patch }),
   createProfile: (name) => req("POST", "/rpc/create-profile", { name }),

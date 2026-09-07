@@ -1,16 +1,29 @@
 """Macro editor persistence.
 
-NayaFlow never shipped a macro editor, but its schema is ready for one (a `macros`
-row + typed step tables) and ZMK supports macros natively. We implement the common
-step kinds now: key actions (press/release/tap), text, and wait-for-release. Mouse
-and loop steps have tables too and can be added later.
+WHERE MACROS RUN. Not on the keyboard. The firmware reserves the macro behaviour type (0x02)
+but implements no macro table: READ_MACRO_LIST answers and stays empty, and seven encoding
+variants of WRITE_MACRO_LIST / WRITE_MACRO_DATA were all acknowledged and discarded
+(docs/module-field-map.md, C9/C10). NayaCore never sends those opcodes either. So a macro is
+authored here and executed by a HOST-side engine -- Create Companion, which already runs
+per-app actions off the F13-F24 transport keys.
 
-Steps are merged across the typed tables and ordered by order_id so the editor
-sees one flat list.
+That is why launch/command steps belong here at all: a keyboard could never start a program,
+but the engine that will run these can. Their shape deliberately matches Companion's
+`Action` enum (`{type: launch, program, args}` / `{type: command, command}`) so an exported
+macro needs no translation.
+
+Step kinds: key (press/release/tap), text, wait-for-release, launch, command. NayaFlow's schema
+supplies the first three tables; `launch_action_macro_steps` is ours (see db/database.py
+_ADDED_TABLES). Its mouse and loop tables exist and are carried for delete/reorder but cannot
+be created yet.
+
+Steps are merged across the typed tables and ordered by order_id so the editor sees one flat
+list.
 """
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime, timezone
 
@@ -62,6 +75,21 @@ def _steps_for(conn, macro_id: str) -> list[dict]:
         (macro_id,),
     ):
         steps.append({"id": r["id"], "kind": "wait", "orderId": r["order_id"], "delay": r["delay"]})
+    # Launch/run. Reported with Create Companion's own shape -- {type: launch, program, args}
+    # or {type: command, command} -- so an exported macro can be handed straight to the engine
+    # that will actually run it. Nothing in OpenFlow executes these; see the module docstring.
+    for r in conn.execute(
+        "SELECT id, order_id, delay, program, args, shell FROM launch_action_macro_steps "
+        "WHERE macro_id=?", (macro_id,),
+    ):
+        try:
+            args = json.loads(r["args"] or "[]")
+        except ValueError:
+            args = []
+        steps.append({"id": r["id"], "kind": "command" if r["shell"] else "launch",
+                      "orderId": r["order_id"], "delay": r["delay"],
+                      "program": r["program"] or "", "args": args,
+                      "shell": bool(r["shell"])})
     steps.sort(key=lambda s: s["orderId"])
     return steps
 
@@ -86,9 +114,9 @@ def create_macro(name: str) -> dict:
 def delete_macro(macro_id: str) -> dict:
     conn = connect()
     try:
-        for tbl in ("standard_action_macro_steps", "text_action_macro_steps",
-                    "wait_for_release_macro_steps", "mouse_action_macro_steps",
-                    "loop_action_macro_steps"):
+        # _STEP_TABLES, not a second hardcoded list -- this one had already fallen behind by
+        # one table, which would have orphaned every launch step when its macro was deleted.
+        for tbl in _STEP_TABLES:
             conn.execute(f"DELETE FROM {tbl} WHERE macro_id=?", (macro_id,))
         conn.execute("DELETE FROM macros WHERE id=?", (macro_id,))
         conn.commit()
@@ -98,7 +126,8 @@ def delete_macro(macro_id: str) -> dict:
 
 
 def add_step(macro_id: str, kind: str, *, action_code: str | None = None,
-             state: str = "tap", input: str = "", delay: int = 30) -> dict:
+             state: str = "tap", input: str = "", delay: int = 30,
+             program: str = "", args: list | None = None) -> dict:
     conn = connect()
     try:
         now = _now()
@@ -126,6 +155,17 @@ def add_step(macro_id: str, kind: str, *, action_code: str | None = None,
                 "VALUES (?,?,?,?,?,?)",
                 (sid, now, now, order, delay, macro_id),
             )
+        elif kind in ("launch", "command"):
+            if not (program or "").strip():
+                raise ValueError("a launch step needs a program")
+            conn.execute(
+                "INSERT INTO launch_action_macro_steps "
+                "(id, updated_at, created_at, order_id, delay, macro_id, program, args, shell) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
+                (sid, now, now, order, delay, macro_id, program.strip(),
+                 json.dumps(list(args or []) if kind == "launch" else []),
+                 1 if kind == "command" else 0),
+            )
         else:
             raise ValueError(f"unknown step kind: {kind}")
         conn.commit()
@@ -137,7 +177,7 @@ def add_step(macro_id: str, kind: str, *, action_code: str | None = None,
 _STEP_TABLES = (
     "standard_action_macro_steps", "text_action_macro_steps",
     "wait_for_release_macro_steps", "mouse_action_macro_steps",
-    "loop_action_macro_steps",
+    "loop_action_macro_steps", "launch_action_macro_steps",
 )
 
 
@@ -158,7 +198,8 @@ def rename_macro(macro_id: str, name: str) -> dict:
 
 
 def update_step(step_id: str, *, delay: int | None = None, action_code: str | None = None,
-                state: str | None = None, input: str | None = None) -> dict:
+                state: str | None = None, input: str | None = None,
+                program: str | None = None) -> dict:
     """Edit a step in place.
 
     Delay was settable only at the moment a step was added, so fixing a timing meant deleting
@@ -169,7 +210,8 @@ def update_step(step_id: str, *, delay: int | None = None, action_code: str | No
     Only columns that exist on the found table are written, so asking to change `input` on a
     key step is ignored rather than raising -- the UI sends whatever the step kind implies.
     """
-    fields = {"delay": delay, "action_code": action_code, "state": state, "input": input}
+    fields = {"delay": delay, "action_code": action_code, "state": state,
+              "input": input, "program": program}
     fields = {k: v for k, v in fields.items() if v is not None}
     if not fields:
         return {"ok": True, "id": step_id, "changed": []}
