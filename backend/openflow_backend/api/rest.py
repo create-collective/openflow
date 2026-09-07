@@ -79,7 +79,7 @@ async def status(verbose: bool = False) -> dict:
     time rather than re-opening the port on every mount."""
     svc = get_service()
     halves = await run_in_threadpool(svc.status_all, verbose)
-    saved = await run_in_threadpool(dstate.save_status, halves)
+    saved = await run_in_threadpool(dstate.save_status, halves, verbose)
     out = {"halves": halves, "at": saved["at"]}
     # Only meaningful with the BLE block, which a plain read does not fetch.
     if verbose:
@@ -88,14 +88,19 @@ async def status(verbose: bool = False) -> dict:
 
 
 @router.get("/api/status/last")
-async def status_last() -> dict:
+async def status_last(deep: bool = False) -> dict:
     """The last half status we read, and when. Touches no hardware.
 
     Device Manager fired a fresh USB read on every mount, so navigating away and back asked the
     keyboard the same questions again -- even right after a read that had just told us. It now
     paints this immediately and says "as of", and re-reading is a deliberate click.
     """
-    return await run_in_threadpool(dstate.load_status)
+    got = await run_in_threadpool(dstate.load_status, deep)
+    # Recomputed from the cached halves rather than persisted: it is derived, and storing a
+    # derived verdict is how a stale one outlives the data it came from.
+    if deep and got.get("halves"):
+        got["pairing"] = pairing_report(got["halves"])
+    return got
 
 
 @router.post("/rpc/read-keyboard")

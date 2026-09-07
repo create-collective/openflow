@@ -93,6 +93,7 @@ export default function Troubleshooting() {
   const [side, setSide] = useState("left");
   const [out, setOut] = useState("");
   const [busy, setBusy] = useState(false);
+  const [live, setLive] = useState(false);   // read in this session, not restored from cache
 
   const refresh = useCallback(async () => {
     setLoading(true); setErr(null);
@@ -101,13 +102,29 @@ export default function Troubleshooting() {
       setHalves(r.halves || []);
       setPairing(r.pairing || null);
       setAt(r.at ? new Date(r.at + "Z") : new Date());
+      setLive(true);
     } catch (e) { setErr(e.message); }
     finally { setLoading(false); }
   }, []);
 
-  // System info is free (no USB), so it loads on mount. The device read is not, so it waits for
-  // a click -- same reasoning as Device Manager, which stopped re-reading the board on mount.
-  useEffect(() => { api.systemInfo().then(setSys).catch(() => {}); }, []);
+  // System info is free (no USB), so it loads on mount. The device read is NOT, so the page
+  // paints the last one from cache and only re-reads on a click -- the same bargain Device
+  // Manager makes. Without this the page went blank every time you navigated away and back,
+  // and re-reading five extra BLE round trips per half to redraw what we already knew.
+  useEffect(() => {
+    let cancelled = false;
+    api.systemInfo().then((r) => !cancelled && setSys(r)).catch(() => {});
+    (async () => {
+      try {
+        const last = await api.statusLastDeep();
+        if (cancelled || !last?.halves?.length) return;
+        setHalves(last.halves);
+        setPairing(last.pairing || null);
+        setAt(last.at ? new Date(last.at + "Z") : null);
+      } catch { /* nothing cached yet: the Read button is right there */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   async function run(label, fn) {
     setBusy(true); setOut(`${label}…`);
@@ -130,7 +147,12 @@ export default function Troubleshooting() {
         <button className="btn primary" onClick={refresh} disabled={loading}>
           {loading ? "Reading…" : "Read device info"}
         </button>
-        {at && <span className="saved-note">as of {at.toLocaleTimeString()}</span>}
+        {at && (
+          <span className="saved-note">
+            {live ? "read " : "as of "}{at.toLocaleTimeString()}
+            {!live && " (cached)"}
+          </span>
+        )}
         {!at && <span className="saved-note">Reads over USB. Nothing is written.</span>}
       </div>
 

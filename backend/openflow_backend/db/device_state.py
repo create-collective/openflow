@@ -26,6 +26,16 @@ KEY = "openflow.device_state"
 # and one Device Manager used to fire on every single mount, so navigating away and back
 # re-opened the port to ask the same questions.
 KEY_STATUS = "openflow.device_status"
+# The Information page's read is a SUPERSET -- same fields plus the BLE identity block -- and it
+# gets its own row rather than sharing one.
+#
+# Sharing would mean Device Manager's Refresh, which is deliberately shallow, overwriting the
+# BLE block and emptying half the Information page. Merging the two instead would be worse: the
+# BLE fields would carry an older timestamp than the rest of the same card while claiming to be
+# one reading. Two rows, each with its own honest "as of".
+#
+# A deep read writes BOTH, since it genuinely contains everything a shallow read would have.
+KEY_STATUS_DEEP = "openflow.device_status_deep"
 
 
 def _now() -> str:
@@ -100,23 +110,31 @@ def load() -> dict:
         conn.close()
 
 
-def save_status(halves: list) -> dict:
-    """Record the half status Device Manager shows, so the page can paint from cache."""
-    payload = {"halves": halves, "at": _now()}
+def save_status(halves: list, deep: bool = False) -> dict:
+    """Record the half status a page shows, so it can paint from cache instead of re-reading.
+
+    A deep read updates the shallow row too: it is the same reading taken at the same moment,
+    just with more in it, so there is no staleness to introduce.
+    """
+    payload = {"halves": halves, "at": _now(), "deep": bool(deep)}
     conn = connect()
     try:
         _write(conn, payload, KEY_STATUS)
+        if deep:
+            _write(conn, payload, KEY_STATUS_DEEP)
         conn.commit()
         return payload
     finally:
         conn.close()
 
 
-def load_status() -> dict:
+def load_status(deep: bool = False) -> dict:
+    """The last half status. `deep` asks for the row that carries the BLE identity block."""
     conn = connect()
     try:
-        got = _read(conn, KEY_STATUS)
+        got = _read(conn, KEY_STATUS_DEEP if deep else KEY_STATUS)
         halves = got.get("halves")
-        return {"halves": halves if isinstance(halves, list) else None, "at": got.get("at")}
+        return {"halves": halves if isinstance(halves, list) else None,
+                "at": got.get("at"), "deep": bool(got.get("deep"))}
     finally:
         conn.close()

@@ -27,6 +27,7 @@ export const api = {
   // verbose adds the BLE identity block + the pairing cross-check. Five extra round trips per
   // half, so it is opt-in: Device Manager does not need it, the Information page does.
   statusDeep: () => req("GET", "/api/status?verbose=1"),
+  statusLastDeep: () => req("GET", "/api/status/last?deep=1"),
   statusLast: () => req("GET", "/api/status/last"),
   diagnostics: () => req("GET", "/api/diagnostics/report"),
   readKeyboard: (body = {}) => req("POST", "/rpc/read-keyboard", body),

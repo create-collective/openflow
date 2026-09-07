@@ -708,7 +708,10 @@ def test_half_status_is_cached_under_its_own_key():
         def close(self): pass
 
     with mock.patch.object(ds, "connect", lambda: Keep(conn)):
-        assert ds.load_status() == {"halves": None, "at": None}
+        # Assert the fields this test is about, not the whole dict: load_status grew a
+        # `deep` flag when the Information page got its own (BLE-carrying) cache row.
+        empty = ds.load_status()
+        assert empty["halves"] is None and empty["at"] is None
         ds.save([{"uuid": "u1"}], "read")
         saved = ds.save_status([{"side": "left", "battery": 87}])
         assert ds.load_status()["halves"][0]["battery"] == 87
