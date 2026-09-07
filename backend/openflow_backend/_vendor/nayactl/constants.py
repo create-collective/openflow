@@ -124,19 +124,26 @@ MODULE_TYPES = {
 # its dock-bus address instead, which SEND_HANDSHAKE (0xDE/0x1001) returns as [01][addr] and
 # GET_ADDRESS (0xDE/0x1007) returns directly.
 #
-# The address carries the type AND the side: bit 0 is the side (0 = left, 1 = right) and the rest
-# identifies the module. Observed on a real Create (fw 3.41.0) by moving the same two modules
-# between halves:
+# The address carries the type AND the side: bit 0 is the side (0 = left, 1 = right) and the
+# high nibble is a one-hot type bit. Confirmed on real hardware (fw 3.30.1 / 3.41.0) by moving
+# modules between halves:
 #
+#     Touch   0x10 left / 0x11 right
 #     Track   0x20 left / 0x21 right
 #     Tune    0x40 left / 0x41 right
+#     Float   0x80 left / 0x81 right   <- unconfirmed, nobody has one to dock
 #
-# So the type is looked up on the address with the side bit masked off. Touch and Float are still
-# unknown -- dock one and run `nayactl status -v` to capture its address.
+# So the type is looked up on the address with the side bit masked off.
+#
+# 0xF0 / 0xF1 (all type bits set) is a transient state: a module at ~0-1% battery that is drawing
+# power from the pogo pins but has not booted yet reports this until it comes up. It is reported
+# as-is rather than mapped to a type.
 MODULE_SIDE_BIT = 0x01
 MODULE_ADDR_TYPES = {
+  0x10: "Touch",
   0x20: "Track",
   0x40: "Tune",
+  # 0x80: "Float",
 }
 
 

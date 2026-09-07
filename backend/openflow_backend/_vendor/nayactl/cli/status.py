@@ -18,7 +18,9 @@ from ..constants import (
   MOD_GET_FW_VERSION,
   MOD_GET_PRECISE_BATTERY,
   MOD_SEND_HANDSHAKE,
-  MODULE_TYPES,
+  MOD_GET_ADDRESS,
+  module_type_from_address,
+  module_side_from_address,
   SYS_GET_FW_VERSION,
   SYS_GET_HW_ID_NUMBER,
   SYS_GET_KB_BATTERY_LEVEL,
@@ -73,14 +75,32 @@ def _query_half(transport: Transport, dest: int, verbose: bool = False) -> dict:
     if verbose:
       click.echo(f"  [raw] BLE_GET_ADDRESS: {hexline(payload)}")
 
-  transport.send_command(dest, CAT_MODULE, MOD_SEND_HANDSHAKE, timeout=1.5)
+  handshake = first_payload(
+    transport.send_command(dest, CAT_MODULE, MOD_SEND_HANDSHAKE, timeout=1.5))
+  if verbose and handshake is not None:
+    click.echo(f"  [raw] MODULE_HANDSHAKE: {hexline(handshake)}")
   payload = first_payload(transport.send_command(dest, CAT_MODULE, MOD_DETECT))
   if verbose and payload is not None:
     click.echo(f"  [raw] MODULE_DETECT: {hexline(payload)}")
 
   if payload is not None and len(payload) >= 1 and payload[0] != 0:
     module_info: dict = {}
-    module_info["type"] = MODULE_TYPES.get(payload[0], f"Unknown ({payload[0]})")
+    # MODULE_DETECT's payload is presence, not type -- the handshake reply carries the
+    # dock-bus address as [01][addr]; fall back to GET_ADDRESS if it did not answer.
+    addr = None
+    if (handshake is not None and len(handshake) >= 2 and
+        handshake[0] == 0x01):
+      addr = handshake[1]
+    if addr is None:
+      addr_payload = first_payload(transport.send_command(dest, CAT_MODULE, MOD_GET_ADDRESS))
+      if verbose and addr_payload is not None:
+        click.echo(f"  [raw] MODULE_GET_ADDRESS: {hexline(addr_payload)}")
+      if addr_payload is not None and len(addr_payload) >= 1:
+        addr = addr_payload[0]
+    module_info["type"] = module_type_from_address(addr)
+    if addr is not None:
+      module_info["address"] = f"0x{addr:02X}"
+      module_info["docked"] = module_side_from_address(addr)
 
     module_payload = first_payload(transport.send_command(dest, CAT_MODULE, MOD_GET_FW_VERSION))
     if module_payload is not None:
@@ -153,6 +173,10 @@ def _print_half_status(label: str, info: dict) -> None:
   module_info = info.get("module")
   if module_info:
     click.echo(f"  Module:      {module_info.get('type', 'Unknown')}")
+    if "address" in module_info:
+      docked = module_info.get("docked")
+      side = f"  ({docked} half)" if docked else ""
+      click.echo(f"    Address:   {module_info['address']}{side}")
     if "fw_version" in module_info:
       click.echo(f"    Firmware:  {module_info['fw_version']}")
     if "battery" in module_info:
