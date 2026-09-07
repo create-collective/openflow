@@ -25,6 +25,13 @@ function layerLegend(code, layerMap) {
 
 // Human label for the selected-key panel (resolves layer ids to "Hold Layer N").
 const LAYER_TEXT = { MO: "Hold Layer", TOG: "Toggle Layer", TO: "Force Layer", SL: "Sticky Layer" };
+// Mouse buttons on a KEY. Confirmed on hardware 2026-09-07: a key takes the same two-word
+// record a module gesture does, so these are real bindings, not app-only decoration.
+// M4/M5 are what the device calls them; Back/Forward is what they do.
+const MOUSE_LABEL = {
+  M1: "L Click", M2: "R Click", M3: "M Click", M4: "Back", M5: "Forward",
+};
+
 export function actionText(binding, layerMap) {
   if (!binding || !binding.actionCode) return "Unassigned";
   const code = binding.actionCode;
@@ -35,6 +42,7 @@ export function actionText(binding, layerMap) {
     }
   }
   if (binding.actionType === "macro") return "Macro";
+  if (binding.actionType === "mouse") return MOUSE_LABEL[code] || code;
   // Show the glyph for symbols/keys so the panel reads "(" not "LEFT_PARENTHESIS".
   if (GLYPH[code]) return GLYPH[code];
   return code;
@@ -48,6 +56,7 @@ export function keyLegend(binding, layerMap) {
   if (layer) return layer;
 
   if (binding.actionType === "macro") return { main: "Macro", sub: "⚡" };
+  if (binding.actionType === "mouse") return { main: MOUSE_LABEL[code] || code, sub: "●" };
   if (binding.actionType === "shortcut_alias" || code.includes(" + ")) {
     const parts = code.split(" + ");
     return { main: GLYPH[parts.at(-1)] || parts.at(-1), sub: "↗" };

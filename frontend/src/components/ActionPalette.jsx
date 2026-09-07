@@ -99,7 +99,11 @@ export default function ActionPalette({
         )}
 
         {tab?.id === "mouse" ? (
-          <VirtualMouse disabled={disabled} onPick={onPick} disabledHint={disabledHint} />
+          // Motion pairs are axis bindings; a key position has no axis, so they are offered on
+          // modules only. Buttons work in both contexts -- measured 2026-09-07, see the mouse
+          // tab's note in device/actions_catalog.py.
+          <VirtualMouse disabled={disabled} onPick={onPick} disabledHint={disabledHint}
+                        motion={context !== "key"} />
         ) : tab?.id === "apps" ? (
           <AppShortcutPicker disabled={disabled} onPick={onPick} disabledHint={disabledHint} />
         ) : tab?.id === "keyboard" ? (

@@ -327,13 +327,19 @@ def _tabs():
             {"name": "Control", "actions": _control()},
             {"name": "Symbols", "actions": _symbols()},
         ]},
-        # Module-only, and that is not an oversight. A mouse action on a KEY position never
-        # reaches the device -- a key takes record type 0x00 with the same two-u32 body, but
-        # its category namespace differs (category 3 is BLUETOOTH on a key and mouse buttons on
-        # a module), and we have no capture of what a key uses for mouse. Offering it on
-        # Bindings would offer a binding that silently never flashes.
+        # Visible in BOTH contexts as of 2026-09-07. This was module-only, on the reasoning that
+        # a key's category namespace differed (category 3 being BLUETOOTH on a key). That was
+        # wrong: bluetooth is a different RECORD TYPE (0x00), not a different category space.
+        # Measured on hardware -- writing 0f 08 03000000 01000000 to layer 0 position 46 and
+        # pressing the key produces a real left click, and ...02000000 a right click. A key takes
+        # the same two-word record a module gesture does. See docs/module-field-map.md (C9/C10)
+        # and tests/test_mouse_on_key.py, which pins the exact bytes.
+        #
+        # Buttons only on a key, though -- the frontend filters the four MOTION entries out of
+        # the key context, because those are axis direction PAIRS ("mouse - SCROLL_UP -
+        # SCROLL_DOWN") and a key position has no axis to bind them to.
         {"id": "mouse", "label": "●", "title": "Mouse",
-         "contexts": [MODULE], "categories": []},
+         "contexts": [KEY, MODULE], "categories": []},
         # 5,311 chords across 20 applications. No categories: it has its own render branch,
         # because a searchable list of five thousand entries is not a grid of buttons. Visible
         # in BOTH contexts -- an app shortcut is just a chord, and a keycap can hold one as

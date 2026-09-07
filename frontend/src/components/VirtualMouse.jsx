@@ -10,9 +10,11 @@ import { MOUSE_BUTTONS, MOUSE_MOTION, mousePick } from "../lib/mousedict";
 //
 // Motion is separate from buttons and says so. A button binds to a tap; a direction pair binds to
 // an AXIS, which is two device fields with the sign as the direction. Clicking one on a tap row
-// would be offering something the field cannot hold, and the palette's own filter already drops
-// them there -- this section exists to make that split legible rather than mysterious.
-export default function VirtualMouse({ disabled, onPick, disabledHint }) {
+// would be offering something the field cannot hold.
+//
+// `motion` is false in the KEY context: a key position has no axis, so only buttons make sense
+// there. Buttons themselves DO work on a key -- measured 2026-09-07, see actions_catalog.py.
+export default function VirtualMouse({ disabled, onPick, disabledHint, motion = true }) {
   const pick = (code) => { if (!disabled) onPick(mousePick(code)); };
   const btn = (area) => MOUSE_BUTTONS.find((b) => b.area === area);
 
@@ -48,7 +50,7 @@ export default function VirtualMouse({ disabled, onPick, disabledHint }) {
         </div>
       </div>
 
-      <div className="vm-motion">
+      {motion && <div className="vm-motion">
         <div className="vm-side-title">
           Motion — binds to an axis, not a tap
         </div>
@@ -61,7 +63,7 @@ export default function VirtualMouse({ disabled, onPick, disabledHint }) {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

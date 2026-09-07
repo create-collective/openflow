@@ -24,7 +24,7 @@ from openflow_backend.device import actions_catalog as ac  # noqa: E402
 
 # Every tab the KEYMAP editor may show. Adding a tab here is a deliberate act; a new tab that
 # should not appear on Bindings simply is not listed.
-KEY_TABS = {"basic", "extended", "layers", "shortcuts", "apps"}
+KEY_TABS = {"basic", "extended", "layers", "shortcuts", "apps", "mouse"}
 
 
 def _visible(context: str) -> set:
@@ -37,6 +37,20 @@ def test_the_keymap_editor_sees_exactly_the_tabs_it_should():
         "a tab changed which contexts it declares, or a new tab did not declare any -- "
         "an undeclared tab defaults to both contexts and would appear on Bindings")
     print(f"  key context sees {sorted(KEY_TABS)}")
+
+
+def test_the_mouse_tab_is_visible_on_keys_because_hardware_says_so():
+    """This tab was module-only until 2026-09-07 on the reasoning that a key's category
+    namespace differed -- category 3 being BLUETOOTH on a key. That was wrong: bluetooth is a
+    different RECORD TYPE (0x00), not a different category space.
+
+    Writing `0f 08 03000000 01000000` to layer 0 position 46 and pressing the key produced a
+    real left click; `...02000000` produced a right click. Both measured, not inferred.
+    tests/test_mouse_on_key.py pins the encoder side.
+    """
+    assert "mouse" in _visible("key"), "mouse buttons on a key are confirmed to work on hardware"
+    assert "mouse" in _visible("module"), "the module context must not have lost the tab"
+    print("  mouse tab is visible in both contexts")
 
 
 def test_layers_are_a_keymap_concept_only():
