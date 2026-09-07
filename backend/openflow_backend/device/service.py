@@ -79,6 +79,54 @@ def _battery_percent(millivolts: int) -> int:
     return max(1, min(100, ((clamped - 3300) * 100) // 900))
 
 
+def pairing_report(halves: list[dict]) -> dict:
+    """Are the two halves actually bonded to each other? Pure; takes a verbose status list.
+
+    This exists to separate two failures that look identical to a user -- "my right half stopped
+    working" is either a half that is not powered/enumerating at all, or two halves that are fine
+    but no longer bonded. NayaFlow cannot tell you which: a half that does not enumerate simply
+    never appears in its update list, and it ships no per-half recovery.
+
+    The check is a cross-comparison, not a flag we are trusting the device to set: each half
+    reports its own BLE address and the address it is paired TO, so a healthy pair is exactly
+    `left.pairAddress == right.bleAddress` and `right.pairAddress == left.bleAddress`. Verified
+    on a working pair 2026-09-07.
+
+    A one-directional match is called out separately rather than being rounded to "paired" or
+    "not paired", because it is a real state (one half re-paired, the other still pointing at an
+    old partner) and rounding it either way would send someone down the wrong repair path.
+    """
+    by_side = {h.get("side"): h for h in halves if h.get("connected")}
+    left, right = by_side.get("left"), by_side.get("right")
+    if left is None or right is None:
+        present = sorted(by_side)
+        return {"state": "incomplete",
+                "detail": f"only {', '.join(present) or 'no halves'} connected over USB; "
+                          "a pairing check needs both halves."}
+
+    def addr(h):
+        return (h.get("bleAddress") or "").upper()
+
+    def paired_to(h):
+        return ((h.get("ble") or {}).get("pairAddress") or "").upper()
+
+    l_ok = paired_to(left) and paired_to(left) == addr(right)
+    r_ok = paired_to(right) and paired_to(right) == addr(left)
+    if not paired_to(left) and not paired_to(right):
+        return {"state": "unknown", "detail": "neither half reported a pair address."}
+    if l_ok and r_ok:
+        return {"state": "paired",
+                "detail": f"each half is bonded to the other ({addr(left)} <-> {addr(right)})."}
+    if l_ok or r_ok:
+        one = "left" if l_ok else "right"
+        return {"state": "half-paired",
+                "detail": f"only the {one} half points at its partner. The other is still bonded "
+                          f"to a different address, so the split link will not come up."}
+    return {"state": "not-paired",
+            "detail": f"neither half points at the other. Left is bonded to "
+                      f"{paired_to(left) or 'nothing'}, right to {paired_to(right) or 'nothing'}."}
+
+
 class DeviceService:
     """Owns serial connections to connected halves and exposes structured ops."""
 
@@ -137,7 +185,12 @@ class DeviceService:
     # --- status ----------------------------------------------------------------
 
     def status_all(self, verbose: bool = False) -> list[dict]:
-        """Query every connected half + module. Structured mirror of nayactl status."""
+        """Query every connected half + module. Structured mirror of nayactl status.
+
+        `verbose` adds the BLE identity block, which costs five more round trips per half.
+        It used to be accepted and then ignored -- the Information page needs it, the Device
+        Manager's refresh does not, so it is honoured now rather than dropped.
+        """
         out: list[dict] = []
         with self._lock:
             for dev in find_naya_serial_ports():
@@ -145,12 +198,18 @@ class DeviceService:
                     "port": dev.port,
                     "side": dev.side,
                     "description": dev.description,
+                    # The USB product id. Carried because it is the half's identity to the
+                    # host -- it is what distinguishes left (0x0064) from right (0x00C8), and
+                    # what a firmware image must be selected by (the two flash generations are
+                    # not interchangeable; see docs/firmware-analysis.md).
+                    "pid": getattr(dev, "pid", None),
+                    "serialNumber": getattr(dev, "serial_number", None),
                     "connected": False,
                 }
                 try:
                     dest = self._dest_for_side(dev.side)
                     t = self._transport_for(dev.port, dest)
-                    entry.update(self._query_half(t, dest))
+                    entry.update(self._query_half(t, dest, deep=verbose))
                     entry["connected"] = True
                 except TransportError as e:
                     entry["error"] = str(e)
@@ -158,7 +217,7 @@ class DeviceService:
                 out.append(entry)
         return out
 
-    def _query_half(self, t: SerialTransport, dest: int) -> dict:
+    def _query_half(self, t: SerialTransport, dest: int, deep: bool = False) -> dict:
         info: dict = {}
 
         payload = _first_payload(t.send_command(dest, C.CAT_SYSTEM, C.SYS_GET_FW_VERSION))
@@ -188,6 +247,37 @@ class DeviceService:
         payload = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_ADDRESS))
         if payload is not None and len(payload) >= 6:
             info["bleAddress"] = ":".join(f"{b:02X}" for b in payload[:6])
+
+        # BLE identity, only when asked. Every one of these commands already existed in
+        # constants.py and nothing called them, so a half's name, its paired partner and its
+        # radio firmware were all unreachable from the app despite being one read away.
+        #
+        # Decoded conservatively: a name is ASCII, an address is six bytes, a version goes
+        # through format_fw_version. BLE_GET_STATUS is reported as raw hex because we have no
+        # capture telling us what its bytes mean, and inventing a reading for them is how this
+        # project has been wrong before.
+        if deep:
+            ble: dict = {}
+            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_NAME))
+            if p is not None:
+                try:
+                    ble["name"] = p.decode("ascii").rstrip("\x00").strip()
+                except (UnicodeDecodeError, ValueError):
+                    ble["name"] = hexline(p)
+            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_PAIR_ADDRESS))
+            if p is not None and len(p) >= 6:
+                ble["pairAddress"] = ":".join(f"{b:02X}" for b in p[:6])
+            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_DONGLE_ADDR))
+            if p is not None and len(p) >= 6:
+                ble["dongleAddress"] = ":".join(f"{b:02X}" for b in p[:6])
+            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_FW_VERSION))
+            if p is not None:
+                ble["firmwareVersion"] = format_fw_version(p)
+            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_STATUS))
+            if p is not None:
+                ble["statusRaw"] = p.hex()
+            if ble:
+                info["ble"] = ble
 
         # Module detection. Type is DERIVED FROM THE ADDRESS, not from MODULE_DETECT (which
         # only reports presence = 0x01 for every module — keying the type on it mislabels

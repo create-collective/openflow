@@ -1921,3 +1921,17 @@
   white-space: nowrap; min-width: 34px;
 }
 .setting-slider .setting-bound:last-child { text-align: right; }
+
+/* --- Information page (additive) ---------------------------------------------------------- */
+/* .pill had no state variants; these mirror the .dot colours already in app.css so a verdict
+   reads the same way wherever it appears. */
+.pill.ok { background: rgba(52, 211, 153, 0.16); color: var(--ok); }
+.pill.warn { background: rgba(234, 179, 8, 0.18); color: #eab308; }
+.pill.err { background: rgba(248, 113, 113, 0.16); color: var(--err); }
+
+/* A sub-heading inside a card's key/value list, for grouping (Bluetooth, Docked module). */
+.info-sub {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-dim); margin: 14px 0 6px; padding-top: 10px;
+  border-top: 1px solid var(--border-strong);
+}

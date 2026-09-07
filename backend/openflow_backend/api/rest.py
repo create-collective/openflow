@@ -28,13 +28,24 @@ from ..db import userdata as ud
 from ..db.database import connect as db_connect
 from ..device import actions_catalog, flash as flash_mod, gesture_presets, keymap_read, module_fields, remap
 from ..device.commands import CommandError, dispatch
-from ..device.service import DangerousCommandError, TransportError
+from ..device.service import DangerousCommandError, TransportError, pairing_report
 from .state import get_service
 
 router = APIRouter()
 
 
 # --- /api (GET) ------------------------------------------------------------
+
+# The firmware NayaFlow 1.25.1 ships, so the UI can say "your half runs X, Naya ships Y".
+# These are version NUMBERS, not vendor content -- the images themselves live in a gitignored
+# tree and the backend deliberately does not read it, so nothing here depends on that tree
+# being present. Update when a newer NayaFlow is examined.
+REFERENCE_FIRMWARE = {
+    "source": "NayaFlow 1.25.1 (NayaCore v6.11.0)",
+    "createFirmware": "3.41.0",
+    "moduleFirmware": "2.3.3",
+}
+
 
 @router.get("/api/info/system")
 async def info_system() -> dict:
@@ -44,6 +55,8 @@ async def info_system() -> dict:
         "os": platform.system(),
         "osVersion": platform.version(),
         "arch": platform.machine(),
+        "python": platform.python_version(),
+        "reference": REFERENCE_FIRMWARE,
     }
 
 
@@ -67,7 +80,11 @@ async def status(verbose: bool = False) -> dict:
     svc = get_service()
     halves = await run_in_threadpool(svc.status_all, verbose)
     saved = await run_in_threadpool(dstate.save_status, halves)
-    return {"halves": halves, "at": saved["at"]}
+    out = {"halves": halves, "at": saved["at"]}
+    # Only meaningful with the BLE block, which a plain read does not fetch.
+    if verbose:
+        out["pairing"] = pairing_report(halves)
+    return out
 
 
 @router.get("/api/status/last")
