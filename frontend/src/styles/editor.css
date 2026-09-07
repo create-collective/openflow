@@ -1898,3 +1898,26 @@
   align-items: center;
   justify-content: center;
 }
+
+/* --- Settings provenance + controls (additive; nothing above is edited) ------------------- */
+/* .setting-head is space-between with two children. The badge is a third, so without this it
+   would be spread to the middle instead of sitting beside its label. */
+.setting-head .gesture-badge { margin-right: auto; }
+.gesture-badge.prov-verified { background: rgba(52, 211, 153, 0.16); color: var(--ok); }
+.gesture-badge.prov-experimental { background: rgba(234, 179, 8, 0.18); color: #eab308; }
+.gesture-badge.prov-app { background: var(--neutral20); color: var(--neutral60); }
+
+/* A number box beside the slider: idle_timeout_s is 0-6000 over ~600px, so dragging gives
+   ~10s per pixel and the value you actually want is unreachable. */
+.setting-num {
+  width: 88px; text-align: right; font-family: var(--font-mono);
+}
+.setting-slider {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px;
+}
+.setting-slider input[type="range"] { flex: 1; min-width: 0; }
+.setting-bound {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+  white-space: nowrap; min-width: 34px;
+}
+.setting-slider .setting-bound:last-child { text-align: right; }

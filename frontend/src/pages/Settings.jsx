@@ -19,15 +19,37 @@ const TABS = [
   { id: "info", label: "Software Info" },
 ];
 
+// What we can actually prove about a setting, straight from the backend's `provenance`.
+// Seven settings used to say "Flashed to the device" while none of them reached it, so the
+// honest thing is to say per setting how much is known -- and the experimental set doubles as
+// the queue of things to go and probe.
+const PROVENANCE = {
+  verified: { label: "verified", title: "Confirmed to reach the keyboard." },
+  experimental: {
+    label: "experimental",
+    title: "Stored, but OpenFlow does not send it to the keyboard yet. Changing it will not "
+         + "affect how the board behaves.",
+  },
+  app: { label: "app only", title: "An OpenFlow preference. Never sent to the keyboard." },
+};
+
 function SettingField({ f, onChange }) {
-  const changed = f.kind !== "toggle" && f.default !== undefined && f.value !== f.default;
+  // Toggles were excluded here, so led_scan_mode and tray_battery could never be reset.
+  const changed = f.default !== undefined && f.value !== f.default;
+  const prov = PROVENANCE[f.provenance];
+  const resetLabel = f.kind === "toggle" ? (f.default ? "on" : "off") : `${f.default}${f.unit || ""}`;
   return (
     <div className="setting">
       <div className="setting-head">
         <strong>{f.label}</strong>
+        {prov && (
+          <span className={"gesture-badge prov-" + f.provenance} title={prov.title}>
+            {prov.label}
+          </span>
+        )}
         <div className="setting-ctl">
           {changed && (
-            <button className="setting-reset" title={`Reset to ${f.default}${f.unit || ""}`}
+            <button className="setting-reset" title={`Reset to ${resetLabel}`}
               onClick={() => onChange(f.id, f.default)}>↺ Reset</button>
           )}
           {f.kind === "toggle" ? (
@@ -39,17 +61,28 @@ function SettingField({ f, onChange }) {
               {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           ) : (
-            <span className="setting-val">{f.value}{f.unit}</span>
+            // A number box, because these ranges are unusable as a bare slider: idle_timeout_s
+            // is 0-6000 across ~600px, so one pixel is ten seconds and the exact value you want
+            // is unreachable by dragging.
+            <input type="number" className="mac-input setting-num"
+              min={f.min} max={f.max} value={f.value}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (Number.isFinite(n)) onChange(f.id, Math.min(f.max, Math.max(f.min, n)));
+              }} />
           )}
         </div>
       </div>
       <div className="setting-desc">{f.desc}</div>
       {f.kind === "slider" && (
-        <input
-          type="range" min={f.min} max={f.max} value={f.value}
-          onChange={(e) => onChange(f.id, Number(e.target.value))}
-          style={{ width: "100%" }}
-        />
+        <div className="setting-slider">
+          <span className="setting-bound">{f.min}{f.unit}</span>
+          <input
+            type="range" min={f.min} max={f.max} value={f.value}
+            onChange={(e) => onChange(f.id, Number(e.target.value))}
+          />
+          <span className="setting-bound">{f.max}{f.unit}</span>
+        </div>
       )}
     </div>
   );
@@ -100,10 +133,20 @@ export default function Settings() {
   }, [tab]);
 
   async function setSetting(key, value) {
-    setSettings((prev) => ({
-      groups: prev.groups.map((g) => ({ ...g, fields: g.fields.map((f) => f.id === key ? { ...f, value } : f) })),
+    const apply = (v) => setSettings((prev) => ({
+      groups: prev.groups.map((g) => ({ ...g, fields: g.fields.map((f) => f.id === key ? { ...f, value: v } : f) })),
     }));
-    try { await api.setSetting(key, value); } catch (e) { setErr(e.message); }
+    // Remember what it was, so a failed write does not leave the screen showing a value the
+    // backend rejected -- which read as "saved" and is the kind of quiet lie this page has
+    // already told once.
+    const before = settings?.groups.flatMap((g) => g.fields).find((f) => f.id === key)?.value;
+    apply(value);
+    try {
+      await api.setSetting(key, value);
+    } catch (e) {
+      setErr(e.message);
+      if (before !== undefined) apply(before);
+    }
   }
 
   const connected = status.some((h) => h.connected);
@@ -126,8 +169,11 @@ export default function Settings() {
     } catch (e) { setUpdate({ error: e.message }); }
   }
 
-  const behaviorGroups = settings?.groups.filter((g) => g.group !== "Interface") || [];
-  const interfaceGroups = settings?.groups.filter((g) => g.group === "Interface") || [];
+  // Route by SCOPE, not by name. This was `group !== "Interface"` vs `=== "Interface"`, so
+  // "OneKey Timing" landed on the Behavior tab by accident and any group added to the backend
+  // later would silently land there too.
+  const behaviorGroups = settings?.groups.filter((g) => g.scope === "device") || [];
+  const interfaceGroups = settings?.groups.filter((g) => g.scope !== "device") || [];
 
   return (
     <div>
