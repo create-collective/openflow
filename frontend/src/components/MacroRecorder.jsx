@@ -57,7 +57,7 @@ export default function MacroRecorder({ onCommit, onCancel }) {
   }));
 
   return (
-    <div className="card" style={{ marginTop: 20, maxWidth: 620 }}>
+    <div className="card macro-record">
       <h3>
         Record
         {recording && <span className="pill err" style={{ marginLeft: 8 }}>recording</span>}

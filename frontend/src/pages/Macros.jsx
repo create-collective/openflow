@@ -22,18 +22,22 @@ function StepRow({ step, index, count, onDelete, onMove, onDelay }) {
       <span className="skp-beh">{step.orderId + 1}</span>
       <span className="skp-arrow">→</span>
       <span className="skp-act">{label}</span>
-      <input
-        className="mac-input step-delay" type="number" min={0} max={60000}
-        defaultValue={step.delay} title="Delay after this step, in milliseconds"
-        onBlur={(e) => {
-          const n = Number(e.target.value);
-          if (Number.isFinite(n) && n !== step.delay) onDelay(step.id, n);
-        }}
-      />
-      <span style={{ color: "var(--text-dim)", marginRight: 8 }}>ms</span>
-      <button className="skp-x" disabled={index === 0} onClick={() => onMove(index, -1)} title="Move up">↑</button>
-      <button className="skp-x" disabled={index === count - 1} onClick={() => onMove(index, 1)} title="Move down">↓</button>
-      <button className="skp-x" onClick={() => onDelete(step.id)} title="Delete step">✕</button>
+      <span className="step-cell-delay">
+        <input
+          className="mac-input step-delay" type="number" min={0} max={60000}
+          defaultValue={step.delay} title="Delay after this step, in milliseconds"
+          onBlur={(e) => {
+            const n = Number(e.target.value);
+            if (Number.isFinite(n) && n !== step.delay) onDelay(step.id, n);
+          }}
+        />
+        <span style={{ color: "var(--text-dim)" }}>ms</span>
+      </span>
+      <span className="step-cell-actions">
+        <button className="skp-x" disabled={index === 0} onClick={() => onMove(index, -1)} title="Move up">↑</button>
+        <button className="skp-x" disabled={index === count - 1} onClick={() => onMove(index, 1)} title="Move down">↓</button>
+        <button className="skp-x" onClick={() => onDelete(step.id)} title="Delete step">✕</button>
+      </span>
     </div>
   );
 }
@@ -116,8 +120,8 @@ export default function Macros() {
       </div>
       {err && <div className="card"><div className="phase-note">{err}</div></div>}
 
-      <div className="module-layout">
-        <div className="module-list">
+      <div className="macro-layout">
+        <div className="module-list macro-rail">
           <div className="module-group-title">Macros</div>
           {macros.length === 0 && <div className="empty" style={{ padding: 16 }}>No macros yet.</div>}
           {macros.map((m) => (
@@ -141,19 +145,29 @@ export default function Macros() {
           </div>
         </div>
 
-        <div className="module-detail">
+        <div className="module-detail macro-detail">
           {!macro ? (
             <div className="empty">Select or create a macro to edit its steps.</div>
           ) : (
             <>
-              <h2 style={{ margin: "0 0 4px" }}>
-                ⚡{" "}
-                <span
-                  title="Double-click to rename"
-                  onDoubleClick={() => setRenaming(macro.name)}
-                  style={{ cursor: "text" }}
-                >{macro.name}</span>
-              </h2>
+              <div className="macro-head">
+                <h2 style={{ margin: 0 }}>
+                  ⚡{" "}
+                  <span
+                    title="Double-click to rename"
+                    onDoubleClick={() => setRenaming(macro.name)}
+                    style={{ cursor: "text" }}
+                  >{macro.name}</span>
+                </h2>
+                <span className="macro-head-count">
+                  {macro.steps.length} step{macro.steps.length === 1 ? "" : "s"}
+                </span>
+                <button className="btn danger" onClick={async () => {
+                  await api.deleteMacro(macro.id);
+                  setSelectedId(null);
+                  await load();
+                }}>Delete macro</button>
+              </div>
               {renaming !== null && (
                 <div className="btn-row" style={{ margin: "0 0 12px" }}>
                   <input className="mac-input" autoFocus value={renaming}
@@ -166,16 +180,20 @@ export default function Macros() {
                   <button className="btn" onClick={() => setRenaming(null)}>Cancel</button>
                 </div>
               )}
-              <div className="btn-row" style={{ margin: "0 0 16px" }}>
-                <button className="btn danger" onClick={async () => {
-                  await api.deleteMacro(macro.id);
-                  setSelectedId(null);
-                  await load();
-                }}>Delete macro</button>
-              </div>
 
-              <div className="skp-head"><span>Step</span><span className="skp-arrow">→</span><span>Action</span></div>
-              {macro.steps.length === 0 && <div className="empty">No steps yet. Add one below.</div>}
+              <div className="card macro-steps">
+              <div className="skp-head">
+                <span style={{ minWidth: 34 }}>#</span>
+                <span className="skp-arrow">→</span>
+                <span style={{ flex: 1 }}>Action</span>
+                <span style={{ minWidth: 96, textAlign: "right" }}>Delay</span>
+                <span style={{ minWidth: 74 }} />
+              </div>
+              {macro.steps.length === 0 && (
+                <div className="empty" style={{ padding: "18px 0" }}>
+                  No steps yet. Record one below, or add them by hand.
+                </div>
+              )}
               {macro.steps.map((s, i) => (
                 <StepRow
                   key={s.id}
@@ -195,6 +213,9 @@ export default function Macros() {
                 />
               ))}
 
+              </div>
+
+              <div className="macro-compose">
               <MacroRecorder
                 onCommit={async (steps) => {
                   if (!steps.length) return;
@@ -203,7 +224,7 @@ export default function Macros() {
                 }}
               />
 
-              <div className="card" style={{ marginTop: 20, maxWidth: 620 }}>
+              <div className="card macro-add">
                 <h3>Add step</h3>
                 <div className="btn-row" style={{ marginBottom: 12 }}>
                   {["key", "text", "wait", "launch", "command"].map((k) => (
@@ -216,7 +237,9 @@ export default function Macros() {
                 {stepKind === "key" && (
                   <>
                     <div className="btn-row" style={{ marginBottom: 12, alignItems: "center" }}>
-                      <span className="skp-act" style={{ minWidth: 120 }}>
+                      {/* Not .skp-act: that carries flex:1 and flung the state select to the
+                          far edge of a full-width card, reading as an unrelated control. */}
+                      <span className="macro-pick">
                         {keyCode
                           ? actionText({ actionCode: keyCode, actionType: keyType })
                           : <span style={{ color: "var(--text-dim)" }}>Pick a key below</span>}
@@ -276,6 +299,7 @@ export default function Macros() {
                   </label>
                   <button className="btn primary" onClick={addStep}>Add step</button>
                 </div>
+              </div>
               </div>
             </>
           )}
