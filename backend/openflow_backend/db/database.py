@@ -69,6 +69,11 @@ def init_db(path: Path | None = None) -> None:
         # Tag rows that predate the column so new profiles can be grouped beside them.
         from .module_profiles import backfill_variants
         backfill_variants(conn)
+        # Device settings used to be stored under their plain id, where the flash path -- which
+        # looks them up by NayaFlow's correlation UUID -- could never find them. Carry those
+        # rows over so a user's existing choices start taking effect instead of being dropped.
+        from .settings import migrate_legacy_setting_keys
+        migrate_legacy_setting_keys(conn)
         conn.commit()
     finally:
         conn.close()
