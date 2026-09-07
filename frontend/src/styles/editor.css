@@ -1887,3 +1887,14 @@
 }
 .vm-motion-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--neutral17); }
 .vm-motion-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Tabs whose label is an ICON, not a character.
+   `.palette-tab` centres with text-align, which handles a glyph but leaves an inline <svg>
+   sitting on the text baseline -- centred across, a couple of pixels high down. Flex centres the
+   box itself. Scoped with :has(svg) so the character tabs keep the text metrics they were built
+   against; additive, so nothing existing is edited. */
+.palette-tab:has(svg) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

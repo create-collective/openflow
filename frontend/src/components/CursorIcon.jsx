@@ -5,15 +5,22 @@
 //
 // Two details that the first attempt got wrong and are worth keeping right:
 //
-//   * The viewBox is the path's TIGHT bounding box, not a round 0 0 16 16. With slack in the
-//     box the artwork sits wherever the path happens to fall, which is what made the first one
-//     look off-centre; with a tight box plus xMidYMid the browser centres the actual ink.
+//   * The viewBox is the path's TIGHT bounding box, not a round 0 0 16 16, so the artwork fills
+//     the frame instead of floating somewhere inside it.
+//   * NO `display: block`. The tab centres its contents with `text-align: center`, which has no
+//     effect on a block-level child -- setting it parked the icon against the left padding edge,
+//     11px off centre in a 40px tab. LayersIcon sits in the same strip and stays inline, which
+//     is exactly why it has never had this problem.
+//   * `verticalAlign: middle` because staying inline is what fixes the horizontal centring, and
+//     an inline box otherwise sits on the TEXT BASELINE -- which left descender space below it
+//     and pushed the icon 4px high in the tab.
 //   * It is the full pointer WITH its tail, white on a dark outline, which is what makes it read
 //     as a cursor instantly rather than as a generic triangle.
 export default function CursorIcon({ size = 15 }) {
   return (
     <svg width={size} height={size} viewBox="3.4 1.2 14.6 20.5"
-      preserveAspectRatio="xMidYMid meet" aria-hidden="true" style={{ display: "block" }}>
+      preserveAspectRatio="xMidYMid meet" aria-hidden="true"
+      style={{ verticalAlign: "middle" }}>
       <path
         d="M4 1.8 L4 18.6 L8.3 14.4 L11 20.9 L14.2 19.5 L11.6 13.2 L17.4 12.9 Z"
         fill="#fff" stroke="#111" strokeWidth="1.3"
