@@ -141,6 +141,57 @@ _STEP_TABLES = (
 )
 
 
+def rename_macro(macro_id: str, name: str) -> dict:
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("a macro needs a name")
+    conn = connect()
+    try:
+        cur = conn.execute("UPDATE macros SET name=?, updated_at=? WHERE id=?",
+                           (name, _now(), macro_id))
+        if cur.rowcount == 0:
+            raise ValueError(f"no macro {macro_id}")
+        conn.commit()
+        return {"ok": True, "id": macro_id, "name": name}
+    finally:
+        conn.close()
+
+
+def update_step(step_id: str, *, delay: int | None = None, action_code: str | None = None,
+                state: str | None = None, input: str | None = None) -> dict:
+    """Edit a step in place.
+
+    Delay was settable only at the moment a step was added, so fixing a timing meant deleting
+    the step and rebuilding it -- which also lost its position. The step's table is found by
+    id rather than passed in, because the caller has a step id and nothing else; which of the
+    five tables holds it is our problem, not theirs.
+
+    Only columns that exist on the found table are written, so asking to change `input` on a
+    key step is ignored rather than raising -- the UI sends whatever the step kind implies.
+    """
+    fields = {"delay": delay, "action_code": action_code, "state": state, "input": input}
+    fields = {k: v for k, v in fields.items() if v is not None}
+    if not fields:
+        return {"ok": True, "id": step_id, "changed": []}
+    conn = connect()
+    try:
+        for tbl in _STEP_TABLES:
+            row = conn.execute(f"SELECT id FROM {tbl} WHERE id=?", (step_id,)).fetchone()
+            if row is None:
+                continue
+            cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({tbl})")}
+            usable = {k: v for k, v in fields.items() if k in cols}
+            if usable:
+                sets = ", ".join(f"{k}=?" for k in usable)
+                conn.execute(f"UPDATE {tbl} SET {sets}, updated_at=? WHERE id=?",
+                             (*usable.values(), _now(), step_id))
+                conn.commit()
+            return {"ok": True, "id": step_id, "changed": sorted(usable)}
+        raise ValueError(f"no step {step_id}")
+    finally:
+        conn.close()
+
+
 def _macro_id_for_step(conn, step_id: str) -> str | None:
     for tbl in _STEP_TABLES:
         r = conn.execute(f"SELECT macro_id FROM {tbl} WHERE id=?", (step_id,)).fetchone()

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
+import VirtualKeyboard from "../components/VirtualKeyboard";
+import { actionText } from "../lib/keylabels";
 
 // Macro editor. Naya never shipped one; ZMK supports macros and the schema is
 // ready, so we build a working editor: create macros, add ordered steps
 // (Key / Text / Wait), persisted offline to SQLite.
 
-function StepRow({ step, index, count, onDelete, onMove }) {
+function StepRow({ step, index, count, onDelete, onMove, onDelay }) {
   let label;
   if (step.kind === "key") label = `Key: ${step.actionCode || "?"} (${step.state})`;
   else if (step.kind === "text") label = `Text: "${step.input}"`;
@@ -16,7 +18,15 @@ function StepRow({ step, index, count, onDelete, onMove }) {
       <span className="skp-beh">{step.orderId + 1}</span>
       <span className="skp-arrow">→</span>
       <span className="skp-act">{label}</span>
-      <span style={{ color: "var(--text-dim)", marginRight: 8 }}>{step.delay}ms</span>
+      <input
+        className="mac-input step-delay" type="number" min={0} max={60000}
+        defaultValue={step.delay} title="Delay after this step, in milliseconds"
+        onBlur={(e) => {
+          const n = Number(e.target.value);
+          if (Number.isFinite(n) && n !== step.delay) onDelay(step.id, n);
+        }}
+      />
+      <span style={{ color: "var(--text-dim)", marginRight: 8 }}>ms</span>
       <button className="skp-x" disabled={index === 0} onClick={() => onMove(index, -1)} title="Move up">↑</button>
       <button className="skp-x" disabled={index === count - 1} onClick={() => onMove(index, 1)} title="Move down">↓</button>
       <button className="skp-x" onClick={() => onDelete(step.id)} title="Delete step">✕</button>
@@ -30,10 +40,12 @@ export default function Macros() {
   const [err, setErr] = useState(null);
   const [newName, setNewName] = useState("");
   const [stepKind, setStepKind] = useState("key");
-  const [keyCode, setKeyCode] = useState("A");
+  const [keyCode, setKeyCode] = useState("");
   const [keyState, setKeyState] = useState("tap");
+  const [keyType, setKeyType] = useState("key");
   const [textVal, setTextVal] = useState("");
   const [delay, setDelay] = useState(30);
+  const [renaming, setRenaming] = useState(null);
 
   async function load() {
     try {
@@ -57,10 +69,21 @@ export default function Macros() {
     setSelectedId(r.id);
   }
 
+  async function saveRename() {
+    const name = (renaming || "").trim();
+    if (!macro || !name || name === macro.name) { setRenaming(null); return; }
+    try { await api.renameMacro(macro.id, name); await load(); }
+    catch (e) { setErr(e.message); }
+    setRenaming(null);
+  }
+
   async function addStep() {
     if (!macro) return;
     const body = { macroId: macro.id, kind: stepKind, delay: Number(delay) || 30 };
-    if (stepKind === "key") { body.actionCode = keyCode; body.state = keyState; }
+    if (stepKind === "key") {
+      if (!keyCode) { setErr("Pick a key for this step first."); return; }
+      body.actionCode = keyCode; body.state = keyState;
+    }
     if (stepKind === "text") body.input = textVal;
     await api.addMacroStep(body);
     setTextVal("");
@@ -71,6 +94,12 @@ export default function Macros() {
     <div>
       <h1 className="page-title">Macros</h1>
       <p className="page-sub">Record ordered sequences of key, text, and wait steps.</p>
+      <div className="phase-note" style={{ maxWidth: 720, marginBottom: 16 }}>
+        Macros are stored in OpenFlow but <strong>cannot be bound to a key yet</strong>. The
+        keyboard reserves the macro behaviour type but implements no macro table &mdash; every
+        write to it is acknowledged and discarded, and Naya&rsquo;s own software never writes one
+        either. Building them here is safe; they simply do not reach the board.
+      </div>
       {err && <div className="card"><div className="phase-note">{err}</div></div>}
 
       <div className="module-layout">
@@ -103,7 +132,26 @@ export default function Macros() {
             <div className="empty">Select or create a macro to edit its steps.</div>
           ) : (
             <>
-              <h2 style={{ margin: "0 0 4px" }}>⚡ {macro.name}</h2>
+              <h2 style={{ margin: "0 0 4px" }}>
+                ⚡{" "}
+                <span
+                  title="Double-click to rename"
+                  onDoubleClick={() => setRenaming(macro.name)}
+                  style={{ cursor: "text" }}
+                >{macro.name}</span>
+              </h2>
+              {renaming !== null && (
+                <div className="btn-row" style={{ margin: "0 0 12px" }}>
+                  <input className="mac-input" autoFocus value={renaming}
+                    onChange={(e) => setRenaming(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveRename();
+                      if (e.key === "Escape") setRenaming(null);
+                    }} />
+                  <button className="btn primary" onClick={saveRename}>Rename</button>
+                  <button className="btn" onClick={() => setRenaming(null)}>Cancel</button>
+                </div>
+              )}
               <div className="btn-row" style={{ margin: "0 0 16px" }}>
                 <button className="btn danger" onClick={async () => {
                   await api.deleteMacro(macro.id);
@@ -121,6 +169,7 @@ export default function Macros() {
                   index={i}
                   count={macro.steps.length}
                   onDelete={async (id) => { await api.deleteMacroStep(id); await load(); }}
+                  onDelay={async (id, ms) => { await api.updateMacroStep(id, { delay: ms }); await load(); }}
                   onMove={async (index, dir) => {
                     const ids = macro.steps.map((x) => x.id);
                     const j = index + dir;
@@ -142,14 +191,29 @@ export default function Macros() {
                   ))}
                 </div>
                 {stepKind === "key" && (
-                  <div className="btn-row" style={{ marginBottom: 12 }}>
-                    <input className="mac-input" value={keyCode} onChange={(e) => setKeyCode(e.target.value.toUpperCase())} placeholder="Action code (e.g. A)" />
-                    <select className="mac-input" value={keyState} onChange={(e) => setKeyState(e.target.value)}>
-                      <option value="tap">tap</option>
-                      <option value="press">press</option>
-                      <option value="release">release</option>
-                    </select>
-                  </div>
+                  <>
+                    <div className="btn-row" style={{ marginBottom: 12, alignItems: "center" }}>
+                      <span className="skp-act" style={{ minWidth: 120 }}>
+                        {keyCode
+                          ? actionText({ actionCode: keyCode, actionType: keyType })
+                          : <span style={{ color: "var(--text-dim)" }}>Pick a key below</span>}
+                      </span>
+                      <select className="mac-input" value={keyState}
+                        onChange={(e) => setKeyState(e.target.value)}>
+                        <option value="tap">tap</option>
+                        <option value="press">press</option>
+                        <option value="release">release</option>
+                      </select>
+                    </div>
+                    {/* Was a bare text input: `value.toUpperCase()`, no validation, so "ASDF"
+                        saved happily. This is the same picker every other binding surface uses,
+                        so a step can only hold a code the rest of the app understands. */}
+                    <VirtualKeyboard
+                      disabled={false}
+                      onPick={(pick) => { setKeyCode(pick.actionCode); setKeyType(pick.actionType); }}
+                      disabledHint=""
+                    />
+                  </>
                 )}
                 {stepKind === "text" && (
                   <div style={{ marginBottom: 12 }}>

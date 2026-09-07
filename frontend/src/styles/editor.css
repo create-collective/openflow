@@ -1935,3 +1935,17 @@
   color: var(--text-dim); margin: 14px 0 6px; padding-top: 10px;
   border-top: 1px solid var(--border-strong);
 }
+
+/* An explanation inside a palette category -- why a whole tab is inert, as opposed to
+   .palette-disabled which covers a body that is merely waiting for a selection. */
+.palette-note {
+  font-size: 12px; line-height: 1.5; color: var(--text-dim);
+  background: var(--neutral17); border-left: 2px solid #eab308;
+  padding: 8px 10px; border-radius: 0 6px 6px 0; margin: 0 0 10px;
+}
+
+/* Per-step delay, editable in the row rather than only at creation time. */
+.step-delay {
+  width: 72px; text-align: right; font-family: var(--font-mono);
+  padding: 2px 6px; margin-right: 4px;
+}

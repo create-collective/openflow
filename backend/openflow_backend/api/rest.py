@@ -262,6 +262,27 @@ async def reorder_macro_steps(body: dict = Body(...)) -> dict:
     return await run_in_threadpool(mac.reorder_steps, body["macroId"], body["orderedIds"])
 
 
+@router.post("/rpc/rename-macro")
+async def rename_macro(body: dict = Body(...)) -> dict:
+    try:
+        return await run_in_threadpool(mac.rename_macro, body["macroId"], body.get("name", ""))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/update-macro-step")
+async def update_macro_step(body: dict = Body(...)) -> dict:
+    """Edit a step in place. Previously the delay could only be chosen when the step was
+    created, so correcting a timing meant deleting and rebuilding it -- losing its position."""
+    try:
+        return await run_in_threadpool(
+            mac.update_step, body["stepId"],
+            delay=body.get("delay"), action_code=body.get("actionCode"),
+            state=body.get("state"), input=body.get("input"))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/rpc/set-key-binding")
 async def set_key_binding(body: dict = Body(...)) -> dict:
     try:

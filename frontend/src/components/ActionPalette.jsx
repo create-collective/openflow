@@ -109,8 +109,27 @@ export default function ActionPalette({
         ) : tab?.id === "keyboard" ? (
           <VirtualKeyboard disabled={disabled} onPick={onPick} disabledHint={disabledHint} />
         ) : tab?.id === "macros" ? (
+          // Shown, but NOT bindable. The keyboard's macro table is not implemented in firmware:
+          // it answers READ_MACRO_LIST/READ_MACRO_DATA and holds nothing, and every
+          // WRITE_MACRO_LIST/WRITE_MACRO_DATA we have sent -- seven encoding variants -- was
+          // ACKed and discarded. NayaCore never sends those opcodes either, even when flashing
+          // a profile that contains a macro. See docs/module-field-map.md (C9/C10).
+          //
+          // Binding one used to be possible: it saved, the keycap read "Macro", and flash.py
+          // dropped it silently at write time. Showing them greyed with the reason is honest;
+          // hiding the tab would just make the same dead end harder to understand.
           <div className="palette-cat">
-            <div className="palette-cat-title">Macros <span className="palette-count">{macros.length}</span></div>
+            <div className="palette-cat-title">
+              Macros <span className="palette-count">{macros.length}</span>
+              <span className="gesture-badge prov-experimental" style={{ marginLeft: 8 }}>
+                experimental
+              </span>
+            </div>
+            <div className="palette-note">
+              Macros cannot be bound to a key yet. The keyboard reserves the macro behaviour type
+              but implements no macro table, so a bound macro would never reach the board. You can
+              still build and edit them on the Macros page.
+            </div>
             {macros.length === 0 ? (
               <div className="palette-disabled">No macros yet. Create them on the Macros page.</div>
             ) : (
@@ -118,10 +137,9 @@ export default function ActionPalette({
                 {macros.map((m) => (
                   <button
                     key={m.id}
-                    className="palette-key"
-                    disabled={disabled}
-                    title={`Bind macro: ${m.name}`}
-                    onClick={() => onPick({ actionCode: m.id, actionType: "macro" })}
+                    className="palette-key soon"
+                    disabled
+                    title="Not bindable: the keyboard has no macro table (firmware limitation)."
                   >
                     ⚡ {m.name}
                   </button>
