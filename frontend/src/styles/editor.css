@@ -1817,3 +1817,73 @@
   white-space: nowrap;
 }
 .apps-more { padding: 6px 10px; color: var(--text-dim); font-size: 11px; }
+
+/* --- Virtual mouse (module gestures) -------------------------------------------------------
+   Drawn rather than listed: "which button is Mouse 4" has an obvious answer when you can see
+   it, and none at all in a dropdown reading M4. */
+.vm { display: flex; flex-direction: column; gap: 14px; }
+.vm-body { display: flex; gap: 18px; align-items: flex-start; }
+
+.vm-shell {
+  width: 150px;
+  border: 1px solid var(--border-strong);
+  border-radius: 74px 74px 56px 56px;
+  overflow: hidden;
+  background: var(--neutral6);
+}
+.vm-top { display: grid; grid-template-columns: 1fr 34px 1fr; height: 96px; }
+.vm-palm { height: 78px; border-top: 1px solid var(--border-strong); }
+
+.vm-btn {
+  border: none;
+  background: var(--neutral10);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: background 0.12s;
+}
+.vm-btn:hover:not(:disabled) { background: var(--accent); color: var(--accent-fg); }
+.vm-btn:disabled { opacity: 0.5; cursor: default; }
+.vm-left { border-right: 1px solid var(--border-strong); border-radius: 72px 0 0 0; }
+.vm-right { border-left: 1px solid var(--border-strong); border-radius: 0 72px 0 0; }
+.vm-btn-label { font-weight: 600; }
+.vm-btn-code { font-size: 10px; opacity: 0.7; font-family: var(--mono, ui-monospace, monospace); }
+
+.vm-side { display: flex; flex-direction: column; gap: 6px; }
+.vm-side-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+.vm-sidebtn {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: var(--neutral10);
+  min-width: 116px;
+}
+
+.vm-motion-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin-top: 6px; }
+.vm-motion-btn {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--neutral10);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.vm-motion-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--neutral17); }
+.vm-motion-btn:disabled { opacity: 0.5; cursor: default; }

@@ -327,6 +327,13 @@ def _tabs():
             {"name": "Control", "actions": _control()},
             {"name": "Symbols", "actions": _symbols()},
         ]},
+        # Module-only, and that is not an oversight. A mouse action on a KEY position never
+        # reaches the device -- a key takes record type 0x00 with the same two-u32 body, but
+        # its category namespace differs (category 3 is BLUETOOTH on a key and mouse buttons on
+        # a module), and we have no capture of what a key uses for mouse. Offering it on
+        # Bindings would offer a binding that silently never flashes.
+        {"id": "mouse", "label": "●", "title": "Mouse",
+         "contexts": [MODULE], "categories": []},
         # 5,311 chords across 20 applications. No categories: it has its own render branch,
         # because a searchable list of five thousand entries is not a grid of buttons. Visible
         # in BOTH contexts -- an app shortcut is just a chord, and a keycap can hold one as

@@ -237,7 +237,11 @@ def encode_module_config(slot: int, field_records: list[bytes]) -> bytes:
 # Confirmed against the 2026-09-02 Track Left flash; see docs/module-gestures.md.
 TWO_WORD = 0x0F
 MOUSE_CATEGORY = 3
-MOUSE_MASK = {"M1": 1, "M2": 2, "M3": 4, "M4": 8}
+# M5 = 16 proved on hardware 2026-09-06: written as category 3 selector 16 into a Tune's
+# 1-finger tap, the tap drove browser FORWARD (X-button 2). M1-M4 came from a 2026-09-02 Track
+# capture and could not have shown a fifth -- a Track has four buttons -- so this was the
+# obvious bit continuation, and it needed testing rather than assuming.
+MOUSE_MASK = {"M1": 1, "M2": 2, "M3": 4, "M4": 8, "M5": 16}
 MOUSE_MASK_REV = {v: k for k, v in MOUSE_MASK.items()}
 
 
