@@ -55,14 +55,34 @@ def test_the_write_covers_every_led_the_device_reports():
     assert len(leds(payload)) == 136
 
 
-def test_leds_the_app_does_not_model_keep_what_the_device_has():
-    """Not defaulted. 97-135 have no representation in the DB, and inventing a value there is
-    what would wipe the module LEDs -- the opposite of the reported bug, equally wrong."""
+def test_the_right_module_block_follows_position_88():
+    """LEDs 97-135 are the right module's block: 39 LEDs carrying ONE colour, not 39 colours.
+
+    Derived by diffing NayaFlow's database against the map it wrote to the board -- LEDs 82-89
+    map identity to positions 82-89, and the 97-135 block always equals what position 88/89
+    holds. This is what left the Track module green while every key changed."""
     profile = {i: (120, 100) for i in range(97)}
-    device = {i: (266, 100) for i in range(136)}          # board holds purple everywhere
+    profile[F.RIGHT_MODULE_LED_SOURCE] = (266, 100)       # purple on the source position
+    got = leds(F._led_payload(0, profile, {i: (0, 100) for i in range(136)}))
+    assert all(got[i] == (266, 100) for i in range(97, 136)), "the module block did not follow 88"
+    assert got[50] == (120, 100), "ordinary key colours disturbed"
+
+
+def test_the_block_is_one_colour_not_a_per_led_map():
+    """39 identical values, confirmed in every capture. If this becomes per-LED the source data
+    has to say so first."""
+    profile = {i: (i % 300, 100) for i in range(97)}
+    got = leds(F._led_payload(0, profile, {i: (0, 100) for i in range(136)}))
+    assert len({got[i] for i in range(97, 136)}) == 1
+
+
+def test_without_a_colour_on_the_source_the_device_value_is_kept():
+    """The fallback still matters: with nothing to copy, passing the device's own value through
+    beats inventing one, which would wipe whatever the module is meant to show."""
+    profile = {i: (120, 100) for i in range(97) if i != F.RIGHT_MODULE_LED_SOURCE}
+    device = {i: (266, 100) for i in range(136)}
     got = leds(F._led_payload(0, profile, device))
-    assert all(got[i] == (120, 100) for i in range(97)), "profile colours not written"
-    assert all(got[i] == (266, 100) for i in range(97, 136)), "unmodelled LEDs were overwritten"
+    assert all(got[i] == (266, 100) for i in range(97, 136))
 
 
 def test_a_gap_inside_the_profile_range_is_unset_not_white():

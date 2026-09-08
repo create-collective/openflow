@@ -35,6 +35,20 @@ SECOND_BANK = 0x52
 SECOND_BANK_KEYS = range(0x00, 0x4A)
 ALL_LAYER_POSITIONS = range(0x00, 0x9C)
 LED_COUNT = 88                                # 0x00..0x57 (observed full LED map = 136? see note)
+# The app models 97 key positions; the board reports 136 LEDs per layer. The 39 past the key
+# range are the RIGHT module's block, and they are not individually addressable colours -- all 39
+# carry ONE value, confirmed identical within each layer in every capture we hold.
+#
+# That value tracks key position 88. Derived by diffing NayaFlow's own database against the map
+# it produced on the board: LEDs 82-89 map identity to positions 82-89, and the 97-135 block
+# always equals what positions 88/89 hold. 88 and 89 carry the same colour in both profiles we
+# have, so which of the two is the real source is NOT yet distinguished -- it needs a profile
+# where they differ. Either way this reproduces the vendor's behaviour on everything we can check.
+#
+# INFERRED, from one NayaFlow flash. To falsify: colour positions 88 and 89 differently, flash,
+# and see which one the right-hand module follows.
+KEY_POSITIONS = 97
+RIGHT_MODULE_LED_SOURCE = 88
 SYS_SET_TIMEOUTS = 0x100A
 
 # ---- MODULE CONFIDENCE ------------------------------------------------------------------
@@ -547,7 +561,18 @@ def _led_payload(idx: int, leds: dict[int, tuple[int, int]],
     # mention must carry the unset sentinel rather than a colour.
     unset = (0, keymap_read.UNSET_SATURATION)
     count = max([*leds, *device], default=-1) + 1
-    recs = [R.encode_led_record(i, *leds.get(i, device.get(i, unset))) for i in range(count)]
+    # LEDs past the app's key positions are the RIGHT module's block, and they take ONE colour
+    # rather than a colour each. See RIGHT_MODULE_LED_SOURCE.
+    block = leds.get(RIGHT_MODULE_LED_SOURCE)
+    recs = []
+    for i in range(count):
+        if i in leds:
+            value = leds[i]
+        elif i >= KEY_POSITIONS and block is not None:
+            value = block
+        else:
+            value = device.get(i, unset)
+        recs.append(R.encode_led_record(i, *value))
     return R.encode_led_map(idx, recs)
 
 
