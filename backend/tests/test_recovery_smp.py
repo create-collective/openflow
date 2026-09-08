@@ -86,7 +86,8 @@ def test_request_header_layout():
     # This assertion previously encoded the opposite and passed happily while the bootloader
     # ignored every frame we sent.
     assert length == len(body) - 2, "the length prefix must cover the body AND the CRC"
-    assert (op, flags, group, seq, cmd) == (0, 0, 1, 0, 0), (op, flags, group, seq, cmd)
+    # `op` here is the whole first byte: version in bits 3-4, op in bits 0-2.
+    assert (op, flags, group, seq, cmd) == (0x08, 0, 1, 0, 0), (op, flags, group, seq, cmd)
     assert plen == 1, "an empty CBOR map is one byte"
 
 
@@ -160,3 +161,29 @@ def test_no_hash_is_not_treated_as_a_match():
 def test_empty_catalog_matches_nothing():
     assert rec.identify("479e89ba", [])["identified"] is False
     assert rec.identify("479e89ba", None)["identified"] is False
+
+
+# --- pinned against a reference implementation ------------------------------------------------ #
+# Everything above validates our encoder against our own decoder, which proves they agree and
+# nothing more. This compares the bytes to the `smp` library, and it is the assertion that would
+# actually have caught the bug that cost six reboots: the first header byte carries the SMP
+# protocol VERSION in bits 3-4, not just the op, and we were sending version 0. The bootloader
+# did not reject that -- it ignored it, which looks exactly like a dead port.
+
+def test_our_request_matches_the_reference_client_byte_for_byte():
+    try:
+        from smp import image_management as im
+    except ImportError:                       # pragma: no cover - optional dev dependency
+        import pytest
+        pytest.skip("smp not installed; this pins framing against the reference client")
+    ours = rec._smp_header(rec.SMP_OP_READ, rec.SMP_GROUP_IMAGE,
+                           rec.SMP_ID_IMAGE_STATE, 1) + b"\xa0"
+    assert ours == bytes(im.ImageStatesReadRequest()), (
+        f"our framing drifted from the reference: {ours.hex()}")
+
+
+def test_the_version_bits_are_actually_set():
+    """Stated separately so the reason survives even if `smp` is not installed."""
+    hdr = rec._smp_header(rec.SMP_OP_READ, rec.SMP_GROUP_IMAGE, rec.SMP_ID_IMAGE_STATE, 1)
+    assert hdr[0] == 0x08, f"first byte {hdr[0]:#04x}: version bits missing, op-only header"
+    assert hdr[0] & 0x07 == rec.SMP_OP_READ, "the op must survive in the low three bits"

@@ -150,9 +150,19 @@ def _crc16_xmodem(data: bytes) -> int:
     return crc
 
 
-def _smp_header(op: int, group: int, cmd_id: int, payload_len: int, seq: int = 0) -> bytes:
-    #  op | flags | length(BE) | group(BE) | seq | id
-    return struct.pack(">BBHHBB", op, 0, payload_len, group, seq, cmd_id)
+# The first header byte is NOT just the op. Bits 0-2 are the op, bits 3-4 are the SMP protocol
+# VERSION. Sending version 0 produced a frame this bootloader silently ignored -- no error, no
+# reply, indistinguishable from a dead port, and it cost six reboots before the byte was compared
+# against a reference client. `smp` builds 08 00 00 01 00 01 00 00 for an image-state read; we
+# were building 00 00 00 01 00 01 00 00.
+SMP_VERSION = 1
+
+
+def _smp_header(op: int, group: int, cmd_id: int, payload_len: int, seq: int = 0,
+                version: int = SMP_VERSION) -> bytes:
+    #  version<<3 | op | flags | length(BE) | group(BE) | seq | id
+    return struct.pack(">BBHHBB", ((version & 0x03) << 3) | (op & 0x07), 0,
+                       payload_len, group, seq, cmd_id)
 
 
 def encode_request(op: int, group: int, cmd_id: int, payload: bytes = b"\xa0", seq: int = 0):
@@ -201,6 +211,25 @@ def _talk(port: str, frame: bytes, timeout: float = 2.0) -> dict:
     long-lived handle would be a handle to something that has already gone.
     """
     import serial
+    import time as _time
+
+    # Windows can refuse the port for a moment right after the bootloader enumerates -- an
+    # "Access is denied" that clears on its own. Retrying is the difference between testing the
+    # data port and never reaching it; a single attempt reported the denial and moved on, so the
+    # data port went untested across several probe runs.
+    last_open_error = None
+    for _attempt in range(4):
+        try:
+            with serial.Serial(port=port, baudrate=115200, bytesize=serial.EIGHTBITS,
+                               parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
+                               timeout=0.05, dsrdtr=False, write_timeout=timeout) as _probe:
+                pass
+            break
+        except serial.SerialException as e:
+            last_open_error = e
+            _time.sleep(0.35)
+    else:
+        raise last_open_error
 
     # Opened the way the vendored transport opens a Naya CDC port, not with pyserial's defaults.
     # dsrdtr defaults to False in pyserial but the explicit settings matter on Windows: a bare
