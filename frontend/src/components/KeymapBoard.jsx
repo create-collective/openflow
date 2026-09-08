@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ModuleBayPicker from "./ModuleBayPicker";
 import { keyLegend } from "../lib/keylabels";
+import { deviceColor } from "../lib/color";
 import LayersIcon from "./LayersIcon";
 import WindowsIcon from "./WindowsIcon";
 import { SHAPES, POS_SHAPE } from "../lib/keyshapes";
@@ -55,7 +56,7 @@ function contrastText(hex) {
 
 // One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked,
 // with the resolved legend centered per-shape.
-function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
+function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline }) {
   const shape = SHAPES[POS_SHAPE[pos]] || SHAPES.Ve;
   const [, , vbw, vbh] = shape.viewBox.split(" ").map(Number);
   const w = vbw * KEY_UNIT, h = vbh * KEY_UNIT;
@@ -70,7 +71,20 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
   const showColor = mode === "color" && color;
   const textColor = showColor ? contrastText(color) : undefined;
   const fill = showColor ? color : "var(--neutral6)";
-  const stroke = selected ? "var(--accent)" : "var(--border-strong)";
+  // On Bindings, the LED colour can be shown as an OUTLINE rather than a fill. Filling the cap
+  // (what the Colour page does) drowns out the legend, which is the whole point of this page --
+  // you want to see the binding AND which colour group it is in at the same time. NayaFlow
+  // outlines for the same reason.
+  //
+  // The colour shown is the DEVICE colour, matching the Colour page's board: what the keyboard
+  // will actually light, not the picker value it came from.
+  const led = ledOutline && mode !== "color" && color ? deviceColor(color) : null;
+  // Selection still wins. A selected key must stay unambiguous, and an accent ring that some
+  // keys replace with their own colour would make "which key am I editing" a guessing game.
+  const stroke = selected ? "var(--accent)"
+    : led ? led.hex
+      : "var(--border-strong)";
+  const strokeWidth = led && !selected ? 3.5 : 2;
   const wrap = KEY_WRAPPERS[pos] || {};
   return (
     <button
@@ -88,9 +102,9 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap }) {
         style={{ position: "absolute", inset: 0, display: "block", overflow: "visible" }}>
         {shape.rect ? (
           <rect x={shape.rect.x} y={shape.rect.y} width={shape.rect.w} height={shape.rect.h}
-            rx={shape.rect.rx} fill={fill} stroke={stroke} strokeWidth="2" />
+            rx={shape.rect.rx} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
         ) : (
-          <path d={shape.d} fill={fill} stroke={stroke} strokeWidth="2" />
+          <path d={shape.d} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
         )}
       </svg>
       {legend.layer && (
@@ -126,7 +140,7 @@ function Column({ col, align, ...kp }) {
       marginTop: (col.mt || 0) * REM, marginRight: (col.mr || 0) * REM, marginLeft: (col.ml || 0) * REM,
     }}>
       {col.keys.map((pos) => (
-        <KeyCap key={pos} pos={pos} data={kp.keysByPosition[pos]} mode={kp.mode}
+        <KeyCap key={pos} pos={pos} data={kp.keysByPosition[pos]} mode={kp.mode} ledOutline={kp.ledOutline}
           selected={kp.selectedPosition === pos} onSelectKey={kp.onSelectKey} layerMap={kp.layerMap} />
       ))}
     </div>
@@ -193,12 +207,13 @@ function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosit
 export default function KeymapBoard(props) {
   const {
     keysByPosition = {}, mode = "bindings", selectedPosition = null, onSelectKey = () => {},
+    ledOutline = false,
     onSelectModule = null, moduleAssign = {}, showModulePalette = false, onAssignModule = null,
     pickedModule = null, onPickModule = null, layerMap = {}, bays = null,
     allowModuleDrag = true,
   } = props;
   const [openBay, setOpenBay] = useState(null);
-  const kp = { keysByPosition, mode, selectedPosition, onSelectKey, layerMap };
+  const kp = { keysByPosition, mode, selectedPosition, onSelectKey, layerMap, ledOutline };
 
   return (
     <div className="keymap-board2">
@@ -261,8 +276,8 @@ export default function KeymapBoard(props) {
           <ModuleSlot id="right" pos={89} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
         </div>
         <div className="kb-thumbs">
-          <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} />)}</div>
-          <div className="kb-thumb-group">{RIGHT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} />)}</div>
+          <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} ledOutline={ledOutline} />)}</div>
+          <div className="kb-thumb-group">{RIGHT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} ledOutline={ledOutline} />)}</div>
         </div>
       </div>
 

@@ -37,6 +37,12 @@ export default function Bindings() {
   const [moduleProfiles, setModuleProfiles] = useState([]);
   const [macros, setMacros] = useState([]);
   const [activeLayerId, setActiveLayerId] = useState(null);
+  // Show each key's LED colour as an outline on this page. Remembered, because it is a way of
+  // working rather than a one-off view -- you turn it on while laying out a layer's colour
+  // groups and want it still on when you come back.
+  const [ledOutline, setLedOutline] = useState(() => {
+    try { return localStorage.getItem("openflow.ledOutline") === "1"; } catch { return false; }
+  });
   const [selectedPos, setSelectedPos] = useState(null);
   const [activeSlot, setActiveSlot] = useState("tap");
   const [err, setErr] = useState(null);
@@ -415,6 +421,21 @@ export default function Bindings() {
           <div className="board-header">
             <div>
               <strong>{layer?.name}</strong>
+              <button
+                className={"btn tiny led-toggle" + (ledOutline ? " primary" : "")}
+                style={{ marginLeft: 10 }}
+                aria-pressed={ledOutline}
+                title={ledOutline
+                  ? "Hide LED colours"
+                  : "Outline each key in its LED colour, so you can see bindings and colour groups together"}
+                onClick={() => {
+                  const next = !ledOutline;
+                  setLedOutline(next);
+                  try { localStorage.setItem("openflow.ledOutline", next ? "1" : "0"); } catch { /* ignore */ }
+                }}
+              >
+                ◌ LED colours
+              </button>
             </div>
             <div className="board-actions-stack">
               {/* Above the buttons rather than beside them: as a sibling in the flex row a
@@ -452,6 +473,7 @@ export default function Bindings() {
           <KeymapBoard
             keysByPosition={keysByPosition}
             mode="bindings"
+            ledOutline={ledOutline}
             selectedPosition={selectedPos}
             onSelectKey={(pos) => { setSelectedPos(pos); setActiveSlot("tap"); }}
             layerMap={layerMap}
