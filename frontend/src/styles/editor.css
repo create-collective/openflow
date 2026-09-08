@@ -1272,6 +1272,31 @@
   cursor: pointer;
 }
 
+/* A corner chip showing what the KEYBOARD will light up, on swatches the device cannot store
+   exactly (it has hue + brightness but no saturation). `position: relative` goes on .swatch so
+   the chip anchors to it. */
+.swatch {
+  position: relative;
+  overflow: hidden;
+}
+
+.swatch-dev {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px 0 999px 0;
+  border-top: 1px solid var(--border-strong);
+  border-left: 1px solid var(--border-strong);
+  pointer-events: none;
+}
+
+.creator-arrow {
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
 .swatch.active {
   border-color: var(--text);
   box-shadow: 0 0 0 2px var(--accent);

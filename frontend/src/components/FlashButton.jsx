@@ -33,12 +33,18 @@ function hasReadDevice() {
 }
 
 function summarize(ops) {
-  const g = { layers: 0, colors: 0, modules: 0, timeouts: 0 };
+  const g = { layers: 0, colors: 0, modules: 0, timeouts: 0, layerList: 0, wipes: 0 };
   for (const op of ops || []) {
-    if (op.label?.startsWith("layer")) g.layers++;
-    else if (op.label?.startsWith("led")) g.colors++;
-    else if (op.label?.startsWith("module")) g.modules++;
-    else if (op.label?.startsWith("timeout")) g.timeouts++;
+    const l = op.label || "";
+    // Order matters: "layer list: 0, 1, 2" and "wipe layer 3" both start with words that the
+    // looser checks below would swallow. Counting the layer-list op as a layer is what made a
+    // three-layer profile report "4 layers".
+    if (l.startsWith("layer list")) g.layerList++;
+    else if (l.startsWith("wipe")) g.wipes++;
+    else if (l.startsWith("layer")) g.layers++;
+    else if (l.startsWith("led")) g.colors++;
+    else if (l.startsWith("module")) g.modules++;
+    else if (l.startsWith("timeout")) g.timeouts++;
   }
   return g;
 }
@@ -171,6 +177,12 @@ export default function FlashButton({ variant = "sidebar" }) {
                 <ul className="flash-diff">
                   <li><b>{g.layers}</b> layer{g.layers === 1 ? "" : "s"}</li>
                   <li><b>{g.colors}</b> colour map{g.colors === 1 ? "" : "s"}</li>
+                  {g.layerList > 0 && (
+                    <li title="Tells the keyboard which layer is which. Written only when the board disagrees.">
+                      layer list
+                    </li>
+                  )}
+                  {g.wipes > 0 && <li><b>{g.wipes}</b> deleted-layer wipe{g.wipes === 1 ? "" : "s"}</li>}
                   {g.modules > 0 && <li><b>{g.modules}</b> module config{g.modules === 1 ? "" : "s"}</li>}
                   {g.timeouts > 0 && <li>timeouts</li>}
                   <li className="flash-diff-tot">
