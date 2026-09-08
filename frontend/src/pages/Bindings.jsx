@@ -136,6 +136,9 @@ export default function Bindings() {
     const layer = profile.layers.find((l) => l.id === activeLayerId);
     const base = profile.layers.find((l) => l.orderId === 0) || profile.layers[0];
     const key = (type, side) => `${type}:keyboard_${side || "left"}`;
+    const layerLabel = layer
+      ? `Layer ${layer.orderId}${layer.name ? ` ${layer.name}` : ""}`
+      : null;
     const liveIds = new Set(
       Object.values(deviceRead || {}).map((e) => e.matched).filter(Boolean));
 
@@ -155,6 +158,7 @@ export default function Bindings() {
     };
 
     return {
+      layerLabel,
       // A Track profile belongs to one side: the left and right units are different hardware,
       // so the left bay must not offer right-hand profiles. Symmetric modules have a single
       // variant and every profile of the type is valid in either bay.

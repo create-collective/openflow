@@ -240,6 +240,7 @@ export default function KeymapBoard(props) {
                   <ModuleBayPicker
                     open={openBay === m.key}
                     anchorLabel={m.label}
+                    layerLabel={bays.layerLabel}
                     profiles={bays.profilesFor(m.type, m.side)}
                     selectedId={bays.selectedFor(m.type, m.side)}
                     inherited={bays.inheritedFor(m.type, m.side)}

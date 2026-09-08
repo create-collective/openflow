@@ -2148,3 +2148,9 @@
 .mod-target-clear { margin-left: auto; }
 /* The action text that replaced each row's dropdown. */
 .skp-act.unset { color: var(--text-dim); font-weight: 400; font-style: italic; }
+
+/* Bay menu header: module on the left, the layer it applies to beside it. */
+.bay-menu-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.bay-menu-mod { font-weight: 700; }
+.bay-menu-layer { color: var(--text-dim); font-weight: 400; }
+.bay-menu-layer::before { content: "— "; }

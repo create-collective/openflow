@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 // another layer and only that layer differs. The flash works out that the board then needs the
 // base layer's profiles plus that alternate.
 export default function ModuleBayPicker({
-  open, anchorLabel, profiles, selectedId, inherited, onPick, onClose, onManage,
+  open, anchorLabel, layerLabel, profiles, selectedId, inherited, onPick, onClose, onManage,
 }) {
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
@@ -39,7 +39,13 @@ export default function ModuleBayPicker({
   if (!open) return null;
   return (
     <div className="bay-menu" ref={ref} style={pos ? { top: pos.top, left: pos.left } : undefined}>
-      <div className="bay-menu-head">{anchorLabel}</div>
+      {/* Which LAYER this choice applies to. A bay assignment is per-layer -- the same Tune
+          icon opens a different answer on every layer -- and the menu never said which one you
+          were looking at, so two layers' menus were indistinguishable. */}
+      <div className="bay-menu-head">
+        <span className="bay-menu-mod">{anchorLabel}</span>
+        {layerLabel && <span className="bay-menu-layer">{layerLabel}</span>}
+      </div>
       {profiles.length === 0 ? (
         <div className="bay-menu-empty">No profiles for this module yet.</div>
       ) : (
