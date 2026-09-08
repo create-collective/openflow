@@ -34,6 +34,15 @@ function cleanCode(code) {
   if (shortcutInfo(code)) return shortcutLabel(code, { withChord: true });
   return code.replaceAll(" - ", " / ").replaceAll("_", " ");
 }
+// The name the catalog gives an action, falling back to the tidied code. Without this the
+// palette button reads "Vertical Scroll" and the row it writes reads
+// "mouse / SCROLL UP / SCROLL DOWN" -- the same value under two different names, and the
+// uglier one is the one that sticks around after the click.
+function makeLabelFor(actions) {
+  const byCode = new Map((actions || []).filter((a) => a.code).map((a) => [a.code, a.label]));
+  return (code) => (code && byCode.get(code)) || cleanCode(code);
+}
+
 function targetLabel(t) {
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -93,7 +102,7 @@ function statusBadge({ unsupported, flashable }) {
            title: "No device field for this gesture yet — edits stay in the app until confirmed." };
 }
 
-function GestureRow({ b, dev, extra, selected, onSelect }) {
+function GestureRow({ b, dev, extra, selected, onSelect, labelFor = cleanCode }) {
   // A Track hold has no device field at all: the capture showed NayaFlow writing the hold value
   // over the tap and the tap never reaching the board. Offering it as editable would be
   // offering to lose the tap, so it renders disabled.
@@ -127,7 +136,7 @@ function GestureRow({ b, dev, extra, selected, onSelect }) {
         }>
         {splitParent ? "set per direction below"
           : unsupported ? "not settable"
-          : b.actionCode ? cleanCode(b.actionCode) : "Unassigned"}
+          : b.actionCode ? labelFor(b.actionCode) : "Unassigned"}
       </span>
       {extra}
     </div>
@@ -448,7 +457,7 @@ export default function Modules() {
           <span className="skp-arrow">→</span>
           <span className={"skp-act" + (code ? "" : " unset")}
             title={`device field 0x${axis.fields[side].toString(16).padStart(2, "0")}`}>
-            {code ? cleanCode(code) : (motionOf(side) ? `motion — ${motionOf(side)}` : "motion")}
+            {code ? labelFor(code) : (motionOf(side) ? `motion — ${motionOf(side)}` : "motion")}
           </span>
         </div>
       );
@@ -504,6 +513,8 @@ export default function Modules() {
     if (selectedBinding.axisHalf) return ["keyboard", "basic", "extended", "shortcuts", "apps"];
     return undefined;
   }, [selectedBinding]);
+
+  const labelFor = useMemo(() => makeLabelFor(actions), [actions]);
 
   const paletteFilter = useCallback(
     (a) => {
@@ -599,6 +610,7 @@ export default function Modules() {
     return (
       <Fragment key={b.id}>
         <GestureRow
+          labelFor={labelFor}
           dev={deviceByGesture[b.behavior]}
           b={{ ...b, pairedSplit: isSplit }}
           selected={selectedBindingId === b.id}
@@ -865,7 +877,7 @@ export default function Modules() {
                 <strong className="mod-target-name">{selectedTargetName}</strong>
                 <span className="skp-arrow">→</span>
                 <span className={"skp-act" + (selectedBinding.actionCode ? "" : " unset")}>
-                  {selectedBinding.actionCode ? cleanCode(selectedBinding.actionCode) : "Unassigned"}
+                  {selectedBinding.actionCode ? labelFor(selectedBinding.actionCode) : "Unassigned"}
                 </span>
                 <button className="btn mod-target-clear" onClick={() => setSelectedBindingId(null)}>
                   Done
