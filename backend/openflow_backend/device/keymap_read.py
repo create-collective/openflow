@@ -72,7 +72,20 @@ SHIFTED_SYMBOL: dict[str, str] = {
 }
 
 # REMAP behavior-type bytes (docs/remap-protocol-live.md + round-trip findings).
-KEY_PRESS, TWO_PARAM, LAYER_HOLD, NONE_BEH, LAYER_SW = 0x01, 0x00, 0x05, 0x07, 0x08
+KEY_PRESS, TWO_PARAM, LAYER_HOLD, NONE_BEH, OUTPUTS = 0x01, 0x00, 0x05, 0x07, 0x08
+# 0x08 was called LAYER_SW and decoded as a layer switch. It is `outputs` (ZMK &out), and the
+# mistake actively CORRUPTED keymaps: reading a stock board turned the Bluetooth-output key into
+# "Force Layer 2" and the USB-C key into "Force Layer 1", and the next flash wrote those back as
+# real to_layer records. A read-then-reflash round trip destroyed both keys.
+#
+# Three independent lines agree:
+#   * NayaCore's behaviour-type table (docs/reference/nayacore-vocabulary.json) has index 8 =
+#     "outputs", and already carried a warning that our name was probably wrong;
+#   * the stock read of 2026-09-01 (device/run-20260901-013431/left-keymap-decoded.json) holds
+#     exactly two type-0x08 records, layer 2, adjacent: idx 0x2f param 02000000, 0x30 param
+#     01000000;
+#   * NayaFlow's own database has BT_OUT at 0x2f and USB_DEVICE at 0x30 in that same profile.
+OUTPUT_SELECTOR = {1: "USB_DEVICE", 2: "BT_OUT"}
 RGB_SYS, TRANS = 0x09, 0x0E
 LAYER_TO, LAYER_TOGGLE = 0x0C, 0x0D   # 0x0c=TO_LAYER (Force), 0x0d=TOGGLE (verified)
 MODULE_TYPE, UNKNOWN_02 = 0x78, 0x02
@@ -155,8 +168,12 @@ def translate(typ: int, param: bytes, order_to_layer: dict[int, str]) -> list[tu
         return [("press", t_at, t_code), ("hold", h_at, h_code)]
     if typ == LAYER_HOLD:
         return [("press", "layer_polite_hold", layer_code("MO_LAYER_"))]
-    if typ == LAYER_SW:
-        return [("press", "layer_rude_toggle", layer_code("TO_LAYER_"))]
+    if typ == OUTPUTS:
+        sel = int.from_bytes(param[:4], "little") if len(param) >= 4 else None
+        code = OUTPUT_SELECTOR.get(sel)
+        # An unknown selector stays RAW rather than being rounded to one of the two we know.
+        # Guessing here is what produced the bug this branch replaces.
+        return [("press", "out", code)] if code else []
     if typ == LAYER_TO:
         return [("press", "layer_rude_toggle", layer_code("TO_LAYER_"))]
     if typ == LAYER_TOGGLE:

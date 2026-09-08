@@ -23,7 +23,12 @@ from openflow_backend.device import remap as R  # noqa: E402
 
 FIXTURE = json.loads((Path(__file__).with_name("write-frames-fixture.json")).read_text())
 
-LAYER_BEHAVIORS = {R.LAYER_HOLD, R.LAYER_SW, R.LAYER_TO, R.LAYER_TOGGLE}
+LAYER_BEHAVIORS = {R.LAYER_HOLD, R.LAYER_TO, R.LAYER_TOGGLE}
+# 0x08 used to be in the set above, named LAYER_SW. It is `outputs`, and the round trip passed
+# anyway because an output selector and a layer index are BOTH u32 LE -- identical bytes, wrong
+# meaning. That is exactly how the wrong name survived a byte-level test, so it gets its own
+# case here rather than being folded back in with the layer behaviours.
+OUTPUT_BEHAVIORS = {R.OUTPUTS}
 EMPTY_BEHAVIORS = {R.NONE_BEH, R.TRANS, R.MODULE_TYPE}
 
 
@@ -43,6 +48,11 @@ def _reencode_binding(typ: int, param: bytes) -> tuple[bytes, bool]:
         flavour, term = body[2], body[3] | (body[4] << 8)
         hold, tap = body[5:9], body[13:17]
         return R.encode_holdtap_param(typ, flavour, term, hold, tap), True
+    if typ in OUTPUT_BEHAVIORS:
+        assert len(param) == 4, f"output selector not 4 bytes: {param.hex()}"
+        sel = int.from_bytes(param, "little")
+        assert sel in (1, 2), f"unknown output selector {sel} (1=USB, 2=wireless)"
+        return param, True
     if typ in LAYER_BEHAVIORS:
         assert len(param) == 4, f"layer param not 4 bytes: {param.hex()}"
         return R.encode_layer_param(int.from_bytes(param, "little")), True
