@@ -43,6 +43,35 @@ function makeLabelFor(actions) {
   return (code) => (code && byCode.get(code)) || cleanCode(code);
 }
 
+// A RAW_ code is the decoder saying it could not name what the field holds. Two different
+// things arrive here and they must not be flattened into one:
+//
+//   RAW_p00:00m00  a KEY_PRESS whose payload is all zeros -- page 0, usage 0, no modifiers. It
+//                  presses nothing, but it is NOT unbound: an unbound field has record type
+//                  NONE and no payload at all. The board carries this on the Tune gestures
+//                  NayaFlow labels LED Brightness, i.e. a gesture the keyboard handles itself
+//                  and never reports to the host.
+//   RAW_<hex>      bytes we genuinely cannot name yet.
+//
+// Neither is "Unassigned", and saying so would be inventing knowledge -- the whole point of the
+// RAW prefix is that we do not have it. Both render muted, like a placeholder rather than a
+// value, which is the look that was actually being asked for.
+function displayAction(code, labelFor) {
+  if (!code) return { text: "Unassigned", muted: true };
+  if (code === "RAW_p00:00m00") {
+    return { text: "Keyboard action", muted: true,
+             title: "The keyboard claims this gesture and handles it itself — it sends nothing to "
+                  + "the computer. This is what the board stores for its own LED brightness "
+                  + "gestures. It is not the same as unassigned." };
+  }
+  if (code.startsWith("RAW_")) {
+    return { text: "Unrecognised", muted: true,
+             title: `The field holds ${code.slice(4)}, which OpenFlow cannot name yet. It is left `
+                  + "exactly as it is unless you bind something else here." };
+  }
+  return { text: labelFor(code), muted: false };
+}
+
 function targetLabel(t) {
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -124,20 +153,28 @@ function GestureRow({ b, dev, extra, selected, onSelect, labelFor = cleanCode })
       <span className={"gesture-badge " + badge.cls} title={badge.title}>{badge.text}</span>
       <DeviceBadge dev={dev} />
       <span className="skp-arrow" title={shortcutTooltip(b.actionCode)}>→</span>
-      <span className={"skp-act" + (b.actionCode ? "" : " unset")}
-        title={
-          splitParent
-            ? "Split is on — each direction is set separately below."
-            : unsupported
-            ? "The Track cannot store a hold — setting one would overwrite the tap."
-            : shortcutInfo(b.actionCode)
-            ? shortcutTooltip(b.actionCode)
-            : "Click the row, then pick an action below."
-        }>
-        {splitParent ? "set per direction below"
-          : unsupported ? "not settable"
-          : b.actionCode ? labelFor(b.actionCode) : "Unassigned"}
-      </span>
+      {(() => {
+        // A split parent and an unsupported row show PLACEHOLDER text, not a value, so they are
+        // muted like an unassigned row. The dial already looked right only because it happens to
+        // carry no actionCode; the 1-finger axis does carry one and so rendered as a real value.
+        const shown = splitParent ? { text: "set per direction below", muted: true }
+          : unsupported ? { text: "not settable", muted: true }
+          : displayAction(b.actionCode, labelFor);
+        return (
+          <span className={"skp-act" + (shown.muted ? " unset" : "")}
+            title={
+              splitParent
+                ? "Split is on — each direction is set separately below."
+                : unsupported
+                ? "The Track cannot store a hold — setting one would overwrite the tap."
+                : shown.title
+                || (shortcutInfo(b.actionCode) ? shortcutTooltip(b.actionCode)
+                    : "Click the row, then pick an action below.")
+            }>
+            {shown.text}
+          </span>
+        );
+      })()}
       {extra}
     </div>
   );
@@ -457,7 +494,8 @@ export default function Modules() {
           <span className="skp-arrow">→</span>
           <span className={"skp-act" + (code ? "" : " unset")}
             title={`device field 0x${axis.fields[side].toString(16).padStart(2, "0")}`}>
-            {code ? labelFor(code) : (motionOf(side) ? `motion — ${motionOf(side)}` : "motion")}
+            {code ? displayAction(code, labelFor).text
+              : (motionOf(side) ? `motion — ${motionOf(side)}` : "motion")}
           </span>
         </div>
       );
@@ -876,9 +914,11 @@ export default function Modules() {
                 <span className="mod-target-label">Binding</span>
                 <strong className="mod-target-name">{selectedTargetName}</strong>
                 <span className="skp-arrow">→</span>
-                <span className={"skp-act" + (selectedBinding.actionCode ? "" : " unset")}>
-                  {selectedBinding.actionCode ? labelFor(selectedBinding.actionCode) : "Unassigned"}
-                </span>
+                {(() => {
+                  const shown = displayAction(selectedBinding.actionCode, labelFor);
+                  return <span className={"skp-act" + (shown.muted ? " unset" : "")}
+                    title={shown.title}>{shown.text}</span>;
+                })()}
                 <button className="btn mod-target-clear" onClick={() => setSelectedBindingId(null)}>
                   Done
                 </button>
