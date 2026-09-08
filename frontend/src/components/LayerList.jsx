@@ -84,24 +84,44 @@ export default function LayerList({
              className={"layer-row" + (l.id === activeLayerId ? " active" : "")
                + (dragId === l.id ? " dragging" : "") + (dragOver === l.id ? " dragover" : "")}
              draggable={!renaming}
-             onDragStart={(e) => { setDragId(l.id); e.dataTransfer.effectAllowed = "move"; }}
+             onDragStart={(e) => {
+               setDragId(l.id);
+               e.dataTransfer.effectAllowed = "move";
+               // REQUIRED, not decoration. A dragstart that sets no data leaves Chrome holding a
+               // drag session with nothing to transfer; when it cannot resolve a drop it never
+               // fires dragend, and from then on the whole PAGE stops receiving clicks. That is
+               // the "everything locks up" report, and it is the second time native HTML5 drag
+               // has done this to us -- see docs/work-queue.md on the image-drag lockup.
+               try { e.dataTransfer.setData("text/plain", l.id); } catch { /* older browsers */ }
+             }}
              onDragEnd={() => { setDragId(null); setDragOver(null); }}
-             onDragOver={(e) => { e.preventDefault(); if (dragId && dragId !== l.id) setDragOver(l.id); }}
+             onDragOver={(e) => {
+               e.preventDefault();
+               // Pairs with effectAllowed above. Without it Chrome can decline the drop, which
+               // is the state that hangs the session.
+               e.dataTransfer.dropEffect = "move";
+               if (dragId && dragId !== l.id) setDragOver(l.id);
+             }}
              onDragLeave={() => setDragOver((d) => (d === l.id ? null : d))}
              onDrop={(e) => {
                e.preventDefault();
-               setDragOver(null);
-               if (!dragId || dragId === l.id) return;
-               // Rebuild the whole order and hand it over -- the backend takes a complete list
-               // rather than a move, so a dropped frame can never leave layers half-ordered.
-               const ids = layers.map((x) => x.id).filter((x) => x !== dragId);
-               ids.splice(ids.indexOf(l.id), 0, dragId);
-               onReorder(ids);
-               setDragId(null);
+               // finally, so a throw from onReorder cannot strand the row mid-drag.
+               try {
+                 if (!dragId || dragId === l.id) return;
+                 // Rebuild the whole order and hand it over -- the backend takes a complete list
+                 // rather than a move, so a dropped frame can never leave layers half-ordered.
+                 const ids = layers.map((x) => x.id).filter((x) => x !== dragId);
+                 ids.splice(ids.indexOf(l.id), 0, dragId);
+                 onReorder(ids);
+               } finally {
+                 setDragOver(null);
+                 setDragId(null);
+               }
              }}>
           {renaming === l.id ? (
             <input
               className="layer-rename"
+              draggable={false}
               autoFocus
               value={renameVal}
               onChange={(e) => setRenameVal(e.target.value)}
@@ -112,7 +132,7 @@ export default function LayerList({
               onBlur={() => commitRename(l)}
             />
           ) : (
-            <button className="layer-item" onClick={() => onSelect(l.id)}>
+            <button className="layer-item" draggable={false} onClick={() => onSelect(l.id)}>
               <span className="layer-index">{i}</span>
               <span className="layer-name">{l.name}</span>
             </button>
@@ -120,6 +140,7 @@ export default function LayerList({
 
           <button
             className="layer-menu-btn"
+            draggable={false}
             title="Layer options"
             onClick={() => { setMenuFor(menuFor === l.id ? null : l.id); setConfirmDel(null); }}
           >
@@ -127,7 +148,7 @@ export default function LayerList({
           </button>
 
           {menuFor === l.id && (
-            <div className="layer-menu">
+            <div className="layer-menu" draggable={false}>
               <button onClick={() => startRename(l)}>Rename</button>
               <button onClick={() => { onSetBase(l.id); setMenuFor(null); }} disabled={i === 0}>
                 Use as base layer
