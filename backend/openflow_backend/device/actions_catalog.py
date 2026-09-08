@@ -127,6 +127,33 @@ def _connection():
     ]
 
 
+def _lighting():
+    """The LED system keys (record type 0x09, ZMK's &rgb_ug).
+
+    These were readable but not bindable: the palette had no LED entries at all, so a board that
+    came with fourteen lighting keys could be read and then never rebuilt. Codes and names are
+    NayaFlow's own -- each was matched to a device record by flashing Naya's default profile and
+    pairing the bytes with its database (2026-09-08). Decode/encode live in
+    keymap_read.decode_rgb_system / remap.encode_rgb_system.
+    """
+    return [
+        _a("LED_EFFECT_ON_OFF", "Lights", "LED", name="Lighting on / off"),
+        _a("LED_EFFECT", "Effect", "LED", name="Next lighting effect"),
+        _a("LED_SOLID", "Solid", "LED", name="Lighting: Solid"),
+        _a("LED_BREATHE", "Breathe", "LED", name="Lighting: Breathe"),
+        _a("LED_SWIRL", "Swirl", "LED", name="Lighting: Swirl"),
+        _a("LED_SPEC", "Spectrum", "LED", name="Lighting: Spectrum"),
+        _a("LED_BRIGHTNESS_UP", "Bright +", "LED", name="Lighting brightness up"),
+        _a("LED_BRIGHTNESS_DOWN", "Bright -", "LED", name="Lighting brightness down"),
+        _a("LED_SPEED_UP", "Speed +", "LED", name="Lighting effect speed up"),
+        _a("LED_SPEED_DOWN", "Speed -", "LED", name="Lighting effect speed down"),
+        _a("LED_COLOR_WHITE", "White", "LED", name="Lighting colour: white"),
+        _a("LED_COLOR_RED", "Red", "LED", name="Lighting colour: red"),
+        _a("LED_COLOR_GREEN", "Green", "LED", name="Lighting colour: green"),
+        _a("LED_COLOR_BLUE", "Blue", "LED", name="Lighting colour: blue"),
+    ]
+
+
 def _system():
     return [
         _a("C_BRIGHTNESS_INC", "Bright +"), _a("C_BRIGHTNESS_DEC", "Bright -"),
@@ -355,6 +382,7 @@ def _tabs():
             {"name": "Empty", "actions": _empty()},
             {"name": "Mouse", "actions": _mouse()},
             {"name": "Connection", "actions": _connection()},
+            {"name": "Lighting", "actions": _lighting()},
             {"name": "Recovery", "actions": _recovery()},
             {"name": "System", "actions": _system()},
             {"name": "Keypad", "actions": _keypad()},
