@@ -93,21 +93,7 @@ function statusBadge({ unsupported, flashable }) {
            title: "No device field for this gesture yet — edits stay in the app until confirmed." };
 }
 
-function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
-  // Constrain the dropdown to what this gesture's device field accepts.
-  const usable = actions.filter((a) => okForKind(a.actionType, b.fieldKind));
-  const known = usable.some((a) => a.code === (b.actionCode || ""));
-  const opts = known
-    ? usable
-    : [{ code: b.actionCode || "", label: cleanCode(b.actionCode), actionType: b.actionType, group: "Imported" }, ...usable];
-  // Group into <optgroup>s (blank group renders ungrouped at the top).
-  const order = [];
-  const groups = {};
-  for (const o of opts) {
-    const g = o.group || "";
-    if (!(g in groups)) { groups[g] = []; order.push(g); }
-    groups[g].push(o);
-  }
+function GestureRow({ b, dev, extra, selected, onSelect }) {
   // A Track hold has no device field at all: the capture showed NayaFlow writing the hold value
   // over the tap and the tap never reaching the board. Offering it as editable would be
   // offering to lose the tap, so it renders disabled.
@@ -117,16 +103,6 @@ function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
   const unsupported = /^hold:track:button_/.test(b.behavior || "");
   const splitParent = !!b.pairedSplit;
   const badge = statusBadge({ unsupported, flashable: b.flashable });
-  // The one row type that keeps a dropdown: its value is a compound direction PAIR
-  // ("mouse - SCROLL_UP - SCROLL_DOWN"), two device fields with the sign as direction, and
-  // every palette branch emits one atomic code per click. The Mouse tab can emit four such
-  // pairs, but the module vocabulary has many more (scroll, volume, brightness), so the select
-  // is still the only way to reach all of them.
-  //
-  // Detected from the VALUE, not from fieldKind (null on these) and not from the config's
-  // `axes` list (empty for Touch, whose 2-finger pairing is still unconfirmed) -- both of which
-  // I tried first and both of which quietly dropped the dropdown from rows that need it.
-  const isPairRow = b.actionType === "value" || (b.actionCode || "").includes(" - ");
   return (
     <div
       className={"skp-row" + (selected ? " selected" : "")}
@@ -139,54 +115,20 @@ function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
       <span className={"gesture-badge " + badge.cls} title={badge.title}>{badge.text}</span>
       <DeviceBadge dev={dev} />
       <span className="skp-arrow" title={shortcutTooltip(b.actionCode)}>→</span>
-      {isPairRow ? (
-        // The ONE place a dropdown survives. An un-split axis holds a compound direction PAIR
-        // ("mouse - SCROLL_UP - SCROLL_DOWN") -- two device fields with the sign as direction --
-        // and every palette branch emits a single atomic code per click. Splitting the axis
-        // gives you two half rows the palette can target normally.
-        <select
-          className="mac-input mod-action"
-          value={b.actionCode || ""}
-          disabled={unsupported || splitParent}
-          title={
-            splitParent
-              ? "Split is on — each direction is set separately below. Untick split to give the whole gesture one action."
-              : shortcutInfo(b.actionCode)
-              ? shortcutTooltip(b.actionCode)
-              : undefined
-          }
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => onPick(b.id, opts.find((o) => o.code === e.target.value))}
-        >
-          {order.map((g) =>
-            g ? (
-              <optgroup key={g} label={g}>
-                {groups[g].map((o) => <option key={o.code || "none"} value={o.code}>{o.label}</option>)}
-              </optgroup>
-            ) : (
-              groups[g].map((o) => <option key={o.code || "none"} value={o.code}>{o.label}</option>)
-            )
-          )}
-        </select>
-      ) : (
-        // Everything else is set through the palette, like every key on Bindings. There used to
-        // be a dropdown here TOO, so one value had two editors and two write paths that had
-        // already drifted apart.
-        <span className={"skp-act" + (b.actionCode ? "" : " unset")}
-          title={
-            splitParent
-              ? "Split is on — each direction is set separately below."
-              : unsupported
-              ? "The Track cannot store a hold — setting one would overwrite the tap."
-              : shortcutInfo(b.actionCode)
-              ? shortcutTooltip(b.actionCode)
-              : "Click the row, then pick an action below."
-          }>
-          {splitParent ? "set per direction below"
-            : unsupported ? "not settable"
-            : b.actionCode ? cleanCode(b.actionCode) : "Unassigned"}
-        </span>
-      )}
+      <span className={"skp-act" + (b.actionCode ? "" : " unset")}
+        title={
+          splitParent
+            ? "Split is on — each direction is set separately below."
+            : unsupported
+            ? "The Track cannot store a hold — setting one would overwrite the tap."
+            : shortcutInfo(b.actionCode)
+            ? shortcutTooltip(b.actionCode)
+            : "Click the row, then pick an action below."
+        }>
+        {splitParent ? "set per direction below"
+          : unsupported ? "not settable"
+          : b.actionCode ? cleanCode(b.actionCode) : "Unassigned"}
+      </span>
       {extra}
     </div>
   );
@@ -504,21 +446,10 @@ export default function Modules() {
             return <span className={"gesture-badge " + bd.cls} title={bd.title}>{bd.text}</span>; })()}
           <DeviceBadge dev={deviceByGesture[`${axis.behavior}:${side}`]} />
           <span className="skp-arrow">→</span>
-          <select className="mac-input mod-action"
-            value={code || ""}
-            disabled={!!busy}
-            title={`device field 0x${axis.fields[side].toString(16).padStart(2, "0")}`}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => setAxisHalf(axis.behavior, side, e.target.value || null)}>
-            <option value="">{motionOf(side) ? `motion — ${motionOf(side)}` : "motion"}</option>
-            {code && !keyActions.some((a) => a.code === code) && (
-              // Bound from the palette to something outside the module vocabulary. Without
-              // this the select has no matching option, silently falls back to showing its
-              // FIRST entry, and a save that worked reads as one that did nothing.
-              <option value={code}>{cleanCode(code)}</option>
-            )}
-            {keyActions.map((a) => <option key={a.code} value={a.code}>{a.label || a.code}</option>)}
-          </select>
+          <span className={"skp-act" + (code ? "" : " unset")}
+            title={`device field 0x${axis.fields[side].toString(16).padStart(2, "0")}`}>
+            {code ? cleanCode(code) : (motionOf(side) ? `motion — ${motionOf(side)}` : "motion")}
+          </span>
         </div>
       );
     });
@@ -559,8 +490,35 @@ export default function Modules() {
   // With nothing selected this must NOT reject everything: the palette drops categories that
   // filter empty and then tabs that lose all their categories, so a blanket false left it with
   // no tabs and it rendered nothing at all. "Nothing selected" is what `disabled` is for.
+  // WHICH TABS, not just which actions. `filter` only reaches the grid tabs -- the virtual
+  // keyboard, the mouse and the app picker are custom render branches that never consult it, so
+  // filtering alone still left a letter one click away from a field that cannot hold one.
+  const paletteTabIds = useMemo(() => {
+    if (!selectedBinding) return undefined;
+    const isPair = selectedBinding.actionType === "value"
+      || (selectedBinding.actionCode || "").includes(" - ");
+    // Every direction pair we know lives in the module tab's Cursor/Scroll/Media categories,
+    // and it is grid-rendered, so `filter` genuinely applies there.
+    if (isPair) return ["module"];
+    // A half takes a single key, which is what its old dropdown offered and nothing more.
+    if (selectedBinding.axisHalf) return ["keyboard", "basic", "extended", "shortcuts", "apps"];
+    return undefined;
+  }, [selectedBinding]);
+
   const paletteFilter = useCallback(
-    (a) => !selectedBinding || okForKind(a.actionType, selectedBinding.fieldKind),
+    (a) => {
+      if (!selectedBinding) return true;
+      // A compound direction pair is two device fields with the sign as direction. Only another
+      // pair can go there, and `fieldKind` is null on these rows so okForKind would wave
+      // anything through -- which is why the old dropdown offered all 101 actions for a field
+      // that can hold five.
+      const isPair = selectedBinding.actionType === "value"
+        || (selectedBinding.actionCode || "").includes(" - ");
+      if (isPair) return a.actionType === "value" || a.actionType === "none";
+      // An axis HALF is one direction, so it takes a single action, never a pair.
+      if (selectedBinding.axisHalf) return a.actionType !== "value";
+      return okForKind(a.actionType, selectedBinding.fieldKind);
+    },
     [selectedBinding]
   );
 
@@ -640,7 +598,7 @@ export default function Modules() {
     const isSplit = axis ? openAxes.has(b.behavior) : !!pair?.split;
     return (
       <Fragment key={b.id}>
-        <GestureRow actions={actions} onPick={pickBinding}
+        <GestureRow
           dev={deviceByGesture[b.behavior]}
           b={{ ...b, pairedSplit: isSplit }}
           selected={selectedBindingId === b.id}
@@ -684,16 +642,6 @@ export default function Modules() {
     if (!config) return;
     try {
       await api.setModuleSetting({ configId: config.id, fieldId, value });
-      await load();
-    } catch (e) {
-      setErr(e.message);
-    }
-  }
-
-  async function pickBinding(bindingId, opt) {
-    if (!opt) return;
-    try {
-      await api.setModuleBinding({ bindingId, actionCode: opt.code, actionType: opt.actionType });
       await load();
     } catch (e) {
       setErr(e.message);
@@ -933,6 +881,8 @@ export default function Modules() {
             disabled={!selectedBinding}
             disabledHint="Select a gesture above to bind it."
             filter={paletteFilter}
+            tabIds={paletteTabIds}
+            defaultTab={paletteTabIds && !paletteTabIds.includes("keyboard") ? paletteTabIds[0] : "keyboard"}
             onPick={pickFromPalette}
           />
         </div>
