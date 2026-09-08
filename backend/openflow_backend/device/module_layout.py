@@ -213,8 +213,19 @@ def overlay(template, module_type, bindings, axes=None, settings=None):
     """
     out = dict(template)
     for gesture, idx in module_fields.writable_fields(module_type).items():
-        code = bindings.get(gesture)
+        # "absent from bindings" and "present but unbound" are different instructions and were
+        # collapsed into one `if not code: continue`. So unbinding a gesture in the UI was a
+        # no-op on the board: the template's old value passed straight through and the field
+        # kept whatever it had.
+        if gesture not in bindings:
+            continue                       # not managed here -- the template owns this field
+        code = bindings[gesture]
         if not code:
+            # Explicitly unbound -> the NONE record, empty value. Captured from NayaCore twice:
+            # `01 0b 07 00` (the "enable all modules" flash that silently cleared Track Right
+            # button 1) and `08 07 00` in the flash-3 table. flash.py already emits this exact
+            # record for stale fields.
+            out[idx] = (R.NONE_BEH, b"")
             continue
         rec = _encode_gesture(idx, code)
         if rec is not None:
