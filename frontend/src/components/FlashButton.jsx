@@ -57,6 +57,12 @@ export default function FlashButton({ variant = "sidebar" }) {
   const [recovery, setRecovery] = useState(false);
   const [wrote, setWrote] = useState(false);   // did this attempt reach the device?
   const [collectOrphans, setCollectOrphans] = useState(false);
+  // Bindings the plan could not encode. Declared here because it was NOT: setDropped was called
+  // in the flash handler and `dropped` read in the result panel, with no useState between them,
+  // so every real flash threw "setDropped is not defined" AFTER the device had already been
+  // written. The write succeeded and the UI reported a failure -- the worst way round.
+  // tools/check-undefined.mjs only looks at hooks and components, which is why it passed.
+  const [dropped, setDropped] = useState([]);
   const readOk = hasReadDevice();
 
   // The dialog reports the result, but it gets closed. A flash is slow, irreversible and easy

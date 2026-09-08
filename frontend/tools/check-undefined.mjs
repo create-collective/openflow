@@ -57,6 +57,9 @@ function bindings(src) {
   return names;
 }
 
+// Browser built-ins that look like state setters.
+const SETTER_GLOBALS = new Set(["setTimeout", "setInterval", "setImmediate"]);
+
 let bad = 0;
 for (const file of walk(ROOT)) {
   const src = readFileSync(file, "utf8");
@@ -64,6 +67,16 @@ for (const file of walk(ROOT)) {
   const used = new Map();
   for (const m of src.matchAll(/\b(use[A-Z][\w$]*)\s*\(/g)) used.set(m[1], "hook");
   for (const m of src.matchAll(/<([A-Z][\w$]*)[\s/>]/g)) used.set(m[1], "component");
+  // State setters. `setDropped` was called in FlashButton's flash handler while the matching
+  // useState was never written, so every real flash threw AFTER the device had been written --
+  // the keyboard took the changes and the UI reported a failure. Neither check above catches
+  // that: a setter is not a hook and not a component. `bindings()` already collects
+  // destructured and imported names, so a real setter is found there.
+  // The lookbehind matters: `\b` also fires after a dot, so `api.setBaseLayer(...)` and any
+  // other method call would read as a bare identifier and produce noise.
+  for (const m of src.matchAll(/(?<![.\w$])(set[A-Z][\w$]*)\s*\(/g)) {
+    if (!SETTER_GLOBALS.has(m[1])) used.set(m[1], "state setter");
+  }
 
   for (const [name, kind] of used) {
     if (have.has(name) || GLOBALS.has(name)) continue;
@@ -76,4 +89,4 @@ if (bad) {
   console.error(`\n${bad} undefined reference(s) -- these render as a blank page, not a build error.`);
   process.exit(1);
 }
-console.log("no undefined hook or component references");
+console.log("no undefined hook, component or state-setter references");
