@@ -24,6 +24,7 @@ from .._vendor.nayactl.transport import (
     TransportError,
 )
 from .._vendor.nayactl.util import format_fw_version, hexline
+from . import ble_status, spi_flash_test
 
 __all__ = [
     "DeviceService",
@@ -79,7 +80,41 @@ def _battery_percent(millivolts: int) -> int:
     return max(1, min(100, ((clamped - 3300) * 100) // 900))
 
 
+def _link_views(halves: list[dict]) -> dict:
+    """side -> split-link quality, from the decoded BLE status blob.
+
+    This is the LINK, where the verdict below is the BOND: two halves can be correctly bonded and
+    still have a link that is dropping, and until now we reported only the first. See
+    device/ble_status.py.
+
+    The expectation passed in is the PARTNER's own `bleAddress`, which comes from a different
+    command than the status blob -- so this stays a genuine cross-check rather than the device
+    agreeing with itself. It falls back to this half's own `pairAddress` when the partner did not
+    answer, which is weaker but still catches a link pointing at nothing.
+    """
+    out: dict = {}
+    for h in halves:
+        side = h.get("side")
+        ble = h.get("ble") or {}
+        decoded = ble.get("status")
+        if not side or not decoded:
+            continue
+        partner = next((x for x in halves if x.get("side") and x.get("side") != side), None)
+        expected = (partner or {}).get("bleAddress") or ble.get("pairAddress")
+        out[side] = ble_status.link_summary(decoded, expected)
+    return out
+
+
 def pairing_report(halves: list[dict]) -> dict:
+    """Bond verdict plus, where the device told us, per-half link quality."""
+    report = _pairing_verdict(halves)
+    links = _link_views(halves)
+    if links:
+        report["links"] = links
+    return report
+
+
+def _pairing_verdict(halves: list[dict]) -> dict:
     """Are the two halves actually bonded to each other? Pure; takes a verbose status list.
 
     This exists to separate two failures that look identical to a user -- "my right half stopped
@@ -275,7 +310,14 @@ class DeviceService:
                 ble["firmwareVersion"] = format_fw_version(p)
             p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_STATUS))
             if p is not None:
+                # statusRaw stays, always: `status` is a decode, and a decode can be wrong in a
+                # way the bytes cannot. See device/ble_status.py for what is confirmed and what
+                # is deliberately left raw. `raw` is dropped from the nested view only because
+                # statusRaw sits right beside it holding the identical string.
                 ble["statusRaw"] = p.hex()
+                decoded = ble_status.decode(p)
+                decoded.pop("raw", None)
+                ble["status"] = decoded
             if ble:
                 info["ble"] = ble
 
@@ -403,10 +445,18 @@ class DeviceService:
             t = self._transport_for(dev.port, dest)
             responses = t.send_command(dest, C.CAT_FLASH, C.FLASH_TEST, timeout=3.0)
             payload = _first_payload(responses)
+            # `raw` stays and callers should keep showing it: this decode is derived from
+            # NayaCore's output format rather than from a captured response, and is the one
+            # decode in this codebase that has never been checked against a device. It reports
+            # `validated: False` for exactly that reason. See device/spi_flash_test.py.
+            decoded = spi_flash_test.decode(payload)
+            decoded.pop("raw", None)
             return {
                 "ok": payload is not None,
                 "side": dev.side,
                 "raw": payload.hex() if payload else "",
+                "diagnosis": decoded,
+                "summary": spi_flash_test.summary(decoded),
             }
 
     def clear_ble_devices(self, side: str, force: bool = False) -> dict:
