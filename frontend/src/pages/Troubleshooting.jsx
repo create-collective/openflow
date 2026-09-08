@@ -108,6 +108,7 @@ function HalfCard({ h, reference }) {
 export default function Troubleshooting() {
   const [halves, setHalves] = useState([]);
   const [pairing, setPairing] = useState(null);
+  const [recovery, setRecovery] = useState([]);
   const [sys, setSys] = useState(null);
   const [at, setAt] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -131,6 +132,7 @@ export default function Troubleshooting() {
       const r = await api.statusDeep();
       setHalves(r.halves || []);
       setPairing(r.pairing || null);
+      setRecovery(r.recovery || []);
       setAt(r.at ? new Date(r.at + "Z") : new Date());
       setLive(true);
     } catch (e) { setErr(e.message); }
@@ -208,6 +210,25 @@ export default function Troubleshooting() {
           <div className="setting-desc">
             Press <strong>Read device info</strong> to ask both halves who they are. It is a
             read-only USB query — nothing is written to the keyboard.
+          </div>
+        </div>
+      )}
+
+      {recovery.length > 0 && (
+        <div className="info-banner warn">
+          <div className="info-banner-title">
+            Bootloader
+            <span className="pill warn">
+              {recovery.length} half{recovery.length === 1 ? "" : "s"} in recovery
+            </span>
+          </div>
+          <div className="info-banner-detail">
+            {recovery.map((r) => r.port).join(", ")} — a half in MCUboot answers none of the
+            normal protocol, which is why it shows here rather than above.
+          </div>
+          <div className="info-banner-help">
+            This is not damage. Recovery boots the keyboard's normal firmware again on its own
+            after a few seconds of inactivity, so a half usually leaves it without help.
           </div>
         </div>
       )}

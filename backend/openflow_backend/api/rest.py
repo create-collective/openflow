@@ -28,6 +28,7 @@ from ..db import userdata as ud
 from ..db.database import connect as db_connect
 from ..device import actions_catalog, flash as flash_mod, gesture_presets, keymap_read, module_fields, remap
 from ..device.commands import CommandError, dispatch
+from ..device import recovery as recovery_mod
 from ..device.service import DangerousCommandError, TransportError, pairing_report
 from .state import get_service
 
@@ -81,6 +82,12 @@ async def status(verbose: bool = False) -> dict:
     halves = await run_in_threadpool(svc.status_all, verbose)
     saved = await run_in_threadpool(dstate.save_status, halves, verbose)
     out = {"halves": halves, "at": saved["at"]}
+    # A half in MCUboot enumerates under a different product id and answers none of the normal
+    # protocol, so without this it is not merely unidentified -- it does not appear at all, and
+    # the page looks the same as if it were unplugged.
+    stuck = recovery_mod.find_recovery_ports()
+    if stuck:
+        out["recovery"] = [{"port": d.port, "description": d.description} for d in stuck]
     # Only meaningful with the BLE block, which a plain read does not fetch.
     if verbose:
         out["pairing"] = pairing_report(halves)
