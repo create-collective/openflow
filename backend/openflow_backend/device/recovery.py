@@ -158,7 +158,11 @@ def _smp_header(op: int, group: int, cmd_id: int, payload_len: int, seq: int = 0
 def encode_request(op: int, group: int, cmd_id: int, payload: bytes = b"\xa0", seq: int = 0):
     """Frame one SMP request. Default payload is an empty CBOR map."""
     body = _smp_header(op, group, cmd_id, len(payload), seq) + payload
-    framed = struct.pack(">H", len(body)) + body
+    # The length prefix covers the body AND the trailing CRC -- mcumgr's serial transport sends
+    # htons(len + 2). Sending len(body) instead produced a frame the bootloader simply ignored:
+    # no error, no reply, which reads exactly like a dead port and cost several reboots to tell
+    # apart from one. The CRC being right is not enough if the length is wrong.
+    framed = struct.pack(">H", len(body) + 2) + body
     framed += struct.pack(">H", _crc16_xmodem(body))
     b64 = base64.b64encode(framed)
     return b"\x06\x09" + b64 + b"\n"
@@ -178,7 +182,7 @@ def decode_response(raw: bytes) -> dict:
     framed = base64.b64decode(b"".join(chunks))
     if len(framed) < 4:
         raise ValueError("SMP frame too short")
-    body = framed[2:-2]
+    body = framed[2:-2]          # strip the length prefix and the CRC
     if _crc16_xmodem(body) != struct.unpack(">H", framed[-2:])[0]:
         raise ValueError("SMP CRC mismatch")
     if len(body) < 8:
@@ -198,8 +202,26 @@ def _talk(port: str, frame: bytes, timeout: float = 2.0) -> dict:
     """
     import serial
 
-    with serial.Serial(port, 115200, timeout=timeout, write_timeout=timeout) as ser:
-        ser.reset_input_buffer()
+    # Opened the way the vendored transport opens a Naya CDC port, not with pyserial's defaults.
+    # dsrdtr defaults to False in pyserial but the explicit settings matter on Windows: a bare
+    # Serial(port, baud) plus reset_input_buffer() fails these ports with "ClearCommError failed
+    # / The device does not recognize the command", because the bootloader's CDC does not
+    # implement the comm-state queries that call makes. Draining by read instead of by
+    # reset_input_buffer avoids the query entirely.
+    with serial.Serial(port=port, baudrate=115200,
+                       bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
+                       stopbits=serial.STOPBITS_ONE, timeout=0.1,
+                       dsrdtr=False, write_timeout=timeout) as ser:
+        ser.dtr = True
+        ser.rts = True
+        # Bounded drain. An unbounded one can spin on the LOG port, which streams continuously,
+        # and every millisecond spent here is spent against a recovery window that closes after
+        # a few seconds of SMP silence.
+        ser.timeout = 0.02
+        for _ in range(3):
+            if not ser.read(256):
+                break
+        ser.timeout = timeout
         ser.write(frame)
         ser.flush()
         raw = b""

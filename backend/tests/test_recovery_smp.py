@@ -82,7 +82,10 @@ def test_request_header_layout():
     body = base64.b64decode(frame[2:-1])
     length = struct.unpack(">H", body[:2])[0]
     op, flags, plen, group, seq, cmd = struct.unpack(">BBHHBB", body[2:10])
-    assert length == len(body) - 4, "the length prefix must cover header+payload only"
+    # The prefix covers body + CRC, which is what mcumgr's serial transport sends (htons(len+2)).
+    # This assertion previously encoded the opposite and passed happily while the bootloader
+    # ignored every frame we sent.
+    assert length == len(body) - 2, "the length prefix must cover the body AND the CRC"
     assert (op, flags, group, seq, cmd) == (0, 0, 1, 0, 0), (op, flags, group, seq, cmd)
     assert plen == 1, "an empty CBOR map is one byte"
 
@@ -93,7 +96,7 @@ def test_response_round_trip():
     body = rec._smp_header(rec.SMP_OP_READ_RSP, rec.SMP_GROUP_IMAGE,
                            rec.SMP_ID_IMAGE_STATE, len(payload)) + payload
     import base64
-    framed = struct.pack(">H", len(body)) + body + struct.pack(">H", rec._crc16_xmodem(body))
+    framed = struct.pack(">H", len(body) + 2) + body + struct.pack(">H", rec._crc16_xmodem(body))
     line = b"\x06\x09" + base64.b64encode(framed) + b"\n"
     got = rec.decode_response(line)
     assert got["images"][0]["hash"] == b"\xaa\xbb\xcc", got
@@ -105,7 +108,7 @@ def test_a_corrupted_frame_is_refused_not_interpreted():
     payload = b"\xa0"
     body = rec._smp_header(1, 1, 0, len(payload)) + payload
     import base64
-    bad = struct.pack(">H", len(body)) + body + struct.pack(">H", 0x0000)   # wrong CRC
+    bad = struct.pack(">H", len(body) + 2) + body + struct.pack(">H", 0x0000)   # wrong CRC
     try:
         rec.decode_response(b"\x06\x09" + base64.b64encode(bad) + b"\n")
     except ValueError as e:
