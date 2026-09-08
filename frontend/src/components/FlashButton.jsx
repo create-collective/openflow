@@ -94,6 +94,9 @@ export default function FlashButton({ variant = "sidebar" }) {
       }
       // "verified" = every ack was good AND the read-back matched. Anything else is a
       // problem the user needs to see, not a success with a caveat.
+      // A verified flash is not necessarily a complete one: verification only checks records
+      // the plan actually SET, so a binding we could not encode passes unnoticed. Keep them.
+      setDropped(res.dropped || []);
       setState(res.status === "verified" ? "done" : "error");
       if (res.status === "verified") markFlashed();
       if (res.status !== "verified") {
@@ -192,6 +195,28 @@ export default function FlashButton({ variant = "sidebar" }) {
               </>
             )}
 
+            {/* Bindings the encoder cannot express. Shown BEFORE writing, because the whole
+                failure this fixes was finding out never. The key is left alone rather than
+                cleared -- clearing would destroy a binding the user did not ask to remove. */}
+            {state === "preview" && preview?.dropped?.length > 0 && (
+              <div className="phase-note flash-dropped">
+                <strong>
+                  {preview.dropped.length} binding{preview.dropped.length === 1 ? "" : "s"} cannot
+                  be written to the keyboard
+                </strong>
+                <ul>
+                  {preview.dropped.slice(0, 6).map((d, i) => (
+                    <li key={i}>
+                      <code>{d.actionCode || d.actionType}</code> on layer {d.layer}, key{" "}
+                      {d.position} — {d.reason}
+                    </li>
+                  ))}
+                </ul>
+                {preview.dropped.length > 6 && <div>…and {preview.dropped.length - 6} more.</div>}
+                <div>Everything else in this flash is unaffected; those keys keep what they have.</div>
+              </div>
+            )}
+
             {/* Module slots the board carries that this profile does not reference. They are
                 invisible otherwise -- one has sat on the reference board for weeks reading back
                 as "unknown" -- and removing one drops a list entry and blanks a slot, so it is
@@ -231,9 +256,32 @@ export default function FlashButton({ variant = "sidebar" }) {
               </div>
             )}
             {state === "done" && result && (
-              <div className="phase-note flash-ok">
+              <div className={"phase-note " + (dropped.length ? "flash-dropped" : "flash-ok")}>
                 <strong>Flashed and verified.</strong> {result.ops} operation(s),{" "}
                 {result.frames} frame(s), read back with no differences.
+                {/* Verification only checks records the plan SET, so it passes even when a
+                    binding could not be encoded. Saying "verified" and stopping there is what
+                    made this class of bug invisible for so long. */}
+                {dropped.length > 0 && (
+                  <>
+                    <div style={{ marginTop: 8 }}>
+                      <strong>
+                        But {dropped.length} binding{dropped.length === 1 ? "" : "s"} could not be
+                        written.
+                      </strong>{" "}
+                      Those keys keep what the keyboard already had on them.
+                    </div>
+                    <ul>
+                      {dropped.slice(0, 6).map((d, i) => (
+                        <li key={i}>
+                          <code>{d.actionCode || d.actionType}</code> on layer {d.layer}, key{" "}
+                          {d.position} — {d.reason}
+                        </li>
+                      ))}
+                    </ul>
+                    {dropped.length > 6 && <div>…and {dropped.length - 6} more.</div>}
+                  </>
+                )}
               </div>
             )}
 

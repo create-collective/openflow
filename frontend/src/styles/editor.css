@@ -2154,3 +2154,10 @@
 .bay-menu-mod { font-weight: 700; }
 .bay-menu-layer { color: var(--text-dim); font-weight: 400; }
 .bay-menu-layer::before { content: "— "; }
+
+/* Bindings a flash could not write. Amber, not red: the flash itself succeeded and the rest of
+   the profile is on the board -- this is a caveat on a success, not a failure. */
+.flash-dropped { border-left: 2px solid #eab308; }
+.flash-dropped ul { margin: 6px 0 0; padding-left: 18px; }
+.flash-dropped li { margin: 3px 0; line-height: 1.5; }
+.flash-dropped code { font-family: var(--font-mono); color: var(--text); }

@@ -69,6 +69,12 @@ class DesiredState:
     # That distinction matters: desired.modules is empty today, so a naive "anything on the
     # device we do not want is an orphan" rule would wipe every module config on the board.
     module_list: dict[int, tuple[int, int, bytes]] | None = None
+    # Bindings the user set that could NOT be encoded. This exists because
+    # _binding_rows_to_record returning None was completely silent: the position was simply
+    # never added, _full_layer_payload then fell back to whatever the device already had, and
+    # the flash reported "verified" because verification only checks records the plan SET.
+    # So a key set to Disabled kept its old binding and nothing said so.
+    dropped: list[dict] = field(default_factory=list)
 
 
 def desired_from_read(read_json: dict) -> DesiredState:
@@ -168,6 +174,17 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
             rec = _binding_rows_to_record(rows, term, flavour, layer_order)
             if rec is not None:
                 d.layers[idx][pos] = rec
+            else:
+                # NOT written as NONE. Clearing the key would destroy a binding the user never
+                # asked to remove; leaving it and SAYING so is the honest option. The report
+                # states what the key will actually keep doing.
+                press = next((r for r in rows if r["beh"] in ("press", "tap", None)), rows[0])
+                d.dropped.append({
+                    "layer": idx, "position": pos,
+                    "actionCode": press["ac"], "actionType": press["at"],
+                    "reason": _drop_reason(press["at"], press["ac"]),
+                    "effect": "this key keeps whatever the keyboard already had on it",
+                })
             # double-tap / tap+hold are a second hold-tap record at pos + 0x52
             second = _second_bank_record(rows, term, flavour)
             if second is not None:
@@ -181,6 +198,29 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
 
 
 # --- DB -> record helpers (semantic; the interesting mapping) --------------- #
+
+# Why a binding could not be encoded, in words a user can act on. Keyed by actionType, because
+# that is what decides the record -- not the code. Anything unlisted still reports, with the
+# type named, rather than falling through to silence.
+_DROP_REASONS = {
+    "none": "Disabled cannot be written yet.",
+    "trans": "Transparent cannot be written yet.",
+    "layer_polite_oneshot": "Sticky Layer is not implemented on this keyboard's firmware as far "
+                            "as we can tell — it has never been seen on a device.",
+    "out": "Wireless / USB-C output switching is decoded but not yet written, pending a "
+           "hardware check.",
+    "macro": "The keyboard reserves a macro type but implements no macro table, so a macro "
+             "binding can never reach it.",
+    "bluetooth": "Only Bluetooth devices 1-4 have a known record; clear/next/previous do not.",
+}
+
+
+def _drop_reason(action_type: str | None, code: str | None) -> str:
+    base = _DROP_REASONS.get(action_type or "")
+    if base:
+        return base
+    return f"OpenFlow has no encoder for action type {action_type!r} yet."
+
 
 def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: dict) -> tuple[int, bytes] | None:
     """One position's binding row(s) -> (type, param). Handles key/modifier/shortcut, layer
@@ -571,12 +611,17 @@ def flash(desired: DesiredState, *, transport=None, dest: int = 0x50, current: D
         "total_bytes": sum(len(op.payload) for op in plan),
     }
     if dry_run:
-        return {"dry_run": True, "summary": summary,
+        return {"dry_run": True, "summary": summary, "dropped": list(desired.dropped),
                 "frames": [f.hex() for _, frames in rendered for f in frames]}
 
     if transport is None:
         raise ValueError("dry_run=False requires a connected transport")
-    return _apply(plan, rendered, transport, desired, reader)
+    out = _apply(plan, rendered, transport, desired, reader)
+    # Carried through the write path too: a flash that verified is still not a flash that wrote
+    # everything the user asked for, and the result is the only place that can say so.
+    if desired.dropped:
+        out["dropped"] = list(desired.dropped)
+    return out
 
 
 def diff_desired(a: "DesiredState", b: "DesiredState") -> list[dict]:
