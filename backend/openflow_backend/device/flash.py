@@ -175,11 +175,17 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
         by_pos: dict[int, list] = {}
         colors: dict[int, str] = {}
         for r in q:
-            if r["p"] is None or r["p"] not in FULL_LAYER_POSITIONS:
+            if r["p"] is None:
                 continue
+            # LED positions and BINDING positions are different domains, and conflating them
+            # discarded colour. Layer records stop at 0x51 (FULL_LAYER_POSITIONS), but the LED
+            # map is its own thing -- the DB models 97 key positions and the board reports 136
+            # LEDs per layer. Gating colour on the binding range silently dropped positions
+            # 82-96, so a flash wrote LEDs 0-81 and left the rest holding whatever was there
+            # before. Reported as "the module LEDs stayed green rather than purple".
             if r["color_hex"]:
                 colors[r["p"]] = r["color_hex"]
-            if r["at"] is not None:
+            if r["at"] is not None and r["p"] in FULL_LAYER_POSITIONS:
                 by_pos.setdefault(r["p"], []).append(r)
         for pos, rows in by_pos.items():
             rec = _binding_rows_to_record(rows, term, flavour, layer_order)
@@ -522,11 +528,26 @@ def _full_layer_payload(idx: int, poss: dict[int, tuple[int, bytes]],
     return R.encode_layer_data(idx, recs)
 
 
-def _led_payload(idx: int, leds: dict[int, tuple[int, int]]) -> bytes:
-    # (0, 0) is WHITE now that the third byte is saturation, so an unmentioned LED must carry the
-    # unset sentinel instead -- otherwise every gap in a profile would flash bright white.
+def _led_payload(idx: int, leds: dict[int, tuple[int, int]],
+                 device: dict[int, tuple[int, int]] | None = None) -> bytes:
+    """One layer's LED map.
+
+    `device` is what the board currently holds for this layer. It matters because the board has
+    MORE LEDs than the app models -- 136 per layer against the DB's 97 key positions. Stopping at
+    the profile's highest coloured position left the remainder showing whatever the last app to
+    write them chose, which is how module LEDs stayed on NayaFlow's green through an OpenFlow
+    flash.
+
+    So the write now spans the whole map the device reports, and the LEDs we have no model for
+    are passed through UNCHANGED rather than invented. Writing a default into them would replace
+    one wrong colour with another and destroy whatever the modules are meant to show.
+    """
+    device = device or {}
+    # (0, 0) is WHITE now that the third byte is saturation, so an LED the profile does not
+    # mention must carry the unset sentinel rather than a colour.
     unset = (0, keymap_read.UNSET_SATURATION)
-    recs = [R.encode_led_record(i, *leds.get(i, unset)) for i in range(max(leds) + 1 if leds else 0)]
+    count = max([*leds, *device], default=-1) + 1
+    recs = [R.encode_led_record(i, *leds.get(i, device.get(i, unset))) for i in range(count)]
     return R.encode_led_map(idx, recs)
 
 
@@ -636,7 +657,10 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
                                f"layer {idx}"))
     for idx in sorted(desired.leds):
         if desired.leds[idx] and (full or current is None or desired.leds[idx] != current.leds.get(idx)):
-            ops.append(WriteOp(R.WRITE_LED_MAP_DATA, _led_payload(idx, desired.leds[idx]), f"led {idx}"))
+            ops.append(WriteOp(R.WRITE_LED_MAP_DATA,
+                               _led_payload(idx, desired.leds[idx],
+                                            (current.leds.get(idx) if current else None)),
+                               f"led {idx}"))
     for slot in sorted(desired.modules):
         want = desired.modules[slot]
         recs = [R.encode_module_field(f, v, t) for f, (t, v) in sorted(want.items())]
