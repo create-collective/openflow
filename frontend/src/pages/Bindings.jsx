@@ -489,6 +489,7 @@ export default function Bindings() {
         <ActionPalette
           catalog={catalog}
           layers={profile.layers}
+          currentLayerIndex={profile.layers.findIndex((l) => l.id === activeLayerId)}
           macros={macros}
           disabled={selectedPos == null}
           onPick={bind}

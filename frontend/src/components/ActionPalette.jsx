@@ -16,9 +16,38 @@ import VirtualMouse from "./VirtualMouse";
 // contexts it belongs in, and this filters on `context`. That is an allowlist on purpose -- with
 // a hide-list, every tab added later would show up in the keymap editor until somebody
 // remembered to exclude it.
+/**
+ * Why a Toggle Layer target can be refused. Returns a reason string, or null if it is fine.
+ *
+ * TOGGLING THE BASE LAYER DOES NOTHING USEFUL, and NayaFlow does not allow it either: its
+ * renderer drops the first entry from the target list for this action type specifically
+ * (`actionType === "layer_polite_toggle" && (l = l.toSpliced(0, 1))`). `&tog 0` toggles the base
+ * layer, which does not deactivate the layer you are standing on -- so it works outward to
+ * layers 1 and 2 and never back, which is exactly how a keyboard ends up stuck.
+ *
+ * Targeting a LOWER layer has the same problem for a different reason: the layer you are on sits
+ * above it and hides it. NayaFlow permits that one; we warn rather than block, because unlike the
+ * base-layer case we have reasoned it out rather than measured it.
+ *
+ * Targeting the layer you are ON is the exception and stays allowed -- `&tog N` from layer N
+ * turns that layer off, which is the ordinary "press the same key to come back" idiom.
+ */
+export function toggleBlock(actionType, targetIndex, currentIndex) {
+  if (actionType !== "layer_polite_toggle") return null;
+  if (targetIndex === 0) {
+    return "Toggle can't target the base layer — it won't bring you back. Use Force Layer.";
+  }
+  if (currentIndex != null && targetIndex < currentIndex) {
+    return `Toggle can't reach layer ${targetIndex} from layer ${currentIndex} — this layer sits `
+      + `above it. Use Force Layer, or toggle layer ${currentIndex} off.`;
+  }
+  return null;
+}
+
 export default function ActionPalette({
   catalog,
   layers = [],
+  currentLayerIndex = null,   // which layer the key being edited lives on; gates layer toggles
   macros = [],
   disabled,
   onPick,
@@ -151,20 +180,30 @@ export default function ActionPalette({
           ? (catalog.layerActionTypes || []).map((lt) => (
               <div key={lt.frontendType} className="palette-cat">
                 <div className="palette-cat-title">{lt.label}</div>
+                {lt.frontendType === "layer_polite_toggle" && (
+                  <div className="palette-note">
+                    Toggle turns a layer on and off. It can’t bring you <em>back down</em>: a lower
+                    layer is hidden by the one you’re on, and toggling the base layer does nothing
+                    at all. Use <strong>Force Layer</strong> to return.
+                  </div>
+                )}
                 <div className="palette-grid">
-                  {layers.map((l, i) => (
-                    <button
-                      key={l.id}
-                      className="palette-key layer"
-                      disabled={disabled}
-                      title={`${lt.label}: ${l.name}`}
-                      onClick={() =>
-                        onPick({ actionCode: lt.prefix + l.id, actionType: lt.frontendType })
-                      }
-                    >
-                      <LayersIcon size={13} /> {i}
-                    </button>
-                  ))}
+                  {layers.map((l, i) => {
+                    const block = toggleBlock(lt.frontendType, i, currentLayerIndex);
+                    return (
+                      <button
+                        key={l.id}
+                        className={"palette-key layer" + (block ? " soon" : "")}
+                        disabled={disabled || !!block}
+                        title={block ? block : `${lt.label}: ${l.name}`}
+                        onClick={() =>
+                          onPick({ actionCode: lt.prefix + l.id, actionType: lt.frontendType })
+                        }
+                      >
+                        <LayersIcon size={13} /> {i}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))
