@@ -2134,3 +2134,17 @@
   padding: 6px 10px; border-radius: var(--radius-sm);
   background: var(--neutral17); font-family: var(--font-mono); font-size: 13px;
 }
+
+/* --- Modules: what the palette is aimed at (additive) -------------------------------------- */
+.mod-target {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; margin-bottom: 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--neutral10); min-height: 42px;
+}
+.mod-target.armed { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--neutral10)); }
+.mod-target-label { color: var(--text-dim); font-size: 12px; }
+.mod-target-name { font-size: 13px; text-transform: capitalize; }
+.mod-target-clear { margin-left: auto; }
+/* The action text that replaced each row's dropdown. */
+.skp-act.unset { color: var(--text-dim); font-weight: 400; font-style: italic; }

@@ -7,6 +7,7 @@ import ActionPalette from "../components/ActionPalette";
 import { shortcutLabel, shortcutTooltip, shortcutInfo,
          setShortcutTableFromActions } from "../lib/shortcutNames";
 import { api } from "../lib/api";
+import SettingField from "../components/SettingField";
 import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import useDoneFlag from "../lib/useDoneFlag";
 
@@ -75,6 +76,23 @@ function DeviceBadge({ dev }) {
   );
 }
 
+// One badge, used by the gesture rows AND the axis half rows. They were built separately, so
+// the halves carried no status badge at all -- a field that IS flashable looked identical to
+// one that is app-only. Their hand-built divergence is called out twice in the comments below
+// as the cause of past bugs, so the shared bits move here rather than being copied again.
+function statusBadge({ unsupported, flashable }) {
+  if (unsupported) {
+    return { cls: "dbonly", text: "experimental",
+             title: "The Track has one field per button and no room for a hold. NayaFlow lets you set one and silently overwrites the tap; we do not." };
+  }
+  if (flashable) {
+    return { cls: "flashable", text: "flashable",
+             title: "This gesture is stored on the device and can be flashed." };
+  }
+  return { cls: "dbonly", text: "app only",
+           title: "No device field for this gesture yet — edits stay in the app until confirmed." };
+}
+
 function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
   // Constrain the dropdown to what this gesture's device field accepts.
   const usable = actions.filter((a) => okForKind(a.actionType, b.fieldKind));
@@ -98,16 +116,17 @@ function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
   // "experimental" badge, which is specifically about a binding the hardware cannot store.
   const unsupported = /^hold:track:button_/.test(b.behavior || "");
   const splitParent = !!b.pairedSplit;
-  const badge = unsupported
-    ? { cls: "dbonly", text: "experimental", title: "The Track has one field per button and no room for a hold. NayaFlow lets you set one and silently overwrites the tap; we do not." }
-    : b.flashable
-    ? { cls: "flashable", text: "flashable", title: "This gesture is stored on the device and can be flashed." }
-    // There used to be an "axis" rung here, reading "writing this is not confirmed yet". It
-    // dated from before axis writing WAS confirmed -- it has since been flashed and read back
-    // on hardware -- so it only ever fired when something else was wrong, and told the user
-    // about a field kind rather than about whether their edit reaches the keyboard. Which is
-    // the only thing the badge is for; `fieldKind` still earns its keep filtering the palette.
-    : { cls: "dbonly", text: "app only", title: "No device field for this gesture yet — edits stay in the app until confirmed." };
+  const badge = statusBadge({ unsupported, flashable: b.flashable });
+  // The one row type that keeps a dropdown: its value is a compound direction PAIR
+  // ("mouse - SCROLL_UP - SCROLL_DOWN"), two device fields with the sign as direction, and
+  // every palette branch emits one atomic code per click. The Mouse tab can emit four such
+  // pairs, but the module vocabulary has many more (scroll, volume, brightness), so the select
+  // is still the only way to reach all of them.
+  //
+  // Detected from the VALUE, not from fieldKind (null on these) and not from the config's
+  // `axes` list (empty for Touch, whose 2-finger pairing is still unconfirmed) -- both of which
+  // I tried first and both of which quietly dropped the dropdown from rows that need it.
+  const isPairRow = b.actionType === "value" || (b.actionCode || "").includes(" - ");
   return (
     <div
       className={"skp-row" + (selected ? " selected" : "")}
@@ -120,35 +139,54 @@ function GestureRow({ b, actions, onPick, dev, extra, selected, onSelect }) {
       <span className={"gesture-badge " + badge.cls} title={badge.title}>{badge.text}</span>
       <DeviceBadge dev={dev} />
       <span className="skp-arrow" title={shortcutTooltip(b.actionCode)}>→</span>
-      <select
-        className="mac-input mod-action"
-        value={b.actionCode || ""}
-        // A split parent is disabled too: its value lives on the half rows below, so editing it
-        // here would fight them.
-        disabled={unsupported || splitParent}
-        // One title, resolved in priority order. Two `title` attributes silently kept only the
-        // last, so the shortcut tooltip was dead on every row.
-        title={
-          splitParent
-            ? "Split is on — each direction is set separately below. Untick split to give the whole gesture one action."
-            : unsupported
-            ? "The Track cannot store a hold — setting one would overwrite the tap."
-            : shortcutInfo(b.actionCode)
-            ? shortcutTooltip(b.actionCode)
-            : undefined
-        }
-        onChange={(e) => onPick(b.id, opts.find((o) => o.code === e.target.value))}
-      >
-        {order.map((g) =>
-          g ? (
-            <optgroup key={g} label={g}>
-              {groups[g].map((o) => <option key={o.code || "none"} value={o.code}>{o.label}</option>)}
-            </optgroup>
-          ) : (
-            groups[g].map((o) => <option key={o.code || "none"} value={o.code}>{o.label}</option>)
-          )
-        )}
-      </select>
+      {isPairRow ? (
+        // The ONE place a dropdown survives. An un-split axis holds a compound direction PAIR
+        // ("mouse - SCROLL_UP - SCROLL_DOWN") -- two device fields with the sign as direction --
+        // and every palette branch emits a single atomic code per click. Splitting the axis
+        // gives you two half rows the palette can target normally.
+        <select
+          className="mac-input mod-action"
+          value={b.actionCode || ""}
+          disabled={unsupported || splitParent}
+          title={
+            splitParent
+              ? "Split is on — each direction is set separately below. Untick split to give the whole gesture one action."
+              : shortcutInfo(b.actionCode)
+              ? shortcutTooltip(b.actionCode)
+              : undefined
+          }
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => onPick(b.id, opts.find((o) => o.code === e.target.value))}
+        >
+          {order.map((g) =>
+            g ? (
+              <optgroup key={g} label={g}>
+                {groups[g].map((o) => <option key={o.code || "none"} value={o.code}>{o.label}</option>)}
+              </optgroup>
+            ) : (
+              groups[g].map((o) => <option key={o.code || "none"} value={o.code}>{o.label}</option>)
+            )
+          )}
+        </select>
+      ) : (
+        // Everything else is set through the palette, like every key on Bindings. There used to
+        // be a dropdown here TOO, so one value had two editors and two write paths that had
+        // already drifted apart.
+        <span className={"skp-act" + (b.actionCode ? "" : " unset")}
+          title={
+            splitParent
+              ? "Split is on — each direction is set separately below."
+              : unsupported
+              ? "The Track cannot store a hold — setting one would overwrite the tap."
+              : shortcutInfo(b.actionCode)
+              ? shortcutTooltip(b.actionCode)
+              : "Click the row, then pick an action below."
+          }>
+          {splitParent ? "set per direction below"
+            : unsupported ? "not settable"
+            : b.actionCode ? cleanCode(b.actionCode) : "Unassigned"}
+        </span>
+      )}
       {extra}
     </div>
   );
@@ -462,6 +500,8 @@ export default function Modules() {
           <span className="skp-beh" style={{ textTransform: "none", paddingLeft: 18 }}>
             {side === "-" ? minusName : plusName}
           </span>
+          {(() => { const bd = statusBadge({ flashable: true });
+            return <span className={"gesture-badge " + bd.cls} title={bd.title}>{bd.text}</span>; })()}
           <DeviceBadge dev={deviceByGesture[`${axis.behavior}:${side}`]} />
           <span className="skp-arrow">→</span>
           <select className="mac-input mod-action"
@@ -483,6 +523,23 @@ export default function Modules() {
       );
     });
   }
+
+  // A human name for whatever the palette is aimed at, including axis halves, which are
+  // addressed by behavior+direction rather than by a binding id.
+  const selectedTargetName = useMemo(() => {
+    if (!selectedBindingId) return "";
+    const half = parseAxisHalfId(selectedBindingId);
+    if (half) {
+      const head = (half.behavior || "").split(":")[0];
+      const [minusName, plusName] = AXIS_HALF_LABEL[head] || ["-", "+"];
+      const axis = axisFor(half.behavior);
+      const base = GESTURE_LABEL[axis?.gesture] || (axis?.gesture || head).replace(/_/g, " ");
+      return `${base} · ${half.side === "-" ? minusName : plusName}`;
+    }
+    const b = (config?.bindings || []).find((x) => x.id === selectedBindingId);
+    if (!b) return "";
+    return GESTURE_LABEL[b.gesture] || (b.gesture || "").replace(/_/g, " ");
+  }, [selectedBindingId, config, axisFor]);
 
   // The gesture row the palette is currently binding.
   const selectedBinding = useMemo(() => {
@@ -742,7 +799,7 @@ export default function Modules() {
                     <button
                       className={"module-item" + (m.id === selectedId ? " active" : "")
                         + (device && isLive(m.id) ? " on-device" : "")}
-                      onClick={() => { setSelectedId(m.id); setActiveTarget(null); }}
+                      onClick={() => { setSelectedId(m.id); setActiveTarget(null); setSelectedBindingId(null); }}
                       onDoubleClick={() => startRename(m)}
                       title={
                         !device
@@ -830,40 +887,12 @@ export default function Modules() {
               {tab === "settings" && (
                 <div style={{ marginTop: 16, maxWidth: 640 }}>
                   {config.settingsSchema.map((f) => (
-                    <div className="setting" key={f.id}>
-                      <div className="setting-head">
-                        <strong>{f.label}</strong>
-                        {f.kind === "toggle" ? (
-                          <button
-                            className={"toggle" + (f.value ? " on" : "")}
-                            onClick={() => setSetting(f.id, !f.value)}
-                            aria-label={f.label}
-                          >
-                            <span className="toggle-knob" />
-                          </button>
-                        ) : (
-                          <span className="setting-val">{f.value}</span>
-                        )}
-                      </div>
-                      <div className="setting-desc">
-                        {f.desc}
-                        {f.writable === false && (
-                          <span className="setting-apponly" title="We have not established which device field holds this, so writing it would be a guess. It is stored in the app and left alone on the keyboard.">
-                            {" "}· app only
-                          </span>
-                        )}
-                      </div>
-                      {f.kind === "slider" && (
-                        <input
-                          type="range"
-                          min={f.min}
-                          max={f.max}
-                          value={f.value}
-                          onChange={(e) => setSetting(f.id, Number(e.target.value))}
-                          style={{ width: "100%" }}
-                        />
-                      )}
-                    </div>
+                    // Shared control, not a second copy. `writable` is this schema's word for
+                    // the same thing `provenance` says on the Settings page: a field we have
+                    // capture evidence for is flashed, one we do not is app-only.
+                    <SettingField key={f.id}
+                      f={{ ...f, provenance: f.writable === false ? "app" : "verified" }}
+                      onChange={setSetting} />
                   ))}
                 </div>
               )}
@@ -877,6 +906,27 @@ export default function Modules() {
             or a key would remount the palette on every pick and reset its tab back to the
             virtual keyboard. */}
         <div className="editor-bottom modules-bottom">
+          {/* What the palette is about to write to. Bindings has SelectedKeyPanel for exactly
+              this; here the only cue was a .selected class on a row that can sit most of a
+              screen above the palette, so it was easy to pick an action into nothing, or into
+              the wrong row. */}
+          <div className={"mod-target" + (selectedBinding ? " armed" : "")}>
+            {selectedBinding ? (
+              <>
+                <span className="mod-target-label">Binding</span>
+                <strong className="mod-target-name">{selectedTargetName}</strong>
+                <span className="skp-arrow">→</span>
+                <span className={"skp-act" + (selectedBinding.actionCode ? "" : " unset")}>
+                  {selectedBinding.actionCode ? cleanCode(selectedBinding.actionCode) : "Unassigned"}
+                </span>
+                <button className="btn mod-target-clear" onClick={() => setSelectedBindingId(null)}>
+                  Done
+                </button>
+              </>
+            ) : (
+              <span className="mod-target-label">Select a gesture above to bind it.</span>
+            )}
+          </div>
           <ActionPalette
             catalog={catalog}
             context="module"
