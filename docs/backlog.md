@@ -1,3 +1,7 @@
+> **Superseded by [`docs/backlog.md`](../../docs/backlog.md) (2026-09-08).**
+> Kept for history only. Several items below shipped: the REMAP flash codec,
+> module gesture-binding editing, and richer macros.
+
 # OpenFlow backlog
 
 Deferred / future work, most valuable first. Device-blocked items wait on the
