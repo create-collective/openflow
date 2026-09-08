@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import FlashButton from "../components/FlashButton.jsx";
 import { api } from "../lib/api";
-import { hsvToHex, isValidHex } from "../lib/color";
+import { hsvToHex, isValidHex, deviceColor } from "../lib/color";
 import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
@@ -118,6 +118,29 @@ export default function Color() {
     return map;
   }, [layer]);
 
+  // What the BOARD will look like after a flash. The device stores hue + SATURATION and no
+  // per-key brightness, so every fully-bright colour survives exactly and dark ones come back
+  // at full brightness (#808080 -> white, #800000 -> red). keysByPosition is left alone so the
+  // pipette picks up the colour the user chose, not the approximation.
+  const boardKeys = useMemo(() => {
+    const out = {};
+    for (const [pos, k] of Object.entries(keysByPosition)) {
+      const dev = deviceColor(k.colorHex);
+      out[pos] = dev ? { ...k, colorHex: dev.hex } : k;
+    }
+    return out;
+  }, [keysByPosition]);
+
+  const brushDevice = deviceColor(brush);
+
+  // Resolved once per swatch rather than three times per swatch per render -- and, more to the
+  // point, `deviceColor` returns null for anything that is not a valid hex, so calling it inline
+  // in both the title and the chip meant one bad swatch value would throw and blank the page.
+  const swatchViews = useMemo(
+    () => swatches.map((c) => ({ c, dev: deviceColor(c) })),
+    [swatches]
+  );
+
   // layerId -> index, so layer-switch keys show "layers icon + number" in the LED view too.
   const layerMap = useMemo(() => {
     const m = {};
@@ -186,10 +209,15 @@ export default function Color() {
         </div>
         <div className="board-wrap">
           <div className="board-header">
-            <div><strong>{layer?.name}</strong> — LED view</div>
+            <div>
+              <strong>{layer?.name}</strong> — LED view
+              <span className="page-sub" style={{ marginLeft: 8 }}>
+                shown as the keyboard will light it
+              </span>
+            </div>
             <div className="board-actions"><FlashButton variant="toolbar" /></div>
           </div>
-          <KeymapBoard keysByPosition={keysByPosition} mode="color" onSelectKey={onKey} layerMap={layerMap} />
+          <KeymapBoard keysByPosition={boardKeys} mode="color" onSelectKey={onKey} layerMap={layerMap} />
         </div>
       </div>
 
@@ -210,15 +238,25 @@ export default function Color() {
 
           <div className="card">
             <h3>LED Color Palette</h3>
+            <p className="page-sub" style={{ marginBottom: 10 }}>
+              The keyboard stores a hue and a saturation — <strong>brightness is a keyboard-wide
+              setting</strong>, not per key. So pale colours and white come out exactly as
+              picked, while dark ones light up at full brightness. The board above shows the
+              real result.
+            </p>
             <div className="swatches">
-              {swatches.map((c, i) => (
+              {swatchViews.map(({ c, dev }, i) => (
                 <button
                   key={i}
                   className={"swatch" + (brush === c ? " active" : "") + (c ? "" : " off")}
                   style={c ? { background: c } : undefined}
                   onClick={() => { setBrush(c); if (c) setHex(c); }}
-                  title={c || "Off"}
-                />
+                  title={!c ? "Off" : dev && !dev.exact ? `${c} — lights up as ${dev.hex}` : c}
+                >
+                  {dev && !dev.exact && (
+                    <span className="swatch-dev" style={{ background: dev.hex }} />
+                  )}
+                </button>
               ))}
               <button className="swatch add" title="Create color" onClick={() => setShowCreator((v) => !v)}>+</button>
             </div>
@@ -234,21 +272,49 @@ export default function Color() {
                     onChange={(e) => { setSat(+e.target.value); }} onInput={() => applyCreator(true)} />
                 </label>
                 <div className="creator-row">
-                  <div className="creator-preview" style={{ background: isValidHex(hex) ? hex : "#000" }} />
+                  <div className="creator-preview" title="The colour you picked"
+                    style={{ background: isValidHex(hex) ? hex : "#000" }} />
+                  <span className="creator-arrow" aria-hidden="true">→</span>
+                  <div className="creator-preview" title="How the keyboard will light it"
+                    style={{ background: brushDevice ? brushDevice.hex : "#000" }} />
                   <input className="mac-input" value={hex}
                     onChange={(e) => setHex(e.target.value)}
                     onBlur={() => applyCreator(false)} />
                   <button className="btn" onClick={() => applyCreator(true)}>Use HSV</button>
                   <button className="btn primary" onClick={addSwatch}>Add swatch</button>
                 </div>
+                {brushDevice && (
+                  <p className="page-sub" style={{ marginTop: 6 }}>
+                    {brushDevice.exact
+                      ? `The keyboard can show this exactly — hue ${brushDevice.hue}°, saturation ${brushDevice.saturation}%.`
+                      : `Stored as hue ${brushDevice.hue}°, saturation ${brushDevice.saturation}% — the keyboard has no per-key brightness, so it will light up ${brushDevice.hex}.`}
+                  </p>
+                )}
               </div>
             )}
           </div>
         </div>
 
         <div className="card">
-          <h3>Animations</h3>
-          <p className="page-sub" style={{ marginBottom: 12 }}>Per-layer LED animation.</p>
+          <h3>
+            Animations
+            <span className="gesture-badge prov-experimental" style={{ marginLeft: 8 }}
+              title="Stored in OpenFlow only. Nothing in the flash path sends an animation to the keyboard.">
+              app only
+            </span>
+          </h3>
+          {/* This card wrote layers.animation_id and nothing else. There is no reference to
+              `animation` anywhere in device/, so picking one has never affected the keyboard --
+              and unlike the other app-only features it carried no badge and no note at all.
+              The capability is real but unwired: LED_SELECT_EFFECT (0x1011) and
+              LED_EFFECT_CYCLE (0x100D) exist in constants.py with no caller, and NayaCore's
+              strings carry LED_BREATHE / LED_SWIRL / Spectrum. It is also a LIVE effect rather
+              than a stored per-layer property, so "per-layer" was wrong twice over. */}
+          <p className="page-sub" style={{ marginBottom: 8 }}>
+            Saved with the layer, but <strong>not sent to the keyboard</strong>. The board has an
+            effect command we have not wired up yet, and it applies to the whole keyboard rather
+            than to one layer — so this is a note to ourselves, not something the keys will do.
+          </p>
           <div className="anim-list">
             {ANIMATIONS.map((a) => (
               <button

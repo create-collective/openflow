@@ -87,6 +87,61 @@ KEY_PRESS, TWO_PARAM, LAYER_HOLD, NONE_BEH, OUTPUTS = 0x01, 0x00, 0x05, 0x07, 0x
 #   * NayaFlow's own database has BT_OUT at 0x2f and USB_DEVICE at 0x30 in that same profile.
 OUTPUT_SELECTOR = {1: "USB_DEVICE", 2: "BT_OUT"}
 RGB_SYS, TRANS = 0x09, 0x0E
+
+# --- record type 0x09: the LED system keys (ZMK's &rgb_ug) ------------------------------------ #
+# These were decoded as `Unmapped("led:<hex>")` and shown in the UI as a bare "LED", so a board
+# full of working lighting keys read back as fourteen indistinguishable unknowns.
+#
+# The table below is not inferred. NayaFlow flashed its own default profile to the reference board
+# on 2026-09-08, and every record was paired with the action code NayaFlow's database holds for
+# that exact layer and position -- so each name here is the vendor's own, matched one to one:
+#
+#     layer 2 pos  9  0d 00000000  ->  LED_SOLID          pos 39  00 00000000  -> LED_EFFECT_ON_OFF
+#             pos 10  0d 01000000  ->  LED_BREATHE        pos 24  07 00000000  -> LED_BRIGHTNESS_UP
+#             pos 11  0d 02000000  ->  LED_SWIRL          pos 40  08 00000000  -> LED_BRIGHTNESS_DOWN
+#             pos 12  0d 03000000  ->  LED_SPEC           pos 25  09 00000000  -> LED_SPEED_UP
+#             pos 23  0b 00000000  ->  LED_EFFECT         pos 41  0a 00000000  -> LED_SPEED_DOWN
+#
+# The param is [subcommand u32 LE][argument u32 LE].
+RGB_SUBCOMMAND = {
+    0x00: "LED_EFFECT_ON_OFF",
+    0x07: "LED_BRIGHTNESS_UP",
+    0x08: "LED_BRIGHTNESS_DOWN",
+    0x09: "LED_SPEED_UP",
+    0x0A: "LED_SPEED_DOWN",
+    0x0B: "LED_EFFECT",           # cycle to the next effect
+}
+RGB_SELECT_EFFECT = 0x0D          # argument is the effect index
+RGB_EFFECTS = {0: "LED_SOLID", 1: "LED_BREATHE", 2: "LED_SWIRL", 3: "LED_SPEC"}
+RGB_SET_COLOR = 0x0F              # argument is [brightness u8][saturation u8][hue u16 LE]
+# Note this LIVE path carries brightness AND saturation, where the stored per-key map holds only
+# hue + saturation. White is saturation 0 in both, which is the cross-check that they agree.
+RGB_COLORS = {
+    (100,   0,   0): "LED_COLOR_WHITE",
+    (100, 100,   0): "LED_COLOR_RED",
+    (100, 100, 120): "LED_COLOR_GREEN",
+    (100, 100, 240): "LED_COLOR_BLUE",
+}
+
+
+def decode_rgb_system(param: bytes):
+    """0x09 param -> an LED action code, or None if we have not seen that combination.
+
+    Returning None rather than a guess is deliberate: an unrecognised subcommand still reads back
+    as raw bytes and gets reported, instead of being rounded to whichever LED key looks closest."""
+    if len(param) < 4:
+        return None
+    sub = int.from_bytes(param[0:4], "little")
+    arg = int.from_bytes(param[4:8], "little") if len(param) >= 8 else 0
+    if sub in RGB_SUBCOMMAND:
+        return RGB_SUBCOMMAND[sub]
+    if sub == RGB_SELECT_EFFECT:
+        return RGB_EFFECTS.get(arg)
+    if sub == RGB_SET_COLOR:
+        bright, sat = arg & 0xFF, (arg >> 8) & 0xFF
+        hue = (arg >> 16) & 0xFFFF
+        return RGB_COLORS.get((bright, sat, hue))
+    return None
 LAYER_TO, LAYER_TOGGLE = 0x0C, 0x0D   # 0x0c=TO_LAYER (Force), 0x0d=TOGGLE (verified)
 MODULE_TYPE, UNKNOWN_02 = 0x78, 0x02
 # Hold-tap records: 0x10 (8-byte header, e.g. OneKey Tap+Hold) and 0x03 (5-byte
@@ -96,6 +151,10 @@ HOLD_TAP_TYPES = (0x10, 0x03)
 
 BT_PROFILE = {0: "BT_DEVICE_1", 1: "BT_DEVICE_2", 2: "BT_DEVICE_3", 3: "BT_DEVICE_4"}
 MAX_POSITION = 96
+
+# The eight module bays. Their record's type byte is a module-config SLOT number, not a behaviour
+# type, so they must never reach `translate`. Mirrors flash.MODULE_SLOT_POSITIONS.
+BAY_POSITIONS = range(0x4A, 0x52)
 
 # A key has TWO records, 0x52 apart. The primary bank (0x00-0x51) holds tap + hold; the
 # secondary bank (position + 0x52) holds double-tap + tap-hold in the same two slots. Captured
@@ -187,7 +246,8 @@ def translate(typ: int, param: bytes, order_to_layer: dict[int, str]) -> list[tu
             return [("press", "bluetooth", Unmapped(f"2p:{a},{b}"))]
         return []
     if typ == RGB_SYS:
-        return [("press", "LED", Unmapped(f"led:{param.hex()}"))]
+        code = decode_rgb_system(param)
+        return [("press", "LED", code if code else Unmapped(f"led:{param.hex()}"))]
     if typ in (MODULE_TYPE, UNKNOWN_02):
         return []
     if not param:
@@ -212,13 +272,49 @@ def parse_records(data: bytes) -> list[tuple[int, int, bytes]]:
 
 
 def parse_led_map(data: bytes) -> list[tuple[int, int, int]]:
+    """-> [(led, hue, SATURATION)]. The third byte is saturation; see hsv_to_hex."""
     return [(data[i], data[i + 1] | (data[i + 2] << 8), data[i + 3])
             for i in range(0, len(data) - 3, 4)]
 
 
-def hsv_to_hex(hue_deg: int, value: int) -> str:
-    r, g, b = colorsys.hsv_to_rgb((hue_deg % 360) / 360.0, 1.0, max(0, min(100, value)) / 100.0)
+# The LED record's third byte is SATURATION, not brightness. This was wrong for a long time and
+# it broke both directions: a white key (saturation 0) rendered as BLACK, and picking white in the
+# app wrote saturation 100 -- pure RED, which is what people actually saw on the keyboard.
+#
+# Established by flashing from NayaFlow and reading the board back (2026-09-08). Against
+# NayaFlow's own database, 17 of 18 colour classes across three layers match this reading,
+# including all 40 white keys:
+#     #ffffff -> (hue 0, sat 0)      #ff0000 -> (hue 0, sat 100)
+#     #21ffaa -> (hue 157, sat 87)   #808080 -> (hue 0, sat 0), same as white
+# Per-key BRIGHTNESS is not stored at all -- it is a global setting, which is why the board has
+# LED_BRIGHTNESS_UP/DOWN keys. So the map is lossy in brightness, not in saturation.
+UNSET_SATURATION = 150      # NayaFlow's "#xxxxxx" placeholder; out of the 0-100 range on purpose
+
+
+def hsv_to_hex(hue_deg: int, saturation: int) -> str:
+    """(hue, saturation) -> hex at FULL brightness, because brightness is not per-key."""
+    r, g, b = colorsys.hsv_to_rgb((hue_deg % 360) / 360.0, max(0, min(100, saturation)) / 100.0, 1.0)
     return "#%02x%02x%02x" % (round(r * 255), round(g * 255), round(b * 255))
+
+
+def hex_to_hue_sat(hex_color: str) -> tuple[int, int]:
+    """hex -> (hue, saturation), matching NayaFlow byte for byte.
+
+    The 60-degree formula on raw 0-255 ints, TRUNCATED. Going through colorsys' 0..1 floats and
+    rounding gives off-by-one hues (#0084ff lands on 209 where the device stores 208), so the
+    arithmetic here is deliberate rather than incidental."""
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
+    mx, mn = max(r, g, b), min(r, g, b)
+    d = mx - mn
+    if d == 0 or mx == 0:
+        return 0, 0                       # any grey, white included, is saturation 0
+    if mx == r:
+        h = 60 * (((g - b) / d) % 6)
+    elif mx == g:
+        h = 60 * (2 + (b - r) / d)
+    else:
+        h = 60 * (4 + (r - g) / d)
+    return int(h) % 360, int(d / mx * 100)
 
 
 # --------------------------------------------------------------------------- #
@@ -355,6 +451,17 @@ def decode_keymap(read: dict, order_to_layer: dict[int, str]) -> dict:
     for order, recs in sorted(read["layers"].items()):
         pos: dict = {}
         for idx, typ, param in recs:
+            # A MODULE BAY IS NOT A BINDING. At 0x4A-0x51 the "type" byte is the module-config
+            # SLOT number, and `translate` happily reads it as a behaviour type: slot 1 became a
+            # KEY_PRESS, slot 2 a macro, slot 3 a mod_tap, slot 5 a layer hold with no target
+            # (the `MO_LAYER_-1` entries that finally made this visible, because they were the
+            # only ones that could not be encoded back).
+            #
+            # So every read imported up to eight invented bindings per layer, and all but the
+            # layer holds looked entirely plausible. Bays are decoded separately and correctly by
+            # `decode_bays` -- this loop must not see them at all.
+            if idx in BAY_POSITIONS:
+                continue
             slots = translate(typ, param, order_to_layer)
             if not slots:
                 continue
@@ -373,7 +480,10 @@ def decode_keymap(read: dict, order_to_layer: dict[int, str]) -> dict:
             pos[key] = [s for s in pos[key] if s[0] not in {b for b, _, _ in slots}] + slots
         out[order] = pos
     for order, entries in sorted(read.get("led", {}).items()):
-        colors[order] = {i: hsv_to_hex(h, v) for i, h, v in entries if i <= MAX_POSITION and v > 0}
+        # `sat > 0` would drop every WHITE key (saturation 0). The thing to exclude is the
+        # unset sentinel, not low saturation.
+        colors[order] = {i: hsv_to_hex(h, sat) for i, h, sat in entries
+                         if i <= MAX_POSITION and sat != UNSET_SATURATION}
     out["_colors"] = colors
     out["_warnings"] = warnings
     out["_dropped"] = dropped

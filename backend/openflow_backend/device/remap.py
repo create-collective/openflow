@@ -212,9 +212,93 @@ def encode_layer_data(layer: int, records: list[bytes]) -> bytes:
     return bytes([layer]) + b"".join(records)
 
 
-def encode_led_record(led: int, hue_deg: int, value: int) -> bytes:
-    """[led][hue u16 LE][value]."""
-    return bytes([led & 0xFF]) + (hue_deg & 0xFFFF).to_bytes(2, "little") + bytes([value & 0xFF])
+# --- WRITE_LAYER_LIST ------------------------------------------------------------------------- #
+# The layer list is the device's IDENTITY table: which UUID sits at which index. It is what a
+# read matches app layers against, and OpenFlow never wrote it -- so a board flashed by us kept
+# whatever identities NayaFlow last wrote while we rewrote the records underneath. Reading back
+# then attributed everyone's bindings to the wrong layers.
+#
+# Both forms below are copied from captured NayaCore flashes, not inferred:
+#   add/replace  docs/write-protocol-spec.md:137  (flash2: two new layers)
+#   delete       docs/write-protocol-spec.md:189  (flash3: those two layers removed)
+# Entry stride and field order match what READ_LAYER_LIST returns (keymap_read.read_keymap),
+# which is the cross-check that they describe the same table.
+
+LAYER_UUID_LEN = 0x10
+
+
+def encode_layer_list_entries(entries: list[tuple[int, bytes]]) -> bytes:
+    """Add or replace layers: `00` then `[idx][id][00][10][uuid16]` each.
+
+    NayaCore sent only the entries that CHANGED, not the whole list, so this takes a diff.
+    `id` mirrors `idx` in every capture we hold."""
+    out = bytearray(b"\x00")
+    for idx, uuid in entries:
+        if len(uuid) != LAYER_UUID_LEN:
+            raise ValueError(f"layer {idx}: uuid must be {LAYER_UUID_LEN} bytes, got {len(uuid)}")
+        if not 0 <= idx <= 0xFF:
+            raise ValueError(f"layer index out of range: {idx}")
+        out += bytes([idx, idx, 0x00, LAYER_UUID_LEN]) + uuid
+    return bytes(out)
+
+
+def encode_layer_list_deletes(indexes: list[int]) -> bytes:
+    """Delete layers: `00` then `[idx] 00 00 00` each -- an entry with an empty id.
+
+    The whole set is sent TWICE in one frame. That is not a typo: NayaCore did it that way, the
+    device accepted it, and a single-entry form has never been tested. Deleting a layer is not
+    undoable from here, so this stays byte-identical to the capture until something proves the
+    shorter form works."""
+    out = bytearray(b"\x00")
+    for idx in list(indexes) * 2:
+        if not 0 <= idx <= 0xFF:
+            raise ValueError(f"layer index out of range: {idx}")
+        out += bytes([idx, 0x00, 0x00, 0x00])
+    return bytes(out)
+
+
+def layer_uuid_bytes(uuid_str: str) -> bytes:
+    """'8c113aea-ee86-...' -> the 16 raw bytes, in the order the device stores them.
+
+    Deliberately not `uuid.UUID(...).bytes`: the device's own read path is a plain hex slice
+    (`blk[4:20].hex()` re-dashed), so this mirrors that exactly rather than trusting two
+    libraries to agree on byte order."""
+    raw = bytes.fromhex(uuid_str.replace("-", ""))
+    if len(raw) != LAYER_UUID_LEN:
+        raise ValueError(f"not a 16-byte uuid: {uuid_str!r}")
+    return raw
+
+
+RGB_SYS = kr.RGB_SYS             # 0x09  (&rgb_ug -- the LED system keys)
+
+# The exact inverse of keymap_read.decode_rgb_system, built from its tables so the two cannot
+# drift. Without this, every LED key on a board read back was dropped at flash time and the key
+# silently kept whatever it had.
+_RGB_SUB_REV = {v: k for k, v in kr.RGB_SUBCOMMAND.items()}
+_RGB_EFFECT_REV = {v: k for k, v in kr.RGB_EFFECTS.items()}
+_RGB_COLOR_REV = {v: k for k, v in kr.RGB_COLORS.items()}
+
+
+def encode_rgb_system(code: str) -> bytes:
+    """LED action code -> the 8-byte 0x09 param: [subcommand u32 LE][argument u32 LE]."""
+    if code in _RGB_SUB_REV:
+        return encode_twoparam(_RGB_SUB_REV[code], 0)
+    if code in _RGB_EFFECT_REV:
+        return encode_twoparam(kr.RGB_SELECT_EFFECT, _RGB_EFFECT_REV[code])
+    if code in _RGB_COLOR_REV:
+        bright, sat, hue = _RGB_COLOR_REV[code]
+        return encode_twoparam(kr.RGB_SET_COLOR, bright | (sat << 8) | (hue << 16))
+    raise RemapEncodeError(f"unknown LED action {code!r}")
+
+
+def encode_led_record(led: int, hue_deg: int, saturation: int) -> bytes:
+    """[led][hue u16 LE][SATURATION].
+
+    The third byte is saturation, not brightness -- brightness is a global setting, which is why
+    the board has LED_BRIGHTNESS keys. See keymap_read.hsv_to_hex for how that was established.
+    150 (UNSET_SATURATION) is a legal value here: it is the "no colour assigned" sentinel, so this
+    deliberately does not clamp to 0-100."""
+    return bytes([led & 0xFF]) + (hue_deg & 0xFFFF).to_bytes(2, "little") + bytes([saturation & 0xFF])
 
 
 def encode_led_map(layer: int, led_records: list[bytes]) -> bytes:

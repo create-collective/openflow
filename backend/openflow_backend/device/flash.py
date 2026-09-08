@@ -18,10 +18,10 @@ Module GESTURE bindings are intentionally NOT written — see MODULE CONFIDENCE 
 """
 from __future__ import annotations
 
-import colorsys
 from dataclasses import dataclass, field
 
 from .._vendor.nayactl.constants import CAT_SYSTEM
+from . import keymap_read
 from . import module_fields as MF
 from . import remap as R
 
@@ -94,10 +94,9 @@ def desired_from_read(read_json: dict) -> DesiredState:
     return d
 
 
-def _hex_to_hue_val(hex_color: str) -> tuple[int, int]:
-    r, g, b = (int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5))
-    h, _s, v = colorsys.rgb_to_hsv(r, g, b)
-    return round(h * 360) % 360, round(v * 100)
+# The LED record is [led][hue u16][SATURATION]. Not brightness -- see keymap_read.hsv_to_hex for
+# the evidence. Writing brightness here is what turned every white key RED on the keyboard.
+_hex_to_hue_sat = keymap_read.hex_to_hue_sat
 
 
 def desired_from_device_read(read: dict) -> DesiredState:
@@ -113,6 +112,11 @@ def desired_from_device_read(read: dict) -> DesiredState:
                               if pos in ALL_LAYER_POSITIONS}
     for idx, entries in (read.get("led") or {}).items():
         d.leds[int(idx)] = {i: (hue, val) for i, hue, val in entries}
+    for idx, uuid_str in (read.get("layer_uuids") or {}).items():
+        try:
+            d.layer_uuids[int(idx)] = R.layer_uuid_bytes(uuid_str)
+        except ValueError:
+            pass          # a board with an unreadable id is a reason to REWRITE it, not to fail
     return d
 
 
@@ -156,6 +160,13 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
             "SELECT id, order_id FROM layers WHERE profile_id = ? ORDER BY order_id", (pid,)):
         idx = lrow["order_id"]
         d.layers[idx], d.leds[idx] = {}, {}
+        # The identity table the board should end up with. Without this the device keeps whatever
+        # UUIDs were last written to it -- by NayaFlow, in practice -- and a later read matches
+        # our layers against those, attributing bindings to the wrong layers entirely.
+        try:
+            d.layer_uuids[idx] = R.layer_uuid_bytes(lrow["id"])
+        except ValueError:
+            pass      # not a uuid (fixtures use short ids); the completeness guard below drops it
         q = conn.execute(
             "SELECT k.position_id p, k.color_hex, b.action_type at, b.action_code ac, b.behavior beh "
             "FROM keys k LEFT JOIN key_bindings b ON b.key_id = k.id WHERE k.layer_id = ? ORDER BY k.position_id",
@@ -191,7 +202,7 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
                 d.layers[idx][pos + SECOND_BANK] = second
         for pos, hexc in colors.items():
             if len(hexc) == 7 and hexc[0] == "#" and all(c in "0123456789abcdefABCDEF" for c in hexc[1:]):
-                d.leds[idx][pos] = _hex_to_hue_val(hexc)
+                d.leds[idx][pos] = _hex_to_hue_sat(hexc)
     d.timeouts = _read_timeouts(conn)
     d.modules = _read_module_safe_fields(conn)
     return d
@@ -215,10 +226,27 @@ _DROP_REASONS = {
 }
 
 
+# Layer switches DO have encoders. When one of these is dropped it is never the type that is
+# unsupported -- it is the layer it points AT that could not be resolved.
+_LAYER_TYPES_WITH_ENCODERS = ("layer_polite_hold", "layer_rude_toggle", "layer_polite_toggle")
+
+
 def _drop_reason(action_type: str | None, code: str | None) -> str:
     base = _DROP_REASONS.get(action_type or "")
     if base:
         return base
+    if action_type in _LAYER_TYPES_WITH_ENCODERS:
+        # Saying "no encoder for 'layer_polite_hold'" here was simply WRONG, and it sent the
+        # device owner looking for a missing feature instead of a broken reference. `MO_LAYER_-1`
+        # is the shape it takes: the importer wrote -1 where a layer UUID belongs, because it was
+        # decoding a module bay as a binding (see keymap_read.BAY_POSITIONS). A stale reference
+        # to a deleted or copied-in layer produces the same drop.
+        target = (code or "").split("_LAYER_", 1)[-1]
+        if target in ("-1", ""):
+            return ("This points at layer -1, which is not a real layer. It comes from an old "
+                    "read that mistook a module bay for a key; deleting this binding is safe.")
+        return (f"The layer this points at ({target}) is not in this profile, so there is no "
+                f"index to write. It was probably deleted or copied in from another profile.")
     return f"OpenFlow has no encoder for action type {action_type!r} yet."
 
 
@@ -240,6 +268,22 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
 
     if at in ("key", "modifier", "shortcut_alias"):
         return R.KEY_PRESS, R.encode_keypress(at, code)
+    if at == "none":
+        # DISABLE -> the NONE record, empty param. Better evidenced than anything else here:
+        # ~220 of these come back in every board read, and NayaCore has been captured writing
+        # them three separate ways (blanking whole layers in flash3, a sparse `49 07 00` edit,
+        # and the `2e 07 00` from the macro investigation). flash.py already emits this exact
+        # record for unmodelled positions -- the only thing missing was a user reaching it.
+        #
+        # Until this existed, setting a key to Disabled left the key doing whatever it did
+        # before, because the position fell through to the device's own record.
+        return R.NONE_BEH, b""
+    if at == "trans":
+        # TRANSPARENT -> 0x0e, empty param. 23-25 per board read, and captured from NayaCore in
+        # both full-layer (flash2) and sparse form. Encoding it also closes a real hole in
+        # mode="recovery", which has no device read to fall back on and so turned every TRANS on
+        # the board into NONE.
+        return R.TRANS, b""
     if at == "mouse":
         # A key takes the SAME two-word record a module gesture does: [cat 3][button mask].
         # Measured, not assumed -- writing 0f 08 03000000 01000000 to a key position and
@@ -247,6 +291,14 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
         # The ZMK shape (a bare mask) was the other candidate and is not what this firmware wants.
         try:
             return R.TWO_WORD, R.encode_mouse_button(code)
+        except R.RemapEncodeError:
+            return None
+    if at == "LED":
+        # The LED system keys (&rgb_ug). Decoded from the board since 2026-09-08 and now
+        # encodable, so reading a profile off the keyboard and flashing it back keeps them
+        # instead of quietly dropping fourteen keys.
+        try:
+            return R.RGB_SYS, R.encode_rgb_system(code)
         except R.RemapEncodeError:
             return None
     if at == "bluetooth":
@@ -471,8 +523,62 @@ def _full_layer_payload(idx: int, poss: dict[int, tuple[int, bytes]],
 
 
 def _led_payload(idx: int, leds: dict[int, tuple[int, int]]) -> bytes:
-    recs = [R.encode_led_record(i, *leds.get(i, (0, 0))) for i in range(max(leds) + 1 if leds else 0)]
+    # (0, 0) is WHITE now that the third byte is saturation, so an unmentioned LED must carry the
+    # unset sentinel instead -- otherwise every gap in a profile would flash bright white.
+    unset = (0, keymap_read.UNSET_SATURATION)
+    recs = [R.encode_led_record(i, *leds.get(i, unset)) for i in range(max(leds) + 1 if leds else 0)]
     return R.encode_led_map(idx, recs)
+
+
+def _blank_layer_payload(idx: int) -> bytes:
+    """A deleted layer's data, wiped. `07 00` (none) everywhere, `00 00` on the module bays.
+
+    The firmware does NOT clear a deleted layer's data or LED map on its own -- NayaCore sends
+    both explicitly (docs/write-protocol-spec.md:14). Leaving them would strand records on an
+    index a later layer could be created at."""
+    recs = [R.record(pos, 0x00 if pos in MODULE_SLOT_POSITIONS else R.NONE_BEH, b"")
+            for pos in ALL_LAYER_POSITIONS]
+    return R.encode_layer_data(idx, recs)
+
+
+def _layer_list_ops(desired: DesiredState, current: DesiredState | None) -> list[WriteOp]:
+    """WRITE_LAYER_LIST for added / re-identified / removed layers, plus the wipes a delete needs.
+
+    Returns [] when the board already agrees, which is the common case: this must not fire on an
+    ordinary flash. Both payload forms come from captured NayaCore flashes -- see remap.py.
+    """
+    # Every layer or none. A PARTIAL identity table is worse than no write at all: it would
+    # name some indexes correctly and leave others pointing at whatever was there before, which
+    # is the exact failure this whole change exists to fix.
+    if not desired.layer_uuids or set(desired.layer_uuids) != set(desired.layers):
+        return []
+    have = dict(current.layer_uuids) if current else {}
+    ops: list[WriteOp] = []
+
+    # Added, or sitting at an index that names a different layer (the stale-identity case).
+    changed = [(i, u) for i, u in sorted(desired.layer_uuids.items()) if have.get(i) != u]
+    if changed:
+        what = ", ".join(f"{i}{'' if i in have else ' (new)'}" for i, _u in changed)
+        ops.append(WriteOp(R.WRITE_LAYER_LIST, R.encode_layer_list_entries(changed),
+                           f"layer list: {what}"))
+
+    # On the board and no longer in the profile.
+    removed = [i for i in sorted(have) if i not in desired.layer_uuids]
+    if removed:
+        ops.append(WriteOp(R.WRITE_LAYER_LIST, R.encode_layer_list_deletes(removed),
+                           f"layer list: remove {', '.join(map(str, removed))}"))
+        for idx in removed:
+            ops.append(WriteOp(R.WRITE_LAYER_DATA, _blank_layer_payload(idx), f"wipe layer {idx}"))
+            # As many LEDs as the board actually reports for that layer, NOT LED_COUNT: that
+            # constant is 88 while a real read returns 136 per layer (its own comment flags the
+            # discrepancy), and wiping 88 would leave a third of a deleted layer still lit.
+            count = len(current.leds.get(idx, {})) if current else 0
+            ops.append(WriteOp(R.WRITE_LED_MAP_DATA,
+                               R.encode_led_map(idx, [
+                                   R.encode_led_record(i, 0, keymap_read.UNSET_SATURATION)
+                                   for i in range(count or LED_COUNT)]),
+                               f"wipe led {idx}"))
+    return ops
 
 
 def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
@@ -511,6 +617,16 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
                         # 0 = disabled. Unambiguous on any layer, and it is NayaFlow's own
                         # idiom for a bay with nothing in it.
                         poss[pos] = (0x00, b"")
+
+    # --- the layer IDENTITY table, before any layer data --------------------------------------
+    # This is what a read matches app layers against. We never wrote it, so a board we had
+    # flashed still advertised NayaFlow's layer UUIDs while carrying our records -- and importing
+    # from that board attributed every binding to whichever profile owned those old UUIDs.
+    #
+    # Emitted only on a real difference. A flash that changes nothing about the layer set must
+    # not rewrite identities, because a rewrite is the one operation here that could confuse a
+    # board we have not tested this against.
+    ops.extend(_layer_list_ops(desired, current))
 
     for idx in sorted(desired.layers):
         if full or current is None or desired.layers[idx] != current.layers.get(idx):
