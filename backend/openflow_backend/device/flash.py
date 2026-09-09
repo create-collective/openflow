@@ -48,7 +48,21 @@ LED_COUNT = 88                                # 0x00..0x57 (observed full LED ma
 # INFERRED, from one NayaFlow flash. To falsify: colour positions 88 and 89 differently, flash,
 # and see which one the right-hand module follows.
 KEY_POSITIONS = 97
-RIGHT_MODULE_LED_SOURCE = 88
+# The LED blocks that light the docked modules, measured 2026-09-08 by painting each band a
+# distinct colour and looking at the keyboard:
+#
+#     74-80    left side edge      7      88-96    LEFT module    9   (a Tune)
+#     81-87    right side edge     7      112-126  RIGHT module  15   (a Track)
+#     97-111 and 127-135 lit nothing on that configuration
+#
+# Each side appears to get a 9-block and a 15-block, mirrored -- one per module TYPE, sized to
+# that type's LED count, with only the docked type lighting. That reading is INFERRED from one
+# configuration; the falsification test is to move the Tune to the right bay and see whether
+# 127-135 lights instead of 112-126.
+#
+# The left block falls inside the key range, so it was already fed by key colours -- which is why
+# the left module tracked the profile while the right stayed on whatever wrote it last.
+MODULE_LED_BLOCKS = {"left": range(88, 97), "right": range(112, 127)}
 SYS_SET_TIMEOUTS = 0x100A
 
 # ---- MODULE CONFIDENCE ------------------------------------------------------------------
@@ -80,6 +94,9 @@ class DesiredState:
     # idx -> LED animation index (0 solid / 1 breathe / 2 swirl / 3 spectrum). Byte 2 of the
     # layer-list entry. Hardcoded 0 here until 2026-09-08, which reset every layer to solid.
     layer_animations: dict[int, int] = field(default_factory=dict)
+    # idx -> {"left"/"right": "#rrggbb"} for the docked modules' LED blocks. The right module has
+    # no key position at all, so without this a flash left it on whatever wrote it last.
+    module_leds: dict[int, dict[str, str]] = field(default_factory=dict)
     profile_id: str | None = None                                                     # which profile this came from
     # {slot: (list_id, module_type, uuid16)} -- the module-config LIST the app intends.
     # None means the app is not managing the module set, and NOTHING is garbage collected.
@@ -179,8 +196,11 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
     # column, and a missing LED animation is not a reason to refuse to flash a keymap.
     _cols = {r[1] for r in conn.execute("PRAGMA table_info(layers)")}
     _anim_sel = ", animation_id" if "animation_id" in _cols else ""
+    _mod_sel = (", module_led_left, module_led_right"
+                if {"module_led_left", "module_led_right"} <= _cols else "")
     for lrow in conn.execute(
-            f"SELECT id, order_id{_anim_sel} FROM layers WHERE profile_id = ? ORDER BY order_id",
+            f"SELECT id, order_id{_anim_sel}{_mod_sel} FROM layers WHERE profile_id = ? "
+            f"ORDER BY order_id",
             (pid,)):
         idx = lrow["order_id"]
         d.layers[idx], d.leds[idx] = {}, {}
@@ -193,6 +213,10 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
             pass      # not a uuid (fixtures use short ids); the completeness guard below drops it
         d.layer_animations[idx] = keymap_read.LAYER_ANIMATION_IDS.get(
             ((lrow["animation_id"] if _anim_sel else None) or "solid"), 0)
+        if _mod_sel:
+            d.module_leds[idx] = {k: v for k, v in
+                                  (("left", lrow["module_led_left"]),
+                                   ("right", lrow["module_led_right"])) if v}
         q = conn.execute(
             "SELECT k.position_id p, k.color_hex, b.action_type at, b.action_code ac, b.behavior beh "
             "FROM keys k LEFT JOIN key_bindings b ON b.key_id = k.id WHERE k.layer_id = ? ORDER BY k.position_id",
@@ -563,8 +587,22 @@ def _full_layer_payload(idx: int, poss: dict[int, tuple[int, bytes]],
     return R.encode_layer_data(idx, recs)
 
 
+def _module_led_values(colours: dict[str, str] | None) -> dict[int, tuple[int, int]]:
+    """{"left": "#rrggbb"} -> {led index: (hue, saturation)} across that module's block."""
+    out: dict[int, tuple[int, int]] = {}
+    for side, hexc in (colours or {}).items():
+        block = MODULE_LED_BLOCKS.get(side)
+        if not block or not hexc:
+            continue
+        value = keymap_read.hex_to_hue_sat(hexc)
+        for i in block:
+            out[i] = value
+    return out
+
+
 def _led_payload(idx: int, leds: dict[int, tuple[int, int]],
-                 device: dict[int, tuple[int, int]] | None = None) -> bytes:
+                 device: dict[int, tuple[int, int]] | None = None,
+                 module_colours: dict[str, str] | None = None) -> bytes:
     """One layer's LED map.
 
     `device` is what the board currently holds for this layer. It matters because the board has
@@ -578,20 +616,20 @@ def _led_payload(idx: int, leds: dict[int, tuple[int, int]],
     one wrong colour with another and destroy whatever the modules are meant to show.
     """
     device = device or {}
+    module_leds = _module_led_values(module_colours)
     # (0, 0) is WHITE now that the third byte is saturation, so an LED the profile does not
     # mention must carry the unset sentinel rather than a colour.
     unset = (0, keymap_read.UNSET_SATURATION)
-    count = max([*leds, *device], default=-1) + 1
-    # LEDs past the app's key positions are the RIGHT module's block, and they take ONE colour
-    # rather than a colour each. See RIGHT_MODULE_LED_SOURCE.
-    block = leds.get(RIGHT_MODULE_LED_SOURCE)
+    count = max([*leds, *device, *module_leds], default=-1) + 1
     recs = []
     for i in range(count):
-        if i in leds:
+        if i in module_leds:
+            value = module_leds[i]          # an explicit module colour wins over everything
+        elif i in leds:
             value = leds[i]
-        elif i >= KEY_POSITIONS and block is not None:
-            value = block
         else:
+            # No model for this LED: keep what the device has rather than invent a colour.
+            # Writing a default into the module blocks would wipe whatever they should show.
             value = device.get(i, unset)
         recs.append(R.encode_led_record(i, *value))
     return R.encode_led_map(idx, recs)
@@ -710,7 +748,8 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
         if desired.leds[idx] and (full or current is None or desired.leds[idx] != current.leds.get(idx)):
             ops.append(WriteOp(R.WRITE_LED_MAP_DATA,
                                _led_payload(idx, desired.leds[idx],
-                                            (current.leds.get(idx) if current else None)),
+                                            (current.leds.get(idx) if current else None),
+                                            desired.module_leds.get(idx)),
                                f"led {idx}"))
     for slot in sorted(desired.modules):
         want = desired.modules[slot]

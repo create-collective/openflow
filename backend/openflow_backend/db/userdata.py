@@ -48,8 +48,8 @@ def get_userdata() -> dict:
         ):
             layers = []
             for l in conn.execute(
-                "SELECT id, name, order_id, icon_id, animation_id FROM layers "
-                "WHERE profile_id = ? ORDER BY order_id",
+                "SELECT id, name, order_id, icon_id, animation_id, module_led_left, "
+                "module_led_right FROM layers WHERE profile_id = ? ORDER BY order_id",
                 (p["id"],),
             ):
                 keys = _keys_for_layer(conn, l["id"])
@@ -60,6 +60,8 @@ def get_userdata() -> dict:
                         "orderId": l["order_id"],
                         "iconId": l["icon_id"],
                         "animationId": l["animation_id"],
+                        "moduleLed": {"left": l["module_led_left"],
+                                      "right": l["module_led_right"]},
                         "keys": keys,
                         "bays": _bays_for_layer(conn, p["id"], l["id"]),
                     }
@@ -432,6 +434,28 @@ def set_base_layer(layer_id: str) -> dict:
             conn.execute("UPDATE layers SET order_id=?, updated_at=? WHERE id=?", (i, now, oid))
         conn.commit()
         return {"ok": True}
+    finally:
+        conn.close()
+
+
+def set_module_led(layer_id: str, side: str, color_hex: str | None) -> dict:
+    """Colour for one docked module's LED block on this layer.
+
+    LEDs 88-96 light the LEFT module and 112-126 the RIGHT (flash.MODULE_LED_BLOCKS), measured by
+    painting each band and looking at the keyboard. The right block has no key position behind
+    it, so before this there was no way to set it and a flash left the right module showing
+    whatever the last application to write the board had chosen."""
+    if side not in ("left", "right"):
+        raise ValueError(f"side must be left or right, got {side!r}")
+    column = "module_led_left" if side == "left" else "module_led_right"
+    conn = connect()
+    try:
+        cur = conn.execute(f"UPDATE layers SET {column}=?, updated_at=? WHERE id=?",
+                           (color_hex, _now(), layer_id))
+        if cur.rowcount == 0:
+            raise ValueError(f"no layer {layer_id}")
+        conn.commit()
+        return {"ok": True, "side": side, "colorHex": color_hex}
     finally:
         conn.close()
 

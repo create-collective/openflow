@@ -46,6 +46,14 @@ _ADDED_COLUMNS = [
     # that device slot -- without this the flash cannot tell, allocates a fresh slot, and
     # strands the original on every read->capture->flash cycle.
     ("module_configs", "captured_from", "TEXT"),
+    # Per-layer colour for each docked module's LED block. The board has 136 LEDs per layer while
+    # the app models 97 key positions, and the blocks past the keys are what light the modules:
+    # 88-96 (9) is the LEFT module and 112-126 (15) the RIGHT, measured by painting each band a
+    # distinct colour and looking. The left block happens to fall inside the key range so it was
+    # already reachable; the right has NO key position at all, which is why a flash left the
+    # right module on whatever the last application wrote.
+    ("layers", "module_led_left", "TEXT"),
+    ("layers", "module_led_right", "TEXT"),
 ]
 
 

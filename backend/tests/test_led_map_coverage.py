@@ -55,34 +55,47 @@ def test_the_write_covers_every_led_the_device_reports():
     assert len(leds(payload)) == 136
 
 
-def test_the_right_module_block_follows_position_88():
-    """LEDs 97-135 are the right module's block: 39 LEDs carrying ONE colour, not 39 colours.
+def test_the_module_blocks_are_written_from_their_own_colours():
+    """LEDs 88-96 light the LEFT module and 112-126 the RIGHT, measured by painting each band a
+    distinct colour and looking at the keyboard. The right block has NO key position behind it,
+    which is why a flash used to leave the right module on whatever wrote it last.
 
-    Derived by diffing NayaFlow's database against the map it wrote to the board -- LEDs 82-89
-    map identity to positions 82-89, and the 97-135 block always equals what position 88/89
-    holds. This is what left the Track module green while every key changed."""
+    This replaces an earlier rule that wrote all of 97-135 from key position 88 -- that made both
+    modules the same colour, tied them to an arbitrary key, and painted two bands that light
+    nothing."""
     profile = {i: (120, 100) for i in range(97)}
-    profile[F.RIGHT_MODULE_LED_SOURCE] = (266, 100)       # purple on the source position
-    got = leds(F._led_payload(0, profile, {i: (0, 100) for i in range(136)}))
-    assert all(got[i] == (266, 100) for i in range(97, 136)), "the module block did not follow 88"
-    assert got[50] == (120, 100), "ordinary key colours disturbed"
+    device = {i: (0, 100) for i in range(136)}
+    got = leds(F._led_payload(0, profile, device,
+                              {"left": "#ff0000", "right": "#0000ff"}))
+    assert all(got[i] == (0, 100) for i in F.MODULE_LED_BLOCKS["left"]), "left block not written"
+    assert all(got[i] == (240, 100) for i in F.MODULE_LED_BLOCKS["right"]), "right block not written"
 
 
-def test_the_block_is_one_colour_not_a_per_led_map():
-    """39 identical values, confirmed in every capture. If this becomes per-LED the source data
-    has to say so first."""
-    profile = {i: (i % 300, 100) for i in range(97)}
-    got = leds(F._led_payload(0, profile, {i: (0, 100) for i in range(136)}))
-    assert len({got[i] for i in range(97, 136)}) == 1
+def test_bands_that_light_nothing_are_left_alone():
+    """97-111 and 127-135 lit nothing on the reference configuration. Painting them would be
+    inventing, and the point of measuring was to stop doing that."""
+    device = {i: (300, 100) for i in range(136)}
+    got = leds(F._led_payload(0, {i: (120, 100) for i in range(97)}, device,
+                              {"left": "#ff0000", "right": "#0000ff"}))
+    for i in list(range(97, 112)) + list(range(127, 136)):
+        assert got[i] == (300, 100), f"led {i} was overwritten"
 
 
-def test_without_a_colour_on_the_source_the_device_value_is_kept():
-    """The fallback still matters: with nothing to copy, passing the device's own value through
-    beats inventing one, which would wipe whatever the module is meant to show."""
-    profile = {i: (120, 100) for i in range(97) if i != F.RIGHT_MODULE_LED_SOURCE}
+def test_a_module_colour_overrides_the_key_colour_underneath_it():
+    """The left block sits INSIDE the key range, so both could claim those LEDs. The explicit
+    module colour must win, or setting it would appear to do nothing."""
+    profile = {i: (120, 100) for i in range(97)}
+    got = leds(F._led_payload(0, profile, None, {"left": "#ff0000"}))
+    assert all(got[i] == (0, 100) for i in F.MODULE_LED_BLOCKS["left"])
+    assert got[50] == (120, 100)
+
+
+def test_no_module_colour_keeps_whatever_the_device_has():
+    """Unset must not mean "paint it something". A user who has never touched the setting keeps
+    the module they see."""
     device = {i: (266, 100) for i in range(136)}
-    got = leds(F._led_payload(0, profile, device))
-    assert all(got[i] == (266, 100) for i in range(97, 136))
+    got = leds(F._led_payload(0, {i: (120, 100) for i in range(97)}, device, None))
+    assert all(got[i] == (266, 100) for i in F.MODULE_LED_BLOCKS["right"])
 
 
 def test_a_gap_inside_the_profile_range_is_unset_not_white():

@@ -374,6 +374,16 @@ async def set_layer_animation(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/rpc/set-module-led")
+async def set_module_led(body: dict = Body(...)) -> dict:
+    """Colour for a docked module's LED block on one layer. See db.userdata.set_module_led."""
+    try:
+        return await run_in_threadpool(ud.set_module_led, body["layerId"], body["side"],
+                                       body.get("colorHex"))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/rpc/create-profile")
 async def create_profile(body: dict = Body(...)) -> dict:
     try:

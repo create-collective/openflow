@@ -87,6 +87,7 @@ export const api = {
   setKeyColor: (body) => req("POST", "/rpc/set-key-color", body),
   fillLayerColor: (body) => req("POST", "/rpc/fill-layer-color", body),
   setLayerAnimation: (body) => req("POST", "/rpc/set-layer-animation", body),
+  setModuleLed: (body) => req("POST", "/rpc/set-module-led", body),
 
   led: (side, action, value) => req("POST", "/rpc/led", { side, action, value }),
   textCommand: (side, command, force = false) =>
