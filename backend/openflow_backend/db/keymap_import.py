@@ -14,6 +14,8 @@ times over.
 from __future__ import annotations
 
 import uuid
+
+from ..device import keymap_read as kr
 from datetime import datetime, timezone
 
 from ..device.keymap_read import decode_keymap
@@ -107,12 +109,29 @@ def import_read(read: dict, profile_name: str | None = None,
         # One layer per device layer index, keyed by the DEVICE's uuid so the next read matches.
         order_to_layer: dict[int, str] = {}
         key_ids: dict[int, dict[int, str]] = {}
+        # The board's per-layer LED animation, byte 2 of the layer-list entry. Read it back so a
+        # profile imported from a keyboard keeps its effects instead of coming in as solid.
+        animations = read.get("layer_animations") or {}
+        # Older databases and the test fixtures predate the column. A missing LED animation must
+        # not stop a keymap being imported.
+        has_anim = "animation_id" in {r[1] for r in conn.execute("PRAGMA table_info(layers)")}
         for order in sorted(read["layers"]):
             lid = device_uuids.get(order) or str(uuid.uuid4())
             order_to_layer[order] = lid
+            anim = kr.LAYER_ANIMATIONS.get(int(animations.get(order, 0)))
             if lid in known:
-                conn.execute("UPDATE layers SET order_id=?, updated_at=? WHERE id=?",
-                             (order, now, lid))          # keep the user's name
+                if has_anim:
+                    conn.execute("UPDATE layers SET order_id=?, animation_id=?, updated_at=? "
+                                 "WHERE id=?", (order, anim, now, lid))   # keep the user's name
+                else:
+                    conn.execute("UPDATE layers SET order_id=?, updated_at=? WHERE id=?",
+                                 (order, now, lid))
+            elif has_anim:
+                conn.execute(
+                    "INSERT INTO layers (name, order_id, animation_id, profile_id, id, updated_at, "
+                    "created_at) VALUES (?,?,?,?,?,?,?)",
+                    (f"Layer {order}", order, anim, prof_id, lid, now, now),
+                )
             else:
                 conn.execute(
                     "INSERT INTO layers (name, order_id, profile_id, id, updated_at, created_at) "

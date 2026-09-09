@@ -77,6 +77,9 @@ class DesiredState:
     modules: dict[int, dict[int, tuple[int, bytes]]] = field(default_factory=dict)   # slot -> {field: (type, value)}
     timeouts: tuple[int, int, int] | None = None                                     # (idle, sleep, sleep_batt) ms
     layer_uuids: dict[int, bytes] = field(default_factory=dict)                       # idx -> 16-byte id (add/delete)
+    # idx -> LED animation index (0 solid / 1 breathe / 2 swirl / 3 spectrum). Byte 2 of the
+    # layer-list entry. Hardcoded 0 here until 2026-09-08, which reset every layer to solid.
+    layer_animations: dict[int, int] = field(default_factory=dict)
     profile_id: str | None = None                                                     # which profile this came from
     # {slot: (list_id, module_type, uuid16)} -- the module-config LIST the app intends.
     # None means the app is not managing the module set, and NOTHING is garbage collected.
@@ -126,6 +129,8 @@ def desired_from_device_read(read: dict) -> DesiredState:
                               if pos in ALL_LAYER_POSITIONS}
     for idx, entries in (read.get("led") or {}).items():
         d.leds[int(idx)] = {i: (hue, val) for i, hue, val in entries}
+    for idx, anim in (read.get("layer_animations") or {}).items():
+        d.layer_animations[int(idx)] = int(anim)
     for idx, uuid_str in (read.get("layer_uuids") or {}).items():
         try:
             d.layer_uuids[int(idx)] = R.layer_uuid_bytes(uuid_str)
@@ -170,8 +175,13 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
     d.profile_id = pid
     layer_order = {row["id"]: row["order_id"] for row in
                    conn.execute("SELECT id, order_id FROM layers WHERE profile_id = ?", (pid,))}
+    # animation_id is queried defensively: older databases and the test fixtures predate the
+    # column, and a missing LED animation is not a reason to refuse to flash a keymap.
+    _cols = {r[1] for r in conn.execute("PRAGMA table_info(layers)")}
+    _anim_sel = ", animation_id" if "animation_id" in _cols else ""
     for lrow in conn.execute(
-            "SELECT id, order_id FROM layers WHERE profile_id = ? ORDER BY order_id", (pid,)):
+            f"SELECT id, order_id{_anim_sel} FROM layers WHERE profile_id = ? ORDER BY order_id",
+            (pid,)):
         idx = lrow["order_id"]
         d.layers[idx], d.leds[idx] = {}, {}
         # The identity table the board should end up with. Without this the device keeps whatever
@@ -181,6 +191,8 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
             d.layer_uuids[idx] = R.layer_uuid_bytes(lrow["id"])
         except ValueError:
             pass      # not a uuid (fixtures use short ids); the completeness guard below drops it
+        d.layer_animations[idx] = keymap_read.LAYER_ANIMATION_IDS.get(
+            ((lrow["animation_id"] if _anim_sel else None) or "solid"), 0)
         q = conn.execute(
             "SELECT k.position_id p, k.color_hex, b.action_type at, b.action_code ac, b.behavior beh "
             "FROM keys k LEFT JOIN key_bindings b ON b.key_id = k.id WHERE k.layer_id = ? ORDER BY k.position_id",
@@ -602,9 +614,14 @@ def _layer_list_ops(desired: DesiredState, current: DesiredState | None) -> list
     ops: list[WriteOp] = []
 
     # Added, or sitting at an index that names a different layer (the stale-identity case).
-    changed = [(i, u) for i, u in sorted(desired.layer_uuids.items()) if have.get(i) != u]
+    have_anim = dict(current.layer_animations) if current else {}
+    changed = [(i, u, desired.layer_animations.get(i, 0))
+               for i, u in sorted(desired.layer_uuids.items())
+               # A DIFFERENT ANIMATION is a reason to rewrite the entry too, not just a different
+               # uuid -- it lives in the same 20 bytes.
+               if have.get(i) != u or have_anim.get(i, 0) != desired.layer_animations.get(i, 0)]
     if changed:
-        what = ", ".join(f"{i}{'' if i in have else ' (new)'}" for i, _u in changed)
+        what = ", ".join(f"{i}{'' if i in have else ' (new)'}" for i, _u, _a in changed)
         ops.append(WriteOp(R.WRITE_LAYER_LIST, R.encode_layer_list_entries(changed),
                            f"layer list: {what}"))
 

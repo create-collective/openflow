@@ -12,11 +12,13 @@ const BASE_SWATCHES = [
   null, "#ff0000", "#ff6f00", "#ffe500", "#00ff00", "#00ffd9", "#0000ff", "#6f00ff", "#ffffff",
 ];
 // ZMK-style RGB animations NayaFlow exposed.
+// The device's own animation enum, byte 2 of each layer-list entry. Order matters -- it is the
+// same table the LED keypress records use (keymap_read.LAYER_ANIMATIONS), confirmed against a
+// probe board carrying a different effect on each layer.
 const ANIMATIONS = [
-  { id: null, label: "None" },
   { id: "solid", label: "Solid" },
-  { id: "swirl", label: "Swirl" },
   { id: "breathe", label: "Breathe" },
+  { id: "swirl", label: "Swirl" },
   { id: "spectrum", label: "Spectrum" },
 ];
 const TOOLS = [
@@ -296,24 +298,16 @@ export default function Color() {
         </div>
 
         <div className="card">
-          <h3>
-            Animations
-            <span className="gesture-badge prov-experimental" style={{ marginLeft: 8 }}
-              title="Stored in OpenFlow only. Nothing in the flash path sends an animation to the keyboard.">
-              app only
-            </span>
-          </h3>
-          {/* This card wrote layers.animation_id and nothing else. There is no reference to
-              `animation` anywhere in device/, so picking one has never affected the keyboard --
-              and unlike the other app-only features it carried no badge and no note at all.
-              The capability is real but unwired: LED_SELECT_EFFECT (0x1011) and
-              LED_EFFECT_CYCLE (0x100D) exist in constants.py with no caller, and NayaCore's
-              strings carry LED_BREATHE / LED_SWIRL / Spectrum. It is also a LIVE effect rather
-              than a stored per-layer property, so "per-layer" was wrong twice over. */}
-          <p className="page-sub" style={{ marginBottom: 8 }}>
-            Saved with the layer, but <strong>not sent to the keyboard</strong>. The board has an
-            effect command we have not wired up yet, and it applies to the whole keyboard rather
-            than to one layer — so this is a note to ourselves, not something the keys will do.
+          <h3>Animations</h3>
+          {/* This card really was app-only until 2026-09-08, and the reason it looked that way
+              is worth keeping: the animation is byte 2 of the layer's entry in the DEVICE'S LAYER
+              LIST, and every board we had ever captured was set to solid on every layer -- so the
+              byte read 0x00 everywhere we looked and sat in the parser as an unnamed constant.
+              Worse, the encoder hardcoded 0x00, so any flash that wrote the layer list silently
+              reset all three layers to solid. A probe profile with a different effect per layer
+              is what exposed it. */}
+          <p className="page-sub" style={{ marginBottom: 12 }}>
+            Per-layer, and written to the keyboard.
           </p>
           <div className="anim-list">
             {ANIMATIONS.map((a) => (

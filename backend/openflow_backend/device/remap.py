@@ -227,18 +227,26 @@ def encode_layer_data(layer: int, records: list[bytes]) -> bytes:
 LAYER_UUID_LEN = 0x10
 
 
-def encode_layer_list_entries(entries: list[tuple[int, bytes]]) -> bytes:
-    """Add or replace layers: `00` then `[idx][id][00][10][uuid16]` each.
+def encode_layer_list_entries(entries: list[tuple[int, bytes, int]]) -> bytes:
+    """Add or replace layers: `00` then `[idx][id][animation][10][uuid16]` each.
 
     NayaCore sent only the entries that CHANGED, not the whole list, so this takes a diff.
-    `id` mirrors `idx` in every capture we hold."""
+    `id` mirrors `idx` in every capture we hold.
+
+    BYTE 2 IS THE LAYER'S LED ANIMATION. It was hardcoded to 0x00 here, which silently reset
+    every layer to "solid" on any flash that wrote the list -- destroying the user's
+    breathe/swirl/spectrum with nothing to show for it. It looked like a constant because every
+    board we had ever captured was solid on every layer, so the byte was 0 everywhere we looked.
+    A probe profile with a different effect per layer is what exposed it."""
     out = bytearray(b"\x00")
-    for idx, uuid in entries:
+    for idx, uuid, animation in entries:
         if len(uuid) != LAYER_UUID_LEN:
             raise ValueError(f"layer {idx}: uuid must be {LAYER_UUID_LEN} bytes, got {len(uuid)}")
         if not 0 <= idx <= 0xFF:
             raise ValueError(f"layer index out of range: {idx}")
-        out += bytes([idx, idx, 0x00, LAYER_UUID_LEN]) + uuid
+        if animation not in kr.LAYER_ANIMATIONS:
+            raise ValueError(f"layer {idx}: unknown animation {animation!r}")
+        out += bytes([idx, idx, animation & 0xFF, LAYER_UUID_LEN]) + uuid
     return bytes(out)
 
 

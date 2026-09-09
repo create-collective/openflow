@@ -112,6 +112,11 @@ RGB_SUBCOMMAND = {
     0x0B: "LED_EFFECT",           # cycle to the next effect
 }
 RGB_SELECT_EFFECT = 0x0D          # argument is the effect index
+# ONE table, used by both the LED keypress records and the per-layer animation byte in the layer
+# list. Verified against the same probe: layer 0 breathe -> 1, layer 1 spectrum -> 3, layer 2
+# swirl -> 2, and every earlier board (all solid) carried 0.
+LAYER_ANIMATIONS = {0: "solid", 1: "breathe", 2: "swirl", 3: "spectrum"}
+LAYER_ANIMATION_IDS = {v: k for k, v in LAYER_ANIMATIONS.items()}
 RGB_EFFECTS = {0: "LED_SOLID", 1: "LED_BREATHE", 2: "LED_SWIRL", 3: "LED_SPEC"}
 RGB_SET_COLOR = 0x0F              # argument is [brightness u8][saturation u8][hue u16 LE]
 # Note this LIVE path carries brightness AND saturation, where the stored per-key map holds only
@@ -362,18 +367,25 @@ def read_keymap(transport, dest: int) -> dict:
     # only stable handle the device carries -- there is no name field anywhere in the protocol.
     # Keeping it is what lets a re-read update the layer it already knows (preserving the user's
     # name) instead of creating a fresh one every time.
-    layer_idxs, layer_uuids = [], {}
+    layer_idxs, layer_uuids, layer_animations = [], {}, {}
     for k in range(0, len(entries) - 19, 20):
         blk = entries[k:k + 20]
         layer_idxs.append(blk[0])
         h = blk[4:20].hex()
         layer_uuids[blk[0]] = f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
+        # Byte 2 is the layer's LED ANIMATION, not a flag. It read 0x00 on every board we had
+        # ever captured, which is exactly what "every layer is set to solid" looks like -- so it
+        # sat in the parser as an unnamed constant and the app reported animations as app-only.
+        # A probe profile with a different effect per layer settled it: breathe/spectrum/swirl
+        # came back as 1/3/2, matching the enum the LED keypress records use.
+        layer_animations[blk[0]] = blk[2]
 
     layers, led = {}, {}
     for li in layer_idxs:
         layers[li] = parse_records(read_full(READ_LAYER_DATA, li))
         led[li] = parse_led_map(read_full(READ_LED_MAP, li))
     return {"layers": layers, "led": led, "layer_uuids": layer_uuids,
+            "layer_animations": layer_animations,
             "bays": {li: decode_bays(recs) for li, recs in layers.items()}}
 
 

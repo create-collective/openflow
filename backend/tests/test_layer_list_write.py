@@ -56,7 +56,7 @@ def state(uuids: dict[int, str], leds: dict | None = None) -> F.DesiredState:
 
 def test_the_add_payload_matches_the_captured_nayacore_frame():
     """flash2: two layers added. `00` + `[idx][id][00][10][uuid16]` each, NEW entries only."""
-    got = R.encode_layer_list_entries([(3, R.layer_uuid_bytes(U1)), (4, R.layer_uuid_bytes(U2))])
+    got = R.encode_layer_list_entries([(3, R.layer_uuid_bytes(U1), 0), (4, R.layer_uuid_bytes(U2), 0)])
     assert got.hex() == (
         "00"
         "03030010" "878610a4c7434723a59932655479dee2"
@@ -84,7 +84,41 @@ def test_a_bad_uuid_is_refused_rather_than_padded():
 
 def test_an_entry_with_a_wrong_length_id_is_refused():
     with pytest.raises(ValueError, match="16 bytes"):
-        R.encode_layer_list_entries([(0, b"\x01\x02")])
+        R.encode_layer_list_entries([(0, b"\x01\x02", 0)])
+
+
+def test_an_unknown_animation_is_refused_rather_than_written_raw():
+    """Byte 2 is the layer's LED animation and only 0-3 are known. Writing an unrecognised value
+    would leave the board in a state no application can describe."""
+    with pytest.raises(ValueError, match="animation"):
+        R.encode_layer_list_entries([(0, R.layer_uuid_bytes(U1), 9)])
+
+
+def test_the_animation_byte_is_carried_not_zeroed():
+    """THE BUG: byte 2 was hardcoded 0x00, so any flash that wrote the layer list silently reset
+    every layer to solid. Read off the probe board as breathe=1 / spectrum=3 / swirl=2."""
+    got = R.encode_layer_list_entries([(0, R.layer_uuid_bytes(U1), 1),
+                                       (1, R.layer_uuid_bytes(U2), 3)])
+    assert got[1:4].hex() == "000001", got[1:4].hex()      # idx 0, id 0, animation 1 (breathe)
+    assert got[21:24].hex() == "010103", got[21:24].hex()  # idx 1, id 1, animation 3 (spectrum)
+
+
+def test_changing_only_the_animation_still_rewrites_the_entry():
+    """The animation lives in the same 20 bytes as the uuid, so a layer whose identity has not
+    moved but whose effect has must still be written."""
+    d = state({0: U1})
+    d.layer_animations[0] = 2                      # swirl
+    cur = state({0: U1})
+    cur.layer_animations[0] = 0                    # board still says solid
+    ops = F._layer_list_ops(d, cur)
+    assert len(ops) == 1, "an animation change was not written"
+    assert ops[0].payload[3] == 2
+
+
+def test_an_unchanged_animation_writes_nothing():
+    d, cur = state({0: U1}), state({0: U1})
+    d.layer_animations[0] = cur.layer_animations[0] = 2
+    assert F._layer_list_ops(d, cur) == []
 
 
 # --- when it fires ------------------------------------------------------------------------------ #
@@ -108,14 +142,14 @@ def test_the_stale_identity_case_is_what_gets_rewritten():
     ops = F._layer_list_ops(d, state({0: U2, 1: U1}))
     assert len(ops) == 1 and ops[0].sub == R.WRITE_LAYER_LIST
     assert ops[0].payload == R.encode_layer_list_entries(
-        [(0, R.layer_uuid_bytes(U1)), (1, R.layer_uuid_bytes(U2))])
+        [(0, R.layer_uuid_bytes(U1), 0), (1, R.layer_uuid_bytes(U2), 0)])
 
 
 def test_only_the_changed_entries_are_sent():
     """NayaCore sent new entries only, not the whole list."""
     ops = F._layer_list_ops(state({0: U1, 1: U2}), state({0: U1}))
     assert len(ops) == 1
-    assert ops[0].payload == R.encode_layer_list_entries([(1, R.layer_uuid_bytes(U2))])
+    assert ops[0].payload == R.encode_layer_list_entries([(1, R.layer_uuid_bytes(U2), 0)])
     assert "new" in ops[0].label
 
 
@@ -123,7 +157,7 @@ def test_a_board_we_have_not_read_gets_the_whole_table():
     ops = F._layer_list_ops(state({0: U1, 1: U2}), None)
     assert len(ops) == 1
     assert ops[0].payload == R.encode_layer_list_entries(
-        [(0, R.layer_uuid_bytes(U1)), (1, R.layer_uuid_bytes(U2))])
+        [(0, R.layer_uuid_bytes(U1), 0), (1, R.layer_uuid_bytes(U2), 0)])
 
 
 def test_a_removed_layer_is_deleted_and_then_wiped():
