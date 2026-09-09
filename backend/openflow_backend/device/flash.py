@@ -51,18 +51,24 @@ KEY_POSITIONS = 97
 # The LED blocks that light the docked modules, measured 2026-09-08 by painting each band a
 # distinct colour and looking at the keyboard:
 #
-#     74-80    left side edge      7      88-96    LEFT module    9   (a Tune)
-#     81-87    right side edge     7      112-126  RIGHT module  15   (a Track)
-#     97-111 and 127-135 lit nothing on that configuration
+#     74-80 / 81-87   the two side edges, 7 each (layout.js RIGHT_LEDS / LEFT_LEDS)
+#     88-111          LEFT bay    24
+#     112-135         RIGHT bay   24
 #
-# Each side appears to get a 9-block and a 15-block, mirrored -- one per module TYPE, sized to
-# that type's LED count, with only the docked type lighting. That reading is INFERRED from one
-# configuration; the falsification test is to move the Tune to the right bay and see whether
-# 127-135 lights instead of 112-126.
+# EACH BAY GETS 24 LEDS AND THE MODULE LIGHTS AS MANY AS IT HAS. A Tune has 9 and a Track 15, so
+# with a Tune on the left only 88-96 lit and 97-111 looked dead; with a Track on the right only
+# 112-126 lit and 127-135 looked dead. That is one block each, not four, and it is symmetric --
+# 24 and 24.
 #
-# The left block falls inside the key range, so it was already fed by key colours -- which is why
-# the left module tracked the profile while the right stayed on whatever wrote it last.
-MODULE_LED_BLOCKS = {"left": range(88, 97), "right": range(112, 127)}
+# It is keyed to the BAY, not the module: swapping the Tune and Track kept each side's colour,
+# so the left bay stayed green and the right red while the hardware in them changed places. An
+# earlier reading here had a 9-block and a 15-block per side, one per module TYPE; the swap
+# disproved it. Painting the whole 24 is therefore correct whatever is docked.
+#
+# The left block starts inside the key range (88-96), which is why key colours were already
+# reaching the left module while the right -- with no key position at all -- kept whatever the
+# last application wrote.
+MODULE_LED_BLOCKS = {"left": range(88, 112), "right": range(112, 136)}
 SYS_SET_TIMEOUTS = 0x100A
 
 # ---- MODULE CONFIDENCE ------------------------------------------------------------------

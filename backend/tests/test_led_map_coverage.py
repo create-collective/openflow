@@ -71,14 +71,20 @@ def test_the_module_blocks_are_written_from_their_own_colours():
     assert all(got[i] == (240, 100) for i in F.MODULE_LED_BLOCKS["right"]), "right block not written"
 
 
-def test_bands_that_light_nothing_are_left_alone():
-    """97-111 and 127-135 lit nothing on the reference configuration. Painting them would be
-    inventing, and the point of measuring was to stop doing that."""
+def test_each_bay_gets_twenty_four_leds_and_they_are_symmetric():
+    """A bay's block is 24 LEDs and the module lights as many as it HAS -- a Tune 9, a Track 15 --
+    which is why 97-111 and 127-135 looked dead with a Tune left and a Track right. They are the
+    unused tail of each block, not a separate structure.
+
+    Keyed to the BAY, not the module: swapping the two kept each side's colour."""
+    assert len(F.MODULE_LED_BLOCKS["left"]) == len(F.MODULE_LED_BLOCKS["right"]) == 24
+    assert F.MODULE_LED_BLOCKS["left"].stop == F.MODULE_LED_BLOCKS["right"].start
     device = {i: (300, 100) for i in range(136)}
     got = leds(F._led_payload(0, {i: (120, 100) for i in range(97)}, device,
                               {"left": "#ff0000", "right": "#0000ff"}))
-    for i in list(range(97, 112)) + list(range(127, 136)):
-        assert got[i] == (300, 100), f"led {i} was overwritten"
+    # the whole block is painted, so it is right whatever module is docked in it
+    assert all(got[i] == (0, 100) for i in range(88, 112))
+    assert all(got[i] == (240, 100) for i in range(112, 136))
 
 
 def test_a_module_colour_overrides_the_key_colour_underneath_it():
