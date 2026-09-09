@@ -16,7 +16,19 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parents[3]
+def _root() -> Path:
+    """Walked for rather than a fixed parent index: NayaOS nests this tree under openflow/ while
+    the standalone repository has it at the root, so parents[3] is right in one layout and lands
+    on the drive root in the other -- where every fixture below silently "went missing" and the
+    tests skipped themselves green."""
+    here = Path(__file__).resolve()
+    for cand in here.parents:
+        if (cand / "docs" / "reference").is_dir():
+            return cand
+    return here.parents[3]
+
+
+_ROOT = _root()
 _BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_BACKEND))
 sys.path.insert(0, str(_BACKEND / "openflow_backend" / "_vendor"))
