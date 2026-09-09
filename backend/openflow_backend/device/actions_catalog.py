@@ -126,6 +126,11 @@ def _connection():
         # from a stock board -- where that position happened to be unbound -- that NayaCore did
         # not flash it either. Absence of evidence.
         _a("BT_CLEAR", "BT Clear", "bluetooth", name="Clear the Bluetooth pairing"),
+        # Beyond NayaFlow: its UI never offers these, but NayaCore's own Bluetooth table defines
+        # them (ZMK &bt next / previous) and the same table's clear and select rows match the
+        # board. Never yet read off hardware.
+        _a("BT_NEXT", "BT Next", "bluetooth", name="Next Bluetooth device"),
+        _a("BT_PREV", "BT Prev", "bluetooth", name="Previous Bluetooth device"),
         _a("BT_OUT", "Wireless", "out"), _a("USB_DEVICE", "USB-C", "out"),
     ]
 
@@ -166,6 +171,12 @@ def _lighting():
         _a("LED_COLOR_RED", "Red", "LED", name="Lighting colour: red"),
         _a("LED_COLOR_GREEN", "Green", "LED", name="Lighting colour: green"),
         _a("LED_COLOR_BLUE", "Blue", "LED", name="Lighting colour: blue"),
+        # The remaining five of NayaFlow's nine; bytes from NayaCore's own table (keymap_read).
+        _a("LED_COLOR_CYAN", "Cyan", "LED", name="Lighting colour: cyan"),
+        _a("LED_COLOR_MAGENTA", "Magenta", "LED", name="Lighting colour: magenta"),
+        _a("LED_COLOR_YELLOW", "Yellow", "LED", name="Lighting colour: yellow"),
+        _a("LED_COLOR_ORANGE", "Orange", "LED", name="Lighting colour: orange"),
+        _a("LED_COLOR_PINK", "Pink", "LED", name="Lighting colour: pink"),
     ]
 
 
@@ -200,7 +211,9 @@ def _navigation():
 def _international():
     out = [_a(f"LANG{n}", f"Lang {n}") for n in range(1, 10)]
     out += [_a(f"INT{n}", f"Int {n}") for n in range(1, 7)]
-    out += [_a("NON_US_BACKSLASH", "\\ |"), _a("NON_US_HASH", "# ~")]
+    out += [_a("NON_US_BACKSLASH", "\\ |"), _a("NON_US_HASH", "# ~"),
+            # NayaFlow's "| 2" and "~ 2": Shift + the two non-US keys (ZMK PIPE2 / TILDE2).
+            _a("PIPE2", "| 2", name="Pipe (non-US)"), _a("TILDE2", "~ 2", name="Tilde (non-US)")]
     return out
 
 
@@ -220,12 +233,6 @@ def _empty():
         _a("TRANSPARENT", "Transparent", "trans"),
         _a("DISABLE", "Disabled", "none"),
     ]
-
-
-def _recovery():
-    # Naya-custom "recover module from critical battery drain". Almost certainly a
-    # firmware-recovery mode; parked as coming-soon until we understand it on device.
-    return [_a("MODULE_FORCE_CHARGING", "Recover Module", "naya", coming_soon=True)]
 
 
 # Full OS/editor shortcut presets, extracted verbatim from NayaFlow's recovered
@@ -273,6 +280,12 @@ _WIN = [
     ("LSHIFT + PG_DN", "Select one page forward"), ("LSHIFT + LCTRL + HOME", "Select to beginning of document"),
     ("LSHIFT + LCTRL + END", "Select to end of document"), ("LALT + A", "Set focus to Suggested actions"),
     ("LALT + TAB", "Switch to previous app"), ("LALT + LSHIFT + TAB", "Switch to next app"),
+    # NayaFlow's own two entries for the same pair. A bracketed modifier is one the user is
+    # already holding, so these flash as a bare Tab / Shift+Tab (captured: 2b000700 / 2b000702)
+    # and step through an app switcher that is already open. Different bytes from the two
+    # above, which press Alt for you; both are offered.
+    ("[LALT] + TAB", "Switch to previous app (Alt held)"),
+    ("[LALT] + LSHIFT + TAB", "Switch to next app (Alt held)"),
     ("LALT + F4", "Close active item"), ("LALT + LSHIFT + ESC", "Previous window"),
     ("LALT + ESC", "Next window"), ("LCTRL + LSHIFT + TAB", "Previous tab"), ("LCTRL + TAB", "Next tab"),
     ("LCTRL + T", "New tab"), ("LCTRL + F4", "Close active document"),
@@ -298,19 +311,59 @@ _VSCODE = [
     ("F5", "Start / Continue"), ("LSHIFT + F5", "Stop"), ("F11", "Step Into"),
     ("LSHIFT + F11", "Step Out"), ("F10", "Step Over"), ("LCTRL + GRAVE", "Open Terminal"),
     ("LCTRL + LSHIFT + GRAVE", "Create Terminal"),
+    # NayaFlow's "Insert Cursor". Not a keyboard usage: the device holds the modifier alone
+    # (captured as 00000004) and the user supplies the click. It was left out of this list as
+    # "a mouse action, not a key press"; it is a chord NayaFlow binds to a key, and the encoder
+    # writes exactly what NayaCore writes for it (remap.MODIFIER_ONLY_BASES).
+    ("LALT + CLICK", "Insert Cursor"),
+]
+# NayaFlow's "VS Code Presets (Mac)" group -- 57 chords, macOS only in its UI. Missing here until
+# the 2026-09-09 coverage probe (tools/action_coverage.py) listed every one of them as bindable
+# in NayaFlow and absent from this palette. Codes and names are the vendor catalog's own
+# (docs/reference/nayaflow-key-palette.json); "LGUI + CTRL + F" keeps its bare CTRL, which the
+# encoder reads as LCTRL.
+_VSCODE_MAC = [
+    ("LGUI + LSHIFT + P", "Show Command Palette"), ("LGUI + LSHIFT + N", "New Window"),
+    ("LGUI + LSHIFT + K", "Delete Line"), ("LGUI + LSHIFT + ENTER", "Insert Line Above"),
+    ("LGUI + ENTER", "Insert Line Below"), ("LGUI + LSHIFT + BACKSLASH", "Jump to Bracket"),
+    ("LGUI + LEFT_BRACKET", "Outdent Line"), ("LGUI + RIGHT_BRACKET", "Indent Line"),
+    ("LGUI + UP", "Go to File Start"), ("LGUI + DOWN", "Go to File End"),
+    ("LGUI + LSHIFT + LEFT_BRACKET", "Fold Region"), ("LGUI + LSHIFT + RIGHT_BRACKET", "Unfold Region"),
+    ("LGUI + SLASH", "Toggle Line Comment"), ("LSHIFT + LALT + A", "Toggle Block Comment"),
+    ("LGUI + LSHIFT + SPACE", "Trigger Parameter Hints"), ("LSHIFT + LALT + F", "Format Document"),
+    ("LALT + F12", "Peek Definition"), ("LGUI + PERIOD", "Quick Fix"),
+    ("LGUI + LALT + UP", "Insert Cursor Above"), ("LGUI + LALT + DOWN", "Insert Cursor Below"),
+    ("LGUI + U", "Undo Cursor Operation"), ("LGUI + LSHIFT + L", "Select All Occurrences"),
+    ("LGUI + F2", "Select All Word Occurrences"), ("LGUI + CTRL + F", "Toggle Full Screen"),
+    ("LSHIFT + LGUI + NUMBER_0", "Toggle Editor Layout"), ("LGUI + MINUS", "Zoom Out"),
+    ("LGUI + EQUAL", "Zoom In"), ("LGUI + B", "Toggle Sidebar"),
+    ("LGUI + LSHIFT + E", "Show Explorer"), ("LGUI + LSHIFT + F", "Show Search"),
+    ("LGUI + LSHIFT + G", "Show Source Control"), ("LGUI + LSHIFT + D", "Show Debug"),
+    ("LGUI + LSHIFT + X", "Show Extensions"), ("LGUI + LSHIFT + H", "Replace in Files"),
+    ("LGUI + LSHIFT + J", "Toggle Search Details"), ("LGUI + LSHIFT + U", "Show Output Panel"),
+    ("LGUI + LSHIFT + V", "Open Markdown Preview"), ("LALT + LGUI + F", "Replace"),
+    ("LGUI + D", "Add Selection to Next Find match"), ("LCTRL + P", "Go to File"),
+    ("LGUI + LSHIFT + O", "Go to Symbol"), ("LGUI + LSHIFT + M", "Show Problems Panel"),
+    ("LGUI + LSHIFT + TAB", "Navigate Editor History"), ("LGUI + LSHIFT + MINUS", "Go Forward"),
+    ("LCTRL + LSHIFT + M", "Toggle Tab Moves Focus"), ("LGUI + BACKSLASH", "Split Editor"),
+    ("LGUI + NUMBER_1", "Focus 1st Editor"), ("LGUI + NUMBER_2", "Focus 2nd Editor"),
+    ("LGUI + NUMBER_3", "Focus 3rd Editor"), ("LGUI + N", "New File"),
+    ("LGUI + LSHIFT + S", "Save As"), ("LALT + LGUI + S", "Save All"),
+    ("LGUI + LSHIFT + T", "Reopen Closed Editor"), ("PAGE_UP", "Scroll Terminal Page Up"),
+    ("PAGE_DOWN", "Scroll Terminal Page Down"), ("LGUI + HOME", "Scroll Terminal to Top"),
+    ("LGUI + END", "Scroll Terminal to Bottom"),
 ]
 
 
 # NayaFlow spellings that differ from the entries above. Verified 2026-09-01 by pairing
 # a NayaFlow user-data.db with the WRITE_LAYER_DATA frames NayaCore actually flashed
 # (device/out/flash2-shortcut-dictionary.md): NayaFlow's own encoder drops a bracketed
-# modifier entirely ("[LALT] + TAB" reaches the device as a plain Tab) and cannot
-# encode CLICK or ENTER (both flash as HID usage 0 with only the modifier bits set).
-# Importers should map these to the canonical code; None = no keyboard equivalent.
+# modifier entirely ("[LALT] + TAB" reaches the device as a plain Tab) and stores CLICK and
+# ENTER-less chords as HID usage 0 with only the modifier bits set. Our encoder does the same
+# (remap.encode_keypress), so these are display aliases only; nothing maps to None any more.
 NAYAFLOW_CODE_ALIASES = {
     "[LALT] + TAB": "LALT + TAB",
     "[LALT] + LSHIFT + TAB": "LALT + LSHIFT + TAB",
-    "LALT + CLICK": None,  # VS Code "Insert Cursor" is a mouse action, not a key press
 }
 # "LALT + ENTER" stays verbatim in the lists above; the frontend dictionary aliases
 # ENTER -> RETURN (keydict.js CODE_ALIASES) and the device encoder must emit usage 0x28.
@@ -399,7 +452,10 @@ def _tabs():
             {"name": "Connection", "actions": _connection()},
             {"name": "Lighting", "actions": _lighting()},
             {"name": "Naya system", "actions": _naya_system()},
-            {"name": "Recovery", "actions": _recovery()},
+            # "Recovery" used to sit here with the SAME action, MODULE_FORCE_CHARGING, parked as
+            # coming-soon from before its record type was known. It has been readable and
+            # writable (0x06, param 401) since 2026-09-08; the duplicate only made the palette
+            # offer one bindable and one disabled button for a single key.
             {"name": "System", "actions": _system()},
             {"name": "Keypad", "actions": _keypad()},
             {"name": "Navigation", "actions": _navigation()},
@@ -414,6 +470,7 @@ def _tabs():
             {"name": "MacOS", "actions": _shortcuts(_MAC)},
             {"name": "Windows", "actions": _shortcuts(_WIN)},
             {"name": "VS Code Presets", "actions": _shortcuts(_VSCODE)},
+            {"name": "VS Code Presets (Mac)", "actions": _shortcuts(_VSCODE_MAC)},
         ]},
     ]
 

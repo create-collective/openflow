@@ -96,11 +96,12 @@ def test_an_unknown_animation_is_refused_rather_than_written_raw():
 
 def test_the_animation_byte_is_carried_not_zeroed():
     """THE BUG: byte 2 was hardcoded 0x00, so any flash that wrote the layer list silently reset
-    every layer to solid. Read off the probe board as breathe=1 / spectrum=3 / swirl=2."""
+    every layer to solid. Read off the probe board as breathe=1 / swirl=3 / spectrum=2 (ZMK's
+    order; the two were transcribed the other way round until 2026-09-09)."""
     got = R.encode_layer_list_entries([(0, R.layer_uuid_bytes(U1), 1),
                                        (1, R.layer_uuid_bytes(U2), 3)])
     assert got[1:4].hex() == "000001", got[1:4].hex()      # idx 0, id 0, animation 1 (breathe)
-    assert got[21:24].hex() == "010103", got[21:24].hex()  # idx 1, id 1, animation 3 (spectrum)
+    assert got[21:24].hex() == "010103", got[21:24].hex()  # idx 1, id 1, animation 3 (swirl)
 
 
 def test_changing_only_the_animation_still_rewrites_the_entry():

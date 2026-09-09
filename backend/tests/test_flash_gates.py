@@ -2,7 +2,9 @@
 
 Two modes with different promises:
   sync     -- reads the board first and plans against it, so everything the app does not model
-              (module->dock bindings, TRANS records, second-bank positions) is carried through.
+              (module->dock bindings, TRANS records, both banks of keys the profile does not
+              set) is carried through. A key the profile DOES set owns its second bank: with no
+              double-tap / tap+hold in the profile that slot is written NONE (test_second_bank_gc).
   recovery -- for a board that can no longer be read. Nothing can be preserved, so it must be
               asked for explicitly and separately from the ordinary confirm.
 No hardware: these exercise the request guards, not the write.

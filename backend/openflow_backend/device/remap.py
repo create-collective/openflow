@@ -60,12 +60,36 @@ MODIFIER_REV = {v: k for k, v in kr.MODIFIER_ID.items()}
 SHIFTED_REV = {v: k for k, v in kr.SHIFTED_SYMBOL.items()}
 MOD_BIT = {name: 1 << i for i, name in enumerate(kr.MOD_BITS)}
 BT_PROFILE_REV = {v: k for k, v in kr.BT_PROFILE.items()}
+# The outputs record (0x08, ZMK &out): param is the selector as u32 LE, 1 = USB, 2 = wireless.
+# The mapping is NayaFlow's own -- its database holds BT_OUT at 0x2f and USB_DEVICE at 0x30 on
+# the stock System layer, and the board reads 02000000 / 01000000 at exactly those positions --
+# and NayaFlow has been captured writing these bytes to this board (four of them on layer 2,
+# 2026-09-08). Writing them back is byte-identical to the vendor.
+OUTPUT_SELECTOR_REV = {v: k for k, v in kr.OUTPUT_SELECTOR.items()}
 BT_SELECT, BT_CLEAR_CMD = kr.BT_SELECT, kr.BT_CLEAR_CMD
 STICKY_LAYER = kr.STICKY_LAYER   # 0x0b -- real, confirmed on hardware 2026-09-08
 NAYA_SYSTEM = kr.NAYA_SYSTEM     # 0x06 -- Naya's own system actions
 NAYA_COMMANDS_REV = {v: k for k, v in kr.NAYA_COMMANDS.items()}
-# NayaFlow token spellings that differ from our canonical codes (verified from captures).
-CODE_ALIASES = {"ENTER": "RETURN"}
+# NayaFlow token spellings that differ from our canonical codes. ENTER is verified from captures;
+# the rest are what NayaFlow's key RECORDER emits (renderer map, 2026-09-09 palette scrape) and
+# what our own recorder (frontend recordkeys.js) emits for the same keys -- a binding recorded
+# from a keypress carries these, and the encoder used to refuse every one of them.
+CODE_ALIASES = {"ENTER": "RETURN", "ESCAPE": "ESC", "CAPS_LOCK": "CAPSLOCK",
+                "SCROLL_LOCK": "SCROLLLOCK", "PAGE_UP": "PG_UP", "PAGE_DOWN": "PG_DN"}
+# Modifier spellings a chord may carry. NayaFlow's chord class accepts LSHFT/RSHFT beside
+# LSHIFT/RSHIFT, its own VS Code preset "LGUI + CTRL + F" uses a bare CTRL, and NayaCore.exe
+# carries an 18-name alias table of its own (0x77bce8, docs/reference/nayacore-action-
+# vocabulary.json) -- every spelling the vendor's serialiser accepts is accepted here.
+MOD_TOKEN_ALIASES = {
+    "CTRL": "LCTRL", "LEFT_CTRL": "LCTRL", "RIGHT_CTRL": "RCTRL",
+    "SHIFT": "LSHIFT", "LEFT_SHIFT": "LSHIFT", "RIGHT_SHIFT": "RSHIFT", "LSHFT": "LSHIFT", "RSHFT": "RSHIFT",
+    "ALT": "LALT", "LEFT_ALT": "LALT",
+    "GUI": "LGUI", "META": "LGUI", "CMD": "LGUI", "WIN": "LGUI", "LEFT_GUI": "LGUI", "LEFT_META": "LGUI",
+    "LMETA": "LGUI", "LCMD": "LGUI", "LWIN": "LGUI", "LEFT_WIN": "LGUI", "LEFT_COMMAND": "LGUI",
+}
+# NayaFlow's recorder stores a recorded chord with actionType "combo"; it is a shortcut_alias in
+# every other respect, and is written as one.
+CHORD_ACTION_TYPES = ("shortcut_alias", "combo")
 
 
 @dataclass
@@ -97,11 +121,12 @@ def encode_keypress(action_type: str, action_code: str) -> bytes:
     code = CODE_ALIASES.get(action_code, action_code)
 
     if action_type == "modifier":
+        code = MOD_TOKEN_ALIASES.get(code, code)
         if code not in MODIFIER_REV:
             raise RemapEncodeError(f"unknown modifier {action_code!r}")
         return bytes([MODIFIER_REV[code], 0x00, 0x07, 0x00])
 
-    if action_type == "shortcut_alias":
+    if action_type in CHORD_ACTION_TYPES:
         *mod_toks, base = [t.strip() for t in code.split(" + ")]
         mods = 0
         for t in mod_toks:
@@ -110,13 +135,21 @@ def encode_keypress(action_type: str, action_code: str) -> bytes:
             # rest. Checked against a real flash capture: "[LALT] + TAB" was stored 2b000700 and
             # "[LALT] + LSHIFT + TAB" 2b000702, both without the LALT bit.
             if t.startswith("[") and t.endswith("]"):
-                if t.strip("[]") not in MOD_BIT:
+                if MOD_TOKEN_ALIASES.get(t.strip("[]"), t.strip("[]")) not in MOD_BIT:
                     raise RemapEncodeError(f"unknown modifier token {t!r} in {action_code!r}")
                 continue
+            t = MOD_TOKEN_ALIASES.get(t, t)
             if t not in MOD_BIT:
                 raise RemapEncodeError(f"unknown modifier token {t!r} in {action_code!r}")
             mods |= MOD_BIT[t]
         base = CODE_ALIASES.get(base, base)
+        base = MOD_TOKEN_ALIASES.get(base, base)
+        if base in MOD_BIT:
+            # A bare modifier list ("LCTRL + LSHIFT"), which NayaFlow's chord grammar allows: the
+            # last token is a modifier too, so there is no key. Stored the way the board stores
+            # any modifiers-only chord -- usage 0, page 0, the bits -- the same form captured
+            # for "[LALT] + CLICK" (00000004).
+            return bytes([0x00, 0x00, 0x00, mods | MOD_BIT[base]])
         if base in PAGE7_REV:
             return bytes([PAGE7_REV[base], 0x00, 0x07, mods])
         if base in PAGE12_REV:
@@ -380,7 +413,7 @@ def keypress_type(action_code: str) -> str:
     """
     if " + " in (action_code or ""):
         return "shortcut_alias"
-    if action_code in MODIFIER_REV:
+    if MOD_TOKEN_ALIASES.get(action_code, action_code) in MODIFIER_REV:
         return "modifier"
     return "key"
 

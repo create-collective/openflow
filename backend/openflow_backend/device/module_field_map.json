@@ -326,25 +326,25 @@
     "kind": "axis",
     "axis": 1,
     "direction": -1,
-    "note": "scroll/pointer routing"
+    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
    },
    "0x06": {
     "kind": "axis",
     "axis": 1,
     "direction": 1,
-    "note": "scroll/pointer routing"
+    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
    },
    "0x07": {
     "kind": "axis",
     "axis": 0,
     "direction": -1,
-    "note": "scroll/pointer routing"
+    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
    },
    "0x08": {
     "kind": "axis",
     "axis": 0,
     "direction": 1,
-    "note": "scroll/pointer routing"
+    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
    },
    "0x09": {
     "kind": "axis",
@@ -360,17 +360,17 @@
    },
    "0x0b": {
     "kind": "mouse_button",
-    "mask": 8,
-    "value": "M4",
+    "mask": 1,
+    "value": "M1 (firmware default when empty)",
     "gesture": "tap:touch:1_finger",
-    "note": "1-finger tap (device owner). Category-3 button field, same shape as 0x0c/0x13."
+    "note": "tap:touch:1_finger. EMPTY = left click, done by the module firmware; NayaFlow never writes this field. The 'M4' once recorded here was OpenFlow's own write, not stock. Written empty at the default M1; a key or other button is written explicitly."
    },
    "0x0c": {
     "kind": "mouse_button",
     "mask": 2,
-    "value": "M2",
+    "value": "M2 (firmware default when empty)",
     "gesture": "tap:touch:2_fingers",
-    "note": "2-finger tap = right click, the Touch's stock default (confirmed by the device owner); the field holds mask 2 = M2, which is right click"
+    "note": "tap:touch:2_fingers. EMPTY = right click, done by the module firmware; NayaFlow never writes this field. The 'mask 2 = M2' once observed here was OpenFlow's own write. Written empty at the default M2; anything else is written explicitly."
    },
    "0x0d": {
     "kind": "axis",
@@ -487,6 +487,6 @@
     "note": "on-device keypress, no default-map match (C_VOL_DOWN)"
    }
   },
-  "note": "Category-3 fields are mouse-button records (tap-to-click), not axes. Only 0x13 (M3 = 3-finger tap) survived the fresh 2026-09-02 write; 1- and 2-finger tap are not stored on the device at all, so they are firmware or host defaults. The Touch's 1-finger CURSOR gestures have no device fields at all -- only its 2-finger scroll is stored (cat 4/cat 6 at 0x0d-0x10). Its cursor is native module firmware, which is why a Tune cannot be made to behave like one by copying config."
+  "note": "Category-3 fields are mouse-button records (tap-to-click), not axes. Only 0x13 (M3 = 3-finger tap) survived the fresh 2026-09-02 write; 1- and 2-finger tap are not stored on the device at all, so they are firmware or host defaults. The Touch's 1-finger CURSOR gestures have no device fields at all -- only its 2-finger scroll is stored (cat 4/cat 6 at 0x0d-0x10). Its cursor is native module firmware, which is why a Tune cannot be made to behave like one by copying config. Confirmed live 2026-09-09 with a Touch docked: 1-finger cursor, 1-finger tap = left click and 2-finger tap = right click all work with 0x05-0x08, 0x0b, 0x0c empty; pinch/spread (0x11/0x12) are empty and do nothing. See module_fields.FIRMWARE_DEFAULTS."
  }
 }

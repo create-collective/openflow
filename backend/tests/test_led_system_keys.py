@@ -107,7 +107,9 @@ def test_an_unknown_subcommand_is_reported_rather_than_guessed():
 
 
 def test_an_unknown_colour_is_not_forced_onto_a_named_one():
-    assert kr.decode_rgb_system(bytes.fromhex("0f00000064643c00")) is None   # hue 60, unnamed
+    # Hue 60 was the example here until NayaCore's own colour table named it LED_COLOR_YELLOW
+    # (2026-09-09); hue 45 is between orange (30) and yellow (60) and belongs to nothing.
+    assert kr.decode_rgb_system(bytes.fromhex("0f00000064642d00")) is None   # hue 45, unnamed
 
 
 def test_a_short_param_decodes_to_nothing_rather_than_a_wrong_key():

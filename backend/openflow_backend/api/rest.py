@@ -26,7 +26,8 @@ from ..db import profiles as prof
 from ..db import settings as settings_db
 from ..db import userdata as ud
 from ..db.database import connect as db_connect
-from ..device import actions_catalog, flash as flash_mod, gesture_presets, keymap_read, module_fields, remap
+from ..device import (actions_catalog, flash as flash_mod, gesture_presets, keymap_read, module_fields,
+                      module_layout, remap)
 from ..device.commands import CommandError, dispatch
 from ..device import recovery as recovery_mod
 from ..device.service import DangerousCommandError, TransportError, pairing_report
@@ -759,8 +760,9 @@ def _build_entries(read: dict) -> list:
     """One entry per device slot, resolved against the app's current module profiles."""
     conn = db_connect()
     try:
-        configs = {r["id"]: dict(r) for r in
-                   conn.execute("SELECT id, name, type FROM module_configs")}
+        # SELECT * rather than a column list: `captured_from` is read below when present, and
+        # older databases (and some test fixtures) predate the column.
+        configs = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM module_configs")}
         # Keyed by behavior for the row the UI renders, and by (behavior, direction) for the
         # per-half rows a split writes. Collapsing on behavior alone made the two halves
         # overwrite each other, so whichever row the query happened to return last became "the"
@@ -785,38 +787,91 @@ def _build_entries(read: dict) -> list:
     finally:
         conn.close()
 
+    # The module LIST names each slot's TYPE in its entry's third byte (Touch 0, Track 1, Tune 2,
+    # Float 3), so a slot is comparable by content whether or not the app has seen its uuid.
+    list_types = _list_types(read.get("list"))
+
     out = []
     for uuid, slot in read["by_uuid"].items():
         cfg = configs.get(uuid)
-        if cfg is None:
+        # THE MATCH IS ON CONTENT, NOT ON UUID. Every NayaFlow install writes its own uuids into
+        # the list, so once any other NayaFlow has flashed the board not one slot uuid is known
+        # here -- and until 2026-09-09 that made every slot "unknown": nothing was imported and
+        # no profile showed as live, while the bindings on the board were byte for byte the
+        # app's own stock profiles. The uuid decides nothing below. It only says which profile
+        # to compare first, and supplies the type when the list cannot.
+        mtype = cfg["type"] if cfg else list_types.get(slot)
+        if mtype is None:
             out.append({"uuid": uuid, "slot": slot, "unknown": True,
-                        "note": "on the device but not in the app's module configs"})
+                        "note": "on the device but not in the app's module configs, and the "
+                                "module list carries no recognisable type for it"})
             continue
         fields = {int(f["field"]): (f["type"], bytes.fromhex(f["value"]))
                   for f in read["slots"].get(slot, read["slots"].get(str(slot), []))}
-        gestures, differs = _compare(cfg["type"], fields, bindings.get(uuid, {}))
-        entry = {"uuid": uuid, "slot": slot, "name": cfg["name"], "type": cfg["type"],
+
+        # Every profile of the type, closest first. Among equals: the profile sharing the uuid,
+        # then one captured from this very slot, then by name -- deterministic, and it keeps a
+        # drifted original naming its own entry exactly as before.
+        ranked = []
+        for cid, c in configs.items():
+            if c["type"] != mtype:
+                continue
+            g, d = _compare(mtype, fields, bindings.get(cid, {}))
+            tie = 0 if cid == uuid else 1 if c.get("captured_from") == uuid else 2
+            ranked.append((d, tie, c["name"], cid, g))
+        ranked.sort(key=lambda t: t[:3])
+
+        if cfg is not None:
+            # The entry describes the slot as the uuid's own profile sees it, drift included.
+            ref_id, ref_name = uuid, cfg["name"]
+            gestures, differs = next((g, d) for d, _t, _n, cid, g in ranked if cid == uuid)
+        elif ranked:
+            # A uuid the app has never seen: the closest profile of its type stands in as the
+            # reference. It names the entry and is what a capture starts from.
+            differs, _t, ref_name, ref_id, gestures = ranked[0]
+        else:
+            # Nothing of this type in the app at all: compare against nothing, capture from nothing.
+            ref_id, ref_name = None, f"{mtype.title()} module"
+            gestures, differs = _compare(mtype, fields, {})
+        entry = {"uuid": uuid, "slot": slot, "name": ref_name, "type": mtype,
                  "fieldCount": len(fields), "gestures": gestures, "differs": differs,
-                 "trailing": max(0, len(fields) - _EXPECTED_FIELDS.get(cfg["type"], len(fields)))}
+                 "trailing": max(0, len(fields) - _EXPECTED_FIELDS.get(mtype, len(fields))),
+                 # What a capture of this slot starts from (module_profiles.capture_from_device).
+                 "templateId": ref_id}
+        if cfg is None:
+            entry["foreign"] = True          # matched by content, or captured -- never by uuid
 
         # Which app profile is ACTUALLY on the board? Sharing the device's uuid is not enough:
         # an unflashed local edit keeps the uuid while no longer being what the keyboard runs,
         # and marking it "on the keyboard" is simply false. The profile on the board is the one
         # whose CONTENT matches, whichever row that is.
-        entry["matched"] = uuid if differs == 0 else None
-        if differs:
-            for other_id, other in configs.items():
-                if other_id == uuid or other["type"] != cfg["type"]:
-                    continue
-                g2, d2 = _compare(cfg["type"], fields, bindings.get(other_id, {}))
-                if d2 == 0:
-                    # Report the slot as the matching profile sees it: identical, no drift.
-                    entry["matched"] = other_id
-                    entry["matchedName"] = other["name"]
-                    entry["matchedGestures"] = g2
-                    break
+        entry["matched"] = ref_id if (ref_id and differs == 0) else None
+        if entry["matched"] is None and ranked and ranked[0][0] == 0:
+            _d, _t, name0, id0, g0 = ranked[0]
+            # Report the slot as the matching profile sees it: identical, no drift.
+            entry["matched"], entry["matchedName"], entry["matchedGestures"] = id0, name0, g0
+        elif entry["matched"] is not None and cfg is None:
+            # A foreign uuid matched by content. The UI resolves this slot through `matched`
+            # and reads matchedGestures when the uuid differs, so give it those rows.
+            entry["matchedName"], entry["matchedGestures"] = ref_name, gestures
         out.append(entry)
     return out
+
+
+def _list_types(list_hex) -> dict:
+    """{slot: module type} from the module LIST's per-entry type byte.
+
+    The list is the one place the board states what each slot IS. It is what lets a slot whose
+    uuid the app has never seen still be compared by content against profiles of its type,
+    instead of being reported as unknown and left alone."""
+    if not list_hex:
+        return {}
+    by_code = {code: typ for typ, code in module_layout.MODULE_TYPE_CODE.items()}
+    try:
+        entries = remap.parse_module_config_list(bytes.fromhex(list_hex))
+    except ValueError:
+        return {}
+    return {e["slot"]: by_code[e["flag"]] for e in entries if e["flag"] in by_code}
 
 
 def _compare(module_type: str, fields: dict, app_bindings: dict):
@@ -849,10 +904,19 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
             combined, sign = pair_of[gesture]
             minus, plus = module_fields.split_pair(app_bindings.get(combined))
             app = minus if sign == "-" else plus
-        same = _same_action(device, app)
+        row = {"gesture": gesture, "field": idx}
+        # EMPTY IS THE DEFAULT for a few gestures (module_fields.FIRMWARE_DEFAULTS): the Touch
+        # left-clicks on a one-finger tap with 0x0b empty, because its firmware does that
+        # itself. Reading empty as "unbound" here compared None against the app's M1, so the
+        # stock Touch profile could never be live and every read minted a capture claiming the
+        # tap was unset. An app row that is unbound is treated as the default as well: there is
+        # nothing else this field can express.
+        default = module_fields.firmware_default(module_type, gesture)
+        if default is not None and device is None:
+            device, row["firmwareDefault"] = default, True
+        same = _same_action(device, app) or (row.get("firmwareDefault", False) and not app)
         differs += 0 if same else 1
-        gestures.append({"gesture": gesture, "field": idx, "device": device,
-                         "app": app, "differs": not same})
+        gestures.append({**row, "device": device, "app": app, "differs": not same})
 
     for gesture, half in sorted(module_fields.axis_halves(module_type).items()):
         combined = app_bindings.get(gesture)      # the single row the UI renders for the axis
@@ -871,6 +935,7 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
         # adrift, and no flash could resolve it.
         if app_bindings.get((gesture, "invert")):
             base = base[::-1]
+        fw = module_fields.firmware_default(module_type, gesture)
         for sign, dflt in zip(("-", "+"), base):
             idx = half[sign]
             typ, val = fields.get(idx, (None, b""))
@@ -882,10 +947,16 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
                 # differ from the board forever -- so it could never be marked live, and every
                 # read minted another copy of it.
                 app = dflt if (combined is None or " - " in str(combined)) else (combined or None)
+            row = {"gesture": gesture, "half": sign, "field": idx}
+            if fw is not None and device is None:
+                # The Touch's one-finger cursor: the firmware drives this half itself while the
+                # field is empty, always with the stock motion for the sign (nothing on the
+                # device inverts it). See module_fields.FIRMWARE_DEFAULTS.
+                device = module_fields.split_pair(fw)[0 if sign == "-" else 1]
+                row["firmwareDefault"] = True
             same = _same_action(device, app)
             differs += 0 if same else 1
-            gestures.append({"gesture": gesture, "half": sign, "field": idx, "device": device,
-                             "app": app, "differs": not same})
+            gestures.append({**row, "device": device, "app": app, "differs": not same})
     return gestures, differs
 
 
@@ -1025,8 +1096,12 @@ async def flash_write(body: dict = Body(default={})) -> dict:
     **mode="sync" (default).** Takes a fresh device read first and plans against it. This is
     what makes preservation possible: compute_plan uses the read to carry through everything
     the app does not model -- the module->dock bindings at layer positions 0x4A-0x51, TRANS
-    records, and second-bank positions -- and to know which module fields are stale. If the
-    read fails, the flash is refused, because a plan built without it would blank all of that.
+    records, and both banks of keys the profile does not set -- and to know which module
+    fields are stale. (A key the profile DOES set owns its second bank: with no double-tap /
+    tap+hold in the profile, that slot is written NONE rather than carried through, because a
+    stale shadow there is exactly what made NayaFlow fail to verify; see flash._own_second_bank.)
+    If the read fails, the flash is refused, because a plan built without it would blank all
+    of that.
 
     **mode="recovery".** For a board that can no longer be read. It skips the read, so NOTHING
     can be preserved: every position in both banks is written explicitly and anything the app

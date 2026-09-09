@@ -8,14 +8,23 @@
 // produced), so a recording is not silently reinterpreted by the OS layout: on AZERTY,
 // event.key for the Q position is "a", and recording "a" there would replay as the wrong key.
 
+// Every value here must be a code the palette and the device encoder already know
+// (keymap_read.PAGE7 names). Five of them were not -- CAPS, APOSTROPHE, DOT, PAGE_UP and
+// PAGE_DOWN were the recorder's own spellings -- so a recorded Caps Lock, quote, period or
+// Page Up/Down was refused at flash time as an unknown key. Found by the 2026-09-09 coverage
+// probe; the backend also accepts PAGE_UP/PAGE_DOWN as aliases because NayaFlow's recorder
+// emits them, but the fix is to not invent spellings in the first place.
 const BY_CODE = {
   Escape: "ESC", Backquote: "GRAVE", Minus: "MINUS", Equal: "EQUAL", Backspace: "BACKSPACE",
   Tab: "TAB", BracketLeft: "LEFT_BRACKET", BracketRight: "RIGHT_BRACKET", Backslash: "BACKSLASH",
-  CapsLock: "CAPS", Semicolon: "SEMICOLON", Quote: "APOSTROPHE", Enter: "RETURN",
-  Comma: "COMMA", Period: "DOT", Slash: "SLASH", Space: "SPACE",
+  CapsLock: "CAPSLOCK", Semicolon: "SEMICOLON", Quote: "SINGLE_QUOTE", Enter: "RETURN",
+  Comma: "COMMA", Period: "PERIOD", Slash: "SLASH", Space: "SPACE",
   ArrowUp: "UP", ArrowDown: "DOWN", ArrowLeft: "LEFT", ArrowRight: "RIGHT",
   Insert: "INSERT", Delete: "DELETE", Home: "HOME", End: "END",
-  PageUp: "PAGE_UP", PageDown: "PAGE_DOWN",
+  PageUp: "PG_UP", PageDown: "PG_DN", PrintScreen: "PRINTSCREEN", ScrollLock: "SCROLLLOCK",
+  Pause: "PAUSE_BREAK", ContextMenu: "K_APP", NumLock: "KP_NUMLOCK", NumpadEnter: "KP_ENTER",
+  NumpadDecimal: "KP_DOT", NumpadAdd: "KP_PLUS", NumpadSubtract: "KP_MINUS",
+  NumpadMultiply: "KP_MULTIPLY", NumpadDivide: "KP_DIVIDE",
 };
 
 const MODIFIER_CODES = new Set([

@@ -42,9 +42,10 @@ def test_every_known_unencodable_type_has_a_reason_a_user_can_act_on():
     for at, code, expect in [
         ("none", "DISABLE", "Disabled"),
         ("trans", "TRANSPARENT", "Transparent"),
-        ("out", "BT_OUT", "Wireless"),
+        # BT_OUT / USB_DEVICE are written since 2026-09-09; only an unknown output drops.
+        ("out", "BT_SOMETHING_ELSE", "Wireless"),
         ("macro", "some-uuid", "macro table"),
-        ("bluetooth", "BT_NEXT", "next/previous"),
+        ("bluetooth", "BT_SELECT_SL", "Next"),      # BT_NEXT/BT_PREV are written since 2026-09-09
     ]:
         reason = F._drop_reason(at, code)
         assert expect in reason, f"{at}: {reason!r} does not mention {expect!r}"

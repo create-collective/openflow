@@ -208,8 +208,11 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
     a capture writes its new uuid into the slot, so the board's identity for that slot changes
     to the profile that was flashed -- which is the honest outcome.
 
-    Only drifted configs whose TYPE we know are captured. A slot whose uuid matches nothing in
-    the app has no discoverable type, so it is reported and left alone rather than guessed at.
+    A slot whose uuid the app has never seen is captured too, since 2026-09-09. Its type comes
+    from the module list (each entry's third byte), and the capture starts from the CLOSEST
+    profile of that type -- `templateId`, chosen by the read -- rather than from the profile
+    sharing its uuid, because there is none. Only a slot the list gives no recognisable type for
+    is still reported as unknown and left alone.
 
     `entries` is the /rpc/read-modules module list. Returns one dict per captured profile.
     """
@@ -236,9 +239,14 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
                     n += 1
                 label = f"{base} {n}"
 
+            # The profile this capture starts from: the one sharing the slot's uuid, or for a
+            # uuid the app has never seen, the closest profile of its type (the read picks it).
+            # `captured_from` below still records the DEVICE uuid, which is what a later flash
+            # uses to claim this slot rather than allocating a fresh one.
+            tmpl = e.get("templateId") or e["uuid"]
             # Sits directly below the profile it was captured from.
             src = conn.execute("SELECT order_id, variant FROM module_configs WHERE id=?",
-                               (e["uuid"],)).fetchone()
+                               (tmpl,)).fetchone()
             pos = (src["order_id"] + 1) if src else 0
             conn.execute("UPDATE module_configs SET order_id = order_id + 1 "
                          "WHERE type=? AND order_id >= ?", (e["type"], pos))
@@ -265,7 +273,7 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
             rows = {(r["behavior"], r["direction"] or "+"):
                     (r["action_code"], r["action_type"]) for r in conn.execute(
                 "SELECT behavior, action_code, action_type, direction FROM module_bindings "
-                "WHERE module_config_id=?", (e["uuid"],))}
+                "WHERE module_config_id=?", (tmpl,))}
 
             halves = module_fields.axis_halves(e["type"])
             seen, axis_seen = {}, {}

@@ -53,6 +53,10 @@
     "action_type": "mouse",
     "action_code": "M1"
    },
+   "tap:touch:2_fingers": {
+    "action_type": "mouse",
+    "action_code": "M2"
+   },
    "tap:touch:3_fingers": {
     "action_type": "mouse",
     "action_code": "M3"

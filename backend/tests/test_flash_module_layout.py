@@ -354,13 +354,17 @@ def test_a_track_hold_binding_cannot_reach_the_device():
 
 def test_a_profile_already_on_the_board_is_still_written_when_it_differs():
     """The bug this exists for. A slot already carrying the profile's uuid was marked "keep" and
-    left completely alone, on the theory it must already be correct. It is not: the board had
-    Touch's 1- and 2-finger tap cleared while the app had M1/M2, and flashing silently refused to
-    push them -- the user's own binding never reached the keyboard."""
+    left completely alone, on the theory it must already be correct. It is not: an edit that
+    never reached the board is exactly what a flash is for.
+
+    The difference is a REAL one here -- the one-finger tap bound to a key. This test used to
+    put M1 / M2 over an empty Touch slot and expect mask 1 / mask 2 written, which was the
+    mistake it was pinning: on the Touch, EMPTY IS M1 / M2, done by the module firmware
+    (module_fields.FIRMWARE_DEFAULTS, 2026-09-09). The two-finger tap stays at M2 below and is
+    written EMPTY over this fixture's junk, which is the other half of the same rule."""
     bays = dict(BASE, **{"touch:keyboard_left": TOUCH})
     conn = _db({0: bays})
-    # The app wants tap-to-click; the device slot has those fields empty.
-    for g, code in (("tap:touch:1_finger", "M1"), ("tap:touch:2_fingers", "M2")):
+    for g, code in (("tap:touch:1_finger", "B"), ("tap:touch:2_fingers", "M2")):
         conn.execute("INSERT INTO module_bindings (module_config_id,behavior,action_code) "
                      "VALUES (?,?,?)", (TOUCH, g, code))
     conn.commit()
@@ -374,11 +378,38 @@ def test_a_profile_already_on_the_board_is_still_written_when_it_differs():
     slot = layout["slot_for"][TOUCH]
     assert slot in d.modules, "a kept slot that differs must still be written"
     from openflow_backend.device import module_fields as MF
-    for gesture, code in (("tap:touch:1_finger", "M1"), ("tap:touch:2_fingers", "M2")):
-        idx = MF.mouse_button_fields("TOUCH")[gesture]
-        assert d.modules[slot][idx] == (
-            R.TWO_WORD, R.encode_two_word(R.MOUSE_CATEGORY, R.MOUSE_MASK[code])), gesture
-    print(f"  kept slot {slot} rewritten with the app's tap bindings")
+    fields = MF.mouse_button_fields("TOUCH")
+    assert d.modules[slot][fields["tap:touch:1_finger"]] == (
+        R.KEY_PRESS, R.encode_keypress("key", "B")), "the key must reach the field"
+    assert d.modules[slot][fields["tap:touch:2_fingers"]] == (R.NONE_BEH, b""), \
+        "M2 is the firmware default: written empty, not as mask 2"
+    print(f"  kept slot {slot} rewritten: tap -> B explicitly, two-finger tap -> empty (default)")
+
+
+def test_a_kept_touch_at_its_firmware_defaults_sends_nothing():
+    """M1 / M2 over an EMPTY Touch slot is not a difference -- empty IS left / right click there.
+    Until 2026-09-09 every flash wrote mask 1 / mask 2 into 0x0b / 0x0c for the stock profile."""
+    from openflow_backend.device import module_fields as MF
+    fields = MF.mouse_button_fields("TOUCH")
+    read = {"by_uuid": dict(MOD_READ["by_uuid"]), "slots": dict(MOD_READ["slots"])}
+    read["slots"][3] = [({"field": f["field"], "type": R.NONE_BEH, "value": ""}
+                         if f["field"] in fields.values() and f["field"] != fields["tap:touch:3_fingers"]
+                         else f) for f in MOD_READ["slots"][3]]
+    bays = dict(BASE, **{"touch:keyboard_left": TOUCH})
+    conn = _db({0: bays})
+    for g, code in (("tap:touch:1_finger", "M1"), ("tap:touch:2_fingers", "M2")):
+        conn.execute("INSERT INTO module_bindings (module_config_id,behavior,action_code) "
+                     "VALUES (?,?,?)", (TOUCH, g, code))
+    conn.commit()
+    d = F.DesiredState()
+    d.profile_id = PID
+    d.layers[0], d.leds[0] = {}, {}
+    layout = F.apply_module_layout(d, conn, read)
+    conn.close()
+    slot = layout["slot_for"][TOUCH]
+    assert TOUCH in layout["kept"] and slot not in d.modules, \
+        f"a Touch at its firmware defaults must send no config write, got {d.modules.get(slot)}"
+    print("  M1 / M2 over an empty slot -> no difference, no write")
 
 
 def test_a_kept_slot_that_matches_still_sends_nothing():

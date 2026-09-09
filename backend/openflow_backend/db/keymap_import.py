@@ -151,8 +151,22 @@ def import_read(read: dict, profile_name: str | None = None,
         # Decode bindings + colours now that layer ids exist (for layer-switch codes).
         decoded = decode_keymap(read, order_to_layer)
         colors = decoded.pop("_colors", {})
+        module_colours = decoded.pop("_module_colours", {})
         warnings = decoded.pop("_warnings", [])
         dropped = decoded.pop("_dropped", [])
+
+        # The two module bay blocks, read from their first LED (88 / 112). They are the layer's
+        # module colours, not key colours -- without this a board read populated key rows 88-96
+        # and left `module_led_*` empty, so the app never knew what the bays showed and a later
+        # flash could only leak those key rows back onto the left bay.
+        layer_cols = {r[1] for r in conn.execute("PRAGMA table_info(layers)")}
+        if {"module_led_left", "module_led_right"} <= layer_cols:
+            for order, sides in module_colours.items():
+                lid = order_to_layer.get(order)
+                if lid is None:
+                    continue
+                conn.execute("UPDATE layers SET module_led_left=?, module_led_right=?, updated_at=? "
+                             "WHERE id=?", (sides.get("left"), sides.get("right"), now, lid))
 
         n_bindings = 0
         for order, positions in decoded.items():

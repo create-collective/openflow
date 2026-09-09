@@ -227,6 +227,13 @@ def overlay(template, module_type, bindings, axes=None, settings=None):
             # record for stale fields.
             out[idx] = (R.NONE_BEH, b"")
             continue
+        if module_fields.firmware_default(module_type, gesture) == code:
+            # AT THE DEFAULT -> EMPTY, and the module firmware takes over. The explicit record
+            # (mask 1 for the Touch's one-finger tap) is what was written here until 2026-09-09;
+            # it is not what NayaFlow writes, and for the cursor gestures the explicit form is
+            # the coarse motion the Tune experiments measured. See module_fields.FIRMWARE_DEFAULTS.
+            out[idx] = (R.NONE_BEH, b"")
+            continue
         rec = _encode_gesture(idx, code)
         if rec is not None:
             out[idx] = rec
@@ -264,6 +271,14 @@ def encode_axis(module_type, gesture, spec):
         return {}
     category = half["category"]
     invert = bool(spec.get("invert"))
+    if (module_fields.firmware_default(module_type, gesture) is not None
+            and not invert and not spec.get("minus") and not spec.get("plus")):
+        # The Touch's one-finger cursor at its default: BOTH halves EMPTY, so the firmware's own
+        # cursor control runs. Writing the explicit cat 1 / cat 0 motion records here -- which
+        # this did for every stock profile until 2026-09-09 -- replaces real cursor control with
+        # the coarse "definite gesture" motion the Tune experiments measured. A split half or an
+        # inverted axis still has to be spelled out, and is.
+        return {half["-"]: (R.NONE_BEH, b""), half["+"]: (R.NONE_BEH, b"")}
     out = {}
     for sign, key in (("-", "minus"), ("+", "plus")):
         idx = half[sign]

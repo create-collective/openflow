@@ -106,8 +106,9 @@ class DesiredState:
     modules: dict[int, dict[int, tuple[int, bytes]]] = field(default_factory=dict)   # slot -> {field: (type, value)}
     timeouts: tuple[int, int, int] | None = None                                     # (idle, sleep, sleep_batt) ms
     layer_uuids: dict[int, bytes] = field(default_factory=dict)                       # idx -> 16-byte id (add/delete)
-    # idx -> LED animation index (0 solid / 1 breathe / 2 swirl / 3 spectrum). Byte 2 of the
-    # layer-list entry. Hardcoded 0 here until 2026-09-08, which reset every layer to solid.
+    # idx -> LED animation index (0 solid / 1 breathe / 2 spectrum / 3 swirl -- ZMK's order, see
+    # keymap_read.LAYER_ANIMATIONS). Byte 2 of the layer-list entry. Hardcoded 0 here until
+    # 2026-09-08, which reset every layer to solid.
     layer_animations: dict[int, int] = field(default_factory=dict)
     # idx -> {"left"/"right": "#rrggbb"} for the docked modules' LED blocks. The right module has
     # no key position at all, so without this a flash left it on whatever wrote it last.
@@ -248,7 +249,15 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
             # LEDs per layer. Gating colour on the binding range silently dropped positions
             # 82-96, so a flash wrote LEDs 0-81 and left the rest holding whatever was there
             # before. Reported as "the module LEDs stayed green rather than purple".
-            if r["color_hex"]:
+            #
+            # But not past 87. Positions 88-96 exist in the app's 97-position model and sit
+            # INSIDE the left module bay block (88-111), which is painted as one colour from
+            # `module_led_left` or, when that is unset, carried through from the board. A key
+            # row's colour there is a leftover from an old import and must never reach the
+            # wire: it is what would have striped the left bay purple and orange over green
+            # (planned against the 2026-09-09 read). NayaFlow's own flash behaves the same
+            # way -- its stored values at 90-96 never appear on the board as colours.
+            if r["color_hex"] and r["p"] <= keymap_read.LAST_KEYED_LED:
                 colors[r["p"]] = r["color_hex"]
             if r["at"] is not None and r["p"] in FULL_LAYER_POSITIONS:
                 by_pos.setdefault(r["p"], []).append(r)
@@ -287,12 +296,11 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
 _DROP_REASONS = {
     "none": "Disabled cannot be written yet.",
     "trans": "Transparent cannot be written yet.",
-    "out": "Wireless / USB-C output switching is decoded but not yet written, pending a "
-           "hardware check.",
+    "out": "Only Wireless (BT_OUT) and USB-C (USB_DEVICE) have a known output record.",
+    "LED": "Not one of the LED actions NayaCore defines (its 19 are all written).",
     "macro": "The keyboard reserves a macro type but implements no macro table, so a macro "
              "binding can never reach it.",
-    "bluetooth": "Only Bluetooth devices 1-4 and Clear have a known record; next/previous "
-                 "do not.",
+    "bluetooth": "Only Bluetooth devices 1-4, Clear, Next and Previous have a known record.",
 }
 
 
@@ -336,7 +344,7 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
         hold_kp = R.encode_keypress(hold["at"], hold["ac"])
         return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
 
-    if at in ("key", "modifier", "shortcut_alias"):
+    if at in ("key", "modifier", *R.CHORD_ACTION_TYPES):
         return R.KEY_PRESS, R.encode_keypress(at, code)
     if at == "none":
         # DISABLE -> the NONE record, empty param. Better evidenced than anything else here:
@@ -371,9 +379,21 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
             return R.RGB_SYS, R.encode_rgb_system(code)
         except R.RemapEncodeError:
             return None
+    if at == "out":
+        # Wireless / USB-C output switching, the 0x08 record. Held back until 2026-09-09 "pending
+        # a hardware check" -- but the check that matters for WRITING is already in hand: these
+        # are the bytes NayaFlow itself put on this board (layer 2, positions 0x2f/0x30/0x47/0x48),
+        # and the name-to-selector mapping comes from NayaFlow's database at those positions.
+        # What a keypress would still settle is only what the firmware does on the press, which
+        # changes no byte here. Refusing to write them stranded every Bluetooth-output key.
+        sel = R.OUTPUT_SELECTOR_REV.get(code)
+        return None if sel is None else (R.OUTPUTS, R.encode_layer_param(sel))
     if at == "bluetooth":
         if code == "BT_CLEAR":
             return R.TWO_PARAM, R.encode_twoparam(R.BT_CLEAR_CMD, 0)
+        for cmd, name in keymap_read.BT_STEP.items():
+            if code == name:                   # next / previous device, from NayaCore's table
+                return R.TWO_PARAM, R.encode_twoparam(cmd, 0)
         prof = R.BT_PROFILE_REV.get(code)
         if prof is not None:
             return R.TWO_PARAM, R.encode_twoparam(R.BT_SELECT, prof)
@@ -602,6 +622,46 @@ def _full_layer_payload(idx: int, poss: dict[int, tuple[int, bytes]],
     return R.encode_layer_data(idx, recs)
 
 
+def _own_second_bank(poss: dict[int, tuple[int, bytes]]) -> dict[int, tuple[int, bytes]]:
+    """The second-bank NONE records a profile owes for the keys it sets.
+
+    A key's double-tap and tap+hold live at position + 0x52. When the profile sets a key and
+    gives it no double-tap / tap+hold, that slot is EMPTY -- and empty has to be WRITTEN, not
+    left to whatever the board holds. Until 2026-09-09 it was left: _full_layer_payload carried
+    the device's record through for every position the profile did not mention, and that
+    included the shadows of keys the profile very much did mention.
+
+    What that did on real hardware: keys 53 and 73 had four behaviours under an old profile; the
+    profile was later reduced to tap-only, and both apps kept re-flashing the board with the two
+    stale shadows intact. NayaFlow could not remove them either (its sparse diff only covers
+    records its profile holds), and its verify then read them back against '(empty)' and failed
+    every flash -- "Failed to verify written data", with the primaries reported as four-behaviour
+    keys because a shadow existed. docs/nayaflow-verify-test-plan.md has NayaCore's log and the
+    hardware run that confirmed it.
+
+    Only KEYS the profile sets are affected. A position the profile does not mention keeps both
+    its banks from the device, as before: the profile has no opinion about that key, so it must
+    not have one about its double-tap either. Bays have no second bank.
+    """
+    return {pos + SECOND_BANK: (R.NONE_BEH, b"")
+            for pos in poss
+            if pos in SECOND_BANK_KEYS and pos + SECOND_BANK not in poss}
+
+
+def _layer_needs_write(desired_layer: dict[int, tuple[int, bytes]],
+                       current_layer: dict[int, tuple[int, bytes]]) -> bool:
+    """Does any position the profile sets differ from what the board holds?
+
+    Compared per position, not as whole dicts: a profile models a subset of the 156 positions
+    and a device read returns all of them, so whole-dict equality was never true on a real sync
+    flash and every layer was rewritten every time. A position missing from `current_layer`
+    counts as NONE -- the device pads every unbound position with `07 00`, so on the wire
+    'absent' and 'empty' are the same record.
+    """
+    empty = (R.NONE_BEH, b"")
+    return any(current_layer.get(pos, empty) != rec for pos, rec in desired_layer.items())
+
+
 def _module_led_values(colours: dict[str, str] | None) -> dict[int, tuple[int, int]]:
     """{"left": "#rrggbb"} -> {led index: (hue, saturation)} across that module's block."""
     out: dict[int, tuple[int, int]] = {}
@@ -754,7 +814,11 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
     ops.extend(_layer_list_ops(desired, current))
 
     for idx in sorted(desired.layers):
-        if full or current is None or desired.layers[idx] != current.layers.get(idx):
+        # A modelled key owns its second bank. Added to `desired` itself, not just to the
+        # payload, so the read-back verify checks that each blanked slot really came back empty.
+        desired.layers[idx].update(_own_second_bank(desired.layers[idx]))
+        if full or current is None or _layer_needs_write(desired.layers[idx],
+                                                         current.layers.get(idx, {})):
             ops.append(WriteOp(R.WRITE_LAYER_DATA,
                                _full_layer_payload(idx, desired.layers[idx],
                                                    (current.layers.get(idx) if current else None)),

@@ -165,6 +165,41 @@ AXIS_HALVES = {
 }
 
 
+# Gestures the MODULE FIRMWARE drives on its own when the field is EMPTY (type 0x07), and what
+# it does then. On the wire, empty IS the default for these four -- not "unbound".
+#
+# Established on the Touch, 2026-09-09. NayaFlow writes all four fields empty on every flash
+# (every NayaFlow-written capture we hold has them at 0x07), and a docked Touch still moves the
+# cursor on one finger, left-clicks on a one-finger tap and right-clicks on a two-finger tap.
+# Pinch/spread (0x11/0x12) are empty too and do NOTHING, so they are not here: for them, empty
+# really is unbound. The rest of the Touch (2-finger scroll, 3-finger tap, the swipes) is stored
+# explicitly, as is everything on the Track and the Tune.
+#
+# Why it matters both ways. The explicit records OpenFlow used to write for these -- cat 1 / cat 0
+# motion, mask 1 / mask 2 -- are the coarse "definite gesture" form the Tune experiments measured
+# (docs/module-field-map.md, "The Tune DOES accept pointer records"): it barely moves the cursor.
+# Real cursor control on the Touch lives in its firmware and only runs when the field is empty.
+# So a binding AT the default is written empty and the firmware takes over, and a read of an
+# empty field decodes to the default rather than to "unbound" -- which is what made the stock
+# Touch profile never read as live and minted a misleading "(on board)" capture on every read.
+#
+# The axis defaults must equal the matching AXIS_HALVES "default" strings.
+FIRMWARE_DEFAULTS = {
+    "TOUCH": {
+        "tap:touch:1_finger": "M1",
+        "tap:touch:2_fingers": "M2",
+        "vertical:touch:1_finger": "mouse - MOUSE_DOWN - MOUSE_UP",
+        "horizontal:touch:1_finger": "mouse - MOUSE_LEFT - MOUSE_RIGHT",
+    },
+}
+
+
+def firmware_default(module_type: str, gesture: str):
+    """What the module firmware does for `gesture` when its field is EMPTY, or None if empty
+    means unbound for that gesture (the usual case). See FIRMWARE_DEFAULTS."""
+    return FIRMWARE_DEFAULTS.get((module_type or "").upper(), {}).get(gesture)
+
+
 # Which modules show a split checkbox on their axis rows.
 #
 # Track: one surface drives all three axes, so "which way did I move" is the whole question.

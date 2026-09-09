@@ -123,7 +123,11 @@ def test_an_empty_profile_and_no_device_writes_nothing():
 
 def test_the_binding_range_no_longer_limits_colour():
     """The exact guard that caused this: FULL_LAYER_POSITIONS stops at 0x51, and colours must
-    not. If this ever fails, someone has reintroduced the conflation."""
+    not. If this ever fails, someone has reintroduced the conflation.
+
+    _led_payload writes what it is given, so it is checked with colours up to 96 here; the DB
+    path (desired_from_db) stops key colours at 87, because 88-96 are the left bay block --
+    see tests/test_bay_block_rule.py."""
     assert max(F.FULL_LAYER_POSITIONS) == 0x51
     profile = {i: (120, 100) for i in range(97)}          # includes 82..96, past the guard
     got = leds(F._led_payload(0, profile, None))

@@ -44,6 +44,13 @@ for _n in range(1, 13):
     PAGE7[0x68 + (_n - 1)] = f"F{_n + 12}"
 for _n in range(1, 10):
     PAGE7[0x59 + (_n - 1)] = f"KP_NUMBER_{_n}"
+# The international keys (HID 0x87-0x8F International1-9, 0x90-0x98 LANG1-9). The palette has
+# offered LANG1-9 and INT1-6 since the start, and the encoder refused every one of them --
+# "unknown key" -- because they were never in this table. Found by the coverage probe
+# (tools/action_coverage.py, 2026-09-09). Standard usages; nothing here is inferred.
+for _n in range(1, 10):
+    PAGE7[0x87 + (_n - 1)] = f"INT{_n}"
+    PAGE7[0x90 + (_n - 1)] = f"LANG{_n}"
 
 MODIFIER_ID = {
     0xE0: "LCTRL", 0xE1: "LSHIFT", 0xE2: "LALT", 0xE3: "LGUI",
@@ -69,6 +76,11 @@ SHIFTED_SYMBOL: dict[str, str] = {
     "LEFT_BRACKET": "LEFT_BRACE", "RIGHT_BRACKET": "RIGHT_BRACE", "BACKSLASH": "PIPE",
     "SEMICOLON": "COLON", "SINGLE_QUOTE": "DOUBLE_QUOTES", "COMMA": "LESS_THAN",
     "PERIOD": "GREATER_THAN", "SLASH": "QUESTION", "GRAVE": "TILDE",
+    # The two "International" glyphs NayaFlow offers. ZMK's keys.h defines PIPE2 as
+    # LS(NON_US_BACKSLASH) and TILDE2 as LS(NON_US_HASH), and NayaCore's key-name table (whose
+    # order follows keys.h) lists each directly after its base key. Same shifted-glyph rule as
+    # the rest of this table, so they encode and decode with no new record shape.
+    "NON_US_BACKSLASH": "PIPE2", "NON_US_HASH": "TILDE2",
 }
 
 # REMAP behavior-type bytes (docs/remap-protocol-live.md + round-trip findings).
@@ -112,10 +124,18 @@ RGB_SUBCOMMAND = {
     0x0B: "LED_EFFECT",           # cycle to the next effect
 }
 RGB_SELECT_EFFECT = 0x0D          # argument is the effect index
-# ONE table, used by both the LED keypress records and the per-layer animation byte in the layer
-# list. Verified against the same probe: layer 0 breathe -> 1, layer 1 spectrum -> 3, layer 2
-# swirl -> 2, and every earlier board (all solid) carried 0.
-LAYER_ANIMATIONS = {0: "solid", 1: "breathe", 2: "swirl", 3: "spectrum"}
+# TWO tables, not one. The per-layer animation byte in the layer list follows ZMK's underglow
+# effect order -- solid 0, breathe 1, SPECTRUM 2, SWIRL 3 -- while the LED effect KEY's argument
+# follows NayaCore's own table, where swirl is 2 and spectrum 3 (NayaCore.exe's LED pair table,
+# docs/reference/nayacore-action-vocabulary.json, and the stock System layer's key records
+# paired with NayaFlow's database).
+#
+# This was one shared table until 2026-09-09, with swirl and spectrum swapped for the layer
+# byte, so a swirl layer read as spectrum and a flash wrote it back the other way. Two NayaFlow
+# flashes settle it: the probe profile (layer 1 swirl, layer 2 spectrum) read back 3 / 2, and a
+# profile set to solid / breathe / swirl read back 0 / 1 / 3. tests/test_layer_animation_byte.py
+# carries both raw layer lists.
+LAYER_ANIMATIONS = {0: "solid", 1: "breathe", 2: "spectrum", 3: "swirl"}
 LAYER_ANIMATION_IDS = {v: k for k, v in LAYER_ANIMATIONS.items()}
 RGB_EFFECTS = {0: "LED_SOLID", 1: "LED_BREATHE", 2: "LED_SWIRL", 3: "LED_SPEC"}
 RGB_SET_COLOR = 0x0F              # argument is [brightness u8][saturation u8][hue u16 LE]
@@ -126,6 +146,17 @@ RGB_COLORS = {
     (100, 100,   0): "LED_COLOR_RED",
     (100, 100, 120): "LED_COLOR_GREEN",
     (100, 100, 240): "LED_COLOR_BLUE",
+    # The other five colours NayaFlow offers. Not captured from a board: read out of
+    # NayaCore.exe's own LED parameter table (19 (argument, subcommand) pairs at 0x77adc8,
+    # docs/reference/nayacore-action-vocabulary.json, 2026-09-09), where the argument is ZMK's
+    # RGB_COLOR_HSB packing h<<16 | s<<8 | b. The four rows above, which WERE captured from
+    # hardware, reproduce that table byte for byte -- that is what makes these five the vendor's
+    # values rather than a guess at what "cyan" means.
+    (100, 100, 180): "LED_COLOR_CYAN",
+    (100, 100, 270): "LED_COLOR_MAGENTA",
+    (100, 100,  60): "LED_COLOR_YELLOW",
+    (100, 100,  30): "LED_COLOR_ORANGE",
+    (100, 100, 300): "LED_COLOR_PINK",
 }
 
 
@@ -164,6 +195,12 @@ MODULE_TYPE, UNKNOWN_02 = 0x78, 0x02
 # header, e.g. home-row mods). Same body: header + hold(4) + pad(4) + tap(4) + pad(4),
 # so the header length is len(param) - 16 either way.
 HOLD_TAP_TYPES = (0x10, 0x03)
+# A mouse button on a KEY: the two-word record a module gesture uses, [category u32][mask u32]
+# with category 3. Written since C9 (a real left click from a key position) but never READ --
+# a board carrying one decoded to a raw "t0xf" unknown, so a mouse key could be flashed and then
+# lost on the next read. remap.MOUSE_MASK is the same table the other way round.
+MOUSE_TWO_WORD, MOUSE_CATEGORY = 0x0F, 3
+MOUSE_BUTTONS = {1: "M1", 2: "M2", 4: "M3", 8: "M4", 16: "M5"}
 
 # The 0x00 two-param record's FIRST word is a sub-command; the second is its argument.
 #   (3, n) -> select Bluetooth device n, ONE-BASED
@@ -171,12 +208,23 @@ HOLD_TAP_TYPES = (0x10, 0x03)
 # Both confirmed 2026-09-08 against a probe profile that bound Dev 1-4 and Clear on adjacent
 # keys: they read back (3,1) (3,2) (3,3) (3,4) and (0,0), twice each.
 BT_SELECT, BT_CLEAR_CMD = 3, 0
+# Next / previous device: commands 1 and 2 with argument 0, ZMK's &bt order, read from
+# NayaCore.exe's Bluetooth pair table (docs/reference/nayacore-action-vocabulary.json) alongside
+# the clear and select pairs that ARE confirmed on hardware. NayaFlow's UI never offers them;
+# NayaCore can serialise them. Never yet read off a board.
+BT_NEXT_CMD, BT_PREV_CMD = 1, 2
+BT_STEP = {BT_NEXT_CMD: "BT_NEXT", BT_PREV_CMD: "BT_PREV"}
 # ONE-BASED. This table said 0 -> BT_DEVICE_1 and traced to an early guess with nothing behind
 # it, so every Bluetooth key we flashed was written one profile off: asking for device 1 selected
 # whatever (3,0) means. Four stock positions had already read (3,1)..(3,4) and that was noted as
 # a discrepancy without being acted on; the probe settled it.
 BT_PROFILE = {1: "BT_DEVICE_1", 2: "BT_DEVICE_2", 3: "BT_DEVICE_3", 4: "BT_DEVICE_4"}
 MAX_POSITION = 96
+# The LED map: 0-73 are the keys, 74-80 the right edge bar, 81-87 the left edge bar, 88-111 the
+# LEFT module bay block and 112-135 the RIGHT one. A bay block is painted as ONE colour from the
+# layer's module colour, so its first LED is the block's colour on a read.
+LAST_KEYED_LED = 87
+MODULE_BLOCK_FIRST = {"left": 88, "right": 112}
 
 # The eight module bays. Their record's type byte is a module-config SLOT number, not a behaviour
 # type, so they must never reach `translate`. Mirrors flash.MODULE_SLOT_POSITIONS.
@@ -229,7 +277,16 @@ def decode_keypress(param: bytes) -> tuple[str, str]:
         return "shortcut_alias", f"{_mods_str(mods)} + {base}"
     if page == 0x0C:
         code = PAGE12.get(uid)
-        return "key", code if code else Unmapped(f"p0c:{uid:02x}")
+        if code is None:
+            return "key", Unmapped(f"p0c:{uid:02x}")
+        # A consumer key with modifiers ("LCTRL + LSHIFT + C_POWER", macOS Display Sleep in
+        # NayaFlow's own presets) used to lose its modifiers here and read back as a bare key.
+        return ("shortcut_alias", f"{_mods_str(mods)} + {code}") if mods else ("key", code)
+    if page == 0x00 and uid == 0 and mods:
+        # Modifiers and nothing else. This is how the board stores a chord whose "key" is not a
+        # keyboard usage -- NayaFlow's "LALT + CLICK" flashes as 00000004 -- and a bare modifier
+        # list, which its chord grammar allows. It reads back as the modifiers it holds.
+        return "shortcut_alias", _mods_str(mods)
     return "key", Unmapped(f"p{page:02x}:{uid:02x}m{mods:02x}")
 
 
@@ -280,11 +337,19 @@ def translate(typ: int, param: bytes, order_to_layer: dict[int, str]) -> list[tu
             # probe, so clearing the pairing is a real, flashable binding.
             if (a, b) == (BT_CLEAR_CMD, 0):
                 return [("press", "bluetooth", "BT_CLEAR")]
+            if a in BT_STEP and b == 0:
+                return [("press", "bluetooth", BT_STEP[a])]
             return [("press", "bluetooth", Unmapped(f"2p:{a},{b}"))]
         return []
     if typ == RGB_SYS:
         code = decode_rgb_system(param)
         return [("press", "LED", code if code else Unmapped(f"led:{param.hex()}"))]
+    if typ == MOUSE_TWO_WORD and len(param) >= 8:
+        cat = int.from_bytes(param[:4], "little")
+        mask = int.from_bytes(param[4:8], "little")
+        if cat == MOUSE_CATEGORY and mask in MOUSE_BUTTONS:
+            return [("press", "mouse", MOUSE_BUTTONS[mask])]
+        return [("press", "mouse", Unmapped(f"2w:{cat},{mask}"))]
     if typ in (MODULE_TYPE, UNKNOWN_02):
         return []
     if not param:
@@ -368,6 +433,30 @@ def _build(dest: int, sub: int, payload: bytes = b"", flags: int = 0x00) -> byte
     return bytes([SOURCE_HOST, 0, dest, 0, CAT_REMAP, len(dr)]) + dr + bytes([xor_checksum(dr), EOT])
 
 
+def parse_layer_list(payload: bytes) -> tuple[list[int], dict[int, str], dict[int, int]]:
+    """READ_LAYER_LIST payload -> (layer indexes, {idx: uuid}, {idx: animation byte}).
+
+    After a one-byte header, each entry is [idx][id][animation][len=0x10][uuid16]. The UUID is
+    the layer's IDENTITY and the only stable handle the device carries -- there is no name field
+    anywhere in the protocol. Keeping it is what lets a re-read update the layer it already
+    knows (preserving the user's name) instead of creating a fresh one every time.
+
+    Byte 2 is the layer's LED ANIMATION, not a flag. It read 0x00 on every board we had ever
+    captured, which is exactly what "every layer is set to solid" looks like -- so it sat in
+    the parser as an unnamed constant and the app reported animations as app-only. Its values
+    are LAYER_ANIMATIONS (ZMK's order), NOT the LED effect key's argument.
+    """
+    entries = payload[1:]
+    layer_idxs, layer_uuids, layer_animations = [], {}, {}
+    for k in range(0, len(entries) - 19, 20):
+        blk = entries[k:k + 20]
+        layer_idxs.append(blk[0])
+        h = blk[4:20].hex()
+        layer_uuids[blk[0]] = f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
+        layer_animations[blk[0]] = blk[2]
+    return layer_idxs, layer_uuids, layer_animations
+
+
 def read_keymap(transport, dest: int) -> dict:
     """Read every layer's binding records and LED map from a connected half.
 
@@ -394,23 +483,7 @@ def read_keymap(transport, dest: int) -> dict:
 
     r = send(READ_LAYER_LIST)
     llp = bytes(r[0].payload) if r else b""
-    entries = llp[1:]
-    # Each entry is [idx][id][flag][len=0x10][uuid16]. The UUID is the layer's IDENTITY and the
-    # only stable handle the device carries -- there is no name field anywhere in the protocol.
-    # Keeping it is what lets a re-read update the layer it already knows (preserving the user's
-    # name) instead of creating a fresh one every time.
-    layer_idxs, layer_uuids, layer_animations = [], {}, {}
-    for k in range(0, len(entries) - 19, 20):
-        blk = entries[k:k + 20]
-        layer_idxs.append(blk[0])
-        h = blk[4:20].hex()
-        layer_uuids[blk[0]] = f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
-        # Byte 2 is the layer's LED ANIMATION, not a flag. It read 0x00 on every board we had
-        # ever captured, which is exactly what "every layer is set to solid" looks like -- so it
-        # sat in the parser as an unnamed constant and the app reported animations as app-only.
-        # A probe profile with a different effect per layer settled it: breathe/spectrum/swirl
-        # came back as 1/3/2, matching the enum the LED keypress records use.
-        layer_animations[blk[0]] = blk[2]
+    layer_idxs, layer_uuids, layer_animations = parse_layer_list(llp)
 
     layers, led = {}, {}
     for li in layer_idxs:
@@ -523,12 +596,25 @@ def decode_keymap(read: dict, order_to_layer: dict[int, str]) -> dict:
             pos.setdefault(key, [])
             pos[key] = [s for s in pos[key] if s[0] not in {b for b, _, _ in slots}] + slots
         out[order] = pos
+    module_colours: dict = {}
     for order, entries in sorted(read.get("led", {}).items()):
         # `sat > 0` would drop every WHITE key (saturation 0). The thing to exclude is the
         # unset sentinel, not low saturation.
+        #
+        # Only LEDs 0-87 are key or edge colours. 88-111 and 112-135 are the two module BAY
+        # blocks, one colour each, and belong to the layer's module colours -- not to key rows
+        # 88-96, which happen to overlap the left block in the app's 97-position model. Storing
+        # them as key colours is what let stale values leak back onto the left module on a
+        # later flash (see flash.desired_from_db).
         colors[order] = {i: hsv_to_hex(h, sat) for i, h, sat in entries
-                         if i <= MAX_POSITION and sat != UNSET_SATURATION}
+                         if i <= LAST_KEYED_LED and sat != UNSET_SATURATION}
+        by_led = {i: (h, sat) for i, h, sat in entries}
+        module_colours[order] = {
+            side: (None if by_led.get(first, (0, UNSET_SATURATION))[1] == UNSET_SATURATION
+                   else hsv_to_hex(*by_led[first]))
+            for side, first in (("left", MODULE_BLOCK_FIRST["left"]), ("right", MODULE_BLOCK_FIRST["right"]))}
     out["_colors"] = colors
+    out["_module_colours"] = module_colours
     out["_warnings"] = warnings
     out["_dropped"] = dropped
     return out
