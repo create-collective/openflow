@@ -248,13 +248,12 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
 _DROP_REASONS = {
     "none": "Disabled cannot be written yet.",
     "trans": "Transparent cannot be written yet.",
-    "layer_polite_oneshot": "Sticky Layer is not implemented on this keyboard's firmware as far "
-                            "as we can tell — it has never been seen on a device.",
     "out": "Wireless / USB-C output switching is decoded but not yet written, pending a "
            "hardware check.",
     "macro": "The keyboard reserves a macro type but implements no macro table, so a macro "
              "binding can never reach it.",
-    "bluetooth": "Only Bluetooth devices 1-4 have a known record; clear/next/previous do not.",
+    "bluetooth": "Only Bluetooth devices 1-4 and Clear have a known record; next/previous "
+                 "do not.",
 }
 
 
@@ -334,9 +333,11 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
         except R.RemapEncodeError:
             return None
     if at == "bluetooth":
+        if code == "BT_CLEAR":
+            return R.TWO_PARAM, R.encode_twoparam(R.BT_CLEAR_CMD, 0)
         prof = R.BT_PROFILE_REV.get(code)
         if prof is not None:
-            return R.TWO_PARAM, R.encode_twoparam(3, prof)
+            return R.TWO_PARAM, R.encode_twoparam(R.BT_SELECT, prof)
         return None
     if at in ("layer_polite_hold",):
         order = _target_order(code, layer_order)
@@ -347,6 +348,14 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
     if at in ("layer_polite_toggle",):
         order = _target_order(code, layer_order)
         return None if order is None else (R.LAYER_TOGGLE, R.encode_layer_param(order))
+    if at in ("layer_polite_oneshot",):
+        # Sticky Layer. Refused until 2026-09-08 because the type had never been seen on a
+        # device; a probe proved it real, param = target layer, same shape as the others.
+        order = _target_order(code, layer_order)
+        return None if order is None else (R.STICKY_LAYER, R.encode_layer_param(order))
+    if at == "naya":
+        cmd = R.NAYA_COMMANDS_REV.get(code)
+        return None if cmd is None else (R.NAYA_SYSTEM, R.encode_layer_param(cmd))
     return None   # macros, LED-system, unknown -> not encoded here (see plan)
 
 

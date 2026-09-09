@@ -42,10 +42,9 @@ def test_every_known_unencodable_type_has_a_reason_a_user_can_act_on():
     for at, code, expect in [
         ("none", "DISABLE", "Disabled"),
         ("trans", "TRANSPARENT", "Transparent"),
-        ("layer_polite_oneshot", "STICKY_LAYER_1", "Sticky Layer"),
         ("out", "BT_OUT", "Wireless"),
         ("macro", "some-uuid", "macro table"),
-        ("bluetooth", "BT_CLEAR", "1-4"),
+        ("bluetooth", "BT_NEXT", "next/previous"),
     ]:
         reason = F._drop_reason(at, code)
         assert expect in reason, f"{at}: {reason!r} does not mention {expect!r}"
@@ -97,3 +96,35 @@ def test_a_dropped_position_is_not_written_as_none():
     # Position 5 must still carry the device's own record, byte for byte:
     # [pos=05][type=01][len=04][04 00 07 00]
     assert bytes.fromhex("05010404000700") in payload, "the existing binding was not preserved"
+
+
+def test_two_of_these_stopped_being_unencodable_on_2026_09_08():
+    """Sticky Layer and BT_CLEAR were both listed here as things the firmware could not take.
+    A probe profile proved both wrong -- sticky layer wrote four real 0x0b records, and BT_CLEAR
+    wrote (0, 0) rather than the NONE we had inferred from a stock board where that position
+    happened to be unbound. Absence of evidence, twice.
+
+    They must NOT drift back into the drop table: a reason that says "this cannot be written"
+    about something that can is worse than no reason at all."""
+    layer_order = {"aaaa": 1}
+    sticky = F._binding_rows_to_record(rows("layer_polite_oneshot", "STICKY_LAYER_aaaa"),
+                                       200, 0, layer_order)
+    assert sticky == (0x0B, (1).to_bytes(4, "little")), sticky
+    clear = F._binding_rows_to_record(rows("bluetooth", "BT_CLEAR"), 200, 0, {})
+    assert clear == (0x00, bytes(8)), clear
+
+
+def test_bluetooth_profiles_are_one_based():
+    """The off-by-one that shipped: asking for device 1 wrote (3, 0). Four stock positions had
+    read (3,1)..(3,4) and it was noted as a discrepancy without being acted on."""
+    for n in (1, 2, 3, 4):
+        rec = F._binding_rows_to_record(rows("bluetooth", f"BT_DEVICE_{n}"), 200, 0, {})
+        assert rec[0] == 0x00
+        assert int.from_bytes(rec[1][:4], "little") == 3
+        assert int.from_bytes(rec[1][4:8], "little") == n, f"BT_DEVICE_{n} wrote {rec[1].hex()}"
+
+
+def test_the_naya_system_action_encodes():
+    """MODULE_FORCE_CHARGING -- record type 0x06, the lightning key on Naya's own System layer."""
+    rec = F._binding_rows_to_record(rows("naya", "MODULE_FORCE_CHARGING"), 200, 0, {})
+    assert rec == (0x06, (401).to_bytes(4, "little")), rec

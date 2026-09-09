@@ -60,6 +60,10 @@ MODIFIER_REV = {v: k for k, v in kr.MODIFIER_ID.items()}
 SHIFTED_REV = {v: k for k, v in kr.SHIFTED_SYMBOL.items()}
 MOD_BIT = {name: 1 << i for i, name in enumerate(kr.MOD_BITS)}
 BT_PROFILE_REV = {v: k for k, v in kr.BT_PROFILE.items()}
+BT_SELECT, BT_CLEAR_CMD = kr.BT_SELECT, kr.BT_CLEAR_CMD
+STICKY_LAYER = kr.STICKY_LAYER   # 0x0b -- real, confirmed on hardware 2026-09-08
+NAYA_SYSTEM = kr.NAYA_SYSTEM     # 0x06 -- Naya's own system actions
+NAYA_COMMANDS_REV = {v: k for k, v in kr.NAYA_COMMANDS.items()}
 # NayaFlow token spellings that differ from our canonical codes (verified from captures).
 CODE_ALIASES = {"ENTER": "RETURN"}
 

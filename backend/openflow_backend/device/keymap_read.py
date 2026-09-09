@@ -148,13 +148,34 @@ def decode_rgb_system(param: bytes):
         return RGB_COLORS.get((bright, sat, hue))
     return None
 LAYER_TO, LAYER_TOGGLE = 0x0C, 0x0D   # 0x0c=TO_LAYER (Force), 0x0d=TOGGLE (verified)
+# Sticky Layer. Its type byte came from NayaCore's table and it had NEVER been read off a device
+# or found in any NayaFlow database -- exactly the evidentiary position `macro` (0x02) was in
+# before macro turned out to be a name with no firmware behind it. A probe profile with sticky
+# keys bound on the thumbs settled it the other way: four records came back, param = target layer
+# as u32 LE, same shape as MO/TO/TOGGLE. Sticky Layer is real.
+STICKY_LAYER = 0x0B
+# Naya's own system actions. 0x06 was an unknown type until a probe carried MODULE_FORCE_CHARGING
+# (the lightning key on the stock System layer, position 62) and it read back as 0x06 with param
+# 401. NayaFlow calls this action type "naya"; only the one command is known.
+NAYA_SYSTEM = 0x06
+NAYA_COMMANDS = {401: "MODULE_FORCE_CHARGING"}
 MODULE_TYPE, UNKNOWN_02 = 0x78, 0x02
 # Hold-tap records: 0x10 (8-byte header, e.g. OneKey Tap+Hold) and 0x03 (5-byte
 # header, e.g. home-row mods). Same body: header + hold(4) + pad(4) + tap(4) + pad(4),
 # so the header length is len(param) - 16 either way.
 HOLD_TAP_TYPES = (0x10, 0x03)
 
-BT_PROFILE = {0: "BT_DEVICE_1", 1: "BT_DEVICE_2", 2: "BT_DEVICE_3", 3: "BT_DEVICE_4"}
+# The 0x00 two-param record's FIRST word is a sub-command; the second is its argument.
+#   (3, n) -> select Bluetooth device n, ONE-BASED
+#   (0, 0) -> clear the Bluetooth pairing
+# Both confirmed 2026-09-08 against a probe profile that bound Dev 1-4 and Clear on adjacent
+# keys: they read back (3,1) (3,2) (3,3) (3,4) and (0,0), twice each.
+BT_SELECT, BT_CLEAR_CMD = 3, 0
+# ONE-BASED. This table said 0 -> BT_DEVICE_1 and traced to an early guess with nothing behind
+# it, so every Bluetooth key we flashed was written one profile off: asking for device 1 selected
+# whatever (3,0) means. Four stock positions had already read (3,1)..(3,4) and that was noted as
+# a discrepancy without being acted on; the probe settled it.
+BT_PROFILE = {1: "BT_DEVICE_1", 2: "BT_DEVICE_2", 3: "BT_DEVICE_3", 4: "BT_DEVICE_4"}
 MAX_POSITION = 96
 
 # The eight module bays. Their record's type byte is a module-config SLOT number, not a behaviour
@@ -242,12 +263,23 @@ def translate(typ: int, param: bytes, order_to_layer: dict[int, str]) -> list[tu
         return [("press", "layer_rude_toggle", layer_code("TO_LAYER_"))]
     if typ == LAYER_TOGGLE:
         return [("press", "layer_polite_toggle", layer_code("TOGGLE_LAYER_"))]
+    if typ == STICKY_LAYER:
+        return [("press", "layer_polite_oneshot", layer_code("STICKY_LAYER_"))]
+    if typ == NAYA_SYSTEM:
+        cmd = int.from_bytes(param[:4], "little") if len(param) >= 4 else None
+        name = NAYA_COMMANDS.get(cmd)
+        return [("press", "naya", name if name else Unmapped(f"naya:{cmd}"))]
     if typ == TWO_PARAM:
         if len(param) >= 8:
             a = int.from_bytes(param[:4], "little")
             b = int.from_bytes(param[4:8], "little")
-            if a == 3:
+            if a == BT_SELECT:
                 return [("press", "bluetooth", BT_PROFILE.get(b, Unmapped(f"bt:{b}")))]
+            # BT_CLEAR really is written, as (0, 0) -- it is NOT the NONE record we assumed from
+            # a stock board where that position happened to be unbound. Read back twice from the
+            # probe, so clearing the pairing is a real, flashable binding.
+            if (a, b) == (BT_CLEAR_CMD, 0):
+                return [("press", "bluetooth", "BT_CLEAR")]
             return [("press", "bluetooth", Unmapped(f"2p:{a},{b}"))]
         return []
     if typ == RGB_SYS:

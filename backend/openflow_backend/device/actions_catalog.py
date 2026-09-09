@@ -122,8 +122,23 @@ def _connection():
     return [
         _a("BT_DEVICE_1", "BT 1", "bluetooth"), _a("BT_DEVICE_2", "BT 2", "bluetooth"),
         _a("BT_DEVICE_3", "BT 3", "bluetooth"), _a("BT_DEVICE_4", "BT 4", "bluetooth"),
-        _a("BT_CLEAR", "BT Clear", "bluetooth"),
+        # Confirmed 2026-09-08: BT_CLEAR writes a real record, two-param (0, 0). We had inferred
+        # from a stock board -- where that position happened to be unbound -- that NayaCore did
+        # not flash it either. Absence of evidence.
+        _a("BT_CLEAR", "BT Clear", "bluetooth", name="Clear the Bluetooth pairing"),
         _a("BT_OUT", "Wireless", "out"), _a("USB_DEVICE", "USB-C", "out"),
+    ]
+
+
+def _naya_system():
+    """Naya's own system actions -- record type 0x06.
+
+    Only one is known. It is the lightning key on the stock System layer (position 62), and its
+    type was an unknown byte until a probe profile carried it and it read back as 0x06 with
+    param 401."""
+    return [
+        _a("MODULE_FORCE_CHARGING", "Force charge", "naya",
+           name="Force the docked modules to charge"),
     ]
 
 
@@ -383,6 +398,7 @@ def _tabs():
             {"name": "Mouse", "actions": _mouse()},
             {"name": "Connection", "actions": _connection()},
             {"name": "Lighting", "actions": _lighting()},
+            {"name": "Naya system", "actions": _naya_system()},
             {"name": "Recovery", "actions": _recovery()},
             {"name": "System", "actions": _system()},
             {"name": "Keypad", "actions": _keypad()},
