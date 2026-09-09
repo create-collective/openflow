@@ -164,12 +164,19 @@ function LedCol({ positions, keysByPosition, selectedPosition, onSelectKey }) {
   );
 }
 
-function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosition, pickedModule, onAssignModule, onSelectModule, onSelectKey }) {
+function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosition, pickedModule, onAssignModule, onSelectModule, onSelectKey, moduleLed, onModuleLed }) {
   if (mode === "color") {
-    const color = keysByPosition[pos]?.colorHex;
+    // A bay's LEDs are a 24-wide BLOCK (88-111 left, 112-135 right), not the single position
+    // this used to paint. `left` wrote LED 88 -- one of the left block's 24 -- and `right` wrote
+    // LED 89, which is also in the LEFT block, so colouring the right module quietly changed the
+    // left one's second LED. The block is stored per layer and per side; see
+    // flash.MODULE_LED_BLOCKS.
+    const color = moduleLed?.[id] || null;
     return (
-      <button className={"kb-module color" + (selectedPosition === pos ? " selected" : "")}
-        title={`${id} module LED`} onClick={() => onSelectKey(pos)} style={{ background: color || undefined }} />
+      <button className={"kb-module color" + (color ? " set" : "")}
+        title={color ? `${id} module LEDs: ${color}` : `${id} module LEDs — not set (keeps what the keyboard has)`}
+        onClick={() => onModuleLed && onModuleLed(id)}
+        style={{ background: color || undefined }} />
     );
   }
   const assigned = moduleAssign[id];
@@ -207,7 +214,7 @@ function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosit
 export default function KeymapBoard(props) {
   const {
     keysByPosition = {}, mode = "bindings", selectedPosition = null, onSelectKey = () => {},
-    ledOutline = false,
+    ledOutline = false, moduleLed = null, onModuleLed = null,
     onSelectModule = null, moduleAssign = {}, showModulePalette = false, onAssignModule = null,
     pickedModule = null, onPickModule = null, layerMap = {}, bays = null,
     allowModuleDrag = true,
@@ -272,8 +279,8 @@ export default function KeymapBoard(props) {
           <div className="kb-palette-row kb-palette-spacer" aria-hidden="true" />
         )}
         <div className="kb-slots">
-          <ModuleSlot id="left" pos={88} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
-          <ModuleSlot id="right" pos={89} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} />
+          <ModuleSlot id="left" pos={88} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} moduleLed={moduleLed} onModuleLed={onModuleLed} />
+          <ModuleSlot id="right" pos={89} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} moduleLed={moduleLed} onModuleLed={onModuleLed} />
         </div>
         <div className="kb-thumbs">
           <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} ledOutline={ledOutline} />)}</div>

@@ -185,6 +185,15 @@ export default function Color() {
   // The docked modules' LED blocks. The left block sits inside the key range so it was already
   // reachable by painting keys; the right has no key position at all, which is why a flash used
   // to leave the right module showing whatever wrote it last. See flash.MODULE_LED_BLOCKS.
+  async function paintModule(side) {
+    if (tool === "pipette") {
+      const c = layer?.moduleLed?.[side];
+      if (c) { setBrush(c); setHex(c); }
+      return;
+    }
+    await setModuleLed(side, brush);
+  }
+
   async function setModuleLed(side, colorHex) {
     if (!layer) return;
     try {
@@ -230,7 +239,8 @@ export default function Color() {
             </div>
             <div className="board-actions"><FlashButton variant="toolbar" /></div>
           </div>
-          <KeymapBoard keysByPosition={boardKeys} mode="color" onSelectKey={onKey} layerMap={layerMap} />
+          <KeymapBoard keysByPosition={boardKeys} mode="color" onSelectKey={onKey} layerMap={layerMap}
+            moduleLed={layer?.moduleLed} onModuleLed={paintModule} />
         </div>
       </div>
 
@@ -305,36 +315,6 @@ export default function Color() {
                 )}
               </div>
             )}
-          </div>
-        </div>
-
-        <div className="card">
-          <h3>Module lighting</h3>
-          <p className="page-sub" style={{ marginBottom: 10 }}>
-            The docked modules have their own LEDs, separate from the keys. Click a swatch above,
-            then a module here. Per layer, like key colours.
-          </p>
-          <div className="module-led-row">
-            {["left", "right"].map((side) => {
-              const c = layer?.moduleLed?.[side] || null;
-              const dev = deviceColor(c);
-              return (
-                <div key={side} className="module-led">
-                  <button
-                    className={"swatch big" + (c ? "" : " off")}
-                    style={dev ? { background: dev.hex } : undefined}
-                    title={c ? `${side} module: ${c}` : `${side} module — not set (keeps what the keyboard has)`}
-                    onClick={() => setModuleLed(side, brush)}
-                  />
-                  <span className="module-led-label">{side}</span>
-                  {c && (
-                    <button className="btn tiny" onClick={() => setModuleLed(side, null)}>
-                      clear
-                    </button>
-                  )}
-                </div>
-              );
-            })}
           </div>
         </div>
 

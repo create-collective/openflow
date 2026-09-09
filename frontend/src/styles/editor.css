@@ -735,6 +735,18 @@
   outline: 2px solid var(--accent);
 }
 
+/* An unset module keeps whatever the keyboard already shows, which is not the same as "off" --
+   so it gets the same hatch the "off" swatch uses rather than a colour it does not have. */
+.kb-module.color:not(.set) {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--neutral20),
+    var(--neutral20) 4px,
+    var(--neutral10) 4px,
+    var(--neutral10) 8px
+  );
+}
+
 .kb-module-icon {
   font-size: 20px;
 }
