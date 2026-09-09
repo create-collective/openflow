@@ -1,85 +1,80 @@
 # OpenFlow
 
-An open-source companion app for the Naya Create keyboard — a clean-room rebuild
-of NayaFlow with **no cloud, no GitHub fetch, no external runtime dependencies**.
-It drives the keyboard over USB CDC using the [nayactl](https://github.com/Qonfused/nayactl)
-protocol layer (Apache-2.0) instead of the proprietary `NayaCore.exe` +
-`flow-bg-server.exe`.
+An open-source configurator for the **Naya Create** keyboard — an independent rebuild of Naya's
+own NayaFlow app, talking to the keyboard over USB CDC.
 
-> Working name — final name/branding is a pending clean-reskin decision.
-> Part of the [NayaOS](../README.md) preservation effort. See the design plan
-> for context: Naya B.V. is bankrupt, so an app that depends on Naya's infra is a
-> liability; OpenFlow removes that dependency.
-
-## Architecture
-
-```
-React renderer (Vite)          frontend/   — faithful UI rebuilt from recovered CSS/assets
-      |  localhost REST + SSE   (recovered flow-bg-server contract; see docs/api-contract.md)
-Python backend (FastAPI)       backend/    — built on the vendored nayactl protocol
-      |  USB CDC serial
-Naya Create keyboard
-Electron desktop shell         electron/   — spawns the backend, hosts the renderer
-```
-
-The renderer, backend, and shell are separable: the backend runs standalone and
-is `curl`-testable without the UI.
-
-## Status
-
-- **Phase 0 — scaffold:** done. Backend, frontend, Electron shell, DB, docs.
-- **Phase 1 — nayactl-backed features:** in progress. Device discovery, status
-  (fw/hw/battery/BLE/module), LED control, diagnostics, SPI-flash self-test,
-  clear-BLE, `dump_settings`. Verified off-device; on-device verification pending
-  a connected keyboard.
-- **Phase 2 — keymap editor:** not started. Requires the REMAP protocol
-  (`device/remap.py`) — the main product. Opcodes documented, wire format TBD.
-- **Phase 3 — firmware update:** blocked on obtaining a firmware image (the NayaOS
-  open problem).
-
-## Run it (dev)
-
-Backend:
-
-```powershell
-cd backend
-py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
-.\.venv\Scripts\python.exe -m openflow_backend 3001   # http://localhost:3001
-```
-
-Frontend (separate terminal):
-
-```powershell
-cd frontend
-npm install
-npm run dev                                            # http://localhost:5173
-```
-
-Or the whole app in Electron (spawns the backend for you):
-
-```powershell
-cd electron
-npm install
-npm run start:dev
-```
-
-Off-device smoke test: `backend\.venv\Scripts\python.exe backend\tests\smoke.py`.
+Naya has shut down, so the vendor software is unmaintained and the keyboards outlive it. This
+exists so the hardware stays configurable.
 
 ## Layout
 
-| Path | What |
-|---|---|
-| `backend/openflow_backend/device/service.py` | Structured device ops (lifted from nayactl's CLI). |
-| `backend/openflow_backend/device/remap.py` | Phase 2 REMAP scaffold (keymap/layer/macro). |
-| `backend/openflow_backend/device/commands.py` | Maps recovered `command` events to CDC ops. |
-| `backend/openflow_backend/api/` | REST + SSE (recovered contract). |
-| `backend/openflow_backend/db/` | SQLite (schema from NayaFlow). |
-| `backend/openflow_backend/_vendor/nayactl/` | Vendored nayactl (Apache-2.0). |
-| `frontend/src/` | React renderer. |
-| `docs/` | API contract, asset provenance. |
+```
+backend/     Python (FastAPI). Device protocol, flash planning, the action catalogue.
+frontend/    React + Vite. The renderer -- this is the part to look at for styling.
+electron/    Desktop shell. Spawns the backend, hosts the renderer.
+docs/        Reference data the backend loads at runtime, plus notes.
+device/      A few captured device reads, used as test fixtures.
+```
 
-## License
+No TypeScript; the renderer is plain JSX.
 
-Apache-2.0. Vendored nayactl retains its own Apache-2.0 license. See
-`docs/asset-provenance.md` for the clean-reskin asset policy.
+## Running it
+
+```bash
+# backend  (needs Python 3.12+)
+cd backend
+python -m venv .venv && .venv/Scripts/activate      # or source .venv/bin/activate
+pip install -e ".[dev]"
+
+# Seed a starting profile. WITHOUT THIS THE APP OPENS EMPTY -- no profiles, no keys,
+# nothing to look at. This copies the captured stock profile that ships in device/.
+python -m openflow_backend.seed
+
+python -m openflow_backend 3001                      # the port is POSITIONAL, not --port
+
+# frontend
+cd frontend
+npm install
+npm run dev                                          # http://localhost:5173
+```
+
+`npm run build` runs `tools/check-undefined.mjs` first — it catches undefined hooks, components
+and state setters, which render as a blank page rather than a build error.
+
+The backend test suite runs without a keyboard attached:
+
+```bash
+cd backend && python -m pytest -q          # 429 pass, 8 skip without device captures
+```
+
+Nothing here talks to the keyboard unless you explicitly flash; the app is read-only until then,
+and it runs perfectly well with no keyboard attached -- which is the expected setup for design
+work.
+
+## Where your data lives
+
+The database is **not** in the repository. It goes to `%APPDATA%/OpenFlow` on Windows,
+`~/Library/Application Support/OpenFlow` on macOS, `$XDG_DATA_HOME/OpenFlow` on Linux, or
+wherever `OPENFLOW_DATA_DIR` points if you set it. So you can throw it away and re-seed freely:
+
+```bash
+OPENFLOW_DATA_DIR=/tmp/openflow-scratch python -m openflow_backend.seed
+OPENFLOW_DATA_DIR=/tmp/openflow-scratch python -m openflow_backend 3001
+```
+
+## Where the styling lives
+
+- `frontend/src/styles/` — `app.css` (shell, buttons, tokens) and `editor.css` (the keyboard
+  board, palette, LED views)
+- `frontend/src/components/KeymapBoard.jsx` — the virtual keyboard, drawn as SVG key shapes
+- `frontend/src/pages/` — Bindings, Color, Modules, Macros, Troubleshooting
+
+Colours come from CSS custom properties (`--neutral*`, `--accent`, `--text`, `--border-strong`),
+so a theme is mostly a matter of redefining those.
+
+## Third-party data
+
+`docs/reference/app-shortcuts.json` is derived from ShortcutMapper (MIT) — see
+`docs/reference/ATTRIBUTION.md`, which must travel with it.
+
+`backend/openflow_backend/_vendor/nayactl` is a vendored copy of nayactl.
