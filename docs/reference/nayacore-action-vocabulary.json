@@ -1,0 +1,3775 @@
+{
+ "_meta": {
+  "date": "2026-09-09",
+  "scope": "Complete key-action vocabulary the vendor stack (NayaFlow 1.25.1: Electron main + flow-bg-server.exe + NayaCore.exe) can name and can flash to the Naya Create keyboard.",
+  "correction_to_task_premise": "NayaFlow's Electron main bundle (asar/dist/main/index.js) contains NO action model, no SQL and no ZMQ protocol: byte-level grep for MODULE_FORCE_CHARGING, LED_BRIGHTNESS_UP, actionType, key_bindings, CREATE TABLE returns 0 hits. Its only relevant code (byte offsets ~1419800-1425600) spawns installed-tree/flow/flow-bg-server.exe (a Go/gin binary, 25.7 MB) with env NAYA_CORE_EXE_DIR and pipes JSON-RPC. The SQLite schema, migrations (goose), the embedded action catalog (data.ActionsJSON, 652 records) and the template seeds live in flow-bg-server.exe; its strings dump is extracted/NayaFlow-1.25.1/strings/flow-strings.txt (6.5 MB; the file starts with the PE header and a 'Go build ID'). The renderer bundle asar/dist/renderer/assets/index-mihUmo_8.js holds the UI-side action typing ($s class) and the feature flags.",
+  "strings_dump_caveat": "core-strings.txt was produced with a 6-character minimum, so every short NayaCore literal (A-Z, F1-F24, ESC, TAB, HOME, mo, none, trans, mouse, macro, tap, hold, key, out, LED, ' + ', ' - ') is missing from it. All short names below were re-extracted from installed-tree/core/NayaCore/NayaCore.exe directly (ASCII runs >=2 chars with file offsets; scratchpad/core-strings-min2.txt) and verified at byte level."
+ },
+ "how_found": {
+  "core-strings.txt (NayaCore.exe, 6-char minimum)": {
+   "behaviour_type_table": "lines 1440-1450 show 11 of the 16 record types (bluetooth, key_press, mod_tap, grave_escape, naya_integrations, outputs, rgb_ug, sticky_key, sticky_layer, to_layer, toggle_layer); macro/mo/none/trans/mouse are shorter than 6 chars and were filtered out. Full table at NayaCore.exe 0x3ee220-0x3ee2e0 (16 entries, index = record type byte, matches docs/reference/nayacore-vocabulary.json).",
+   "action_name_tables": "lines 4691-4927 (BT_CLEAR .. STATIC_ZOOM). Full run incl. short names at NayaCore.exe 0x77a948-0x77bf98; single letters A-Z at 0x77afb4-0x77b017 ('C' is absent there because MSVC string pooling reused another 'C' literal).",
+   "cdc_protocol_command_names": "lines 5720-5803 ('[READ LAYER LIST 0x' .. '[GET MODULE INFO IF PRESENT 0x'); macro commands at 5735-5738 ('[READ MACRO LIST 0x','[WRITE MACRO LIST 0x','[READ MACRO DATA 0x','[WRITE MACRO DATA 0x').",
+   "remap_process_steps": "lines 6015-6120: _verifyProfile.cpp, constructRemapCommands.cpp (_remapRead/WriteLayerList, _remapRead/WriteLayerData, _remapRead/WriteModuleConfigList, _remapRead/WriteModuleData, _remapRead/WriteColorData), handleRemapResponses.cpp, interpretRemapData.cpp (_interpretLayerListData, _interpretLayerData, _interpretModuleConfigListData, _interpretModuleConfigData, _interpretLedMapData). No macro step exists. Log formats 'Layer (0x%1) Key Index (0x%2) Write Data' at 6033, 'Module Config (0x%1) Data Index (0x%2) Write Data' at 6027.",
+   "sql_reader": "lines 6247-6339 (Naya_SQLReader.cpp): 'SELECT action_code, action_type, behavior FROM key_bindings ...' at 6322, module_bindings query at 6335, DISABLED/TRANSPARENT at 6324-6325. No query touches the macros tables.",
+   "binding_serializer": "lines 6340-6362 (Naya_Data/Naya_Binding.cpp): param-length checks for KEY_PRESS, TO_LAYER, TOGGLE_LAYER, MO, STICKY_LAYER, BLUETOOTH, RGB_UG, OUTPUTS, NAYA_INTEGRATIONS, MOUSE (6345-6354); 'Unimplemented ZMK behaviour: %1' (6360) and 'Unknown ZMK behaviour: (%1) %2' (6362) in naya_remap::Binding::serializeBindingData; MOUSE_STATIC/STATIC_SCROLL_Y/STATIC_SCROLL_X/STATIC_ZOOM display formats 6355-6358; DISABLE 6359.",
+   "key_serializer": "lines 6363-6373 (Naya_Key.cpp): 'Bytes with MOD_TAP identifier are too small, expected at least 21 bytes' (6366), naya_remap::Key::serializeBindingPairData / 'Cannot serialize mod-tap pair with missing binding (tap: %1, hold: %2)' (6368-6369).",
+   "module_config": "lines 6391-6423 (Naya_ModuleConfig.cpp) incl. addSlotFromActionCode (6406) and the layer display formats TO(%1) TOG(%1) MO(%1) SL(%1) at 6420-6423.",
+   "error_table": "lines 1685-1710; 'Maximum macros exceeded.' at 1699 is an error-code string between 'Maximum configs exceeded.' and 'Maximum layers exceeded.', not a writer.",
+   "led_command_param_checks": "lines 5886-5895 (LED_ADJ_BRT / LEDS_RGB_BRT) belong to the direct CDC LED commands, not to key bindings."
+  },
+  "NayaCore.exe raw data (offsets in installed-tree/core/NayaCore/NayaCore.exe)": {
+   "record_type_table": "0x3ee220-0x3ee2e0",
+   "app_action_type_dispatch_table": "0x3f07f0-0x3f08e8: combo, key, modifier, naya, layer_rude_toggle, layer_polite_toggle, layer_polite_hold, layer_polite_oneshot, core, core_toggle_hold_morph, Value, out, LED, configuration_rude_toggle, configuration_rude_toggle_l, configuration_rude_toggle_r (bluetooth/mouse/macro/none/trans would be pooled with the record-type table and cannot be attributed).",
+   "key_binding_behaviour_words": "0x3f0904-0x3f0920: tap, hold, double_tap, tap_hold. The literal 'press' (the value the bg-server writes for 804 of 804 seeded key rows) is ABSENT from NayaCore.exe.",
+   "module_types": "0x3f092c-0x3f0944: TOUCH, TRACK, TUNE, FLOAT",
+   "modifier_bitmask_table": "0x77a9b8: u32 [1,2,4,8,16,32,64,128]",
+   "key_param_table": "0x77a9d8-0x77adbb: 249 x 4 bytes = (usage u16 LE, hid_page u8, modifier_bits u8) = exactly the key_press record param; in ZMK keys.h order",
+   "outputs_selectors": "0x77adbc u32 1 (USB_DEVICE), 0x77adc0 u32 2 (BT_OUT)",
+   "rgb_ug_pairs": "0x77adc8-0x77ae5f: 19 x (argument u32, subcommand u32) -- stored argument-first, i.e. reversed relative to the wire order [subcommand][argument]",
+   "naya_integration_ids": "0x77ae60-0x77ae7f: u32 150,151,200,201,300,301,400,401",
+   "mouse_button_pairs": "0x77aef0-0x77af17: (1,3),(2,3),(4,3),(8,3),(16,3) = M1..M5 (mask, cmd 3)",
+   "bluetooth_pairs": "0x77af20-0x77af5f: (0,0),(0,1),(0,2),(0,3),(1,3),(2,3),(3,3),(4,3)",
+   "composite_code_literals": "' + ' at 0x78f630 (inside the Naya_Binding.cpp string run, between the KEY_PRESS and TO_LAYER length-check messages); ' - ' at 0x79023c (Naya_ModuleConfig.cpp run, next to numboxSlider/toggle/MS-2..MS-5)",
+   "disable_transparent": "DISABLE 0x78f998; DISABLED 0x78f1c8; TRANSPARENT 0x78f1d8; TO( 0x790748, TOG( 0x790750, MO( 0x790758, SL( 0x790760"
+  },
+  "flow-strings.txt (= strings of installed-tree/flow/flow-bg-server.exe, Go)": {
+   "embedded_action_catalog": "lines 3575-20894, 652 records of {id, orderId, actionId, actionCode, frontendType, defaultDisplayName, holdDisplayName, mac/windows/linuxDisplayName, icon, macIcon, windowsIcon, tabType, groupType, searchTags, hasVariable, tooltip, displayContext, 'linked value', 'linked neg', 'linked pos', context}; served by naya.tech/server/internal/features/actions.GetActionByActionCodeHandler (symbol line 74615) from data.ActionsJSON",
+   "template_seed_rows": "lines ~32900-60900: keyBindings/moduleBindings objects with actionType/actionCode/behavior; distinct actionType values counted over the whole file",
+   "sql": "lines 32060-32360: sqlc queries for key_bindings (context, action_code, action_type, behavior, key_id, id), module_bindings (action_id, action_code, action_type, behavior, invert, threshold, direction, mode, module_config_id, id), macros + loop/text/mouse/standard/wait_for_release _action_macro_steps; goose migrations (e.g. 20250903113837_add_module_config_binding_state...). No CHECK constraint on action_type was found.",
+   "macro_crud": "lines 22494-30156 (GetMacro, ListMacros, CreateMacro, UpdateMacro, UpsertMacro, DeleteMacro and the five MacroStep families)",
+   "settings_tables": "lines 2960-3365 ('Status': 'Production', 'hidden': 'No' are setting-UI fields, not action flags)"
+  },
+  "renderer index-mihUmo_8.js (byte offsets)": {
+   "feature_flags_object": "2714970: const f0t={colorMapping:{enabled:!0},keyMapping:{enabled:!0},macros:{enabled:!1},moduleConfigurations:{enabled:!0},layerManagement:{enabled:!1},settings:{enabled:!0},bugReport:{enabled:!1},help:{enabled:!0},basicActions:{enabled:!0},extendedActions:{enabled:!0},layersActions:{enabled:!0},modulesActions:{enabled:!1},integrationsActions:{enabled:!1},customActions:{enabled:!1},moduleBindingSlots:{enabled:!0},ledToggle:{enabled:!1},behaviorToggle:{enabled:!1},dynamicLayers:{enabled:!1},viewToggle:{enabled:!1},basicLayers:{enabled:!0},signIn:{enabled:!1},backwardAndForward:{enabled:!1},undoAndRedo:{enabled:!1},advancedBehaviors:{enabled:!1}}",
+   "flag_reader": "1482501: Dn(e){return!!eHe().flags[e].enabled}; call sites use only 13 names (backwardAndForward, bugReport, colorMapping, dynamicLayers, help, keyMapping, layerManagement, macros, moduleBindingSlots, moduleConfigurations, settings, signIn, undoAndRedo). Dn('macros') at 1482765 hides the 'Macros & Shortcuts' onboarding item. advancedBehaviors, behaviorToggle, integrationsActions, modulesActions, customActions, ledToggle, viewToggle are declared false and never read anywhere.",
+   "zmk_code_builder": "1956977: class $s -- splits action codes on '+', isModifier() = [LGUI,RGUI,LCTRL,RCTRL,LALT,RALT,LSHFT,RSHFT,LSHIFT,RSHIFT]; getActionType() returns 'combo' when the code contains '+', 'key' for a bare non-modifier, 'modifier' for modifiers only, else 'none'",
+   "key_behaviour_list": "2041069: function flt(e){const t=['tap','tap_hold','double_tap','hold','press'] ...}",
+   "macro_binding_lookup": "~1933916: keyBindingsByMacroId filters actionType.toLowerCase()==='macro' and takes the last '_' token of actionCode as the macro id",
+   "action_picker_tabs": "grep anchors 'id:\"basic\",icon:', 'id:\"extended\"', 'id:\"layers\"'/'static:layers', 'id:\"integrations\"', 'id:\"modules\"' (three tab-list constants; none has a Macro tab)"
+  }
+ },
+ "hid_keyboard_names": [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+  "I",
+  "J",
+  "K",
+  "L",
+  "M",
+  "N",
+  "O",
+  "P",
+  "Q",
+  "R",
+  "S",
+  "T",
+  "U",
+  "V",
+  "W",
+  "X",
+  "Y",
+  "Z",
+  "NUMBER_1",
+  "EXCLAMATION",
+  "NUMBER_2",
+  "AT_SIGN",
+  "NUMBER_3",
+  "HASH",
+  "POUND",
+  "NUMBER_4",
+  "DOLLAR",
+  "NUMBER_5",
+  "PERCENT",
+  "NUMBER_6",
+  "CARET",
+  "NUMBER_7",
+  "AMPERSAND",
+  "NUMBER_8",
+  "ASTERISK",
+  "NUMBER_9",
+  "LEFT_PARENTHESIS",
+  "NUMBER_0",
+  "RIGHT_PARENTHESIS",
+  "RETURN",
+  "ESC",
+  "BACKSPACE",
+  "TAB",
+  "SPACE",
+  "MINUS",
+  "UNDERSCORE",
+  "EQUAL",
+  "PLUS",
+  "LEFT_BRACKET",
+  "LEFT_BRACE",
+  "RIGHT_BRACKET",
+  "RIGHT_BRACE",
+  "BACKSLASH",
+  "PIPE",
+  "NON_US_HASH",
+  "TILDE2",
+  "SEMICOLON",
+  "COLON",
+  "SINGLE_QUOTE",
+  "DOUBLE_QUOTES",
+  "GRAVE",
+  "TILDE",
+  "COMMA",
+  "LESS_THAN",
+  "PERIOD",
+  "GREATER_THAN",
+  "SLASH",
+  "QUESTION",
+  "CAPSLOCK",
+  "F1",
+  "F2",
+  "F3",
+  "F4",
+  "F5",
+  "F6",
+  "F7",
+  "F8",
+  "F9",
+  "F10",
+  "F11",
+  "F12",
+  "PRINTSCREEN",
+  "SCROLLLOCK",
+  "PAUSE_BREAK",
+  "INSERT",
+  "HOME",
+  "PG_UP",
+  "DELETE",
+  "DEL",
+  "END",
+  "PG_DN",
+  "RIGHT",
+  "LEFT",
+  "DOWN",
+  "UP",
+  "KP_NUMLOCK",
+  "KP_CLEAR",
+  "CLEAR2",
+  "KP_DIVIDE",
+  "KP_MULTIPLY",
+  "KP_MINUS",
+  "KP_PLUS",
+  "KP_ENTER",
+  "KP_NUMBER_1",
+  "KP_NUMBER_2",
+  "KP_NUMBER_3",
+  "KP_NUMBER_4",
+  "KP_NUMBER_5",
+  "KP_NUMBER_6",
+  "KP_NUMBER_7",
+  "KP_NUMBER_8",
+  "KP_NUMBER_9",
+  "KP_NUMBER_0",
+  "KP_DOT",
+  "NON_US_BACKSLASH",
+  "PIPE2",
+  "K_APP",
+  "K_POWER",
+  "KP_EQUAL",
+  "F13",
+  "F14",
+  "F15",
+  "F16",
+  "F17",
+  "F18",
+  "F19",
+  "F20",
+  "F21",
+  "F22",
+  "F23",
+  "F24",
+  "K_EXECUTE",
+  "K_HELP",
+  "K_MENU",
+  "K_SELECT",
+  "K_STOP",
+  "K_REDO",
+  "K_UNDO",
+  "K_CUT",
+  "K_COPY",
+  "K_PASTE",
+  "K_FIND",
+  "K_MUTE",
+  "K_VOL_UP",
+  "K_VOL_DN",
+  "LOCKING_CAPS",
+  "LOCKING_NUM",
+  "LOCKING_SCROLL",
+  "KP_COMMA",
+  "KP_EQUAL_AS400",
+  "INTERNATIONAL_1",
+  "INT1",
+  "INTERNATIONAL_2",
+  "INT2",
+  "INTERNATIONAL_3",
+  "INT3",
+  "INTERNATIONAL_4",
+  "INT4",
+  "INTERNATIONAL_5",
+  "INT5",
+  "INTERNATIONAL_6",
+  "INT6",
+  "INTERNATIONAL_7",
+  "INT7",
+  "INTERNATIONAL_8",
+  "INT8",
+  "INTERNATIONAL_9",
+  "INT9",
+  "LANGUAGE_1",
+  "LANG1",
+  "LANG_HANGEUL",
+  "LANGUAGE_2",
+  "LANG2",
+  "LANG_HANJA",
+  "LANGUAGE_3",
+  "LANG3",
+  "LANG_KATAKANA",
+  "LANGUAGE_4",
+  "LANG4",
+  "LANG_HIRAGANA",
+  "LANGUAGE_5",
+  "LANG5",
+  "LANG_ZENKAKUHANKAKU",
+  "LANGUAGE_6",
+  "LANG6",
+  "LANG_ZENKAKUHANKAKU2",
+  "LANGUAGE_7",
+  "LANG7",
+  "LANG_HANJA2",
+  "LANGUAGE_8",
+  "LANG8",
+  "LANG_HANJA3",
+  "LANGUAGE_9",
+  "LANG9",
+  "ALT_ERASE",
+  "SYSREQ",
+  "ATTENTION",
+  "CANCEL",
+  "CLEAR",
+  "PRIOR",
+  "RETURN2",
+  "SEPARATOR",
+  "OUT",
+  "OPER",
+  "CLEAR_AGAIN",
+  "CRSEL",
+  "EXSEL",
+  "KP_LEFT_PARENTHESIS",
+  "KP_RIGHT_PARENTHESIS",
+  "KPSPC",
+  "LCTRL",
+  "LSHIFT",
+  "LALT",
+  "LGUI",
+  "RCTRL",
+  "RSHIFT",
+  "RALT",
+  "RGUI",
+  "K_PLAY_PAUSE",
+  "K_STOP2",
+  "K_PREV",
+  "K_NEXT",
+  "K_EJECT",
+  "K_VOLUME_UP2",
+  "K_VOLUME_DN2",
+  "K_MUTE2",
+  "K_WWW",
+  "K_BACK",
+  "K_FORWARD",
+  "K_STOP3",
+  "K_FIND2",
+  "K_SCROLL_UP",
+  "K_SCROLL_DN",
+  "K_EDIT",
+  "K_SLEEP",
+  "K_LOCK",
+  "K_SCREENSAVER",
+  "K_COFFEE",
+  "K_REFRESH",
+  "K_CALCULATOR"
+ ],
+ "hid_keyboard_names_note": "248 names, HID page 0x07, in NayaCore.exe order (A-Z from 0x77afb4, then 0x77b018-0x77b9d8). ZMK-style aliases that resolve to the same usage: HASH/POUND, DELETE/DEL, INTERNATIONAL_n/INTn, LANGUAGE_n/LANGn/LANG_HANGEUL/LANG_HANJA/LANG_KATAKANA/LANG_HIRAGANA/LANG_ZENKAKUHANKAKU/LANG_ZENKAKUHANKAKU2/LANG_HANJA2/LANG_HANJA3, SYSREQ/ATTENTION. Shifted symbols (EXCLAMATION, AT_SIGN, HASH, DOLLAR, PERCENT, CARET, AMPERSAND, ASTERISK, LEFT/RIGHT_PARENTHESIS, UNDERSCORE, PLUS, LEFT/RIGHT_BRACE, PIPE, TILDE2, COLON, DOUBLE_QUOTES, TILDE, LESS_THAN, GREATER_THAN, QUESTION, CLEAR2, PIPE2) are encoded as base usage + modifier byte 0x02 (LSHIFT). K_PLAY_PAUSE..K_CALCULATOR are the keyboard-page (0x07) media usages 0xE8-0xFB; K_LOCK, K_SCREENSAVER and K_COFFEE all encode usage 0xF9 exactly as in ZMK keys.h. No name in NayaCore carries a _JIS, _MAC or other locale suffix.",
+ "hid_system_names": [
+  "SYSTEM_POWER",
+  "SYS_PWR",
+  "SYSTEM_SLEEP",
+  "SYS_SLEEP",
+  "SYSTEM_WAKE_UP",
+  "SYS_WAKE"
+ ],
+ "hid_system_names_note": "HID page 0x01 usages 0x81/0x82/0x83 (param entries 0-2). Present in NayaCore only; not in the bg-server catalog.",
+ "consumer_names": [
+  "C_POWER",
+  "C_RESET",
+  "C_SLEEP",
+  "C_SLEEP_MODE",
+  "C_MENU",
+  "C_MENU_PICK",
+  "C_MENU_UP",
+  "C_MENU_DOWN",
+  "C_MENU_LEFT",
+  "C_MENU_RIGHT",
+  "C_MENU_ESCAPE",
+  "C_MENU_INCREASE",
+  "C_MENU_DECREASE",
+  "C_DATA_ON_SCREEN",
+  "C_SUBTITLES",
+  "C_BRIGHTNESS_INC",
+  "C_BRIGHTNESS_DEC",
+  "C_MUTE",
+  "C_VOL_UP",
+  "C_VOL_DOWN",
+  "C_PLAY_PAUSE",
+  "C_PREVIOUS",
+  "C_NEXT",
+  "C_STOP",
+  "C_EJECT",
+  "C_REWIND",
+  "C_FAST_FORWARD"
+ ],
+ "consumer_names_note": "27 names, HID page 0x0C (param entries 222-248: 0x30,0x31,0x32,0x34,0x40-0x48,0x60,0x61,0x6F,0x70,0xB3-0xB8,0xCD,0xE2,0xE9,0xEA). The bg-server catalog exposes only C_POWER, C_BRIGHTNESS_DEC, C_BRIGHTNESS_INC, C_MUTE, C_VOL_DOWN, C_VOL_UP, C_PLAY_PAUSE, C_PREVIOUS, C_NEXT, C_REWIND, C_FAST_FORWARD (11).",
+ "modifier_names": [
+  "LCTRL",
+  "LSHIFT",
+  "LALT",
+  "LGUI",
+  "RCTRL",
+  "RSHIFT",
+  "RALT",
+  "RGUI",
+  "CTRL",
+  "LEFT_CTRL",
+  "SHIFT",
+  "LEFT_SHIFT",
+  "ALT",
+  "LEFT_ALT",
+  "GUI",
+  "META",
+  "CMD",
+  "LEFT_GUI",
+  "LEFT_META",
+  "LMETA",
+  "LCMD",
+  "LWIN",
+  "LEFT_WIN",
+  "LEFT_COMMAND",
+  "RIGHT_CTRL",
+  "RIGHT_SHIFT"
+ ],
+ "modifier_details": {
+  "hid_modifier_keys": {
+   "names": [
+    "LCTRL",
+    "LSHIFT",
+    "LALT",
+    "LGUI",
+    "RCTRL",
+    "RSHIFT",
+    "RALT",
+    "RGUI"
+   ],
+   "usages": "0xE0-0xE7 page 0x07 (param entries 192-199)",
+   "catalog_frontendType": "modifier (8 codes, seeds write action_type 'modifier')"
+  },
+  "modifier_alias_table": {
+   "names_in_order": [
+    "CTRL",
+    "LEFT_CTRL",
+    "SHIFT",
+    "LEFT_SHIFT",
+    "ALT",
+    "LEFT_ALT",
+    "GUI",
+    "META",
+    "CMD",
+    "LEFT_GUI",
+    "LEFT_META",
+    "LMETA",
+    "LCMD",
+    "LWIN",
+    "LEFT_WIN",
+    "LEFT_COMMAND",
+    "RIGHT_CTRL",
+    "RIGHT_SHIFT"
+   ],
+   "offset": "0x77bce8-0x77bda0",
+   "bitmask_table": "0x77a9b8 u32 1,2,4,8,16,32,64,128 (LCTRL,LSHIFT,LALT,LGUI,RCTRL,RSHIFT,RALT,RGUI bit order as in the key_press modifier byte)",
+   "note": "This run sits between the LED names and the naya-integration names and is the token set NayaCore accepts as modifiers when it splits composite codes on ' + '. LCTRL/LSHIFT/LALT/LGUI/RCTRL/RSHIFT/RALT/RGUI are almost certainly members too but their literals are pooled with the HID-key run and cannot be attributed. RIGHT_ALT, RIGHT_GUI, RIGHT_META, RIGHT_WIN, RIGHT_COMMAND, RMETA, RCMD, RWIN do not exist anywhere in NayaCore.exe. The renderer's own modifier list is [LGUI,RGUI,LCTRL,RCTRL,LALT,RALT,LSHFT,RSHFT,LSHIFT,RSHIFT]; LSHFT/RSHFT are NOT NayaCore names."
+  }
+ },
+ "led_actions": [
+  "LED_EFFECT_ON_OFF",
+  "LED_BREATHE",
+  "LED_SOLID",
+  "LED_SWIRL",
+  "LED_SPEC",
+  "LED_EFFECT",
+  "LED_BRIGHTNESS_UP",
+  "LED_BRIGHTNESS_DOWN",
+  "LED_SPEED_UP",
+  "LED_SPEED_DOWN",
+  "LED_COLOR_RED",
+  "LED_COLOR_GREEN",
+  "LED_COLOR_BLUE",
+  "LED_COLOR_WHITE",
+  "LED_COLOR_CYAN",
+  "LED_COLOR_MAGENTA",
+  "LED_COLOR_YELLOW",
+  "LED_COLOR_ORANGE",
+  "LED_COLOR_PINK"
+ ],
+ "led_params": [
+  {
+   "name": "LED_EFFECT_ON_OFF",
+   "subcommand": "0x00",
+   "argument": 0
+  },
+  {
+   "name": "LED_BRIGHTNESS_UP",
+   "subcommand": "0x07",
+   "argument": 0
+  },
+  {
+   "name": "LED_BRIGHTNESS_DOWN",
+   "subcommand": "0x08",
+   "argument": 0
+  },
+  {
+   "name": "LED_SPEED_UP",
+   "subcommand": "0x09",
+   "argument": 0
+  },
+  {
+   "name": "LED_SPEED_DOWN",
+   "subcommand": "0x0a",
+   "argument": 0
+  },
+  {
+   "name": "LED_EFFECT",
+   "subcommand": "0x0b",
+   "argument": 0
+  },
+  {
+   "name": "LED_COLOR_RED",
+   "subcommand": "0x0f",
+   "argument": 25700,
+   "hsb": {
+    "b": 100,
+    "s": 100,
+    "h": 0
+   }
+  },
+  {
+   "name": "LED_COLOR_GREEN",
+   "subcommand": "0x0f",
+   "argument": 7890020,
+   "hsb": {
+    "b": 100,
+    "s": 100,
+    "h": 120
+   }
+  },
+  {
+   "name": "LED_COLOR_BLUE",
+   "subcommand": "0x0f",
+   "argument": 15754340,
+   "hsb": {
+    "b": 100,
+    "s": 100,
+    "h": 240
+   }
+  },
+  {
+   "name": "LED_COLOR_WHITE",
+   "subcommand": "0x0f",
+   "argument": 100,
+   "hsb": {
+    "b": 100,
+    "s": 0,
+    "h": 0
+   }
+  },
+  {
+   "name": "LED_COLOR_CYAN",
+   "subcommand": "0x0f",
+   "argument": 11822180,
+   "hsb": {
+    "b": 100,
+    "s": 100,
+    "h": 180
+   }
+  },
+  {
+   "name": "LED_COLOR_MAGENTA",
+   "subcommand": "0x0f",
+   "argument": 17720420,
+   "hsb": {
+    "b": 100,
+    "s": 100,
+    "h": 270
+   }
+  },
+  {
+   "name": "LED_COLOR_YELLOW",
+   "subcommand": "0x0f",
+   "argument": 3957860,
+   "hsb": {
+    "b": 100,
+    "s": 100,
+    "h": 60
+   }
+  },
+  {
+   "name": "LED_COLOR_ORANGE",
+   "subcommand": "0x0f",
+   "argument": 1991780,
+   "hsb": {
+    "b": 100,
+    "s": 100,
+    "h": 30
+   }
+  },
+  {
+   "name": "LED_COLOR_PINK",
+   "subcommand": "0x0f",
+   "argument": 19686500,
+   "hsb": {
+    "b": 100,
+    "s": 100,
+    "h": 300
+   }
+  },
+  {
+   "name": "LED_BREATHE",
+   "subcommand": "0x0d",
+   "argument": 1
+  },
+  {
+   "name": "LED_SOLID",
+   "subcommand": "0x0d",
+   "argument": 0
+  },
+  {
+   "name": "LED_SWIRL",
+   "subcommand": "0x0d",
+   "argument": 2
+  },
+  {
+   "name": "LED_SPEC",
+   "subcommand": "0x0d",
+   "argument": 3
+  }
+ ],
+ "led_params_note": "Decoded from the 19 (argument, subcommand) pairs at 0x77adc8. Memory order is EFFECT_ON_OFF, BRIGHTNESS_UP, BRIGHTNESS_DOWN, SPEED_UP, SPEED_DOWN, EFFECT, the nine colours, then BREATHE, SOLID, SWIRL, SPEC -- i.e. not the string order; names were assigned by matching the known subcommand semantics (0x00 toggle, 0x07/0x08 brightness, 0x09/0x0a speed, 0x0b cycle, 0x0d select effect 0 solid/1 breathe/2 swirl/3 spectrum, 0x0f colour). Colour argument is ZMK's RGB_COLOR_HSB packing (h<<16 | s<<8 | b): red h0, green 120, blue 240, white s0, cyan 180, magenta 270, yellow 60, orange 30, pink 300, all b=100. All 19 are exposed in the bg-server catalog (frontendType LED, tab Extended, group Lighting) and seeded into templates.",
+ "bluetooth_actions": [
+  "BT_CLEAR",
+  "BT_NEXT",
+  "BT_PREV",
+  "BT_SELECT_SL",
+  "BT_DEVICE_1",
+  "BT_DEVICE_2",
+  "BT_DEVICE_3",
+  "BT_DEVICE_4"
+ ],
+ "bluetooth_params": [
+  {
+   "name": "BT_CLEAR",
+   "memory_pair_(arg,cmd)": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "BT_NEXT",
+   "memory_pair_(arg,cmd)": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "BT_PREV",
+   "memory_pair_(arg,cmd)": [
+    0,
+    2
+   ]
+  },
+  {
+   "name": "BT_SELECT_SL",
+   "memory_pair_(arg,cmd)": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "BT_DEVICE_1",
+   "memory_pair_(arg,cmd)": [
+    1,
+    3
+   ]
+  },
+  {
+   "name": "BT_DEVICE_2",
+   "memory_pair_(arg,cmd)": [
+    2,
+    3
+   ]
+  },
+  {
+   "name": "BT_DEVICE_3",
+   "memory_pair_(arg,cmd)": [
+    3,
+    3
+   ]
+  },
+  {
+   "name": "BT_DEVICE_4",
+   "memory_pair_(arg,cmd)": [
+    4,
+    3
+   ]
+  }
+ ],
+ "bluetooth_params_note": "(argument, command) pairs at 0x77af20; command numbering is ZMK's bt behaviour (0 clear, 1 next, 2 prev, 3 select). Name assignment for BT_CLEAR=(0,0) matches the known '(0,0) clear' wire fact; BT_NEXT/BT_PREV/BT_SELECT_SL by ZMK command order; BT_DEVICE_n=(n,3) matches the known '(3,n)'. Catalog exposes only BT_DEVICE_1..4 and BT_CLEAR (frontendType bluetooth, group Connection); BT_NEXT, BT_PREV, BT_SELECT_SL are NayaCore-only.",
+ "output_actions": [
+  "USB_DEVICE",
+  "BT_OUT"
+ ],
+ "output_params": {
+  "USB_DEVICE": 1,
+  "BT_OUT": 2,
+  "note": "u32 selectors at 0x77adbc/0x77adc0; catalog frontendType 'out', seeds action_type 'out'"
+ },
+ "naya_integrations": [
+  {
+   "name": "TUNE_MODE_L",
+   "id": 150,
+   "confidence": "inferred: id table at 0x77ae60 is in the same order as the name run at 0x77bdb0; only 401<->MODULE_FORCE_CHARGING is independently known"
+  },
+  {
+   "name": "TUNE_MODE_R",
+   "id": 151,
+   "confidence": "inferred: id table at 0x77ae60 is in the same order as the name run at 0x77bdb0; only 401<->MODULE_FORCE_CHARGING is independently known"
+  },
+  {
+   "name": "WINDOWS_OS",
+   "id": 200,
+   "confidence": "inferred: id table at 0x77ae60 is in the same order as the name run at 0x77bdb0; only 401<->MODULE_FORCE_CHARGING is independently known"
+  },
+  {
+   "name": "MAC_OS",
+   "id": 201,
+   "confidence": "inferred: id table at 0x77ae60 is in the same order as the name run at 0x77bdb0; only 401<->MODULE_FORCE_CHARGING is independently known"
+  },
+  {
+   "name": "SCROLL_DIRECTION_L",
+   "id": 300,
+   "confidence": "inferred: id table at 0x77ae60 is in the same order as the name run at 0x77bdb0; only 401<->MODULE_FORCE_CHARGING is independently known"
+  },
+  {
+   "name": "SCROLL_DIRECTION_R",
+   "id": 301,
+   "confidence": "inferred: id table at 0x77ae60 is in the same order as the name run at 0x77bdb0; only 401<->MODULE_FORCE_CHARGING is independently known"
+  },
+  {
+   "name": "MODULE_CHARGING",
+   "id": 400,
+   "confidence": "inferred: id table at 0x77ae60 is in the same order as the name run at 0x77bdb0; only 401<->MODULE_FORCE_CHARGING is independently known"
+  },
+  {
+   "name": "MODULE_FORCE_CHARGING",
+   "id": 401,
+   "confidence": "confirmed (known anchor)"
+  }
+ ],
+ "naya_integrations_note": "Eight names at 0x77bdb0-0x77be28 and eight u32 ids at 0x77ae60. Only MODULE_FORCE_CHARGING (401) is in the bg-server catalog (frontendType 'naya', group 'Configuration Toggles', tooltip 'Activate Recovery Mode...'). NayaCore additionally knows app action types configuration_rude_toggle, configuration_rude_toggle_l, configuration_rude_toggle_r (0x3f08a8-0x3f08e8) which plausibly carry TUNE_MODE_L/R, SCROLL_DIRECTION_L/R, WINDOWS_OS/MAC_OS, MODULE_CHARGING -- no catalog record uses them.",
+ "mouse_actions": [
+  "MOUSE_LEFT",
+  "MOUSE_RIGHT",
+  "MOUSE_UP",
+  "MOUSE_DOWN",
+  "SCROLL_UP",
+  "SCROLL_DOWN",
+  "SCROLL_LEFT",
+  "SCROLL_RIGHT",
+  "ZOOM_IN",
+  "ZOOM_OUT",
+  "M1",
+  "M2",
+  "M3",
+  "M4",
+  "M5",
+  "MOUSE_HORIZONTAL",
+  "MOUSE_VERTICAL",
+  "MOUSE_STATIC",
+  "MOUSE_BUTTONS",
+  "MOUSE_SCROLL_VERTICAL",
+  "STATIC_SCROLL_VERTICAL",
+  "MOUSE_SCROLL_HORIZONTAL",
+  "STATIC_SCROLL_HORIZONTAL",
+  "STATIC_ZOOM"
+ ],
+ "mouse_params": {
+  "buttons": [
+   {
+    "name": "M1",
+    "memory_pair_(mask,cmd)": [
+     1,
+     3
+    ]
+   },
+   {
+    "name": "M2",
+    "memory_pair_(mask,cmd)": [
+     2,
+     3
+    ]
+   },
+   {
+    "name": "M3",
+    "memory_pair_(mask,cmd)": [
+     4,
+     3
+    ]
+   },
+   {
+    "name": "M4",
+    "memory_pair_(mask,cmd)": [
+     8,
+     3
+    ]
+   },
+   {
+    "name": "M5",
+    "memory_pair_(mask,cmd)": [
+     16,
+     3
+    ]
+   }
+  ],
+  "note": "M1..M5 = (button mask, command 3) pairs at 0x77aef0, matching the known 'mouse on a key = (3, mask)' wire fact (memory stores argument first). Catalog aliases MOUSE_1..MOUSE_5 (+_JIS) map to actionCode M1..M5.",
+  "catalog_exposure": {
+   "displayContext_counts": {
+    "Module Editing, US": 8,
+    "Japanese-Light, Module Editing": 8,
+    "US": 5,
+    "Japanese-Light": 5
+   },
+   "codes_exposed_outside_Module_Editing": [
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5"
+   ],
+   "codes_only_in_Module_Editing": [
+    "MOUSE_DOWN",
+    "MOUSE_LEFT",
+    "MOUSE_RIGHT",
+    "MOUSE_UP",
+    "SCROLL_DOWN",
+    "SCROLL_LEFT",
+    "SCROLL_RIGHT",
+    "SCROLL_UP"
+   ]
+  },
+  "module_only_names": [
+   "ZOOM_IN",
+   "ZOOM_OUT",
+   "MOUSE_HORIZONTAL",
+   "MOUSE_VERTICAL",
+   "MOUSE_STATIC",
+   "MOUSE_BUTTONS",
+   "MOUSE_SCROLL_VERTICAL",
+   "STATIC_SCROLL_VERTICAL",
+   "MOUSE_SCROLL_HORIZONTAL",
+   "STATIC_SCROLL_HORIZONTAL",
+   "STATIC_ZOOM"
+  ],
+  "module_only_note": "These have display formats 'MOUSE_STATIC<%1<%2)', 'STATIC_SCROLL_Y<%1)', 'STATIC_SCROLL_X<%1)', 'STATIC_ZOOM<%1)' in Naya_Binding.cpp and are the Track/Touch gesture slot values; none is in the catalog by that name (the catalog's module 'value' codes are 'mouse - MOUSE_LEFT - MOUSE_RIGHT', 'mouse - MOUSE_DOWN - MOUSE_UP', 'mouse - SCROLL_UP - SCROLL_DOWN', 'mouse - SCROLL_LEFT - SCROLL_RIGHT')."
+ },
+ "layer_behaviours": [
+  {
+   "record_type": "0x05 mo",
+   "nayacore_action_type": "layer_polite_hold",
+   "catalog_code": "MO_LAYER_$ID",
+   "catalog_frontendType": "layer_polite_hold",
+   "group": "Hold Layer",
+   "display_format": "MO(%1)",
+   "length_check": "MO"
+  },
+  {
+   "record_type": "0x0c to_layer",
+   "nayacore_action_type": "layer_rude_toggle",
+   "catalog_code": "TO_LAYER_$ID",
+   "catalog_frontendType": "layer_rude_toggle",
+   "group": "Force Layer",
+   "display_format": "TO(%1)",
+   "length_check": "TO_LAYER"
+  },
+  {
+   "record_type": "0x0d toggle_layer",
+   "nayacore_action_type": "layer_polite_toggle",
+   "catalog_code": "TOGGLE_LAYER_$ID",
+   "catalog_frontendType": "layer_polite_toggle",
+   "group": "Toggle Layer",
+   "display_format": "TOG(%1)",
+   "length_check": "TOGGLE_LAYER"
+  },
+  {
+   "record_type": "0x0b sticky_layer",
+   "nayacore_action_type": "layer_polite_oneshot",
+   "catalog_code": "STICKY_LAYER_$ID",
+   "catalog_frontendType": "layer_polite_oneshot",
+   "group": "Sticky Layer",
+   "display_format": "SL(%1)",
+   "length_check": "STICKY_LAYER"
+  }
+ ],
+ "layer_behaviours_note": "$ID is replaced by the layer UUID (seeds: 'MO_LAYER_<uuid>' with actionType layer_polite_hold, 15 rows). NayaCore has no 'MO_LAYER'/'_LAYER_' literal; it dispatches on the action_type word and resolves the layer from the code's last '_' token (cf. 'Layer (%1) not found for layer navigation action in module config id:%2'). All four have serializer length checks and are flashable; only layer_polite_hold appears in shipped templates.",
+ "other_behaviours": {
+  "sticky_key": "Record type 0x0a exists only as the word 'sticky_key' in the record-type table (0x3ee298). No param-length check in Binding::readBytes (the checked set is KEY_PRESS, TO_LAYER, TOGGLE_LAYER, MO, STICKY_LAYER, BLUETOOTH, RGB_UG, OUTPUTS, NAYA_INTEGRATIONS, MOUSE), no action name, no app action_type, no catalog record, no display format. Named, not flashable.",
+  "grave_escape": "Record type 0x04, same situation as sticky_key: only the word 'grave_escape' at 0x3ee250. Named, not flashable.",
+  "macro": "Record type 0x02: the word 'macro' at 0x3ee23c; CDC command names [READ/WRITE MACRO LIST/DATA 0x exist (core-strings.txt 5735-5738) but there is no _remapRead/WriteMacro* process step, no _interpretMacro*, no SQL query against macros/*_macro_steps in Naya_SQLReader, no 'MACRO' action name, no length check; 'Maximum macros exceeded.' (1699) is an error enum string. The bg-server has full macro CRUD (macros + loop/text/mouse/standard/wait_for_release _action_macro_steps) and the renderer resolves macro bindings (actionType 'macro', code '<...>_<macroId>'), but the renderer ships macros:{enabled:!1} and Dn('macros') hides the 'Macros & Shortcuts' onboarding item; no seed row uses actionType macro. Named on the app side, not flashable by NayaCore (consistent with the measured 2026-09-07 result: NayaCore writes NONE).",
+  "mod_tap": "Record type 0x03. NayaCore serializes it as a per-key tap/hold PAIR: naya_remap::Key::serializeBindingPairData, 'Cannot serialize mod-tap pair with missing binding (tap: %1, hold: %2)', 'Bytes with MOD_TAP identifier are too small, expected at least 21 bytes' (Naya_Key.cpp), plus the key_bindings.behavior words tap/hold/double_tap/tap_hold at 0x3f0904 and settings 'tapping term ms' / 'tap hold flavour'. So it is flashable, but only via two key_bindings rows (behavior 'tap' + 'hold') on one key -- there is no standalone MOD_TAP action code or catalog record. The renderer knows the behaviour list ['tap','tap_hold','double_tap','hold','press'] but the flags advancedBehaviors and behaviorToggle are false (and never even read); every shipped seed row uses behavior 'press'. 'core' and 'core_toggle_hold_morph' at 0x3f0878/0x3f0880 are NayaCore app-action-types with no catalog user and may be the hold-morph path."
+ },
+ "nayacore_record_types": {
+  "0x00": "bluetooth",
+  "0x01": "key_press",
+  "0x02": "macro",
+  "0x03": "mod_tap",
+  "0x04": "grave_escape",
+  "0x05": "mo",
+  "0x06": "naya_integrations",
+  "0x07": "none",
+  "0x08": "outputs",
+  "0x09": "rgb_ug",
+  "0x0a": "sticky_key",
+  "0x0b": "sticky_layer",
+  "0x0c": "to_layer",
+  "0x0d": "toggle_layer",
+  "0x0e": "trans",
+  "0x0f": "mouse"
+ },
+ "nayacore_app_action_type_dispatch": [
+  "combo",
+  "key",
+  "modifier",
+  "naya",
+  "layer_rude_toggle",
+  "layer_polite_toggle",
+  "layer_polite_hold",
+  "layer_polite_oneshot",
+  "core",
+  "core_toggle_hold_morph",
+  "Value",
+  "out",
+  "LED",
+  "configuration_rude_toggle",
+  "configuration_rude_toggle_l",
+  "configuration_rude_toggle_r"
+ ],
+ "nayacore_key_binding_behaviour_words": [
+  "tap",
+  "hold",
+  "double_tap",
+  "tap_hold"
+ ],
+ "key_param_table": [
+  {
+   "i": 0,
+   "off": "0x77a9d8",
+   "usage": "0x81",
+   "page": "0x01",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SYSTEM_POWER"
+  },
+  {
+   "i": 1,
+   "off": "0x77a9dc",
+   "usage": "0x82",
+   "page": "0x01",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SYSTEM_SLEEP"
+  },
+  {
+   "i": 2,
+   "off": "0x77a9e0",
+   "usage": "0x83",
+   "page": "0x01",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SYSTEM_WAKE_UP"
+  },
+  {
+   "i": 3,
+   "off": "0x77a9e4",
+   "usage": "0x04",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "A"
+  },
+  {
+   "i": 4,
+   "off": "0x77a9e8",
+   "usage": "0x05",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "B"
+  },
+  {
+   "i": 5,
+   "off": "0x77a9ec",
+   "usage": "0x06",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C"
+  },
+  {
+   "i": 6,
+   "off": "0x77a9f0",
+   "usage": "0x07",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "D"
+  },
+  {
+   "i": 7,
+   "off": "0x77a9f4",
+   "usage": "0x08",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "E"
+  },
+  {
+   "i": 8,
+   "off": "0x77a9f8",
+   "usage": "0x09",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F"
+  },
+  {
+   "i": 9,
+   "off": "0x77a9fc",
+   "usage": "0x0a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "G"
+  },
+  {
+   "i": 10,
+   "off": "0x77aa00",
+   "usage": "0x0b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "H"
+  },
+  {
+   "i": 11,
+   "off": "0x77aa04",
+   "usage": "0x0c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "I"
+  },
+  {
+   "i": 12,
+   "off": "0x77aa08",
+   "usage": "0x0d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "J"
+  },
+  {
+   "i": 13,
+   "off": "0x77aa0c",
+   "usage": "0x0e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K"
+  },
+  {
+   "i": 14,
+   "off": "0x77aa10",
+   "usage": "0x0f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "L"
+  },
+  {
+   "i": 15,
+   "off": "0x77aa14",
+   "usage": "0x10",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "M"
+  },
+  {
+   "i": 16,
+   "off": "0x77aa18",
+   "usage": "0x11",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "N"
+  },
+  {
+   "i": 17,
+   "off": "0x77aa1c",
+   "usage": "0x12",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "O"
+  },
+  {
+   "i": 18,
+   "off": "0x77aa20",
+   "usage": "0x13",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "P"
+  },
+  {
+   "i": 19,
+   "off": "0x77aa24",
+   "usage": "0x14",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "Q"
+  },
+  {
+   "i": 20,
+   "off": "0x77aa28",
+   "usage": "0x15",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "R"
+  },
+  {
+   "i": 21,
+   "off": "0x77aa2c",
+   "usage": "0x16",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "S"
+  },
+  {
+   "i": 22,
+   "off": "0x77aa30",
+   "usage": "0x17",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "T"
+  },
+  {
+   "i": 23,
+   "off": "0x77aa34",
+   "usage": "0x18",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "U"
+  },
+  {
+   "i": 24,
+   "off": "0x77aa38",
+   "usage": "0x19",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "V"
+  },
+  {
+   "i": 25,
+   "off": "0x77aa3c",
+   "usage": "0x1a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "W"
+  },
+  {
+   "i": 26,
+   "off": "0x77aa40",
+   "usage": "0x1b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "X"
+  },
+  {
+   "i": 27,
+   "off": "0x77aa44",
+   "usage": "0x1c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "Y"
+  },
+  {
+   "i": 28,
+   "off": "0x77aa48",
+   "usage": "0x1d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "Z"
+  },
+  {
+   "i": 29,
+   "off": "0x77aa4c",
+   "usage": "0x1e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_1"
+  },
+  {
+   "i": 30,
+   "off": "0x77aa50",
+   "usage": "0x1e",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "EXCLAMATION"
+  },
+  {
+   "i": 31,
+   "off": "0x77aa54",
+   "usage": "0x1f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_2"
+  },
+  {
+   "i": 32,
+   "off": "0x77aa58",
+   "usage": "0x1f",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "AT_SIGN"
+  },
+  {
+   "i": 33,
+   "off": "0x77aa5c",
+   "usage": "0x20",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_3"
+  },
+  {
+   "i": 34,
+   "off": "0x77aa60",
+   "usage": "0x20",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "HASH"
+  },
+  {
+   "i": 35,
+   "off": "0x77aa64",
+   "usage": "0x21",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_4"
+  },
+  {
+   "i": 36,
+   "off": "0x77aa68",
+   "usage": "0x21",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "DOLLAR"
+  },
+  {
+   "i": 37,
+   "off": "0x77aa6c",
+   "usage": "0x22",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_5"
+  },
+  {
+   "i": 38,
+   "off": "0x77aa70",
+   "usage": "0x22",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "PERCENT"
+  },
+  {
+   "i": 39,
+   "off": "0x77aa74",
+   "usage": "0x23",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_6"
+  },
+  {
+   "i": 40,
+   "off": "0x77aa78",
+   "usage": "0x23",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "CARET"
+  },
+  {
+   "i": 41,
+   "off": "0x77aa7c",
+   "usage": "0x24",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_7"
+  },
+  {
+   "i": 42,
+   "off": "0x77aa80",
+   "usage": "0x24",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "AMPERSAND"
+  },
+  {
+   "i": 43,
+   "off": "0x77aa84",
+   "usage": "0x25",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_8"
+  },
+  {
+   "i": 44,
+   "off": "0x77aa88",
+   "usage": "0x25",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "ASTERISK"
+  },
+  {
+   "i": 45,
+   "off": "0x77aa8c",
+   "usage": "0x26",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_9"
+  },
+  {
+   "i": 46,
+   "off": "0x77aa90",
+   "usage": "0x26",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "LEFT_PARENTHESIS"
+  },
+  {
+   "i": 47,
+   "off": "0x77aa94",
+   "usage": "0x27",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NUMBER_0"
+  },
+  {
+   "i": 48,
+   "off": "0x77aa98",
+   "usage": "0x27",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "RIGHT_PARENTHESIS"
+  },
+  {
+   "i": 49,
+   "off": "0x77aa9c",
+   "usage": "0x28",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "RETURN"
+  },
+  {
+   "i": 50,
+   "off": "0x77aaa0",
+   "usage": "0x29",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "ESC"
+  },
+  {
+   "i": 51,
+   "off": "0x77aaa4",
+   "usage": "0x2a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "BACKSPACE"
+  },
+  {
+   "i": 52,
+   "off": "0x77aaa8",
+   "usage": "0x2b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "TAB"
+  },
+  {
+   "i": 53,
+   "off": "0x77aaac",
+   "usage": "0x2c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SPACE"
+  },
+  {
+   "i": 54,
+   "off": "0x77aab0",
+   "usage": "0x2d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "MINUS"
+  },
+  {
+   "i": 55,
+   "off": "0x77aab4",
+   "usage": "0x2d",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "UNDERSCORE"
+  },
+  {
+   "i": 56,
+   "off": "0x77aab8",
+   "usage": "0x2e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "EQUAL"
+  },
+  {
+   "i": 57,
+   "off": "0x77aabc",
+   "usage": "0x2e",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "PLUS"
+  },
+  {
+   "i": 58,
+   "off": "0x77aac0",
+   "usage": "0x2f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LEFT_BRACKET"
+  },
+  {
+   "i": 59,
+   "off": "0x77aac4",
+   "usage": "0x2f",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "LEFT_BRACE"
+  },
+  {
+   "i": 60,
+   "off": "0x77aac8",
+   "usage": "0x30",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "RIGHT_BRACKET"
+  },
+  {
+   "i": 61,
+   "off": "0x77aacc",
+   "usage": "0x30",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "RIGHT_BRACE"
+  },
+  {
+   "i": 62,
+   "off": "0x77aad0",
+   "usage": "0x31",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "BACKSLASH"
+  },
+  {
+   "i": 63,
+   "off": "0x77aad4",
+   "usage": "0x31",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "PIPE"
+  },
+  {
+   "i": 64,
+   "off": "0x77aad8",
+   "usage": "0x32",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NON_US_HASH"
+  },
+  {
+   "i": 65,
+   "off": "0x77aadc",
+   "usage": "0x32",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "TILDE2"
+  },
+  {
+   "i": 66,
+   "off": "0x77aae0",
+   "usage": "0x33",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SEMICOLON"
+  },
+  {
+   "i": 67,
+   "off": "0x77aae4",
+   "usage": "0x33",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "COLON"
+  },
+  {
+   "i": 68,
+   "off": "0x77aae8",
+   "usage": "0x34",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SINGLE_QUOTE"
+  },
+  {
+   "i": 69,
+   "off": "0x77aaec",
+   "usage": "0x34",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "DOUBLE_QUOTES"
+  },
+  {
+   "i": 70,
+   "off": "0x77aaf0",
+   "usage": "0x35",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "GRAVE"
+  },
+  {
+   "i": 71,
+   "off": "0x77aaf4",
+   "usage": "0x35",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "TILDE"
+  },
+  {
+   "i": 72,
+   "off": "0x77aaf8",
+   "usage": "0x36",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "COMMA"
+  },
+  {
+   "i": 73,
+   "off": "0x77aafc",
+   "usage": "0x36",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "LESS_THAN"
+  },
+  {
+   "i": 74,
+   "off": "0x77ab00",
+   "usage": "0x37",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "PERIOD"
+  },
+  {
+   "i": 75,
+   "off": "0x77ab04",
+   "usage": "0x37",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "GREATER_THAN"
+  },
+  {
+   "i": 76,
+   "off": "0x77ab08",
+   "usage": "0x38",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SLASH"
+  },
+  {
+   "i": 77,
+   "off": "0x77ab0c",
+   "usage": "0x38",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "QUESTION"
+  },
+  {
+   "i": 78,
+   "off": "0x77ab10",
+   "usage": "0x39",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "CAPSLOCK"
+  },
+  {
+   "i": 79,
+   "off": "0x77ab14",
+   "usage": "0x3a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F1"
+  },
+  {
+   "i": 80,
+   "off": "0x77ab18",
+   "usage": "0x3b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F2"
+  },
+  {
+   "i": 81,
+   "off": "0x77ab1c",
+   "usage": "0x3c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F3"
+  },
+  {
+   "i": 82,
+   "off": "0x77ab20",
+   "usage": "0x3d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F4"
+  },
+  {
+   "i": 83,
+   "off": "0x77ab24",
+   "usage": "0x3e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F5"
+  },
+  {
+   "i": 84,
+   "off": "0x77ab28",
+   "usage": "0x3f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F6"
+  },
+  {
+   "i": 85,
+   "off": "0x77ab2c",
+   "usage": "0x40",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F7"
+  },
+  {
+   "i": 86,
+   "off": "0x77ab30",
+   "usage": "0x41",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F8"
+  },
+  {
+   "i": 87,
+   "off": "0x77ab34",
+   "usage": "0x42",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F9"
+  },
+  {
+   "i": 88,
+   "off": "0x77ab38",
+   "usage": "0x43",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F10"
+  },
+  {
+   "i": 89,
+   "off": "0x77ab3c",
+   "usage": "0x44",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F11"
+  },
+  {
+   "i": 90,
+   "off": "0x77ab40",
+   "usage": "0x45",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F12"
+  },
+  {
+   "i": 91,
+   "off": "0x77ab44",
+   "usage": "0x46",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "PRINTSCREEN"
+  },
+  {
+   "i": 92,
+   "off": "0x77ab48",
+   "usage": "0x47",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SCROLLLOCK"
+  },
+  {
+   "i": 93,
+   "off": "0x77ab4c",
+   "usage": "0x48",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "PAUSE_BREAK"
+  },
+  {
+   "i": 94,
+   "off": "0x77ab50",
+   "usage": "0x49",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INSERT"
+  },
+  {
+   "i": 95,
+   "off": "0x77ab54",
+   "usage": "0x4a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "HOME"
+  },
+  {
+   "i": 96,
+   "off": "0x77ab58",
+   "usage": "0x4b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "PG_UP"
+  },
+  {
+   "i": 97,
+   "off": "0x77ab5c",
+   "usage": "0x4c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "DELETE"
+  },
+  {
+   "i": 98,
+   "off": "0x77ab60",
+   "usage": "0x4d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "END"
+  },
+  {
+   "i": 99,
+   "off": "0x77ab64",
+   "usage": "0x4e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "PG_DN"
+  },
+  {
+   "i": 100,
+   "off": "0x77ab68",
+   "usage": "0x4f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "RIGHT"
+  },
+  {
+   "i": 101,
+   "off": "0x77ab6c",
+   "usage": "0x50",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LEFT"
+  },
+  {
+   "i": 102,
+   "off": "0x77ab70",
+   "usage": "0x51",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "DOWN"
+  },
+  {
+   "i": 103,
+   "off": "0x77ab74",
+   "usage": "0x52",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "UP"
+  },
+  {
+   "i": 104,
+   "off": "0x77ab78",
+   "usage": "0x53",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMLOCK"
+  },
+  {
+   "i": 105,
+   "off": "0x77ab7c",
+   "usage": "0x53",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "CLEAR2"
+  },
+  {
+   "i": 106,
+   "off": "0x77ab80",
+   "usage": "0x54",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_DIVIDE"
+  },
+  {
+   "i": 107,
+   "off": "0x77ab84",
+   "usage": "0x55",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_MULTIPLY"
+  },
+  {
+   "i": 108,
+   "off": "0x77ab88",
+   "usage": "0x56",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_MINUS"
+  },
+  {
+   "i": 109,
+   "off": "0x77ab8c",
+   "usage": "0x57",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_PLUS"
+  },
+  {
+   "i": 110,
+   "off": "0x77ab90",
+   "usage": "0x58",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_ENTER"
+  },
+  {
+   "i": 111,
+   "off": "0x77ab94",
+   "usage": "0x59",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_1"
+  },
+  {
+   "i": 112,
+   "off": "0x77ab98",
+   "usage": "0x5a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_2"
+  },
+  {
+   "i": 113,
+   "off": "0x77ab9c",
+   "usage": "0x5b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_3"
+  },
+  {
+   "i": 114,
+   "off": "0x77aba0",
+   "usage": "0x5c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_4"
+  },
+  {
+   "i": 115,
+   "off": "0x77aba4",
+   "usage": "0x5d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_5"
+  },
+  {
+   "i": 116,
+   "off": "0x77aba8",
+   "usage": "0x5e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_6"
+  },
+  {
+   "i": 117,
+   "off": "0x77abac",
+   "usage": "0x5f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_7"
+  },
+  {
+   "i": 118,
+   "off": "0x77abb0",
+   "usage": "0x60",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_8"
+  },
+  {
+   "i": 119,
+   "off": "0x77abb4",
+   "usage": "0x61",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_9"
+  },
+  {
+   "i": 120,
+   "off": "0x77abb8",
+   "usage": "0x62",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_NUMBER_0"
+  },
+  {
+   "i": 121,
+   "off": "0x77abbc",
+   "usage": "0x63",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_DOT"
+  },
+  {
+   "i": 122,
+   "off": "0x77abc0",
+   "usage": "0x64",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "NON_US_BACKSLASH"
+  },
+  {
+   "i": 123,
+   "off": "0x77abc4",
+   "usage": "0x64",
+   "page": "0x07",
+   "mods": "0x02",
+   "nayacore_name_inferred": "PIPE2"
+  },
+  {
+   "i": 124,
+   "off": "0x77abc8",
+   "usage": "0x65",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_APP"
+  },
+  {
+   "i": 125,
+   "off": "0x77abcc",
+   "usage": "0x66",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_POWER"
+  },
+  {
+   "i": 126,
+   "off": "0x77abd0",
+   "usage": "0x67",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_EQUAL"
+  },
+  {
+   "i": 127,
+   "off": "0x77abd4",
+   "usage": "0x68",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F13"
+  },
+  {
+   "i": 128,
+   "off": "0x77abd8",
+   "usage": "0x69",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F14"
+  },
+  {
+   "i": 129,
+   "off": "0x77abdc",
+   "usage": "0x6a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F15"
+  },
+  {
+   "i": 130,
+   "off": "0x77abe0",
+   "usage": "0x6b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F16"
+  },
+  {
+   "i": 131,
+   "off": "0x77abe4",
+   "usage": "0x6c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F17"
+  },
+  {
+   "i": 132,
+   "off": "0x77abe8",
+   "usage": "0x6d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F18"
+  },
+  {
+   "i": 133,
+   "off": "0x77abec",
+   "usage": "0x6e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F19"
+  },
+  {
+   "i": 134,
+   "off": "0x77abf0",
+   "usage": "0x6f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F20"
+  },
+  {
+   "i": 135,
+   "off": "0x77abf4",
+   "usage": "0x70",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F21"
+  },
+  {
+   "i": 136,
+   "off": "0x77abf8",
+   "usage": "0x71",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F22"
+  },
+  {
+   "i": 137,
+   "off": "0x77abfc",
+   "usage": "0x72",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F23"
+  },
+  {
+   "i": 138,
+   "off": "0x77ac00",
+   "usage": "0x73",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "F24"
+  },
+  {
+   "i": 139,
+   "off": "0x77ac04",
+   "usage": "0x74",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_EXECUTE"
+  },
+  {
+   "i": 140,
+   "off": "0x77ac08",
+   "usage": "0x75",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_HELP"
+  },
+  {
+   "i": 141,
+   "off": "0x77ac0c",
+   "usage": "0x76",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_MENU"
+  },
+  {
+   "i": 142,
+   "off": "0x77ac10",
+   "usage": "0x77",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_SELECT"
+  },
+  {
+   "i": 143,
+   "off": "0x77ac14",
+   "usage": "0x78",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_STOP"
+  },
+  {
+   "i": 144,
+   "off": "0x77ac18",
+   "usage": "0x79",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_REDO"
+  },
+  {
+   "i": 145,
+   "off": "0x77ac1c",
+   "usage": "0x7a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_UNDO"
+  },
+  {
+   "i": 146,
+   "off": "0x77ac20",
+   "usage": "0x7b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_CUT"
+  },
+  {
+   "i": 147,
+   "off": "0x77ac24",
+   "usage": "0x7c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_COPY"
+  },
+  {
+   "i": 148,
+   "off": "0x77ac28",
+   "usage": "0x7d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_PASTE"
+  },
+  {
+   "i": 149,
+   "off": "0x77ac2c",
+   "usage": "0x7e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_FIND"
+  },
+  {
+   "i": 150,
+   "off": "0x77ac30",
+   "usage": "0x7f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_MUTE"
+  },
+  {
+   "i": 151,
+   "off": "0x77ac34",
+   "usage": "0x80",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_VOL_UP"
+  },
+  {
+   "i": 152,
+   "off": "0x77ac38",
+   "usage": "0x81",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_VOL_DN"
+  },
+  {
+   "i": 153,
+   "off": "0x77ac3c",
+   "usage": "0x82",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LOCKING_CAPS"
+  },
+  {
+   "i": 154,
+   "off": "0x77ac40",
+   "usage": "0x83",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LOCKING_NUM"
+  },
+  {
+   "i": 155,
+   "off": "0x77ac44",
+   "usage": "0x84",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LOCKING_SCROLL"
+  },
+  {
+   "i": 156,
+   "off": "0x77ac48",
+   "usage": "0x85",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_COMMA"
+  },
+  {
+   "i": 157,
+   "off": "0x77ac4c",
+   "usage": "0x86",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_EQUAL_AS400"
+  },
+  {
+   "i": 158,
+   "off": "0x77ac50",
+   "usage": "0x87",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INTERNATIONAL_1"
+  },
+  {
+   "i": 159,
+   "off": "0x77ac54",
+   "usage": "0x88",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INTERNATIONAL_2"
+  },
+  {
+   "i": 160,
+   "off": "0x77ac58",
+   "usage": "0x89",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INTERNATIONAL_3"
+  },
+  {
+   "i": 161,
+   "off": "0x77ac5c",
+   "usage": "0x8a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INTERNATIONAL_4"
+  },
+  {
+   "i": 162,
+   "off": "0x77ac60",
+   "usage": "0x8b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INTERNATIONAL_5"
+  },
+  {
+   "i": 163,
+   "off": "0x77ac64",
+   "usage": "0x8c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INTERNATIONAL_6"
+  },
+  {
+   "i": 164,
+   "off": "0x77ac68",
+   "usage": "0x8d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INTERNATIONAL_7"
+  },
+  {
+   "i": 165,
+   "off": "0x77ac6c",
+   "usage": "0x8e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INTERNATIONAL_8"
+  },
+  {
+   "i": 166,
+   "off": "0x77ac70",
+   "usage": "0x8f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "INTERNATIONAL_9"
+  },
+  {
+   "i": 167,
+   "off": "0x77ac74",
+   "usage": "0x90",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LANGUAGE_1"
+  },
+  {
+   "i": 168,
+   "off": "0x77ac78",
+   "usage": "0x91",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LANGUAGE_2"
+  },
+  {
+   "i": 169,
+   "off": "0x77ac7c",
+   "usage": "0x92",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LANGUAGE_3"
+  },
+  {
+   "i": 170,
+   "off": "0x77ac80",
+   "usage": "0x93",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LANGUAGE_4"
+  },
+  {
+   "i": 171,
+   "off": "0x77ac84",
+   "usage": "0x94",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LANGUAGE_5"
+  },
+  {
+   "i": 172,
+   "off": "0x77ac88",
+   "usage": "0x95",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LANGUAGE_6"
+  },
+  {
+   "i": 173,
+   "off": "0x77ac8c",
+   "usage": "0x96",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LANGUAGE_7"
+  },
+  {
+   "i": 174,
+   "off": "0x77ac90",
+   "usage": "0x97",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LANGUAGE_8"
+  },
+  {
+   "i": 175,
+   "off": "0x77ac94",
+   "usage": "0x98",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LANGUAGE_9"
+  },
+  {
+   "i": 176,
+   "off": "0x77ac98",
+   "usage": "0x99",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "ALT_ERASE"
+  },
+  {
+   "i": 177,
+   "off": "0x77ac9c",
+   "usage": "0x9a",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SYSREQ"
+  },
+  {
+   "i": 178,
+   "off": "0x77aca0",
+   "usage": "0x9b",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "CANCEL"
+  },
+  {
+   "i": 179,
+   "off": "0x77aca4",
+   "usage": "0x9c",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "CLEAR"
+  },
+  {
+   "i": 180,
+   "off": "0x77aca8",
+   "usage": "0x9d",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "PRIOR"
+  },
+  {
+   "i": 181,
+   "off": "0x77acac",
+   "usage": "0x9e",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "RETURN2"
+  },
+  {
+   "i": 182,
+   "off": "0x77acb0",
+   "usage": "0x9f",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "SEPARATOR"
+  },
+  {
+   "i": 183,
+   "off": "0x77acb4",
+   "usage": "0xa0",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "OUT"
+  },
+  {
+   "i": 184,
+   "off": "0x77acb8",
+   "usage": "0xa1",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "OPER"
+  },
+  {
+   "i": 185,
+   "off": "0x77acbc",
+   "usage": "0xa2",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "CLEAR_AGAIN"
+  },
+  {
+   "i": 186,
+   "off": "0x77acc0",
+   "usage": "0xa3",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "CRSEL"
+  },
+  {
+   "i": 187,
+   "off": "0x77acc4",
+   "usage": "0xa4",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "EXSEL"
+  },
+  {
+   "i": 188,
+   "off": "0x77acc8",
+   "usage": "0xb6",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_LEFT_PARENTHESIS"
+  },
+  {
+   "i": 189,
+   "off": "0x77accc",
+   "usage": "0xb7",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_RIGHT_PARENTHESIS"
+  },
+  {
+   "i": 190,
+   "off": "0x77acd0",
+   "usage": "0xcd",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KPSPC"
+  },
+  {
+   "i": 191,
+   "off": "0x77acd4",
+   "usage": "0xd8",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "KP_CLEAR"
+  },
+  {
+   "i": 192,
+   "off": "0x77acd8",
+   "usage": "0xe0",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LCTRL"
+  },
+  {
+   "i": 193,
+   "off": "0x77acdc",
+   "usage": "0xe1",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LSHIFT"
+  },
+  {
+   "i": 194,
+   "off": "0x77ace0",
+   "usage": "0xe2",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LALT"
+  },
+  {
+   "i": 195,
+   "off": "0x77ace4",
+   "usage": "0xe3",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "LGUI"
+  },
+  {
+   "i": 196,
+   "off": "0x77ace8",
+   "usage": "0xe4",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "RCTRL"
+  },
+  {
+   "i": 197,
+   "off": "0x77acec",
+   "usage": "0xe5",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "RSHIFT"
+  },
+  {
+   "i": 198,
+   "off": "0x77acf0",
+   "usage": "0xe6",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "RALT"
+  },
+  {
+   "i": 199,
+   "off": "0x77acf4",
+   "usage": "0xe7",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "RGUI"
+  },
+  {
+   "i": 200,
+   "off": "0x77acf8",
+   "usage": "0xe8",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_PLAY_PAUSE"
+  },
+  {
+   "i": 201,
+   "off": "0x77acfc",
+   "usage": "0xe9",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_STOP2"
+  },
+  {
+   "i": 202,
+   "off": "0x77ad00",
+   "usage": "0xea",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_PREV"
+  },
+  {
+   "i": 203,
+   "off": "0x77ad04",
+   "usage": "0xeb",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_NEXT"
+  },
+  {
+   "i": 204,
+   "off": "0x77ad08",
+   "usage": "0xec",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_EJECT"
+  },
+  {
+   "i": 205,
+   "off": "0x77ad0c",
+   "usage": "0xed",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_VOLUME_UP2"
+  },
+  {
+   "i": 206,
+   "off": "0x77ad10",
+   "usage": "0xee",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_VOLUME_DN2"
+  },
+  {
+   "i": 207,
+   "off": "0x77ad14",
+   "usage": "0xef",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_MUTE2"
+  },
+  {
+   "i": 208,
+   "off": "0x77ad18",
+   "usage": "0xf0",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_WWW"
+  },
+  {
+   "i": 209,
+   "off": "0x77ad1c",
+   "usage": "0xf1",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_BACK"
+  },
+  {
+   "i": 210,
+   "off": "0x77ad20",
+   "usage": "0xf2",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_FORWARD"
+  },
+  {
+   "i": 211,
+   "off": "0x77ad24",
+   "usage": "0xf3",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_STOP3"
+  },
+  {
+   "i": 212,
+   "off": "0x77ad28",
+   "usage": "0xf4",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_FIND2"
+  },
+  {
+   "i": 213,
+   "off": "0x77ad2c",
+   "usage": "0xf5",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_SCROLL_UP"
+  },
+  {
+   "i": 214,
+   "off": "0x77ad30",
+   "usage": "0xf6",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_SCROLL_DN"
+  },
+  {
+   "i": 215,
+   "off": "0x77ad34",
+   "usage": "0xf7",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_EDIT"
+  },
+  {
+   "i": 216,
+   "off": "0x77ad38",
+   "usage": "0xf8",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_SLEEP"
+  },
+  {
+   "i": 217,
+   "off": "0x77ad3c",
+   "usage": "0xf9",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_LOCK"
+  },
+  {
+   "i": 218,
+   "off": "0x77ad40",
+   "usage": "0xf9",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_SCREENSAVER"
+  },
+  {
+   "i": 219,
+   "off": "0x77ad44",
+   "usage": "0xf9",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_COFFEE"
+  },
+  {
+   "i": 220,
+   "off": "0x77ad48",
+   "usage": "0xfa",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_REFRESH"
+  },
+  {
+   "i": 221,
+   "off": "0x77ad4c",
+   "usage": "0xfb",
+   "page": "0x07",
+   "mods": "0x00",
+   "nayacore_name_inferred": "K_CALCULATOR"
+  },
+  {
+   "i": 222,
+   "off": "0x77ad50",
+   "usage": "0x30",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_POWER"
+  },
+  {
+   "i": 223,
+   "off": "0x77ad54",
+   "usage": "0x31",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_RESET"
+  },
+  {
+   "i": 224,
+   "off": "0x77ad58",
+   "usage": "0x32",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_SLEEP"
+  },
+  {
+   "i": 225,
+   "off": "0x77ad5c",
+   "usage": "0x34",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_SLEEP_MODE"
+  },
+  {
+   "i": 226,
+   "off": "0x77ad60",
+   "usage": "0x40",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MENU"
+  },
+  {
+   "i": 227,
+   "off": "0x77ad64",
+   "usage": "0x41",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MENU_PICK"
+  },
+  {
+   "i": 228,
+   "off": "0x77ad68",
+   "usage": "0x42",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MENU_UP"
+  },
+  {
+   "i": 229,
+   "off": "0x77ad6c",
+   "usage": "0x43",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MENU_DOWN"
+  },
+  {
+   "i": 230,
+   "off": "0x77ad70",
+   "usage": "0x44",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MENU_LEFT"
+  },
+  {
+   "i": 231,
+   "off": "0x77ad74",
+   "usage": "0x45",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MENU_RIGHT"
+  },
+  {
+   "i": 232,
+   "off": "0x77ad78",
+   "usage": "0x46",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MENU_ESCAPE"
+  },
+  {
+   "i": 233,
+   "off": "0x77ad7c",
+   "usage": "0x47",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MENU_INCREASE"
+  },
+  {
+   "i": 234,
+   "off": "0x77ad80",
+   "usage": "0x48",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MENU_DECREASE"
+  },
+  {
+   "i": 235,
+   "off": "0x77ad84",
+   "usage": "0x60",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_DATA_ON_SCREEN"
+  },
+  {
+   "i": 236,
+   "off": "0x77ad88",
+   "usage": "0x61",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_SUBTITLES"
+  },
+  {
+   "i": 237,
+   "off": "0x77ad8c",
+   "usage": "0x6f",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_BRIGHTNESS_INC"
+  },
+  {
+   "i": 238,
+   "off": "0x77ad90",
+   "usage": "0x70",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_BRIGHTNESS_DEC"
+  },
+  {
+   "i": 239,
+   "off": "0x77ad94",
+   "usage": "0xb3",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_FAST_FORWARD"
+  },
+  {
+   "i": 240,
+   "off": "0x77ad98",
+   "usage": "0xb4",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_REWIND"
+  },
+  {
+   "i": 241,
+   "off": "0x77ad9c",
+   "usage": "0xb5",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_NEXT"
+  },
+  {
+   "i": 242,
+   "off": "0x77ada0",
+   "usage": "0xb6",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_PREVIOUS"
+  },
+  {
+   "i": 243,
+   "off": "0x77ada4",
+   "usage": "0xb7",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_STOP"
+  },
+  {
+   "i": 244,
+   "off": "0x77ada8",
+   "usage": "0xb8",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_EJECT"
+  },
+  {
+   "i": 245,
+   "off": "0x77adac",
+   "usage": "0xcd",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_PLAY_PAUSE"
+  },
+  {
+   "i": 246,
+   "off": "0x77adb0",
+   "usage": "0xe2",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_MUTE"
+  },
+  {
+   "i": 247,
+   "off": "0x77adb4",
+   "usage": "0xe9",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_VOL_UP"
+  },
+  {
+   "i": 248,
+   "off": "0x77adb8",
+   "usage": "0xea",
+   "page": "0x0c",
+   "mods": "0x00",
+   "nayacore_name_inferred": "C_VOL_DOWN"
+  }
+ ],
+ "key_param_table_note": "249 entries at 0x77a9d8, each the 4-byte key_press param (usage lo, usage hi, page, mods). The 'nayacore_name_inferred' column is assigned from the HID usage (ZMK keys.h order); it is not a literal zip with the string run, because the strings for KP_CLEAR (0xD8) and the consumer tail (C_MUTE..C_FAST_FORWARD) are emitted in a different order than the table.",
+ "bg_server_catalog": {
+  "records": 652,
+  "distinct_actionId": 652,
+  "distinct_actionCode": 389,
+  "frontendType_counts": {
+   "key": 314,
+   "modifier": 16,
+   "trans": 2,
+   "none": 2,
+   "bluetooth": 10,
+   "out": 4,
+   "LED": 38,
+   "naya": 2,
+   "mouse": 26,
+   "layer_polite_toggle": 2,
+   "layer_polite_hold": 2,
+   "layer_rude_toggle": 2,
+   "layer_polite_oneshot": 2,
+   "shortcut_alias": 211,
+   "value": 19
+  },
+  "tabType_counts": {
+   "Basic": 175,
+   "Extended": 239,
+   "Layers": 8,
+   "Integrations": 211,
+   "Modules": 19
+  },
+  "groupType_counts": {
+   "Letters": 52,
+   "Numbers": 20,
+   "Modifiers": 16,
+   "Control": 26,
+   "Symbols": 64,
+   "Empty": 4,
+   "Connection": 14,
+   "Lighting": 42,
+   "System": 24,
+   "Keypad": 30,
+   "Navigation": 18,
+   "Configuration Toggles": 2,
+   "Cursor": 16,
+   "International": 27,
+   "Locks": 8,
+   "Function Keys": 48,
+   "Mouse": 18,
+   "Toggle Layer": 2,
+   "Hold Layer": 2,
+   "Force Layer": 2,
+   "Sticky Layer": 2,
+   "MacOS": 44,
+   "Windows": 60,
+   "VS Code Presets": 31,
+   "VS Code Presets (Mac)": 76,
+   "Media & Peripherals": 4
+  },
+  "displayContext_counts": {
+   "null": 101,
+   "US": 155,
+   "Japanese-Light": 155,
+   "German, US": 2,
+   "Module Editing, US": 14,
+   "Japanese-Light, Module Editing": 14,
+   "All": 104,
+   "All, Linux, MacOS, US, VSCode, Windows": 31,
+   "All, MacOS, VSCode": 7,
+   "All, MacOS, US, VSCode": 66,
+   "All, Linux, MacOS, US, VSCode": 3
+  },
+  "codes_by_frontendType": {
+   "key": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "NUMBER_1",
+    "NUMBER_2",
+    "NUMBER_3",
+    "NUMBER_4",
+    "NUMBER_5",
+    "NUMBER_6",
+    "NUMBER_7",
+    "NUMBER_8",
+    "NUMBER_9",
+    "NUMBER_0",
+    "RETURN",
+    "ESC",
+    "BACKSPACE",
+    "DELETE",
+    "TAB",
+    "SPACE",
+    "INSERT",
+    "INT1",
+    "INT2",
+    "INT4",
+    "INT5",
+    "LANG1",
+    "LANG2",
+    "LANG3",
+    "LANG4",
+    "LANG5",
+    "MINUS",
+    "EQUAL",
+    "COMMA",
+    "PERIOD",
+    "SLASH",
+    "SEMICOLON",
+    "SINGLE_QUOTE",
+    "LEFT_BRACKET",
+    "RIGHT_BRACKET",
+    "BACKSLASH",
+    "GRAVE",
+    "LESS_THAN",
+    "GREATER_THAN",
+    "QUESTION",
+    "COLON",
+    "DOUBLE_QUOTES",
+    "LEFT_BRACE",
+    "RIGHT_BRACE",
+    "PIPE",
+    "TILDE",
+    "EXCLAMATION",
+    "AT_SIGN",
+    "HASH",
+    "DOLLAR",
+    "PERCENT",
+    "CARET",
+    "AMPERSAND",
+    "ASTERISK",
+    "LEFT_PARENTHESIS",
+    "RIGHT_PARENTHESIS",
+    "UNDERSCORE",
+    "PLUS",
+    "INT3",
+    "NON_US_BACKSLASH",
+    "C_POWER",
+    "C_BRIGHTNESS_DEC",
+    "C_BRIGHTNESS_INC",
+    "C_MUTE",
+    "C_VOL_DOWN",
+    "C_VOL_UP",
+    "C_PLAY_PAUSE",
+    "C_PREVIOUS",
+    "C_NEXT",
+    "C_REWIND",
+    "C_FAST_FORWARD",
+    "PRINTSCREEN",
+    "KP_NUMBER_1",
+    "KP_NUMBER_2",
+    "KP_NUMBER_3",
+    "KP_NUMBER_4",
+    "KP_NUMBER_5",
+    "KP_NUMBER_6",
+    "KP_NUMBER_7",
+    "KP_NUMBER_8",
+    "KP_NUMBER_9",
+    "KP_NUMBER_0",
+    "KP_PLUS",
+    "KP_MINUS",
+    "KP_MULTIPLY",
+    "KP_DIVIDE",
+    "KP_DOT",
+    "HOME",
+    "END",
+    "PG_UP",
+    "PG_DN",
+    "UP",
+    "DOWN",
+    "LEFT",
+    "RIGHT",
+    "K_APP",
+    "LANG6",
+    "LANG7",
+    "LANG8",
+    "LANG9",
+    "INT6",
+    "NON_US_HASH",
+    "PIPE2",
+    "TILDE2",
+    "CAPSLOCK",
+    "KP_NUMLOCK",
+    "SCROLLLOCK",
+    "PAUSE_BREAK",
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7",
+    "F8",
+    "F9",
+    "F10",
+    "F11",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F16",
+    "F17",
+    "F18",
+    "F19",
+    "F20",
+    "F21",
+    "F22",
+    "F23",
+    "F24"
+   ],
+   "modifier": [
+    "LCTRL",
+    "LSHIFT",
+    "LALT",
+    "LGUI",
+    "RCTRL",
+    "RSHIFT",
+    "RALT",
+    "RGUI"
+   ],
+   "trans": [
+    "TRANSPARENT"
+   ],
+   "none": [
+    "DISABLE"
+   ],
+   "bluetooth": [
+    "BT_DEVICE_1",
+    "BT_DEVICE_2",
+    "BT_DEVICE_3",
+    "BT_DEVICE_4",
+    "BT_CLEAR"
+   ],
+   "out": [
+    "BT_OUT",
+    "USB_DEVICE"
+   ],
+   "LED": [
+    "LED_BRIGHTNESS_DOWN",
+    "LED_BRIGHTNESS_UP",
+    "LED_EFFECT_ON_OFF",
+    "LED_EFFECT",
+    "LED_BREATHE",
+    "LED_SOLID",
+    "LED_SPEC",
+    "LED_SWIRL",
+    "LED_SPEED_DOWN",
+    "LED_SPEED_UP",
+    "LED_COLOR_RED",
+    "LED_COLOR_GREEN",
+    "LED_COLOR_BLUE",
+    "LED_COLOR_WHITE",
+    "LED_COLOR_CYAN",
+    "LED_COLOR_MAGENTA",
+    "LED_COLOR_YELLOW",
+    "LED_COLOR_ORANGE",
+    "LED_COLOR_PINK"
+   ],
+   "naya": [
+    "MODULE_FORCE_CHARGING"
+   ],
+   "mouse": [
+    "MOUSE_UP",
+    "MOUSE_DOWN",
+    "MOUSE_LEFT",
+    "MOUSE_RIGHT",
+    "SCROLL_UP",
+    "SCROLL_DOWN",
+    "SCROLL_LEFT",
+    "SCROLL_RIGHT",
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5"
+   ],
+   "layer_polite_toggle": [
+    "TOGGLE_LAYER_$ID"
+   ],
+   "layer_polite_hold": [
+    "MO_LAYER_$ID"
+   ],
+   "layer_rude_toggle": [
+    "TO_LAYER_$ID"
+   ],
+   "layer_polite_oneshot": [
+    "STICKY_LAYER_$ID"
+   ],
+   "shortcut_alias": [
+    "LGUI + X",
+    "LGUI + C",
+    "LGUI + V",
+    "LGUI + Z",
+    "LSHIFT + LGUI + Z",
+    "LGUI + A",
+    "LGUI + F",
+    "LSHIFT + LGUI + G",
+    "LGUI + G",
+    "LGUI + SPACE",
+    "LALT + LGUI + SPACE",
+    "LGUI + H",
+    "LALT + LGUI + H",
+    "LGUI + M",
+    "LALT + LGUI + M",
+    "LCTRL + LGUI + F",
+    "LGUI + O",
+    "LGUI + P",
+    "LGUI + S",
+    "LCTRL + LGUI + SPACE",
+    "LGUI + T",
+    "LCTRL + TAB",
+    "LCTRL + LSHIFT + TAB",
+    "LGUI + W",
+    "LALT + LGUI + W",
+    "LGUI + GRAVE",
+    "LSHIFT + LGUI + GRAVE",
+    "LGUI + Q",
+    "LALT + LGUI + ESC",
+    "LGUI + TAB",
+    "LSHIFT + LGUI + TAB",
+    "LCTRL + LEFT",
+    "LCTRL + RIGHT",
+    "LSHIFT + LGUI + NUMBER_3",
+    "LSHIFT + LGUI + NUMBER_5",
+    "LSHIFT + LGUI + NUMBER_4",
+    "LALT + LSHIFT + LGUI + NUMBER_4",
+    "LSHIFT + LGUI + N",
+    "LCTRL + LGUI + N",
+    "LGUI + COMMA",
+    "LALT + LSHIFT + LGUI + Q",
+    "LCTRL + LSHIFT + C_POWER",
+    "LCTRL + UP",
+    "LCTRL + DOWN",
+    "LCTRL + X",
+    "LCTRL + C",
+    "LCTRL + V",
+    "LCTRL + LSHIFT + V",
+    "LCTRL + B",
+    "LCTRL + I",
+    "LCTRL + U",
+    "LCTRL + BACKSPACE",
+    "LCTRL + DELETE",
+    "LCTRL + HOME",
+    "LCTRL + END",
+    "LCTRL + F",
+    "LCTRL + H",
+    "LCTRL + A",
+    "LSHIFT + LEFT",
+    "LSHIFT + RIGHT",
+    "LSHIFT + LCTRL + LEFT",
+    "LSHIFT + LCTRL + RIGHT",
+    "LSHIFT + HOME",
+    "LSHIFT + END",
+    "LSHIFT + UP",
+    "LSHIFT + DOWN",
+    "LSHIFT + LCTRL + UP",
+    "LSHIFT + LCTRL + DOWN",
+    "LSHIFT + PG_UP",
+    "LSHIFT + PG_DN",
+    "LSHIFT + LCTRL + HOME",
+    "LSHIFT + LCTRL + END",
+    "LALT + A",
+    "[LALT] + TAB",
+    "[LALT] + LSHIFT + TAB",
+    "LALT + F4",
+    "LALT + LSHIFT + ESC",
+    "LALT + ESC",
+    "LCTRL + T",
+    "LCTRL + F4",
+    "LGUI + LCTRL + D",
+    "LGUI + LCTRL + LEFT",
+    "LGUI + LCTRL + RIGHT",
+    "LALT + PG_DN",
+    "LALT + PG_UP",
+    "LGUI + LCTRL + F4",
+    "LCTRL + Z",
+    "LCTRL + Y",
+    "LALT + F8",
+    "LALT + SPACE",
+    "LALT + LEFT",
+    "LALT + RIGHT",
+    "LCTRL + LSHIFT + ESC",
+    "LALT + ENTER",
+    "LGUI + I",
+    "LALT + UP",
+    "LALT + DOWN",
+    "LSHIFT + LALT + UP",
+    "HOME",
+    "END",
+    "LALT + Z",
+    "F12",
+    "LSHIFT + F12",
+    "F2",
+    "LALT + CLICK",
+    "LSHIFT + LALT + I",
+    "LCTRL + L",
+    "LSHIFT + LALT + LEFT",
+    "LSHIFT + LALT + RIGHT",
+    "LSHIFT + F8",
+    "F8",
+    "F9",
+    "F5",
+    "LSHIFT + F5",
+    "F11",
+    "LSHIFT + F11",
+    "F10",
+    "LCTRL + GRAVE",
+    "LCTRL + LSHIFT + GRAVE",
+    "LGUI + LSHIFT + P",
+    "LGUI + LSHIFT + N",
+    "LGUI + LSHIFT + K",
+    "LGUI + LSHIFT + ENTER",
+    "LGUI + ENTER",
+    "LGUI + LSHIFT + BACKSLASH",
+    "LGUI + LEFT_BRACKET",
+    "LGUI + RIGHT_BRACKET",
+    "LGUI + UP",
+    "LGUI + DOWN",
+    "LGUI + LSHIFT + LEFT_BRACKET",
+    "LGUI + LSHIFT + RIGHT_BRACKET",
+    "LGUI + SLASH",
+    "LSHIFT + LALT + A",
+    "LGUI + LSHIFT + SPACE",
+    "LSHIFT + LALT + F",
+    "LALT + F12",
+    "LGUI + PERIOD",
+    "LGUI + LALT + UP",
+    "LGUI + LALT + DOWN",
+    "LGUI + U",
+    "LGUI + LSHIFT + L",
+    "LGUI + F2",
+    "LGUI + CTRL + F",
+    "LSHIFT + LGUI + NUMBER_0",
+    "LGUI + MINUS",
+    "LGUI + EQUAL",
+    "LGUI + B",
+    "LGUI + LSHIFT + E",
+    "LGUI + LSHIFT + F",
+    "LGUI + LSHIFT + G",
+    "LGUI + LSHIFT + D",
+    "LGUI + LSHIFT + X",
+    "LGUI + LSHIFT + H",
+    "LGUI + LSHIFT + J",
+    "LGUI + LSHIFT + U",
+    "LGUI + LSHIFT + V",
+    "LALT + LGUI + F",
+    "LGUI + D",
+    "LCTRL + P",
+    "LGUI + LSHIFT + O",
+    "LGUI + LSHIFT + M",
+    "LGUI + LSHIFT + TAB",
+    "LGUI + LSHIFT + MINUS",
+    "LCTRL + LSHIFT + M",
+    "LGUI + BACKSLASH",
+    "LGUI + NUMBER_1",
+    "LGUI + NUMBER_2",
+    "LGUI + NUMBER_3",
+    "LGUI + N",
+    "LGUI + LSHIFT + S",
+    "LALT + LGUI + S",
+    "LGUI + LSHIFT + T",
+    "PAGE_UP",
+    "PAGE_DOWN",
+    "LGUI + HOME",
+    "LGUI + END"
+   ],
+   "value": [
+    "LED - LED_BRIGHTNESS_DOWN - LED_BRIGHTNESS_UP",
+    "LED - LED_SPEED_UP - LED_SPEED_DOWN",
+    "LEFT - RIGHT",
+    "DOWN - UP",
+    "C_VOL_DOWN - C_VOL_UP",
+    "C_BRIGHTNESS_DEC - C_BRIGHTNESS_INC",
+    "mouse - MOUSE_LEFT - MOUSE_RIGHT",
+    "mouse - MOUSE_DOWN - MOUSE_UP",
+    "mouse - SCROLL_UP - SCROLL_DOWN",
+    "mouse - SCROLL_LEFT - SCROLL_RIGHT"
+   ]
+  },
+  "seed_actionType_values_in_templates": {
+   "key": 496,
+   "none": 148,
+   "shortcut_alias": 107,
+   "LED": 66,
+   "value": 54,
+   "mouse": 42,
+   "modifier": 41,
+   "bluetooth": 20,
+   "layer_polite_hold": 15,
+   "out": 8,
+   "naya": 4,
+   "combo": 2
+  },
+  "seed_behavior_values_for_keys": {
+   "press": 804
+  },
+  "suffix_families": {
+   "_JIS_actionIds": 219,
+   "_JIS_that_remap_to_a_different_actionCode": 42,
+   "examples_of_JIS_remaps": [
+    [
+     "CARET_JIS",
+     "EQUAL"
+    ],
+    [
+     "YEN_JIS",
+     "INT3"
+    ],
+    [
+     "COLON_JIS",
+     "SINGLE_QUOTE"
+    ],
+    [
+     "AT_JIS",
+     "LEFT_BRACKET"
+    ],
+    [
+     "KANA_JIS",
+     "INT1"
+    ],
+    [
+     "HENKAN_JIS",
+     "INT4"
+    ],
+    [
+     "MUHENKAN_JIS",
+     "INT5"
+    ],
+    [
+     "KANA_MAC_JIS",
+     "LANG1"
+    ],
+    [
+     "EISU_MAC_JIS",
+     "LANG2"
+    ],
+    [
+     "WO_JIS",
+     "RIGHT_PARENTHESIS"
+    ]
+   ],
+   "_MAC_actionIds": [
+    "KANA_MAC_JIS",
+    "EISU_MAC_JIS"
+   ],
+   "MAC_prefix": 44,
+   "WIN_prefix": 60,
+   "VS_MAC_prefix": 72,
+   "VS_DEF_prefix": 35,
+   "V_prefix_(module variable values)": 20,
+   "German_displayContext": [
+    "RETURN",
+    "ESC"
+   ],
+   "note": "Suffixes/prefixes exist only on actionId (the app-side unique id); NayaCore only ever sees actionCode, which never carries a suffix."
+  }
+ },
+ "renderer_feature_flags": {
+  "declared_false": [
+   "macros",
+   "layerManagement",
+   "bugReport",
+   "modulesActions",
+   "integrationsActions",
+   "customActions",
+   "ledToggle",
+   "behaviorToggle",
+   "dynamicLayers",
+   "viewToggle",
+   "signIn",
+   "backwardAndForward",
+   "undoAndRedo",
+   "advancedBehaviors"
+  ],
+  "declared_true": [
+   "colorMapping",
+   "keyMapping",
+   "moduleConfigurations",
+   "settings",
+   "help",
+   "basicActions",
+   "extendedActions",
+   "layersActions",
+   "moduleBindingSlots",
+   "basicLayers"
+  ],
+  "actually_read_via_Dn": [
+   "backwardAndForward",
+   "bugReport",
+   "colorMapping",
+   "dynamicLayers",
+   "help",
+   "keyMapping",
+   "layerManagement",
+   "macros",
+   "moduleBindingSlots",
+   "moduleConfigurations",
+   "settings",
+   "signIn",
+   "undoAndRedo"
+  ]
+ },
+ "flashable_action_types": [
+  {
+   "type": "key",
+   "record": "0x01 key_press",
+   "evidence": "249-entry (usage,page,mods) table + KEY_PRESS length check; catalog 'key' 158 codes; 496 seed rows"
+  },
+  {
+   "type": "modifier",
+   "record": "0x01 key_press (usage 0xE0-0xE7)",
+   "evidence": "param entries 192-199; NayaCore action_type 'modifier'; catalog 8 codes; 41 seed rows"
+  },
+  {
+   "type": "combo (modifiers + key, e.g. 'LCTRL + DOWN')",
+   "record": "0x01 key_press with modifier bits",
+   "evidence": "NayaCore action_type 'combo' (0x3f07f0), ' + ' literal at 0x78f630 inside Binding.cpp, modifier-alias table + bitmask table; renderer $s.getActionType() emits 'combo'; 2 seed rows"
+  },
+  {
+   "type": "LED",
+   "record": "0x09 rgb_ug",
+   "evidence": "19 names + 19 decoded pairs + RGB_UG length check; NayaCore action_type 'LED'; 66 seed rows"
+  },
+  {
+   "type": "bluetooth",
+   "record": "0x00 bluetooth",
+   "evidence": "8 names + 8 pairs + BLUETOOTH length check; 20 seed rows (5 codes exposed)"
+  },
+  {
+   "type": "out",
+   "record": "0x08 outputs",
+   "evidence": "USB_DEVICE=1, BT_OUT=2 + OUTPUTS length check; NayaCore action_type 'out'; 8 seed rows"
+  },
+  {
+   "type": "naya",
+   "record": "0x06 naya_integrations",
+   "evidence": "8 names + 8 ids + NAYA_INTEGRATIONS length check; NayaCore action_type 'naya'; catalog exposes MODULE_FORCE_CHARGING=401 only"
+  },
+  {
+   "type": "layer_polite_hold / layer_rude_toggle / layer_polite_toggle / layer_polite_oneshot",
+   "record": "0x05 mo / 0x0c to_layer / 0x0d toggle_layer / 0x0b sticky_layer",
+   "evidence": "four length checks, four NayaCore action_type words, four display formats, four catalog $ID codes"
+  },
+  {
+   "type": "none / trans",
+   "record": "0x07 none / 0x0e trans",
+   "evidence": "DISABLE / DISABLED / TRANSPARENT literals in Binding.cpp and SQL reader; catalog frontendTypes none/trans; 148 seed rows of DISABLE"
+  },
+  {
+   "type": "mod_tap (OneKey tap+hold pair)",
+   "record": "0x03 mod_tap",
+   "evidence": "Key::serializeBindingPairData + 21-byte MOD_TAP reader + behaviour words tap/hold; not reachable from any catalog code, see other_behaviours.mod_tap"
+  },
+  {
+   "type": "mouse buttons M1-M5",
+   "record": "0x0f mouse",
+   "evidence": "(mask,3) pairs + MOUSE length check in Binding; catalog exposes M1-M5 in the plain US/Japanese-Light context (i.e. to keys) -- firmware support on a key position is not shown by these sources"
+  },
+  {
+   "type": "value (module dial/track variables, e.g. 'mouse - SCROLL_UP - SCROLL_DOWN')",
+   "record": "module config slots, not key records",
+   "evidence": "' - ' literal at 0x79023c in ModuleConfig.cpp; NayaCore action_type 'Value'; 54 seed module rows"
+  }
+ ],
+ "named_but_not_flashable": [
+  {
+   "type_or_code": "macro (record 0x02; catalog/renderer actionType 'macro'; code '<...>_<macroId>')",
+   "evidence": "NayaCore: only the type-table word; no remap step, no SQL read of macros, no length check, no action name. Renderer: macros:{enabled:!1}. Seeds: 0 rows. Measured: NayaCore emits NONE."
+  },
+  {
+   "type_or_code": "sticky_key (record 0x0a)",
+   "evidence": "Word in the record-type table only; no serializer artefacts, no app action_type, no catalog record."
+  },
+  {
+   "type_or_code": "grave_escape (record 0x04)",
+   "evidence": "Word in the record-type table only; no serializer artefacts, no app action_type, no catalog record."
+  },
+  {
+   "type_or_code": "mod_tap as a standalone action",
+   "evidence": "No MOD_TAP action code or catalog record; only reachable as a tap+hold pair whose UI (advancedBehaviors/behaviorToggle) is flagged off and never read."
+  },
+  {
+   "type_or_code": "mouse movement/scroll on a key (MOUSE_UP/DOWN/LEFT/RIGHT, SCROLL_UP/DOWN/LEFT/RIGHT)",
+   "evidence": "Catalog exposes these 8 mouse codes only with displayContext 'Module Editing' (16 records), so the app never writes them into key_bindings; NayaCore has no (arg,cmd) pair for them in the key table (only M1-M5 masks)."
+  },
+  {
+   "type_or_code": "shortcut_alias records whose code uses a token NayaCore does not know",
+   "evidence": "NayaCore has no literal ENTER, PAGE_UP, PAGE_DOWN or CLICK (it uses RETURN, PG_UP, PG_DN). Affected catalog entries: WIN_DISPLAY_PROPERTIES = 'LALT + ENTER'; VS_DEF_INSERT_CURSOR = 'LALT + CLICK'; VS_DEF_SELECT_MATCHES = 'LALT + ENTER'; VS_MAC_INSERT_LINE_ABOVE = 'LGUI + LSHIFT + ENTER'; VS_MAC_INSERT_LINE_BELOW = 'LGUI + ENTER'; VS_MAC_TERMINAL_PAGE_UP = 'PAGE_UP'; VS_MAC_TERMINAL_PAGE_DOWN = 'PAGE_DOWN'"
+  },
+  {
+   "type_or_code": "shortcut_alias as an action_type word",
+   "evidence": "The string 'shortcut_alias' is absent from NayaCore.exe although 107 seeded key rows and 211 catalog records carry it. NayaCore does know 'combo' and ' + '; whether it dispatches on action_type (then these rows would hit 'Unknown ZMK behaviour') or on the code shape cannot be settled from strings. Treat every shortcut_alias row as unverified until flashed and read back."
+  },
+  {
+   "type_or_code": "catalog codes not present in NayaCore at all",
+   "evidence": "DISABLE and TRANSPARENT are handled by dedicated literals (fine); the four *_LAYER_$ID templates are resolved by action_type (fine). No other direct catalog code is missing from NayaCore."
+  }
+ ],
+ "nayacore_only_names": {
+  "count": 153,
+  "note": "Action codes NayaCore can serialize that no bg-server catalog record (direct, shortcut component or value component) references; unreachable from NayaFlow's UI or templates but valid input to NayaCore if written into key_bindings.action_code with the right action_type.",
+  "names": [
+   "BT_NEXT",
+   "BT_PREV",
+   "BT_SELECT_SL",
+   "SYSTEM_POWER",
+   "SYS_PWR",
+   "SYSTEM_SLEEP",
+   "SYS_SLEEP",
+   "SYSTEM_WAKE_UP",
+   "SYS_WAKE",
+   "POUND",
+   "DEL",
+   "KP_CLEAR",
+   "CLEAR2",
+   "KP_ENTER",
+   "K_POWER",
+   "KP_EQUAL",
+   "K_EXECUTE",
+   "K_HELP",
+   "K_MENU",
+   "K_SELECT",
+   "K_STOP",
+   "K_REDO",
+   "K_UNDO",
+   "K_CUT",
+   "K_COPY",
+   "K_PASTE",
+   "K_FIND",
+   "K_MUTE",
+   "K_VOL_UP",
+   "K_VOL_DN",
+   "LOCKING_CAPS",
+   "LOCKING_NUM",
+   "LOCKING_SCROLL",
+   "KP_COMMA",
+   "KP_EQUAL_AS400",
+   "INTERNATIONAL_1",
+   "INTERNATIONAL_2",
+   "INTERNATIONAL_3",
+   "INTERNATIONAL_4",
+   "INTERNATIONAL_5",
+   "INTERNATIONAL_6",
+   "INTERNATIONAL_7",
+   "INT7",
+   "INTERNATIONAL_8",
+   "INT8",
+   "INTERNATIONAL_9",
+   "INT9",
+   "LANGUAGE_1",
+   "LANG_HANGEUL",
+   "LANGUAGE_2",
+   "LANG_HANJA",
+   "LANGUAGE_3",
+   "LANG_KATAKANA",
+   "LANGUAGE_4",
+   "LANG_HIRAGANA",
+   "LANGUAGE_5",
+   "LANG_ZENKAKUHANKAKU",
+   "LANGUAGE_6",
+   "LANG_ZENKAKUHANKAKU2",
+   "LANGUAGE_7",
+   "LANG_HANJA2",
+   "LANGUAGE_8",
+   "LANG_HANJA3",
+   "LANGUAGE_9",
+   "ALT_ERASE",
+   "SYSREQ",
+   "ATTENTION",
+   "CANCEL",
+   "CLEAR",
+   "PRIOR",
+   "RETURN2",
+   "SEPARATOR",
+   "OUT",
+   "OPER",
+   "CLEAR_AGAIN",
+   "CRSEL",
+   "EXSEL",
+   "KP_LEFT_PARENTHESIS",
+   "KP_RIGHT_PARENTHESIS",
+   "KPSPC",
+   "K_PLAY_PAUSE",
+   "K_STOP2",
+   "K_PREV",
+   "K_NEXT",
+   "K_EJECT",
+   "K_VOLUME_UP2",
+   "K_VOLUME_DN2",
+   "K_MUTE2",
+   "K_WWW",
+   "K_BACK",
+   "K_FORWARD",
+   "K_STOP3",
+   "K_FIND2",
+   "K_SCROLL_UP",
+   "K_SCROLL_DN",
+   "K_EDIT",
+   "K_SLEEP",
+   "K_LOCK",
+   "K_SCREENSAVER",
+   "K_COFFEE",
+   "K_REFRESH",
+   "K_CALCULATOR",
+   "C_RESET",
+   "C_SLEEP",
+   "C_SLEEP_MODE",
+   "C_MENU",
+   "C_MENU_PICK",
+   "C_MENU_UP",
+   "C_MENU_DOWN",
+   "C_MENU_LEFT",
+   "C_MENU_RIGHT",
+   "C_MENU_ESCAPE",
+   "C_MENU_INCREASE",
+   "C_MENU_DECREASE",
+   "C_DATA_ON_SCREEN",
+   "C_SUBTITLES",
+   "C_STOP",
+   "C_EJECT",
+   "LEFT_CTRL",
+   "SHIFT",
+   "LEFT_SHIFT",
+   "ALT",
+   "LEFT_ALT",
+   "GUI",
+   "META",
+   "CMD",
+   "LEFT_GUI",
+   "LEFT_META",
+   "LMETA",
+   "LCMD",
+   "LWIN",
+   "LEFT_WIN",
+   "LEFT_COMMAND",
+   "RIGHT_CTRL",
+   "RIGHT_SHIFT",
+   "TUNE_MODE_L",
+   "TUNE_MODE_R",
+   "WINDOWS_OS",
+   "MAC_OS",
+   "SCROLL_DIRECTION_L",
+   "SCROLL_DIRECTION_R",
+   "MODULE_CHARGING",
+   "ZOOM_IN",
+   "ZOOM_OUT",
+   "MOUSE_HORIZONTAL",
+   "MOUSE_VERTICAL",
+   "MOUSE_STATIC",
+   "MOUSE_BUTTONS",
+   "MOUSE_SCROLL_VERTICAL",
+   "STATIC_SCROLL_VERTICAL",
+   "MOUSE_SCROLL_HORIZONTAL",
+   "STATIC_SCROLL_HORIZONTAL",
+   "STATIC_ZOOM"
+  ]
+ },
+ "uncertain": [
+  "Everything here is string/data-table evidence; no disassembly was done (no capstone/objdump available). 'Flashable' means a serializer artefact exists in NayaCore, not that firmware honours the record.",
+  "The naya-integration ids 150/151/200/201/300/301/400 are matched to TUNE_MODE_L/R, WINDOWS_OS/MAC_OS, SCROLL_DIRECTION_L/R, MODULE_CHARGING purely by table position; only 401 = MODULE_FORCE_CHARGING is independently known.",
+  "The key_param_table name column is inferred from HID usage semantics (ZMK keys.h order), because two spots (KP_CLEAR 0xD8 at entry 191; consumer tail entries 239-248 ordered by usage number) show the string run and the param table are not emitted in the same order.",
+  "All in-memory pairs (rgb_ug, bluetooth, mouse) are stored (argument, subcommand); the known wire order is (subcommand, argument). Either NayaCore swaps on emit or the wire notes are transposed -- not resolvable from strings.",
+  "BT_SELECT_SL=(0,3) would select profile 0 while BT_DEVICE_1=(1,3) selects 1; whether the firmware is 0- or 1-based is unknown.",
+  "NayaCore's dispatch word is 'Value' (capital V, 0x3f0898) while the bg-server writes action_type 'value'; a case-insensitive compare is assumed since 54 seeded module rows use it.",
+  "NayaCore has no 'press' literal although every seeded key row has behavior 'press'; presumably any behavior word other than tap/hold/double_tap/tap_hold is treated as the plain slot.",
+  "NayaCore app action types 'core', 'core_toggle_hold_morph', 'configuration_rude_toggle', 'configuration_rude_toggle_l', 'configuration_rude_toggle_r' have no catalog record and unknown semantics.",
+  "Unexplained data between the integration ids and the M1-M5 pairs (0x77ae80-0x77aeef, 28 u32: 0, 1, 3, 4, 6, 1, 4294967295, 4056559838, 4294967295, 0, 1, 0, 4294967295, 1, 1, 1, 1, 4, 4294967295, 4, 4294967295, 6, 1, 6, 1, 8, 4294967295, 8) and the pair (254,0) at 0x77af18; probably Touch/Track gesture slot parameters (MOUSE_HORIZONTAL etc.), not decoded.",
+  "A u32 index table 0..0x23,0x40,0x41,0x42,0x25,0x24,0x27.. at 0x77a7f4-0x77a947 precedes BT_CLEAR; looks like a key-position permutation and was not decoded.",
+  "Whether the renderer's disabled flags modulesActions/integrationsActions gate the Modules/Integrations tabs of the key-action picker could not be confirmed: those names are never read by Dn(); the three tab-list constants include an 'integrations' tab unconditionally.",
+  "The catalog record for 'LALT + CLICK' (VS_DEF_INSERT_CURSOR) contains CLICK, which is neither a HID key nor a NayaCore mouse name; it is unflashable as written.",
+  "The 6-char strings dump also hides any other NayaCore literal shorter than 6 characters; the min-2 re-dump used here catches 2-5 char ASCII literals but not UTF-16 QStringLiterals (835 UTF-16 strings were scanned; none is action-related)."
+ ]
+}
