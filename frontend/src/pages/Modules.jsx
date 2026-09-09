@@ -118,7 +118,11 @@ function DeviceBadge({ dev }) {
 // the halves carried no status badge at all -- a field that IS flashable looked identical to
 // one that is app-only. Their hand-built divergence is called out twice in the comments below
 // as the cause of past bugs, so the shared bits move here rather than being copied again.
-function statusBadge({ unsupported, flashable }) {
+function statusBadge({ unsupported, flashable, locked }) {
+  if (locked) {
+    return { cls: "flashable", text: "firmware",
+             title: "The module's firmware does this itself while the field is empty, and the keyboard is flashed that way. NayaFlow locks it too." };
+  }
   if (unsupported) {
     return { cls: "dbonly", text: "experimental",
              title: "The Track has one field per button and no room for a hold. NayaFlow lets you set one and silently overwrites the tap; we do not." };
@@ -140,12 +144,15 @@ function GestureRow({ b, dev, extra, selected, onSelect, labelFor = cleanCode })
   // "experimental" badge, which is specifically about a binding the hardware cannot store.
   const unsupported = /^hold:track:button_/.test(b.behavior || "");
   const splitParent = !!b.pairedSplit;
-  const badge = statusBadge({ unsupported, flashable: b.flashable });
+  // Firmware-driven (the Touch's taps and one-finger cursor): shown, never selectable. The
+  // value displayed is what the firmware does, from the server, not a row the user set.
+  const locked = !!b.locked;
+  const badge = statusBadge({ unsupported, flashable: b.flashable, locked });
   return (
     <div
       className={"skp-row" + (selected ? " selected" : "")}
-      style={onSelect ? undefined : { cursor: "default" }}
-      onClick={onSelect ? () => onSelect(b.id) : undefined}
+      style={onSelect && !locked ? undefined : { cursor: "default" }}
+      onClick={onSelect && !locked ? () => onSelect(b.id) : undefined}
     >
       <span className="skp-beh" style={{ textTransform: GESTURE_LABEL[b.gesture] ? "none" : "capitalize" }}>
         {GESTURE_LABEL[b.gesture] || (b.gesture || "").replace(/_/g, " ")}
@@ -159,12 +166,15 @@ function GestureRow({ b, dev, extra, selected, onSelect, labelFor = cleanCode })
         // carry no actionCode; the 1-finger axis does carry one and so rendered as a real value.
         const shown = splitParent ? { text: "set per direction below", muted: true }
           : unsupported ? { text: "not settable", muted: true }
+          : locked ? { text: `${displayAction(b.firmwareDefault || "", labelFor).text} (firmware)`, muted: true }
           : displayAction(b.actionCode, labelFor);
         return (
           <span className={"skp-act" + (shown.muted ? " unset" : "")}
             title={
               splitParent
                 ? "Split is on — each direction is set separately below."
+                : locked
+                ? "Driven by the module firmware. The field is flashed empty and cannot be rebound here or in NayaFlow."
                 : unsupported
                 ? "The Track cannot store a hold — setting one would overwrite the tap."
                 : shown.title

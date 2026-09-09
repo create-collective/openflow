@@ -12,8 +12,10 @@ too and do nothing. So:
           explicit mask / motion records OpenFlow wrote until now give only the coarse motion
           the Tune experiments measured.
 
-Everything else -- a tap bound to a key, a split or inverted axis, pinch/spread, the Track, the
-Tune -- is unchanged. No hardware.
+Later the same day the four were LOCKED as NayaFlow locks them (module_fields.FIRMWARE_LOCKED):
+always flashed empty, never drift, no control in the editor -- see test_touch_two_finger_split.py.
+Everything else -- the three-finger tap, the two-finger scroll (which splits), pinch/spread, the
+Track, the Tune -- is unchanged. No hardware.
 """
 from __future__ import annotations
 
@@ -98,10 +100,15 @@ def test_an_explicit_record_on_the_board_still_matches_the_default():
     print("  explicit M1 / M2 / motion records compare equal to the same defaults")
 
 
-def test_a_tap_bound_to_a_key_still_differs_from_an_empty_field():
-    _g, differs = rest._compare(T, _board(), _app(**{TAP1: "B"}))
-    assert differs == 1
-    print("  app wants B on the one-finger tap, board is at the default -> 1 difference")
+def test_a_key_stored_on_a_locked_tap_is_not_drift():
+    """Locked since the same day: the field is always flashed empty and cannot be rebound, so
+    an old row holding B is not a difference the user can act on. An UNLOCKED tap still is."""
+    gestures, differs = rest._compare(T, _board(), _app(**{TAP1: "B"}))
+    assert differs == 0
+    assert next(g for g in gestures if g["gesture"] == TAP1)["locked"] is True
+    _g, differs = rest._compare(T, _board(), _app(**{"tap:touch:3_fingers": "B"}))
+    assert differs == 1, "the three-finger tap is a real field and a real difference"
+    print("  B on the locked one-finger tap -> no drift; B on the three-finger tap -> 1")
 
 
 def test_an_unbound_app_tap_counts_as_the_default():
@@ -118,25 +125,33 @@ def test_overlay_writes_the_default_taps_empty_and_a_key_explicitly():
     idx1, idx2 = MF.mouse_button_fields(T)[TAP1], MF.mouse_button_fields(T)[TAP2]
     out = ML.overlay(template, T, {TAP1: "M1", TAP2: "M2"})
     assert out[idx1] == EMPTY and out[idx2] == EMPTY
+    # Locked: even a key or another button stored on these rows is not written.
     out = ML.overlay(template, T, {TAP1: "B", TAP2: "M3"})
-    assert out[idx1] == (R.KEY_PRESS, R.encode_keypress("key", "B"))
-    assert out[idx2] == (R.TWO_WORD, R.encode_two_word(R.MOUSE_CATEGORY, 4))
-    print("  M1 / M2 -> empty; B -> keypress; M3 -> explicit mask")
+    assert out[idx1] == EMPTY and out[idx2] == EMPTY
+    # An unlocked Touch gesture still takes an explicit record.
+    idx3 = MF.mouse_button_fields(T)["tap:touch:3_fingers"]
+    out = ML.overlay(template, T, {"tap:touch:3_fingers": "M3"})
+    assert out[idx3] == (R.TWO_WORD, R.encode_two_word(R.MOUSE_CATEGORY, 4))
+    print("  locked taps -> empty whatever the row says; three-finger tap -> explicit mask")
 
 
 def test_overlay_writes_the_default_axes_empty_and_a_split_or_invert_explicitly():
     at_default = {"minus": None, "plus": None, "invert": False}
     assert ML.encode_axis(T, VERT, at_default) == {H[VERT]["-"]: EMPTY, H[VERT]["+"]: EMPTY}
     assert ML.encode_axis(T, HORZ, at_default) == {H[HORZ]["-"]: EMPTY, H[HORZ]["+"]: EMPTY}
-    inverted = ML.encode_axis(T, VERT, dict(at_default, invert=True))
-    assert inverted[H[VERT]["-"]] == (R.TWO_WORD, R.encode_two_word(1, 1)), "inverted is spelled out"
-    split = ML.encode_axis(T, HORZ, dict(at_default, plus="A"))
-    assert split[H[HORZ]["+"]] == (R.KEY_PRESS, R.encode_keypress("key", "A"))
-    assert split[H[HORZ]["-"]][0] == R.TWO_WORD, "the other half keeps its motion record"
-    # Two-finger scroll is stored on the device and stays explicit.
-    scroll = ML.encode_axis(T, "vertical:touch:2_fingers", at_default)
+    # Locked: an old row asking for invert or a split half on a one-finger axis is not written.
+    assert ML.encode_axis(T, VERT, dict(at_default, invert=True)) == {H[VERT]["-"]: EMPTY, H[VERT]["+"]: EMPTY}
+    assert ML.encode_axis(T, HORZ, dict(at_default, plus="A")) == {H[HORZ]["-"]: EMPTY, H[HORZ]["+"]: EMPTY}
+    # Two-finger scroll is stored on the device: explicit at default, and it splits / inverts.
+    two = "vertical:touch:2_fingers"
+    scroll = ML.encode_axis(T, two, at_default)
     assert all(rec[0] == R.TWO_WORD for rec in scroll.values())
-    print("  one-finger axes at default -> empty; invert / split / two-finger scroll -> explicit")
+    inverted = ML.encode_axis(T, two, dict(at_default, invert=True))
+    assert inverted[H[two]["-"]] == (R.TWO_WORD, R.encode_two_word(H[two]["category"], 1)), "inverted is spelled out"
+    split = ML.encode_axis(T, two, dict(at_default, plus="A"))
+    assert split[H[two]["+"]] == (R.KEY_PRESS, R.encode_keypress("key", "A"))
+    assert split[H[two]["-"]][0] == R.TWO_WORD, "the other half keeps its motion record"
+    print("  one-finger axes -> always empty; two-finger scroll explicit, and it splits and inverts")
 
 
 def test_the_track_is_untouched():
@@ -154,7 +169,7 @@ if __name__ == "__main__":
     for fn in (test_the_rule_is_exactly_four_gestures_wide,
                test_a_stock_touch_profile_matches_a_nayaflow_written_slot,
                test_an_explicit_record_on_the_board_still_matches_the_default,
-               test_a_tap_bound_to_a_key_still_differs_from_an_empty_field,
+               test_a_key_stored_on_a_locked_tap_is_not_drift,
                test_an_unbound_app_tap_counts_as_the_default,
                test_overlay_writes_the_default_taps_empty_and_a_key_explicitly,
                test_overlay_writes_the_default_axes_empty_and_a_split_or_invert_explicitly,

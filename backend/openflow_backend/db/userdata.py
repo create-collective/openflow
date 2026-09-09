@@ -645,8 +645,15 @@ def _ensure_gesture_slots(conn) -> None:
 
 def set_module_binding(binding_id: str, action_code: str, action_type: str) -> dict:
     """Update a module gesture's assigned action (from the Modules dropdown)."""
+    from ..device import module_fields
     conn = connect()
     try:
+        row = conn.execute(
+            "SELECT b.behavior, c.type FROM module_bindings b JOIN module_configs c "
+            "ON c.id = b.module_config_id WHERE b.id=?", (binding_id,)).fetchone()
+        if row is not None and module_fields.gesture_locked(row["type"], row["behavior"] or ""):
+            raise ValueError(f"{row['behavior']!r} is driven by the {row['type'].title()}'s firmware "
+                             "and cannot be rebound (NayaFlow locks it too)")
         cur = conn.execute(
             "UPDATE module_bindings SET action_code=?, action_type=?, updated_at=? WHERE id=?",
             (action_code or "", action_type or "none", _now(), binding_id),
@@ -736,6 +743,11 @@ def get_modules() -> dict:
                     "mode": b["mode"],
                     "fieldKind": field_kind,      # 'keypress'/'mouse_button'/'axis'/None
                     "flashable": flashable,       # True = we can write it (proved live in C1/C2)
+                    # Firmware-driven and locked, as NayaFlow locks it: the Touch's two taps and
+                    # its one-finger cursor. The editor shows what the firmware does and offers
+                    # no control; the flash always writes the field empty.
+                    "locked": module_fields.gesture_locked(m["type"], b["behavior"] or ""),
+                    "firmwareDefault": module_fields.firmware_default(m["type"], b["behavior"] or ""),
                 })
             stored = {
                 s["correlation_id"]: s["value"]
@@ -908,7 +920,7 @@ def set_axis_split(config_id: str, behavior: str, half: str, action_code: str | 
 
     `half` is "-" or "+". `action_code` of None clears that half back to motion.
     """
-    from ..device.module_fields import axis_halves
+    from ..device.module_fields import axis_halves, splittable_axes
 
     if half not in ("-", "+"):
         raise ValueError(f"half must be '-' or '+', got {half!r}")
@@ -917,7 +929,9 @@ def set_axis_split(config_id: str, behavior: str, half: str, action_code: str | 
         row = conn.execute("SELECT type FROM module_configs WHERE id=?", (config_id,)).fetchone()
         if row is None:
             raise ValueError(f"no module config {config_id}")
-        if behavior not in axis_halves(row["type"]):
+        # The same gate the UI uses. A Touch's 1-finger axes are in axis_halves (the compare
+        # needs them) but not splittable: the firmware drives the cursor while they are empty.
+        if behavior not in splittable_axes(row["type"]):
             raise ValueError(f"{behavior!r} is not a splittable axis on a {row['type']}")
 
         now = _now()
@@ -951,15 +965,15 @@ def set_axis_invert(config_id: str, behavior: str, invert: bool) -> dict:
     flag in the config anywhere. NayaFlow has the control but never writes anything for it, which
     is why toggling it there does nothing (capture 2026-09-03: zero writes).
     """
-    from ..device.module_fields import axis_halves
+    from ..device.module_fields import axis_halves, splittable_axes
 
     conn = connect()
     try:
         row = conn.execute("SELECT type FROM module_configs WHERE id=?", (config_id,)).fetchone()
         if row is None:
             raise ValueError(f"no module config {config_id}")
-        if behavior not in axis_halves(row["type"]):
-            raise ValueError(f"{behavior!r} is not an axis gesture on a {row['type']}")
+        if behavior not in splittable_axes(row["type"]):
+            raise ValueError(f"{behavior!r} is not an invertible axis on a {row['type']}")
         cur = conn.execute("UPDATE module_bindings SET invert=?, updated_at=? "
                            "WHERE module_config_id=? AND behavior=?",
                            (1 if invert else 0, _now(), config_id, behavior))

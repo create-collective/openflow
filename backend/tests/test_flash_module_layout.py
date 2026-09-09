@@ -357,14 +357,15 @@ def test_a_profile_already_on_the_board_is_still_written_when_it_differs():
     left completely alone, on the theory it must already be correct. It is not: an edit that
     never reached the board is exactly what a flash is for.
 
-    The difference is a REAL one here -- the one-finger tap bound to a key. This test used to
+    The difference is a REAL one here -- the three-finger tap bound to a key. This test used to
     put M1 / M2 over an empty Touch slot and expect mask 1 / mask 2 written, which was the
     mistake it was pinning: on the Touch, EMPTY IS M1 / M2, done by the module firmware
-    (module_fields.FIRMWARE_DEFAULTS, 2026-09-09). The two-finger tap stays at M2 below and is
-    written EMPTY over this fixture's junk, which is the other half of the same rule."""
+    (module_fields.FIRMWARE_DEFAULTS, 2026-09-09), and those gestures are LOCKED -- a key on
+    the one-finger tap below is written EMPTY over this fixture's junk, the other half of the
+    same rule."""
     bays = dict(BASE, **{"touch:keyboard_left": TOUCH})
     conn = _db({0: bays})
-    for g, code in (("tap:touch:1_finger", "B"), ("tap:touch:2_fingers", "M2")):
+    for g, code in (("tap:touch:3_fingers", "B"), ("tap:touch:1_finger", "B")):
         conn.execute("INSERT INTO module_bindings (module_config_id,behavior,action_code) "
                      "VALUES (?,?,?)", (TOUCH, g, code))
     conn.commit()
@@ -379,11 +380,11 @@ def test_a_profile_already_on_the_board_is_still_written_when_it_differs():
     assert slot in d.modules, "a kept slot that differs must still be written"
     from openflow_backend.device import module_fields as MF
     fields = MF.mouse_button_fields("TOUCH")
-    assert d.modules[slot][fields["tap:touch:1_finger"]] == (
+    assert d.modules[slot][fields["tap:touch:3_fingers"]] == (
         R.KEY_PRESS, R.encode_keypress("key", "B")), "the key must reach the field"
-    assert d.modules[slot][fields["tap:touch:2_fingers"]] == (R.NONE_BEH, b""), \
-        "M2 is the firmware default: written empty, not as mask 2"
-    print(f"  kept slot {slot} rewritten: tap -> B explicitly, two-finger tap -> empty (default)")
+    assert d.modules[slot][fields["tap:touch:1_finger"]] == (R.NONE_BEH, b""), \
+        "the one-finger tap is locked to the firmware: written empty, whatever the row says"
+    print(f"  kept slot {slot} rewritten: three-finger tap -> B explicitly, one-finger tap -> empty (locked)")
 
 
 def test_a_kept_touch_at_its_firmware_defaults_sends_nothing():

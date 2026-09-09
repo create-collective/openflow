@@ -914,7 +914,13 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
         default = module_fields.firmware_default(module_type, gesture)
         if default is not None and device is None:
             device, row["firmwareDefault"] = default, True
-        same = _same_action(device, app) or (row.get("firmwareDefault", False) and not app)
+        if module_fields.gesture_locked(module_type, gesture):
+            # Locked: the field is always written empty and the editor offers no control, so
+            # whatever an old row holds is not drift the user can act on.
+            row["locked"] = True
+            same = True
+        else:
+            same = _same_action(device, app) or (row.get("firmwareDefault", False) and not app)
         differs += 0 if same else 1
         gestures.append({**row, "device": device, "app": app, "differs": not same})
 
@@ -954,7 +960,11 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
                 # device inverts it). See module_fields.FIRMWARE_DEFAULTS.
                 device = module_fields.split_pair(fw)[0 if sign == "-" else 1]
                 row["firmwareDefault"] = True
-            same = _same_action(device, app)
+            if module_fields.gesture_locked(module_type, gesture):
+                row["locked"] = True
+                same = True
+            else:
+                same = _same_action(device, app)
             differs += 0 if same else 1
             gestures.append({**row, "device": device, "app": app, "differs": not same})
     return gestures, differs

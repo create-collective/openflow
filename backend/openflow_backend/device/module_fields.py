@@ -200,15 +200,34 @@ def firmware_default(module_type: str, gesture: str):
     return FIRMWARE_DEFAULTS.get((module_type or "").upper(), {}).get(gesture)
 
 
+# The firmware-driven gestures are LOCKED, as NayaFlow's own editor locks them: the field is
+# always written empty, the editor shows the firmware's behaviour and offers no control, and the
+# compare never counts them as drift. Whether the Touch's firmware would honour a key written
+# into 0x0b / 0x05-0x08 is untested (tools/touch_one_finger_probe.py is the experiment); until
+# it is, "put something else there" is a guess with the cursor as the stake. Decided 2026-09-09.
+FIRMWARE_LOCKED = {t: set(g) for t, g in FIRMWARE_DEFAULTS.items()}
+LOCKED_REASON = "Driven by the module firmware; NayaFlow locks it too."
+
+
+def gesture_locked(module_type: str, gesture: str) -> bool:
+    return gesture in FIRMWARE_LOCKED.get((module_type or "").upper(), set())
+
+
 # Which modules show a split checkbox on their axis rows.
 #
 # Track: one surface drives all three axes, so "which way did I move" is the whole question.
 # Tune: its 1-finger swipes are the only motion on that module not already split -- the 2- and
 # 3-finger gestures ship as separate swipe_up/down/left/right bindings.
+# Touch: its 2-finger scroll axes are two device fields each (0x0d/0x0e, 0x0f/0x10), the same
+# shape the Tune splits, so "two fingers up -> one key, two fingers down -> another" is exactly
+# a split. It was excluded here as "no gain" because the Touch already separates 1-finger from
+# 2-finger motion; that reasoning missed per-direction binding altogether (2026-09-09).
 #
-# Touch is excluded on merit: it already names 1-finger and 2-finger motion as separate
-# gestures, so a split there would show two horizontals and two verticals for no gain.
-SPLITTABLE_TYPES = {"TRACK", "TUNE"}
+# The Touch's 1-finger axes are NOT splittable: the module firmware drives the cursor while
+# those fields are empty (FIRMWARE_DEFAULTS), NayaFlow's own editor locks them, and whether the
+# firmware honours a key written there is untested.
+SPLITTABLE_TYPES = {"TRACK", "TUNE", "TOUCH"}
+UNSPLITTABLE_AXES = {"TOUCH": {"vertical:touch:1_finger", "horizontal:touch:1_finger"}}
 
 # Rendering order: the order the module is actually used in, not alphabetical.
 AXIS_ORDER = ["vertical", "horizontal", "rotate"]
@@ -216,13 +235,15 @@ AXIS_ORDER = ["vertical", "horizontal", "rotate"]
 
 def splittable_axes(module_type: str) -> dict:
     """Axis gestures the UI offers a per-direction control for, in display order."""
-    if (module_type or "").upper() not in SPLITTABLE_TYPES:
+    t = (module_type or "").upper()
+    if t not in SPLITTABLE_TYPES:
         return {}
     halves = axis_halves(module_type)
+    locked = UNSPLITTABLE_AXES.get(t, set())
     def rank(g):
         head = g.split(":")[0]
         return AXIS_ORDER.index(head) if head in AXIS_ORDER else len(AXIS_ORDER)
-    return {g: halves[g] for g in sorted(halves, key=rank)}
+    return {g: halves[g] for g in sorted(halves, key=rank) if g not in locked}
 
 
 def axis_halves(module_type: str) -> dict:
