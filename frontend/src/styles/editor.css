@@ -1615,7 +1615,20 @@
 .layer-note-x:hover { color: var(--text); }
 
 /* Layer rows can be dragged to reorder. */
-.layer-row[draggable="true"] { cursor: grab; }
+/* The grip is the only drag source; see LayerList. It needs a real hit area, so it is padded
+   rather than sized by the glyph alone. */
+.layer-grip {
+  cursor: grab;
+  padding: 0 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1;
+  user-select: none;
+  flex: 0 0 auto;
+}
+
+.layer-grip:active { cursor: grabbing; }
+.layer-row:hover .layer-grip { color: var(--text); }
 .layer-row.dragging { opacity: 0.45; }
 .layer-row.dragover {
   box-shadow: inset 0 2px 0 0 var(--accent);

@@ -35,6 +35,19 @@ export default function LayerList({
   const [dragId, setDragId] = useState(null);
   const [dragOver, setDragOver] = useState(null);
 
+  // Belt and braces: if a drag ends anywhere at all -- including a cancel, or a drop on nothing
+  // -- clear the row state. The lockup reports were about Chrome holding a session, and while
+  // this cannot un-stick the browser it guarantees OUR state never lingers to make it worse.
+  useEffect(() => {
+    function clear() { setDragId(null); setDragOver(null); }
+    window.addEventListener("dragend", clear);
+    window.addEventListener("drop", clear);
+    return () => {
+      window.removeEventListener("dragend", clear);
+      window.removeEventListener("drop", clear);
+    };
+  }, []);
+
   useEffect(() => {
     function onDoc(e) {
       if (rootRef.current && !rootRef.current.contains(e.target)) {
@@ -83,7 +96,6 @@ export default function LayerList({
         <div key={l.id}
              className={"layer-row" + (l.id === activeLayerId ? " active" : "")
                + (dragId === l.id ? " dragging" : "") + (dragOver === l.id ? " dragover" : "")}
-             draggable={!renaming}
              onDragStart={(e) => {
                setDragId(l.id);
                e.dataTransfer.effectAllowed = "move";
@@ -118,6 +130,26 @@ export default function LayerList({
                  setDragId(null);
                }
              }}>
+          {/* THE DRAG SOURCE IS THIS HANDLE, not the row.
+              A <button> blocks drag initiation in Chrome, and the row is almost entirely covered
+              by the layer button -- so making the row draggable never worked from anywhere the
+              user actually clicks. An earlier attempt at this bug then added draggable={false} to
+              that button, which removed the last part of the row that could start a drag: hence
+              "not draggable at all". A handle with no interactive children cannot have either
+              problem. */}
+          <span
+            className="layer-grip"
+            draggable={!renaming}
+            title="Drag to reorder"
+            aria-label="Drag to reorder"
+            onDragStart={(e) => {
+              setDragId(l.id);
+              e.dataTransfer.effectAllowed = "move";
+              try { e.dataTransfer.setData("text/plain", l.id); } catch { /* older browsers */ }
+            }}
+            onDragEnd={() => { setDragId(null); setDragOver(null); }}
+          >⠿</span>
+
           {renaming === l.id ? (
             <input
               className="layer-rename"

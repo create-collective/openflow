@@ -380,3 +380,39 @@ img:not([draggable="true"]) {
   -webkit-user-drag: none;
   user-drag: none;
 }
+
+/* Render-crash panel (components/ErrorBoundary.jsx). Deliberately plain and loud: the failure
+   it replaces was an app that silently stopped responding to clicks. */
+.crash {
+  max-width: 720px;
+  margin: 48px auto;
+  padding: 24px 28px;
+  border: 1px solid var(--err, #d05);
+  border-radius: var(--radius-sm);
+  background: var(--neutral6);
+}
+
+.crash-title { margin: 0 0 6px; color: var(--err, #d05); }
+.crash-lede { margin: 0 0 14px; color: var(--text-muted); }
+
+.crash-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: var(--neutral10);
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+}
+
+.crash-hint { margin: 0 0 16px; color: var(--text-muted); font-size: 12px; }
+.crash-hint kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--neutral10);
+  font-size: 11px;
+}
+
+.crash-stack { margin-top: 16px; color: var(--text-muted); }
+.crash-stack pre { overflow-x: auto; font-size: 11px; }

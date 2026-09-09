@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { hydrateDeviceState, invalidateDeviceState } from "./lib/deviceState";
 import { api } from "./lib/api";
 import { useSSE } from "./lib/useSSE";
@@ -68,11 +69,21 @@ function Sidebar() {
   );
 }
 
+function RouteBoundary({ children }) {
+  const { pathname } = useLocation();
+  return <ErrorBoundary key={pathname}>{children}</ErrorBoundary>;
+}
+
+
 export default function App() {
   return (
     <div className="app">
       <Sidebar />
       <main className="main">
+        {/* Keyed on the path so navigating away from a crashed page RESETS the boundary --
+            otherwise one bad page would keep showing its error after you had moved on. The
+            sidebar stays mounted outside it, so there is always a way out. */}
+        <RouteBoundary>
         <Routes>
           <Route path="/" element={<Hub />} />
           <Route path="/device-management" element={<DeviceManagement />} />
@@ -85,6 +96,7 @@ export default function App() {
           <Route path="/bug-report" element={<Placeholder title="Bug Report" phase="Phase 1" note="Diagnostics report export." />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </RouteBoundary>
       </main>
     </div>
   );
