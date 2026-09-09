@@ -1629,7 +1629,9 @@
 
 .layer-grip:active { cursor: grabbing; }
 .layer-row:hover .layer-grip { color: var(--text); }
-.layer-row.dragging { opacity: 0.45; }
+/* No `.dragging` rule any more, deliberately. Restyling the row that a gesture started on is
+   what cancelled the native drag; the target row's `.dragover` highlight is enough feedback and
+   it never touches the element being dragged. */
 .layer-row.dragover {
   box-shadow: inset 0 2px 0 0 var(--accent);
 }

@@ -32,19 +32,34 @@ export default function LayerList({
   const [importOpen, setImportOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const rootRef = useRef(null);
-  const [dragId, setDragId] = useState(null);
+  // Which row the gesture picked up, held in a REF so that starting a drag re-renders nothing.
+  // That mattered enormously with native HTML5 drag -- any re-render during dragstart restyles
+  // the source and CANCELS the drag -- and it is still the right shape here: a pointer gesture
+  // should not repaint the list on every move.
+  const dragIdRef = useRef(null);
+  const rowRefs = useRef({});
+
+  /** Which layer row is under this viewport Y? Measured live, so it stays correct if the list
+      scrolls mid-gesture. */
+  function rowAt(clientY) {
+    for (const [id, el] of Object.entries(rowRefs.current)) {
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (clientY >= r.top && clientY <= r.bottom) return id;
+    }
+    return null;
+  }
   const [dragOver, setDragOver] = useState(null);
 
-  // Belt and braces: if a drag ends anywhere at all -- including a cancel, or a drop on nothing
-  // -- clear the row state. The lockup reports were about Chrome holding a session, and while
-  // this cannot un-stick the browser it guarantees OUR state never lingers to make it worse.
+  // A pointer gesture cannot be left hanging by the browser the way a drag session could, but a
+  // pointerup that lands outside the window still needs to clear our state.
   useEffect(() => {
-    function clear() { setDragId(null); setDragOver(null); }
-    window.addEventListener("dragend", clear);
-    window.addEventListener("drop", clear);
+    function clear() { dragIdRef.current = null; setDragOver(null); }
+    window.addEventListener("pointerup", clear);
+    window.addEventListener("pointercancel", clear);
     return () => {
-      window.removeEventListener("dragend", clear);
-      window.removeEventListener("drop", clear);
+      window.removeEventListener("pointerup", clear);
+      window.removeEventListener("pointercancel", clear);
     };
   }, []);
 
@@ -94,60 +109,47 @@ export default function LayerList({
       )}
       {layers.map((l, i) => (
         <div key={l.id}
+             ref={(el) => { if (el) rowRefs.current[l.id] = el; else delete rowRefs.current[l.id]; }}
              className={"layer-row" + (l.id === activeLayerId ? " active" : "")
-               + (dragId === l.id ? " dragging" : "") + (dragOver === l.id ? " dragover" : "")}
-             onDragStart={(e) => {
-               setDragId(l.id);
-               e.dataTransfer.effectAllowed = "move";
-               // REQUIRED, not decoration. A dragstart that sets no data leaves Chrome holding a
-               // drag session with nothing to transfer; when it cannot resolve a drop it never
-               // fires dragend, and from then on the whole PAGE stops receiving clicks. That is
-               // the "everything locks up" report, and it is the second time native HTML5 drag
-               // has done this to us -- see docs/work-queue.md on the image-drag lockup.
-               try { e.dataTransfer.setData("text/plain", l.id); } catch { /* older browsers */ }
-             }}
-             onDragEnd={() => { setDragId(null); setDragOver(null); }}
-             onDragOver={(e) => {
-               e.preventDefault();
-               // Pairs with effectAllowed above. Without it Chrome can decline the drop, which
-               // is the state that hangs the session.
-               e.dataTransfer.dropEffect = "move";
-               if (dragId && dragId !== l.id) setDragOver(l.id);
-             }}
-             onDragLeave={() => setDragOver((d) => (d === l.id ? null : d))}
-             onDrop={(e) => {
-               e.preventDefault();
-               // finally, so a throw from onReorder cannot strand the row mid-drag.
-               try {
-                 if (!dragId || dragId === l.id) return;
-                 // Rebuild the whole order and hand it over -- the backend takes a complete list
-                 // rather than a move, so a dropped frame can never leave layers half-ordered.
-                 const ids = layers.map((x) => x.id).filter((x) => x !== dragId);
-                 ids.splice(ids.indexOf(l.id), 0, dragId);
-                 onReorder(ids);
-               } finally {
-                 setDragOver(null);
-                 setDragId(null);
-               }
-             }}>
-          {/* THE DRAG SOURCE IS THIS HANDLE, not the row.
-              A <button> blocks drag initiation in Chrome, and the row is almost entirely covered
-              by the layer button -- so making the row draggable never worked from anywhere the
-              user actually clicks. An earlier attempt at this bug then added draggable={false} to
-              that button, which removed the last part of the row that could start a drag: hence
-              "not draggable at all". A handle with no interactive children cannot have either
-              problem. */}
+               + (dragOver === l.id ? " dragover" : "")}>
+          {/* POINTER EVENTS, NOT HTML5 DRAG.
+              Native drag failed four different ways here: a <button> covering the row blocks
+              drag initiation; any re-render during dragstart restyles the source and CANCELS
+              the drag; a leftover duplicate handler on the row defeated the fix for that; and
+              once a drag is cancelled mid-initiation Chrome holds a session that never ends,
+              which reads to the user as the whole page freezing.
+              Pointer events have none of that: nothing is snapshotted, there is no session to
+              wedge, and the browser cannot cancel anything behind our back. Pointer capture
+              means we keep receiving moves even outside the element. */}
           <span
             className="layer-grip"
-            draggable={!renaming}
             title="Drag to reorder"
             aria-label="Drag to reorder"
-            onDragStart={(e) => {
-              setDragId(l.id);
-              e.dataTransfer.effectAllowed = "move";
-              try { e.dataTransfer.setData("text/plain", l.id); } catch { /* older browsers */ }
+            onPointerDown={(e) => {
+              if (renaming) return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              dragIdRef.current = l.id;
             }}
-            onDragEnd={() => { setDragId(null); setDragOver(null); }}
+            onPointerMove={(e) => {
+              if (!dragIdRef.current) return;
+              const over = rowAt(e.clientY);
+              setDragOver(over && over !== dragIdRef.current ? over : null);
+            }}
+            onPointerUp={(e) => {
+              const dragId = dragIdRef.current;
+              dragIdRef.current = null;
+              try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already gone */ }
+              const over = rowAt(e.clientY);
+              setDragOver(null);
+              if (!dragId || !over || over === dragId) return;
+              // Rebuild the whole order and hand it over -- the backend takes a complete list
+              // rather than a move, so an interrupted gesture can never half-order the layers.
+              const ids = layers.map((x) => x.id).filter((x) => x !== dragId);
+              ids.splice(ids.indexOf(over), 0, dragId);
+              onReorder(ids);
+            }}
+            onPointerCancel={() => { dragIdRef.current = null; setDragOver(null); }}
           >⠿</span>
 
           {renaming === l.id ? (
