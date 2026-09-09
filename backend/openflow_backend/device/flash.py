@@ -68,15 +68,15 @@ KEY_POSITIONS = 97
 # The left block starts inside the key range (88-96), which is why key colours were already
 # reaching the left module while the right -- with no key position at all -- kept whatever the
 # last application wrote.
-# UNCONFIRMED AT THE BOUNDARY. What was measured is narrower than what is written here: a Tune on
-# the left lit 88-96, a Track on the right lit 112-126. The split at 112 is INFERRED by symmetry,
-# and 97-111 lit nothing on that configuration -- which is equally consistent with it being the
-# tail of the left block or the head of the right one.
+# A bay reserves a block sized for the LARGEST module type, and whatever is docked lights as many
+# LEDs as it has. A Tune is a ring (~9, seen at 88-96); a Track and a Touch are a single dot, so
+# they light through ONE index of their block. Painting the whole block is therefore correct
+# whatever is docked, and harmless for the indices nothing is wired to.
 #
-# A Touch docked on the right (2026-09-09) shows the right module blinking GREEN mid-animation
-# while the left module is set to green, so the right block very likely starts before 112 and we
-# are painting part of it with the left colour. See docs/plan-status.md for the banded experiment
-# that settles it. Do not adjust these by guesswork -- guessing is what produced the error.
+# The exact boundary between the two blocks is still inferred rather than measured -- 97-111 lit
+# nothing with a Tune on the left, which is equally consistent with the tail of the left block or
+# the head of the right. It does not matter while we paint each block a single colour. It would
+# matter if per-LED module colour ever became a feature.
 MODULE_LED_BLOCKS = {"left": range(88, 112), "right": range(112, 136)}
 SYS_SET_TIMEOUTS = 0x100A
 
