@@ -24,7 +24,10 @@ sys.path.insert(0, str(_BACKEND / "openflow_backend" / "_vendor"))
 from openflow_backend.db import userdata as U  # noqa: E402
 from openflow_backend.device import module_fields as mf  # noqa: E402
 
-_ENUM = _BACKEND.parents[1] / "docs" / "reference" / "naya-gesture-enum.json"
+# Walked for, not indexed: NayaOS nests this tree under openflow/ while the standalone
+# repository has it at the root.
+_ENUM = next(d / "docs" / "reference" / "naya-gesture-enum.json"
+             for d in _BACKEND.parents if (d / "docs" / "reference").is_dir())
 
 
 def test_slots_are_real_nayaflow_gestures():

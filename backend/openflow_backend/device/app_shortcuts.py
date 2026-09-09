@@ -16,7 +16,20 @@ from functools import lru_cache
 from pathlib import Path
 
 # docs/reference/ lives at the repo root, four levels up from this file.
-_FILE = (Path(__file__).resolve().parents[4] / "docs" / "reference" / "app-shortcuts.json")
+def _reference_dir() -> Path:
+    """Where docs/reference lives.
+
+    Walked for rather than reached by a fixed parent index: NayaOS nests this tree under
+    openflow/ while the standalone repository has it at the root, so `parents[4]` is right in one
+    layout and points above the drive root in the other."""
+    for p in Path(__file__).resolve().parents:
+        cand = p / "docs" / "reference"
+        if cand.is_dir():
+            return cand
+    return Path(__file__).resolve().parents[4] / "docs" / "reference"
+
+
+_FILE = _reference_dir() / "app-shortcuts.json"
 
 PLATFORMS = ("windows", "mac")
 

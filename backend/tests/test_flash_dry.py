@@ -12,7 +12,10 @@ import sys
 from pathlib import Path
 
 _BACKEND = Path(__file__).resolve().parents[1]
-_REPO = _BACKEND.parents[1]
+# Walk up to whichever directory holds the shared device captures. NayaOS nests this tree
+# under openflow/ while this repository has it at the root, so a hardcoded parent index
+# only works in one of them.
+_REPO = next(p for p in _BACKEND.parents if (p / "device").is_dir())
 sys.path.insert(0, str(_BACKEND))
 sys.path.insert(0, str(_BACKEND / "openflow_backend" / "_vendor"))
 

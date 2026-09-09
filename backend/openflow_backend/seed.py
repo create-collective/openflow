@@ -16,10 +16,19 @@ from pathlib import Path
 
 from .config import db_path
 
-# Default: the recovered snapshot in the NayaOS repo (dev convenience only).
-DEFAULT_SNAPSHOT = Path(
-    r"D:\NayaOS\device\userdata-snapshot\user-data-2026-08-28.db"
-)
+def _default_snapshot() -> Path | None:
+    """The captured snapshot that ships with this repository, wherever it is checked out.
+
+    This was an absolute path into one developer's machine, so the script only ever worked
+    there. Walked for instead, so a fresh clone finds its own copy."""
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "device" / "userdata-snapshot" / "user-data-2026-08-28.db"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+DEFAULT_SNAPSHOT = _default_snapshot()
 
 
 def seed(source: Path, force: bool = False) -> Path:
@@ -36,6 +45,8 @@ def main() -> None:
     args = [a for a in sys.argv[1:] if a != "--force"]
     force = "--force" in sys.argv
     source = Path(args[0]) if args else DEFAULT_SNAPSHOT
+    if source is None:
+        raise SystemExit("no snapshot found in this checkout; pass a path to a user-data.db")
     dest = seed(source, force=force)
     print(f"Seeded {dest} from {source}")
 

@@ -17,8 +17,20 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-_DICT = (Path(__file__).resolve().parents[3].parent / "docs" / "reference"
-         / "shortcut-dictionary.json")
+def _reference_dir() -> Path:
+    """Where docs/reference lives.
+
+    Walked for rather than reached by a fixed parent index: NayaOS nests this tree under
+    openflow/ while the standalone repository has it at the root, so `parents[4]` is right in one
+    layout and points above the drive root in the other."""
+    for p in Path(__file__).resolve().parents:
+        cand = p / "docs" / "reference"
+        if cand.is_dir():
+            return cand
+    return Path(__file__).resolve().parents[4] / "docs" / "reference"
+
+
+_DICT = _reference_dir() / "shortcut-dictionary.json"
 
 
 @lru_cache(maxsize=1)
