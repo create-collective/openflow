@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import BleSlots from "../components/BleSlots";
 
 // The page the nav calls "Information". It used to show none: three action buttons and a raw
 // JSON dump, with every action hardcoded to the left half.
@@ -257,6 +258,13 @@ export default function Troubleshooting() {
       )}
 
       <div className="info-halves">
+        <div className="card info-card">
+          <div className="info-card-head"><h3>Bluetooth slots</h3></div>
+          {/* Which of the five slots the keyboard sends to, and what each holds. Lives here
+              with the rest of the device's identity rather than under Settings, since it is a
+              state of the keyboard, not a preference of the app. */}
+          <BleSlots />
+        </div>
         <div className="card info-card">
           <div className="info-card-head"><h3>Software</h3></div>
           <KV k="OpenFlow" v={sys?.backendVersion} />

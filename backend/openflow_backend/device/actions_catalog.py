@@ -14,6 +14,9 @@ round-trips. Some actions are marked comingSoon (present for parity, not yet wir
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 # action_type -> ZMK behaviour (reference; device-constants.txt 226-233)
 ZMK_BEHAVIOUR = {
     "KEY_PRESS": "&kp", "MOD_TAP": "&mt", "TO_LAYER": "&to", "TOGGLE_LAYER": "&tog",
@@ -475,11 +478,62 @@ def _tabs():
     ]
 
 
+# NayaFlow's own label and tooltip for every key action it offers, scraped from
+# flow-bg-server.exe (tools/build_nayaflow_names.py -> nayaflow_names.json, 367 codes). These
+# are the names a Naya owner already knows, so they are what the palette shows as an action's
+# name and tooltip. Our terse `label` stays the keycap legend (a 44px cell), and our own
+# sentence-case `name`, where one was written, survives as `alias` so search still finds it.
+_NAMES_FILE = Path(__file__).with_name("nayaflow_names.json")
+
+
+def nayaflow_names() -> dict:
+    try:
+        return json.loads(_NAMES_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _describe(action: dict, names: dict) -> dict:
+    """One palette entry with NayaFlow's name and tooltip attached. Never drops a field."""
+    out = dict(action)
+    nf = names.get(action["code"])
+    if nf:
+        if nf.get("name") and nf["name"].strip().lower() != (action.get("name") or "").strip().lower():
+            if action.get("name") and action["name"] != action["label"]:
+                out["alias"] = action["name"]
+            out["name"] = nf["name"]
+        elif not out.get("name"):
+            out["name"] = nf.get("name") or action["label"]
+        if nf.get("tooltip"):
+            out["tooltip"] = nf["tooltip"]
+        if nf.get("category"):
+            out["nayaflowCategory"] = nf["category"]
+    elif not out.get("name"):
+        out["name"] = action["label"]
+    return out
+
+
 def get_catalog() -> dict:
     from . import shortcuts as _sc
 
+    names = nayaflow_names()
+    tabs = []
+    flat: dict = {}
+    for t in _tabs():
+        cats = []
+        for c in t.get("categories") or []:
+            actions = [_describe(a, names) for a in c.get("actions") or []]
+            for a in actions:
+                flat.setdefault(a["code"], {k: a[k] for k in ("label", "name", "tooltip", "alias")
+                                            if k in a})
+            cats.append({**c, "actions": actions})
+        tabs.append({**t, "categories": cats})
+
     return {
-        "tabs": _tabs(),
+        "tabs": tabs,
+        # code -> {label, name, tooltip, alias} for every palette entry, so a bound key, a
+        # gesture row or a search result can be described without walking the tabs.
+        "names": flat,
         "behaviorSlots": BEHAVIOR_SLOTS,
         "layerActionTypes": [
             {"frontendType": k, **v} for k, v in LAYER_ACTION_TYPES.items()

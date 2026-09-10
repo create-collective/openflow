@@ -2236,3 +2236,41 @@
 .flash-dropped ul { margin: 6px 0 0; padding-left: 18px; }
 .flash-dropped li { margin: 3px 0; line-height: 1.5; }
 .flash-dropped code { font-family: var(--font-mono); color: var(--text); }
+
+
+/* Palette search: one box over every tab. Results are rows, not keycaps, because the point
+   of a result is its name and what it does, which a 44px cell cannot show. */
+.palette-search {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 6px 0 4px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--panel-2, var(--panel));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.palette-search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.palette-results { display: flex; flex-direction: column; gap: 4px; }
+.palette-result {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  text-align: left;
+  padding: 6px 10px;
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2, var(--panel));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.palette-result:hover:not(:disabled) { border-color: var(--accent); }
+.palette-result:disabled { opacity: 0.5; cursor: default; }
+.palette-result-name { font-weight: 600; }
+.palette-result-where { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.palette-result-tip { grid-column: 1 / -1; color: var(--text-dim); font-size: 12px; }
+.skp-act-name { color: var(--text-dim); font-weight: 400; font-size: 12px; }

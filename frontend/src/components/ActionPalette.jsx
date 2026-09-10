@@ -59,6 +59,7 @@ export default function ActionPalette({
   className = "",
 }) {
   const [tabId, setTabId] = useState(defaultTab);
+  const [query, setQuery] = useState("");
 
   // Tab list and per-tab filtering, recomputed only when the inputs actually change.
   const tabs = useMemo(() => {
@@ -102,8 +103,45 @@ export default function ActionPalette({
     return all.slice().sort((a, b) => rank(a.id) - rank(b.id));
   }, [catalog, context, tabIds, filter]);
 
+  // One search over every tab at once: code, keycap legend, NayaFlow's name, our alias and
+  // the tooltip, plus the 5,000-odd application shortcuts by name and chord. The names are
+  // the key -- "wireless" finds BT_OUT, "brightness" finds the LED keys, "paste" finds every
+  // app's paste chord -- which is why this waited on the names work.
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!catalog || q.length < 2) return null;
+    const hit = (...fields) => fields.some((f) => f && String(f).toLowerCase().includes(q));
+    const out = [];
+    for (const t of tabs) {
+      for (const c of t.categories || []) {
+        for (const a of c.actions || []) {
+          if (a.comingSoon) continue;
+          if (hit(a.code, a.label, a.name, a.alias, a.tooltip)) {
+            out.push({ key: `${t.id}/${a.code}`, tab: t, cat: c.name, action: a,
+                       pick: { actionCode: a.code, actionType: a.actionType } });
+          }
+          if (out.length >= 80) return out;
+        }
+      }
+    }
+    for (const [code, sc] of Object.entries(catalog.shortcuts || {})) {
+      if (hit(code, sc.name, sc.chord, sc.group)) {
+        out.push({ key: `apps/${code}`, tab: { id: "apps", title: "Application shortcuts" },
+                   cat: sc.group || "Shortcut", action: { code, label: sc.name, name: sc.name, tooltip: sc.chord },
+                   pick: { actionCode: sc.chord || code,
+                           actionType: (sc.chord || code).includes(" + ") ? "shortcut_alias" : "key" } });
+      }
+      if (out.length >= 80) break;
+    }
+    return out;
+  }, [catalog, tabs, query]);
+
   if (!catalog || !tabs.length) return null;
   const tab = tabs.find((t) => t.id === tabId) || tabs[0];
+  // What a hover says about an action: NayaFlow's name, its tooltip, then the code. Every
+  // line is something a person can act on; the code alone ("BT_OUT") told them nothing.
+  const describe = (a) => [a.name || a.label, a.tooltip, a.alias && a.alias !== a.name ? `also: ${a.alias}` : null, `(${a.code})`]
+    .filter(Boolean).join("\n");
 
   return (
     <div className={"palette" + (className ? " " + className : "")}>
@@ -122,12 +160,43 @@ export default function ActionPalette({
         ))}
       </div>
 
+      <input
+        className="palette-search"
+        type="search"
+        value={query}
+        placeholder="Search every action — e.g. wireless, brightness, paste"
+        onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search all actions"
+      />
+
       <div className="palette-body">
         {disabled && !["keyboard", "apps", "mouse"].includes(tab?.id) && (
           <div className="palette-disabled">{disabledHint}</div>
         )}
 
-        {tab?.id === "mouse" ? (
+        {results ? (
+          <div className="palette-cat">
+            <div className="palette-cat-title">
+              Results <span className="palette-count">{results.length}{results.length >= 80 ? "+" : ""}</span>
+            </div>
+            {results.length === 0 && <div className="palette-disabled">Nothing matches “{query}”.</div>}
+            <div className="palette-results">
+              {results.map((r) => (
+                <button
+                  key={r.key}
+                  className="palette-result"
+                  disabled={disabled}
+                  title={describe(r.action)}
+                  onClick={() => onPick(r.pick)}
+                >
+                  <span className="palette-result-name">{r.action.name || r.action.label}</span>
+                  <span className="palette-result-where">{r.tab.title || r.tab.id} · {r.cat}</span>
+                  {r.action.tooltip && <span className="palette-result-tip">{r.action.tooltip}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : tab?.id === "mouse" ? (
           // Motion pairs are axis bindings; a key position has no axis, so they are offered on
           // modules only. Buttons work in both contexts -- measured 2026-09-07, see the mouse
           // tab's note in device/actions_catalog.py.
@@ -222,7 +291,7 @@ export default function ActionPalette({
                       key={a.code + "-" + i}
                       className={"palette-key" + (a.comingSoon ? " soon" : "")}
                       disabled={disabled || a.comingSoon}
-                      title={tab.id === "shortcuts" ? `${a.name || a.label}  (${a.code})` : (a.comingSoon ? `${a.label} (coming soon)` : `${a.name || a.label} (${a.code})`)}
+                      title={a.comingSoon ? `${a.name || a.label} (coming soon)` : describe(a)}
                       onClick={() => onPick({ actionCode: a.code, actionType: a.actionType })}
                     >
                       {tab.id === "shortcuts" ? formatCombo(a.code) : a.label}

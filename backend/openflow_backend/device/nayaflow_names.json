@@ -1,0 +1,1837 @@
+{
+ "A": {
+  "name": "A",
+  "tooltip": "A",
+  "category": "Basic / Letters"
+ },
+ "AMPERSAND": {
+  "name": "&",
+  "tooltip": "&",
+  "category": "Basic / Symbols"
+ },
+ "ASTERISK": {
+  "name": "*",
+  "tooltip": "*",
+  "category": "Basic / Symbols"
+ },
+ "AT_SIGN": {
+  "name": "@",
+  "tooltip": "@",
+  "category": "Basic / Symbols"
+ },
+ "B": {
+  "name": "B",
+  "tooltip": "B",
+  "category": "Basic / Letters"
+ },
+ "BACKSLASH": {
+  "name": "\\ and |",
+  "tooltip": "\\ and |",
+  "category": "Basic / Symbols"
+ },
+ "BACKSPACE": {
+  "name": "Backspace",
+  "tooltip": "Backspace",
+  "category": "Basic / Control"
+ },
+ "BT_CLEAR": {
+  "name": "Bluetooth Clear and Pair",
+  "tooltip": "Clear bluetooth device and start pairing mode for the selected bluetooth slot.",
+  "category": "Extended / Connection"
+ },
+ "BT_DEVICE_1": {
+  "name": "Select BT Device 1",
+  "tooltip": "Select bluetooth device 1.",
+  "category": "Extended / Connection"
+ },
+ "BT_DEVICE_2": {
+  "name": "Select BT Device 2",
+  "tooltip": "Select bluetooth device 2.",
+  "category": "Extended / Connection"
+ },
+ "BT_DEVICE_3": {
+  "name": "Select BT Device 3",
+  "tooltip": "Select bluetooth device 3.",
+  "category": "Extended / Connection"
+ },
+ "BT_DEVICE_4": {
+  "name": "Select BT Device 4",
+  "tooltip": "Select bluetooth device 4.",
+  "category": "Extended / Connection"
+ },
+ "BT_OUT": {
+  "name": "Connect via Wireless",
+  "tooltip": "Output to selected wireless device.",
+  "category": "Extended / Connection"
+ },
+ "C": {
+  "name": "C",
+  "tooltip": "C",
+  "category": "Basic / Letters"
+ },
+ "CAPSLOCK": {
+  "name": "Caps Lock",
+  "tooltip": "Caps Lock",
+  "category": "Extended / Locks"
+ },
+ "CARET": {
+  "name": "^",
+  "tooltip": "^",
+  "category": "Basic / Symbols"
+ },
+ "COLON": {
+  "name": ":",
+  "tooltip": ":",
+  "category": "Basic / Symbols"
+ },
+ "COMMA": {
+  "name": ", and <",
+  "tooltip": ", and <",
+  "category": "Basic / Symbols"
+ },
+ "C_BRIGHTNESS_DEC": {
+  "name": "Brightness Decrease",
+  "tooltip": "Decrease monitor brightness.",
+  "category": "Extended / System"
+ },
+ "C_BRIGHTNESS_INC": {
+  "name": "Brightness Increase",
+  "tooltip": "Increase monitor brightness.",
+  "category": "Extended / System"
+ },
+ "C_FAST_FORWARD": {
+  "name": "Fast Forward",
+  "tooltip": "Fast Forward",
+  "category": "Extended / System"
+ },
+ "C_MUTE": {
+  "name": "Mute",
+  "tooltip": "Mute audio.",
+  "category": "Extended / System"
+ },
+ "C_NEXT": {
+  "name": "Next Track",
+  "tooltip": "Next Track",
+  "category": "Extended / System"
+ },
+ "C_PLAY_PAUSE": {
+  "name": "Play / Pause",
+  "tooltip": "Play/Pause",
+  "category": "Extended / System"
+ },
+ "C_POWER": {
+  "name": "Power Button",
+  "tooltip": "Power Button.",
+  "category": "Extended / System"
+ },
+ "C_PREVIOUS": {
+  "name": "Previous Track",
+  "tooltip": "Previous Track",
+  "category": "Extended / System"
+ },
+ "C_REWIND": {
+  "name": "Rewind",
+  "tooltip": "Rewind",
+  "category": "Extended / System"
+ },
+ "C_VOL_DOWN": {
+  "name": "Volume Down",
+  "tooltip": "Decrease volume.",
+  "category": "Extended / System"
+ },
+ "C_VOL_UP": {
+  "name": "Volume Up",
+  "tooltip": "Increase volume",
+  "category": "Extended / System"
+ },
+ "D": {
+  "name": "D",
+  "tooltip": "D",
+  "category": "Basic / Letters"
+ },
+ "DELETE": {
+  "name": "Delete",
+  "tooltip": "Delete",
+  "category": "Basic / Control"
+ },
+ "DISABLE": {
+  "name": "Disabled",
+  "tooltip": "Key is disabled.",
+  "category": "Extended / Empty"
+ },
+ "DOLLAR": {
+  "name": "$",
+  "tooltip": "$",
+  "category": "Basic / Symbols"
+ },
+ "DOUBLE_QUOTES": {
+  "name": "“",
+  "tooltip": "“",
+  "category": "Basic / Symbols"
+ },
+ "DOWN": {
+  "name": "Down Arrow",
+  "tooltip": "Down Arrow Key",
+  "category": "Extended / Navigation"
+ },
+ "E": {
+  "name": "E",
+  "tooltip": "E",
+  "category": "Basic / Letters"
+ },
+ "END": {
+  "name": "End",
+  "tooltip": "End",
+  "category": "Extended / Navigation"
+ },
+ "EQUAL": {
+  "name": "= and +",
+  "tooltip": "= and +",
+  "category": "Basic / Symbols"
+ },
+ "ESC": {
+  "name": "Escape",
+  "tooltip": "Escape",
+  "category": "Basic / Control"
+ },
+ "EXCLAMATION": {
+  "name": "!",
+  "tooltip": "!",
+  "category": "Basic / Symbols"
+ },
+ "F": {
+  "name": "F",
+  "tooltip": "F",
+  "category": "Basic / Letters"
+ },
+ "F1": {
+  "name": "F1",
+  "tooltip": "Function Key 1",
+  "category": "Extended / Function Keys"
+ },
+ "F10": {
+  "name": "F10",
+  "tooltip": "Function Key 10",
+  "category": "Extended / Function Keys"
+ },
+ "F11": {
+  "name": "F11",
+  "tooltip": "Function Key 11",
+  "category": "Extended / Function Keys"
+ },
+ "F12": {
+  "name": "F12",
+  "tooltip": "Function Key 12",
+  "category": "Extended / Function Keys"
+ },
+ "F13": {
+  "name": "F13",
+  "tooltip": "Function Key 13",
+  "category": "Extended / Function Keys"
+ },
+ "F14": {
+  "name": "F14",
+  "tooltip": "Function Key 14",
+  "category": "Extended / Function Keys"
+ },
+ "F15": {
+  "name": "F15",
+  "tooltip": "Function Key 15",
+  "category": "Extended / Function Keys"
+ },
+ "F16": {
+  "name": "F16",
+  "tooltip": "Function Key 16",
+  "category": "Extended / Function Keys"
+ },
+ "F17": {
+  "name": "F17",
+  "tooltip": "Function Key 17",
+  "category": "Extended / Function Keys"
+ },
+ "F18": {
+  "name": "F18",
+  "tooltip": "Function Key 18",
+  "category": "Extended / Function Keys"
+ },
+ "F19": {
+  "name": "F19",
+  "tooltip": "Function Key 19",
+  "category": "Extended / Function Keys"
+ },
+ "F2": {
+  "name": "F2",
+  "tooltip": "Function Key 2",
+  "category": "Extended / Function Keys"
+ },
+ "F20": {
+  "name": "F20",
+  "tooltip": "Function Key 20",
+  "category": "Extended / Function Keys"
+ },
+ "F21": {
+  "name": "F21",
+  "tooltip": "Function Key 21",
+  "category": "Extended / Function Keys"
+ },
+ "F22": {
+  "name": "F22",
+  "tooltip": "Function Key 22",
+  "category": "Extended / Function Keys"
+ },
+ "F23": {
+  "name": "F23",
+  "tooltip": "Function Key 23",
+  "category": "Extended / Function Keys"
+ },
+ "F24": {
+  "name": "F24",
+  "tooltip": "Function Key 24",
+  "category": "Extended / Function Keys"
+ },
+ "F3": {
+  "name": "F3",
+  "tooltip": "Function Key 3",
+  "category": "Extended / Function Keys"
+ },
+ "F4": {
+  "name": "F4",
+  "tooltip": "Function Key 4",
+  "category": "Extended / Function Keys"
+ },
+ "F5": {
+  "name": "F5",
+  "tooltip": "Function Key 5",
+  "category": "Extended / Function Keys"
+ },
+ "F6": {
+  "name": "F6",
+  "tooltip": "Function Key 6",
+  "category": "Extended / Function Keys"
+ },
+ "F7": {
+  "name": "F7",
+  "tooltip": "Function Key 7",
+  "category": "Extended / Function Keys"
+ },
+ "F8": {
+  "name": "F8",
+  "tooltip": "Function Key 8",
+  "category": "Extended / Function Keys"
+ },
+ "F9": {
+  "name": "F9",
+  "tooltip": "Function Key 9",
+  "category": "Extended / Function Keys"
+ },
+ "G": {
+  "name": "G",
+  "tooltip": "G",
+  "category": "Basic / Letters"
+ },
+ "GRAVE": {
+  "name": "` and ~",
+  "tooltip": "` and ~",
+  "category": "Basic / Symbols"
+ },
+ "GREATER_THAN": {
+  "name": ">",
+  "tooltip": ">",
+  "category": "Basic / Symbols"
+ },
+ "H": {
+  "name": "H",
+  "tooltip": "H",
+  "category": "Basic / Letters"
+ },
+ "HASH": {
+  "name": "#",
+  "tooltip": "#",
+  "category": "Basic / Symbols"
+ },
+ "HOME": {
+  "name": "Home",
+  "tooltip": "Home",
+  "category": "Extended / Navigation"
+ },
+ "I": {
+  "name": "I",
+  "tooltip": "I",
+  "category": "Basic / Letters"
+ },
+ "INSERT": {
+  "name": "Insert",
+  "tooltip": "Insert",
+  "category": "Basic / Control"
+ },
+ "INT1": {
+  "name": "International 1",
+  "tooltip": "HID International 1 Key",
+  "category": "Extended / International"
+ },
+ "INT2": {
+  "name": "International 2",
+  "tooltip": "HID International 2 Key",
+  "category": "Extended / International"
+ },
+ "INT3": {
+  "name": "International 3",
+  "tooltip": "HID International 3 Key",
+  "category": "Extended / International"
+ },
+ "INT4": {
+  "name": "International 4",
+  "tooltip": "HID International 4 Key",
+  "category": "Extended / International"
+ },
+ "INT5": {
+  "name": "International 5",
+  "tooltip": "HID International 5 Key",
+  "category": "Extended / International"
+ },
+ "INT6": {
+  "name": "International 6",
+  "tooltip": "HID International 6 Key",
+  "category": "Extended / International"
+ },
+ "J": {
+  "name": "J",
+  "tooltip": "J",
+  "category": "Basic / Letters"
+ },
+ "K": {
+  "name": "K",
+  "tooltip": "K",
+  "category": "Basic / Letters"
+ },
+ "KP_DIVIDE": {
+  "name": "Keypad ÷",
+  "tooltip": "Keypad Divide",
+  "category": "Extended / Keypad"
+ },
+ "KP_DOT": {
+  "name": "Keypad ·",
+  "tooltip": "Keypad Dot",
+  "category": "Extended / Keypad"
+ },
+ "KP_MINUS": {
+  "name": "Keypad -",
+  "tooltip": "Keypad Minus",
+  "category": "Extended / Keypad"
+ },
+ "KP_MULTIPLY": {
+  "name": "Keypad ×",
+  "tooltip": "Keypad Multiply",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_0": {
+  "name": "Keypad 0",
+  "tooltip": "Keypad 0",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_1": {
+  "name": "Keypad 1",
+  "tooltip": "Keypad 1",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_2": {
+  "name": "Keypad 2",
+  "tooltip": "Keypad 2",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_3": {
+  "name": "Keypad 3",
+  "tooltip": "Keypad 3",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_4": {
+  "name": "Keypad 4",
+  "tooltip": "Keypad 4",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_5": {
+  "name": "Keypad 5",
+  "tooltip": "Keypad 5",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_6": {
+  "name": "Keypad 6",
+  "tooltip": "Keypad 6",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_7": {
+  "name": "Keypad 7",
+  "tooltip": "Keypad 7",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_8": {
+  "name": "Keypad 8",
+  "tooltip": "Keypad 8",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMBER_9": {
+  "name": "Keypad 9",
+  "tooltip": "Keypad 9",
+  "category": "Extended / Keypad"
+ },
+ "KP_NUMLOCK": {
+  "name": "Num Lock",
+  "tooltip": "Keypad Numlock",
+  "category": "Extended / Locks"
+ },
+ "KP_PLUS": {
+  "name": "Keypad +",
+  "tooltip": "Keypad Plus",
+  "category": "Extended / Keypad"
+ },
+ "K_APP": {
+  "name": "Application (Context Menu)",
+  "tooltip": "Menu",
+  "category": "Extended / Navigation"
+ },
+ "L": {
+  "name": "L",
+  "tooltip": "L",
+  "category": "Basic / Letters"
+ },
+ "LALT": {
+  "name": "Alt",
+  "tooltip": "Alt / Option",
+  "category": "Basic / Modifiers"
+ },
+ "LALT + A": {
+  "name": "Set focus to Suggested actions",
+  "tooltip": "Set focus to the first icon in the Suggested actions menu.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + CLICK": {
+  "name": "Insert Cursor",
+  "tooltip": "Insert cursor (may not work on some Linux distributions).",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LALT + DOWN": {
+  "name": "Move Line Down",
+  "tooltip": "Move line down.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LALT + ENTER": {
+  "name": "Display properties",
+  "tooltip": "Display properties for the selected item.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + ESC": {
+  "name": "Next window",
+  "tooltip": "Switch to next window.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + F12": {
+  "name": "Peek Definition",
+  "tooltip": "Peek Definition.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LALT + F4": {
+  "name": "Close active item",
+  "tooltip": "Close the active item, or exit the active app.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + F8": {
+  "name": "Show password",
+  "tooltip": "Show your password on the sign-in screen.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + LEFT": {
+  "name": "Go back",
+  "tooltip": "Go back.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + LGUI + ESC": {
+  "name": "Force Quit Application",
+  "tooltip": "Force Quit Application",
+  "category": "Integrations / MacOS"
+ },
+ "LALT + LGUI + F": {
+  "name": "Replace",
+  "tooltip": "Replace.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LALT + LGUI + H": {
+  "name": "Hide Other Apps",
+  "tooltip": "Hide all apps other than the front app.",
+  "category": "Integrations / MacOS"
+ },
+ "LALT + LGUI + M": {
+  "name": "Minimize All Windows of App",
+  "tooltip": "Minimize all windows of the front app.",
+  "category": "Integrations / MacOS"
+ },
+ "LALT + LGUI + S": {
+  "name": "Save All",
+  "tooltip": "Save All.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LALT + LGUI + SPACE": {
+  "name": "Spotlight From Finder",
+  "tooltip": "Open Spotlight From Finder",
+  "category": "Integrations / MacOS"
+ },
+ "LALT + LGUI + W": {
+  "name": "Close All Windows of Application",
+  "tooltip": "Close All Windows of Application",
+  "category": "Integrations / MacOS"
+ },
+ "LALT + LSHIFT + ESC": {
+  "name": "Previous window",
+  "tooltip": "Switch to previous window.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + LSHIFT + LGUI + NUMBER_4": {
+  "name": "Screenshot Cursor Clipboard",
+  "tooltip": "Screenshot Cursor Selection to Clipboard",
+  "category": "Integrations / MacOS"
+ },
+ "LALT + LSHIFT + LGUI + Q": {
+  "name": "Log Out Mac",
+  "tooltip": "Log Out Mac",
+  "category": "Integrations / MacOS"
+ },
+ "LALT + PG_DN": {
+  "name": "Move down one screen",
+  "tooltip": "Move down one screen.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + PG_UP": {
+  "name": "Move up one screen",
+  "tooltip": "Move up one screen.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + RIGHT": {
+  "name": "Go forward",
+  "tooltip": "Go forward.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + SPACE": {
+  "name": "Open context menu",
+  "tooltip": "Open the context menu for the active window.",
+  "category": "Integrations / Windows"
+ },
+ "LALT + UP": {
+  "name": "Move Line Up",
+  "tooltip": "Move line up.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LALT + Z": {
+  "name": "Toggle Word Wrap",
+  "tooltip": "Toggle word wrap.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LANG1": {
+  "name": "Language 1",
+  "tooltip": "HID Language 1 Key",
+  "category": "Extended / International"
+ },
+ "LANG2": {
+  "name": "Language 2",
+  "tooltip": "HID Language 2 Key",
+  "category": "Extended / International"
+ },
+ "LANG3": {
+  "name": "Language 3",
+  "tooltip": "HID Language 3 Key",
+  "category": "Extended / International"
+ },
+ "LANG4": {
+  "name": "Language 4",
+  "tooltip": "HID Language 4 Key",
+  "category": "Extended / International"
+ },
+ "LANG5": {
+  "name": "Language 5",
+  "tooltip": "HID Language 5 Key",
+  "category": "Extended / International"
+ },
+ "LANG6": {
+  "name": "Language 6",
+  "tooltip": "HID Language 6 Key",
+  "category": "Extended / International"
+ },
+ "LANG7": {
+  "name": "Language 7",
+  "tooltip": "HID Language 7 Key",
+  "category": "Extended / International"
+ },
+ "LANG8": {
+  "name": "Language 8",
+  "tooltip": "HID Language 8 Key",
+  "category": "Extended / International"
+ },
+ "LANG9": {
+  "name": "Language 9",
+  "tooltip": "HID Language 9 Key",
+  "category": "Extended / International"
+ },
+ "LCTRL": {
+  "name": "Control",
+  "tooltip": "Control",
+  "category": "Basic / Modifiers"
+ },
+ "LCTRL + A": {
+  "name": "Select all",
+  "tooltip": "Select all items in a document or window.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + B": {
+  "name": "Apply bold format",
+  "tooltip": "Apply the bold format to the selected text.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + BACKSPACE": {
+  "name": "Delete words to the left",
+  "tooltip": "Delete words to the left of the cursor.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + C": {
+  "name": "Copy to clipboard",
+  "tooltip": "Copy the selected text.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + DELETE": {
+  "name": "Delete words to the right",
+  "tooltip": "Delete words to the right of the cursor.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + DOWN": {
+  "name": "App Exposé",
+  "tooltip": "Show all windows of the front app.",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + END": {
+  "name": "Move to end of document",
+  "tooltip": "Move the cursor forward to the end of the document.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + F": {
+  "name": "Find text",
+  "tooltip": "Find text.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + F4": {
+  "name": "Close active document",
+  "tooltip": "Close the active document (in apps that are full-screen and let you have multiple documents open at the same time).",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + GRAVE": {
+  "name": "Open Terminal",
+  "tooltip": "Open new command prompt/terminal.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LCTRL + H": {
+  "name": "Find and replace text",
+  "tooltip": "Find and replace text.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + HOME": {
+  "name": "Move to beginning of document",
+  "tooltip": "Move the cursor backward to the beginning of the document.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + I": {
+  "name": "Apply italic format",
+  "tooltip": "Apply the italic format to the selected text.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + L": {
+  "name": "Select Current Line",
+  "tooltip": "Select current line.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LCTRL + LEFT": {
+  "name": "Switch to Previous Screen",
+  "tooltip": "Switch to Previous Screen",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + LGUI + F": {
+  "name": "Fullscreen",
+  "tooltip": "Fullscreen",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + LGUI + N": {
+  "name": "New Folder with Selection",
+  "tooltip": "New Folder with Selection",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + LGUI + SPACE": {
+  "name": "Character Viewer",
+  "tooltip": "Open Character Viewer",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + LSHIFT + C_POWER": {
+  "name": "Display Sleep",
+  "tooltip": "Display Sleep",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + LSHIFT + ESC": {
+  "name": "Open Task Manager",
+  "tooltip": "Open Task Manager.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + LSHIFT + GRAVE": {
+  "name": "Create Terminal",
+  "tooltip": "Create new terminal.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LCTRL + LSHIFT + M": {
+  "name": "Toggle Tab Moves Focus",
+  "tooltip": "Toggle Tab moves focus.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LCTRL + LSHIFT + TAB": {
+  "name": "Prev Tab",
+  "tooltip": "Switches focus to the previous tab in order.",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + LSHIFT + V": {
+  "name": "Paste as plain text",
+  "tooltip": "Paste as plain text.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + P": {
+  "name": "Go to File",
+  "tooltip": "Go to File.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LCTRL + RIGHT": {
+  "name": "Switch to Next Screen",
+  "tooltip": "Switch to Next Screen",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + T": {
+  "name": "New tab",
+  "tooltip": "Open new tab.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + TAB": {
+  "name": "Next Tab",
+  "tooltip": "Switches focus to the next tab in order.",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + U": {
+  "name": "Apply underline format",
+  "tooltip": "Apply the underline format to the selected text.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + UP": {
+  "name": "Mission Control",
+  "tooltip": "Open Mission Control.",
+  "category": "Integrations / MacOS"
+ },
+ "LCTRL + V": {
+  "name": "Paste from clipboard",
+  "tooltip": "Paste the last item from the clipboard.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + X": {
+  "name": "Cut to clipboard",
+  "tooltip": "Cut the selected text.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + Y": {
+  "name": "Redo an action",
+  "tooltip": "Redo an action.",
+  "category": "Integrations / Windows"
+ },
+ "LCTRL + Z": {
+  "name": "Undo an action",
+  "tooltip": "Undo an action.",
+  "category": "Integrations / Windows"
+ },
+ "LED_BREATHE": {
+  "name": "LED Effect Breathe",
+  "tooltip": "Turn on backlight “breathe” effect.",
+  "category": "Extended / Lighting"
+ },
+ "LED_BRIGHTNESS_DOWN": {
+  "name": "LED Brightness Down",
+  "tooltip": "Decrease backlight brightness.",
+  "category": "Extended / Lighting"
+ },
+ "LED_BRIGHTNESS_UP": {
+  "name": "LED Brightness Up",
+  "tooltip": "Increase backlight brightness.",
+  "category": "Extended / Lighting"
+ },
+ "LED_COLOR_BLUE": {
+  "name": "LED Blue",
+  "tooltip": "Set base color of backlight to Blue (color may be overwritten by effect).",
+  "category": "Extended / Lighting"
+ },
+ "LED_COLOR_CYAN": {
+  "name": "LED Cyan",
+  "tooltip": "Set base color of backlight to Cyan (color may be overwritten by effect).",
+  "category": "Extended / Lighting"
+ },
+ "LED_COLOR_GREEN": {
+  "name": "LED Green",
+  "tooltip": "Set base color of backlight to Green (color may be overwritten by effect).",
+  "category": "Extended / Lighting"
+ },
+ "LED_COLOR_MAGENTA": {
+  "name": "LED Magenta",
+  "tooltip": "Set base color of backlight to Magenta (color may be overwritten by effect).",
+  "category": "Extended / Lighting"
+ },
+ "LED_COLOR_ORANGE": {
+  "name": "LED Orange",
+  "tooltip": "Set base color of backlight to Orange (color may be overwritten by effect).",
+  "category": "Extended / Lighting"
+ },
+ "LED_COLOR_PINK": {
+  "name": "LED Pink",
+  "tooltip": "Set base color of backlight to Pink (color may be overwritten by effect).",
+  "category": "Extended / Lighting"
+ },
+ "LED_COLOR_RED": {
+  "name": "LED Red",
+  "tooltip": "Set base color of backlight to Red (color may be overwritten by effect).",
+  "category": "Extended / Lighting"
+ },
+ "LED_COLOR_WHITE": {
+  "name": "LED White",
+  "tooltip": "Set base color of backlight to White (color may be overwritten by effect).",
+  "category": "Extended / Lighting"
+ },
+ "LED_COLOR_YELLOW": {
+  "name": "LED Yellow",
+  "tooltip": "Set base color of backlight to Yellow (color may be overwritten by effect).",
+  "category": "Extended / Lighting"
+ },
+ "LED_EFFECT": {
+  "name": "LED Effect Cycle",
+  "tooltip": "Toggle through backlight effects.",
+  "category": "Extended / Lighting"
+ },
+ "LED_EFFECT_ON_OFF": {
+  "name": "LED On/Off",
+  "tooltip": "Toggle backlight on/off.",
+  "category": "Extended / Lighting"
+ },
+ "LED_SOLID": {
+  "name": "LED Effect Solid",
+  "tooltip": "Turn on backlight “solid” effect.",
+  "category": "Extended / Lighting"
+ },
+ "LED_SPEC": {
+  "name": "LED Effect Spectrum",
+  "tooltip": "Turn on backlight “spectrum” effect.",
+  "category": "Extended / Lighting"
+ },
+ "LED_SPEED_DOWN": {
+  "name": "LED Animation Speed Down",
+  "tooltip": "Decrease speed of backlight effect.",
+  "category": "Extended / Lighting"
+ },
+ "LED_SPEED_UP": {
+  "name": "LED Animation Speed Up",
+  "tooltip": "Increase speed of backlight effect.",
+  "category": "Extended / Lighting"
+ },
+ "LED_SWIRL": {
+  "name": "LED Effect Swirl",
+  "tooltip": "Turn on backlight “swirl” effect.",
+  "category": "Extended / Lighting"
+ },
+ "LEFT": {
+  "name": "Left Arrow",
+  "tooltip": "Left Arrow Key",
+  "category": "Extended / Navigation"
+ },
+ "LEFT_BRACE": {
+  "name": "{",
+  "tooltip": "{",
+  "category": "Basic / Symbols"
+ },
+ "LEFT_BRACKET": {
+  "name": "[ and {",
+  "tooltip": "[ and {",
+  "category": "Basic / Symbols"
+ },
+ "LEFT_PARENTHESIS": {
+  "name": "(",
+  "tooltip": "(",
+  "category": "Basic / Symbols"
+ },
+ "LESS_THAN": {
+  "name": "<",
+  "tooltip": "<",
+  "category": "Basic / Symbols"
+ },
+ "LGUI": {
+  "name": "Meta",
+  "tooltip": "Win Key / Command / Meta",
+  "category": "Basic / Modifiers"
+ },
+ "LGUI + A": {
+  "name": "Select All",
+  "tooltip": "Select All items.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + B": {
+  "name": "Toggle Sidebar",
+  "tooltip": "Toggle Sidebar visibility.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + BACKSLASH": {
+  "name": "Split Editor",
+  "tooltip": "Split editor.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + C": {
+  "name": "Copy",
+  "tooltip": "Copy the selected item to the Clipboard.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + COMMA": {
+  "name": "Open Preferences",
+  "tooltip": "Open Preferences",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + CTRL + F": {
+  "name": "Toggle Full Screen",
+  "tooltip": "Toggle full screen.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + D": {
+  "name": "Add Selection to Next Find match",
+  "tooltip": "Add selection to next Find match.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + DOWN": {
+  "name": "Go to File End",
+  "tooltip": "Go to end of file.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + END": {
+  "name": "Scroll Terminal to Bottom",
+  "tooltip": "Scroll to bottom.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + ENTER": {
+  "name": "Insert Line Below",
+  "tooltip": "Insert line below.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + EQUAL": {
+  "name": "Zoom In",
+  "tooltip": "Zoom in.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + F": {
+  "name": "Find",
+  "tooltip": "Find items in a document or open a Find window.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + F2": {
+  "name": "Select All Word Occurrences",
+  "tooltip": "Select all occurrences of current word.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + G": {
+  "name": "Find Next",
+  "tooltip": "Find the next occurrence of the item previously found.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + GRAVE": {
+  "name": "Switch to Previous Window",
+  "tooltip": "Switch to Previous Window",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + H": {
+  "name": "Hide",
+  "tooltip": "Hide the windows of the front app.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + HOME": {
+  "name": "Scroll Terminal to Top",
+  "tooltip": "Scroll to top.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + I": {
+  "name": "Open Settings",
+  "tooltip": "Open Settings.",
+  "category": "Integrations / Windows"
+ },
+ "LGUI + LALT + DOWN": {
+  "name": "Insert Cursor Below",
+  "tooltip": "Insert cursor below.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LALT + UP": {
+  "name": "Insert Cursor Above",
+  "tooltip": "Insert cursor above.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LCTRL + D": {
+  "name": "Add a virtual desktop",
+  "tooltip": "Add a virtual desktop.",
+  "category": "Integrations / Windows"
+ },
+ "LGUI + LCTRL + F4": {
+  "name": "Close virtual desktop",
+  "tooltip": "Close the virtual desktop you are using.",
+  "category": "Integrations / Windows"
+ },
+ "LGUI + LCTRL + LEFT": {
+  "name": "Switch to left virtual desktop",
+  "tooltip": "Switch between virtual desktops you've created on the left.",
+  "category": "Integrations / Windows"
+ },
+ "LGUI + LCTRL + RIGHT": {
+  "name": "Switch to right virtual desktop",
+  "tooltip": "Switch between virtual desktops you've created on the right.",
+  "category": "Integrations / Windows"
+ },
+ "LGUI + LEFT_BRACKET": {
+  "name": "Outdent Line",
+  "tooltip": "Outdent line.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + BACKSLASH": {
+  "name": "Jump to Bracket",
+  "tooltip": "Jump to matching bracket.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + D": {
+  "name": "Show Debug",
+  "tooltip": "Show Debug.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + E": {
+  "name": "Show Explorer",
+  "tooltip": "Show Explorer / Toggle focus.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + ENTER": {
+  "name": "Insert Line Above",
+  "tooltip": "Insert line above.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + F": {
+  "name": "Show Search",
+  "tooltip": "Show Search.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + G": {
+  "name": "Show Source Control",
+  "tooltip": "Show Source Control.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + H": {
+  "name": "Replace in Files",
+  "tooltip": "Replace in files.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + J": {
+  "name": "Toggle Search Details",
+  "tooltip": "Toggle Search details.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + K": {
+  "name": "Delete Line",
+  "tooltip": "Delete line.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + L": {
+  "name": "Select All Occurrences",
+  "tooltip": "Select all occurrences of current selection.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + LEFT_BRACKET": {
+  "name": "Fold Region",
+  "tooltip": "Fold region.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + M": {
+  "name": "Show Problems Panel",
+  "tooltip": "Show Problems panel.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + MINUS": {
+  "name": "Go Forward",
+  "tooltip": "Go forward.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + N": {
+  "name": "New Window",
+  "tooltip": "New window/instance.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + O": {
+  "name": "Go to Symbol",
+  "tooltip": "Go to Symbol.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + P": {
+  "name": "Show Command Palette",
+  "tooltip": "Show Command Palette (F1 alternative).",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + RIGHT_BRACKET": {
+  "name": "Unfold Region",
+  "tooltip": "Unfold region.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + S": {
+  "name": "Save As",
+  "tooltip": "Save As.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + SPACE": {
+  "name": "Trigger Parameter Hints",
+  "tooltip": "Trigger parameter hints.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + T": {
+  "name": "Reopen Closed Editor",
+  "tooltip": "Reopen closed editor.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + TAB": {
+  "name": "Navigate Editor History",
+  "tooltip": "Navigate editor group history.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + U": {
+  "name": "Show Output Panel",
+  "tooltip": "Show Output panel.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + V": {
+  "name": "Open Markdown Preview",
+  "tooltip": "Open Markdown preview.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + LSHIFT + X": {
+  "name": "Show Extensions",
+  "tooltip": "Show Extensions.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + M": {
+  "name": "Minimize Front Window",
+  "tooltip": "Minimizes focused window.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + MINUS": {
+  "name": "Zoom Out",
+  "tooltip": "Zoom out.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + N": {
+  "name": "New File",
+  "tooltip": "New File.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + NUMBER_1": {
+  "name": "Focus 1st Editor",
+  "tooltip": "Focus into 1st editor group.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + NUMBER_2": {
+  "name": "Focus 2nd Editor",
+  "tooltip": "Focus into 2nd editor group.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + NUMBER_3": {
+  "name": "Focus 3rd Editor",
+  "tooltip": "Focus into 3rd editor group.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + O": {
+  "name": "Open",
+  "tooltip": "Open the selected item, or open a dialog to select a file to open.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + P": {
+  "name": "Print",
+  "tooltip": "Print the current document.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + PERIOD": {
+  "name": "Quick Fix",
+  "tooltip": "Quick Fix.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + Q": {
+  "name": "Quit Application",
+  "tooltip": "Quit Application",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + RIGHT_BRACKET": {
+  "name": "Indent Line",
+  "tooltip": "Indent line.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + S": {
+  "name": "Save",
+  "tooltip": "Save the current document.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + SLASH": {
+  "name": "Toggle Line Comment",
+  "tooltip": "Toggle line comment.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + SPACE": {
+  "name": "Spotlight",
+  "tooltip": "Open Spotlight",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + T": {
+  "name": "New Tab",
+  "tooltip": "Open a new tab.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + TAB": {
+  "name": "Switch to Previous App",
+  "tooltip": "Switch to Previous App",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + U": {
+  "name": "Undo Cursor Operation",
+  "tooltip": "Undo last cursor operation.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + UP": {
+  "name": "Go to File Start",
+  "tooltip": "Go to beginning of file.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LGUI + V": {
+  "name": "Paste",
+  "tooltip": "Paste the contents of the Clipboard into the current document or app.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + W": {
+  "name": "Close Window",
+  "tooltip": "Close Window",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + X": {
+  "name": "Cut",
+  "tooltip": "Cut the selected item and copy it to the Clipboard.",
+  "category": "Integrations / MacOS"
+ },
+ "LGUI + Z": {
+  "name": "Undo",
+  "tooltip": "Undo the previous command. In some apps, you can undo and redo multiple commands.",
+  "category": "Integrations / MacOS"
+ },
+ "LSHIFT": {
+  "name": "Shift",
+  "tooltip": "Shift",
+  "category": "Basic / Modifiers"
+ },
+ "LSHIFT + DOWN": {
+  "name": "Select lines forward",
+  "tooltip": "Select lines forward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + END": {
+  "name": "Select to end of line",
+  "tooltip": "Select text from the current cursor position to the end of the current line.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + F11": {
+  "name": "Step Out",
+  "tooltip": "Step out.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LSHIFT + F12": {
+  "name": "Show References",
+  "tooltip": "Show References.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LSHIFT + F5": {
+  "name": "Stop",
+  "tooltip": "Stop.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LSHIFT + F8": {
+  "name": "Go to Previous Error",
+  "tooltip": "Go to previous error or warning.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LSHIFT + HOME": {
+  "name": "Select to beginning of line",
+  "tooltip": "Select text from the current cursor position to the beginning of the current line.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + LALT + A": {
+  "name": "Toggle Block Comment",
+  "tooltip": "Toggle block comment.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LSHIFT + LALT + F": {
+  "name": "Format Document",
+  "tooltip": "Format document.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LSHIFT + LALT + I": {
+  "name": "Insert Cursor at End of Line",
+  "tooltip": "Insert cursor at end of each line selected.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LSHIFT + LALT + LEFT": {
+  "name": "Shrink Selection",
+  "tooltip": "Shrink selection.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LSHIFT + LALT + RIGHT": {
+  "name": "Expand Selection",
+  "tooltip": "Expand selection.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LSHIFT + LALT + UP": {
+  "name": "Copy Line Up",
+  "tooltip": "Copy line up.",
+  "category": "Integrations / VS Code Presets"
+ },
+ "LSHIFT + LCTRL + DOWN": {
+  "name": "Select paragraphs forward",
+  "tooltip": "Select paragraphs forward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + LCTRL + END": {
+  "name": "Select to end of document",
+  "tooltip": "Select text between the current cursor position and the end of the document.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + LCTRL + HOME": {
+  "name": "Select to beginning of document",
+  "tooltip": "Select text between the current cursor position and the beginning of the document.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + LCTRL + LEFT": {
+  "name": "Select words backward",
+  "tooltip": "Select words backward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + LCTRL + RIGHT": {
+  "name": "Select words forward",
+  "tooltip": "Select words forward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + LCTRL + UP": {
+  "name": "Select paragraphs backward",
+  "tooltip": "Select paragraphs backward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + LEFT": {
+  "name": "Select characters backward",
+  "tooltip": "Select characters backward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + LGUI + G": {
+  "name": "Find Previous",
+  "tooltip": "Find the previous occurrence of the item previously found.",
+  "category": "Integrations / MacOS"
+ },
+ "LSHIFT + LGUI + GRAVE": {
+  "name": "Switch to Next Window",
+  "tooltip": "Switch to Next Window",
+  "category": "Integrations / MacOS"
+ },
+ "LSHIFT + LGUI + N": {
+  "name": "New Folder",
+  "tooltip": "New Folder",
+  "category": "Integrations / MacOS"
+ },
+ "LSHIFT + LGUI + NUMBER_0": {
+  "name": "Toggle Editor Layout",
+  "tooltip": "Toggle editor layout (horizontal/vertical).",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "LSHIFT + LGUI + NUMBER_3": {
+  "name": "Screenshot",
+  "tooltip": "Screenshot",
+  "category": "Integrations / MacOS"
+ },
+ "LSHIFT + LGUI + NUMBER_4": {
+  "name": "Screenshot Cursor",
+  "tooltip": "Screenshot Cursor",
+  "category": "Integrations / MacOS"
+ },
+ "LSHIFT + LGUI + NUMBER_5": {
+  "name": "Open Screenshot Dialog",
+  "tooltip": "Open Screenshot Dialog",
+  "category": "Integrations / MacOS"
+ },
+ "LSHIFT + LGUI + TAB": {
+  "name": "Switch to Next App",
+  "tooltip": "Switch to Next App",
+  "category": "Integrations / MacOS"
+ },
+ "LSHIFT + LGUI + Z": {
+  "name": "Redo",
+  "tooltip": "Redo, reversing the undo command. In some apps, you can undo and redo multiple commands.",
+  "category": "Integrations / MacOS"
+ },
+ "LSHIFT + PG_DN": {
+  "name": "Select one page forward",
+  "tooltip": "Select one page of text forward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + PG_UP": {
+  "name": "Select one page backward",
+  "tooltip": "Select one page of text backward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + RIGHT": {
+  "name": "Select characters forward",
+  "tooltip": "Select characters forward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "LSHIFT + UP": {
+  "name": "Select lines backward",
+  "tooltip": "Select lines backward from the current cursor position.",
+  "category": "Integrations / Windows"
+ },
+ "M": {
+  "name": "M",
+  "tooltip": "M",
+  "category": "Basic / Letters"
+ },
+ "M1": {
+  "name": "Left Click",
+  "tooltip": "Left Click (MB1)",
+  "category": "Extended / Mouse"
+ },
+ "M2": {
+  "name": "Right Click",
+  "tooltip": "Right Click (MB2)",
+  "category": "Extended / Mouse"
+ },
+ "M3": {
+  "name": "Middle Mouse Click",
+  "tooltip": "Middle Click (MB3)",
+  "category": "Extended / Mouse"
+ },
+ "M4": {
+  "name": "Mouse Button 4",
+  "tooltip": "Mouse Button 4 (MB4)",
+  "category": "Extended / Mouse"
+ },
+ "M5": {
+  "name": "Mouse Button 5",
+  "tooltip": "Mouse Button 5 (MB5)",
+  "category": "Extended / Mouse"
+ },
+ "MINUS": {
+  "name": "- and _",
+  "tooltip": "- and _",
+  "category": "Basic / Symbols"
+ },
+ "MODULE_FORCE_CHARGING": {
+  "name": "Activate Module Recovery Mode",
+  "tooltip": "Activate Recovery Mode to recover module from a critically drained battery. Your module will not be functional while in recovery mode. Restart your keyboard to",
+  "category": "Extended / Configuration Toggles"
+ },
+ "N": {
+  "name": "N",
+  "tooltip": "N",
+  "category": "Basic / Letters"
+ },
+ "NON_US_BACKSLASH": {
+  "name": "Non US \\",
+  "tooltip": "Non US Backslash",
+  "category": "Extended / International"
+ },
+ "NON_US_HASH": {
+  "name": "Non US # and ~",
+  "tooltip": "Non US Hash",
+  "category": "Extended / International"
+ },
+ "NUMBER_0": {
+  "name": "0 and )",
+  "tooltip": "0 and )",
+  "category": "Basic / Numbers"
+ },
+ "NUMBER_1": {
+  "name": "1 and !",
+  "tooltip": "1 and !",
+  "category": "Basic / Numbers"
+ },
+ "NUMBER_2": {
+  "name": "2 and @",
+  "tooltip": "2 and @",
+  "category": "Basic / Numbers"
+ },
+ "NUMBER_3": {
+  "name": "3 and #",
+  "tooltip": "3 and #",
+  "category": "Basic / Numbers"
+ },
+ "NUMBER_4": {
+  "name": "4 and $",
+  "tooltip": "4 and $",
+  "category": "Basic / Numbers"
+ },
+ "NUMBER_5": {
+  "name": "5 and %",
+  "tooltip": "5 and %",
+  "category": "Basic / Numbers"
+ },
+ "NUMBER_6": {
+  "name": "6 and ^",
+  "tooltip": "6 and ^",
+  "category": "Basic / Numbers"
+ },
+ "NUMBER_7": {
+  "name": "7 and &",
+  "tooltip": "7 and &",
+  "category": "Basic / Numbers"
+ },
+ "NUMBER_8": {
+  "name": "8 and *",
+  "tooltip": "8 and *",
+  "category": "Basic / Numbers"
+ },
+ "NUMBER_9": {
+  "name": "9 and (",
+  "tooltip": "9 and (",
+  "category": "Basic / Numbers"
+ },
+ "O": {
+  "name": "O",
+  "tooltip": "O",
+  "category": "Basic / Letters"
+ },
+ "P": {
+  "name": "P",
+  "tooltip": "P",
+  "category": "Basic / Letters"
+ },
+ "PAGE_DOWN": {
+  "name": "Scroll Terminal Page Down",
+  "tooltip": "Scroll page down.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "PAGE_UP": {
+  "name": "Scroll Terminal Page Up",
+  "tooltip": "Scroll page up.",
+  "category": "Integrations / VS Code Presets (Mac)"
+ },
+ "PAUSE_BREAK": {
+  "name": "Pause / Break",
+  "tooltip": "Pause/Break",
+  "category": "Extended / Locks"
+ },
+ "PERCENT": {
+  "name": "%",
+  "tooltip": "%",
+  "category": "Basic / Symbols"
+ },
+ "PERIOD": {
+  "name": ". and >",
+  "tooltip": ". and >",
+  "category": "Basic / Symbols"
+ },
+ "PG_DN": {
+  "name": "Page Down",
+  "tooltip": "Page Down",
+  "category": "Extended / Navigation"
+ },
+ "PG_UP": {
+  "name": "Page Up",
+  "tooltip": "Page Up",
+  "category": "Extended / Navigation"
+ },
+ "PIPE": {
+  "name": "|",
+  "tooltip": "|",
+  "category": "Basic / Symbols"
+ },
+ "PIPE2": {
+  "name": "| 2",
+  "tooltip": "Pipe 2",
+  "category": "Extended / International"
+ },
+ "PLUS": {
+  "name": "+",
+  "tooltip": "+",
+  "category": "Basic / Symbols"
+ },
+ "PRINTSCREEN": {
+  "name": "Print Screen",
+  "tooltip": "Print Screen",
+  "category": "Extended / System"
+ },
+ "Q": {
+  "name": "Q",
+  "tooltip": "Q",
+  "category": "Basic / Letters"
+ },
+ "QUESTION": {
+  "name": "?",
+  "tooltip": "?",
+  "category": "Basic / Symbols"
+ },
+ "R": {
+  "name": "R",
+  "tooltip": "R",
+  "category": "Basic / Letters"
+ },
+ "RALT": {
+  "name": "Right Alt",
+  "tooltip": "Right Alt / Option",
+  "category": "Basic / Modifiers"
+ },
+ "RCTRL": {
+  "name": "Right Control",
+  "tooltip": "Right Control",
+  "category": "Basic / Modifiers"
+ },
+ "RETURN": {
+  "name": "Enter",
+  "tooltip": "Enter",
+  "category": "Basic / Control"
+ },
+ "RGUI": {
+  "name": "Right Meta",
+  "tooltip": "Right Win Key / Command / Meta",
+  "category": "Basic / Modifiers"
+ },
+ "RIGHT": {
+  "name": "Right Arrow",
+  "tooltip": "Right Arrow Key",
+  "category": "Extended / Navigation"
+ },
+ "RIGHT_BRACE": {
+  "name": "}",
+  "tooltip": "}",
+  "category": "Basic / Symbols"
+ },
+ "RIGHT_BRACKET": {
+  "name": "] and }",
+  "tooltip": "] and }",
+  "category": "Basic / Symbols"
+ },
+ "RIGHT_PARENTHESIS": {
+  "name": ")",
+  "tooltip": ")",
+  "category": "Basic / Symbols"
+ },
+ "RSHIFT": {
+  "name": "Right Shift",
+  "tooltip": "Right Shift",
+  "category": "Basic / Modifiers"
+ },
+ "S": {
+  "name": "S",
+  "tooltip": "S",
+  "category": "Basic / Letters"
+ },
+ "SCROLLLOCK": {
+  "name": "Scroll Lock",
+  "tooltip": "Scroll Lock",
+  "category": "Extended / Locks"
+ },
+ "SEMICOLON": {
+  "name": "; and :",
+  "tooltip": "",
+  "category": "Basic / Symbols"
+ },
+ "SINGLE_QUOTE": {
+  "name": "‘ and “",
+  "tooltip": "‘ and “",
+  "category": "Basic / Symbols"
+ },
+ "SLASH": {
+  "name": "/ and ?",
+  "tooltip": "/ and ?",
+  "category": "Basic / Symbols"
+ },
+ "SPACE": {
+  "name": "Space",
+  "tooltip": "Space",
+  "category": "Basic / Control"
+ },
+ "T": {
+  "name": "T",
+  "tooltip": "T",
+  "category": "Basic / Letters"
+ },
+ "TAB": {
+  "name": "Tab",
+  "tooltip": "Tab",
+  "category": "Basic / Control"
+ },
+ "TILDE": {
+  "name": "~",
+  "tooltip": "~",
+  "category": "Basic / Symbols"
+ },
+ "TILDE2": {
+  "name": "~ 2",
+  "tooltip": "Tilde 2",
+  "category": "Extended / International"
+ },
+ "TRANSPARENT": {
+  "name": "Transparent",
+  "tooltip": "Key copies binding from next (lower) active layer.",
+  "category": "Extended / Empty"
+ },
+ "U": {
+  "name": "U",
+  "tooltip": "U",
+  "category": "Basic / Letters"
+ },
+ "UNDERSCORE": {
+  "name": "_",
+  "tooltip": "_",
+  "category": "Basic / Symbols"
+ },
+ "UP": {
+  "name": "Up Arrow",
+  "tooltip": "Up Arrow Key",
+  "category": "Extended / Navigation"
+ },
+ "USB_DEVICE": {
+  "name": "Connect via USB Cable",
+  "tooltip": "Output to device connected via usb cable.",
+  "category": "Extended / Connection"
+ },
+ "V": {
+  "name": "V",
+  "tooltip": "V",
+  "category": "Basic / Letters"
+ },
+ "W": {
+  "name": "W",
+  "tooltip": "W",
+  "category": "Basic / Letters"
+ },
+ "X": {
+  "name": "X",
+  "tooltip": "X",
+  "category": "Basic / Letters"
+ },
+ "Y": {
+  "name": "Y",
+  "tooltip": "Y",
+  "category": "Basic / Letters"
+ },
+ "Z": {
+  "name": "Z",
+  "tooltip": "Z",
+  "category": "Basic / Letters"
+ },
+ "[LALT] + LSHIFT + TAB": {
+  "name": "Switch to next app",
+  "tooltip": "Switch to the next app.",
+  "category": "Integrations / Windows"
+ },
+ "[LALT] + TAB": {
+  "name": "Switch to previous app",
+  "tooltip": "Switch to the previous app.",
+  "category": "Integrations / Windows"
+ }
+}

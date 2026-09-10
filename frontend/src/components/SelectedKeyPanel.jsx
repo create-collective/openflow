@@ -11,6 +11,7 @@ export default function SelectedKeyPanel({
   onSelectSlot,
   onClearSlot,
   layerMap = {},
+  names = {},          // catalog.names: code -> {label, name, tooltip, alias}
 }) {
   return (
     <div className="skp">
@@ -42,7 +43,17 @@ export default function SelectedKeyPanel({
               )}
             </span>
             <span className="skp-arrow">→</span>
-            <span className="skp-act">{b ? actionText(b, layerMap) : "Unassigned"}</span>
+            {(() => {
+              const text = b ? actionText(b, layerMap) : "Unassigned";
+              const nf = b && names[b.actionCode];
+              const name = nf?.name && nf.name !== text ? nf.name : null;
+              return (
+                <span className="skp-act" title={nf ? [nf.name, nf.tooltip, `(${b.actionCode})`].filter(Boolean).join("\n") : undefined}>
+                  {text}
+                  {name && <span className="skp-act-name"> — {name}</span>}
+                </span>
+              );
+            })()}
             {b && slot.enabled && (
               <button
                 className="skp-x"

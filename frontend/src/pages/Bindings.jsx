@@ -503,6 +503,7 @@ export default function Bindings() {
           label={selectedPos != null ? POS_LABEL[selectedPos] : null}
           bindings={selectedKey?.bindings || {}}
           slots={catalog?.behaviorSlots || []}
+          names={catalog?.names || {}}
           activeSlot={activeSlot}
           onSelectSlot={setActiveSlot}
           onClearSlot={clearSlot}
