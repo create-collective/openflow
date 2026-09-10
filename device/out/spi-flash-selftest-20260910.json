@@ -1,0 +1,21 @@
+{
+ "_meta": {
+  "taken": "2026-09-10T13:24:34",
+  "firmware": "3.41.0",
+  "note": "FLASH_TEST 0xFA/0x1001 raw payloads, both halves, healthy board, two separate USB cables"
+ },
+ "left": {
+  "raw": "0100030000000000030000000000030000000000030000000000030000000000",
+  "summary": {
+   "state": "ok",
+   "detail": "All 5 partitions mounted with no errors."
+  }
+ },
+ "right": {
+  "raw": "0100000000000000030000000000030000000000",
+  "summary": {
+   "state": "not-mounted",
+   "detail": "No errors, but 1 of 3 partitions are not mounted: #0 (Not Detected)."
+  }
+ }
+}

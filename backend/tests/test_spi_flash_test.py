@@ -1,15 +1,13 @@
 """The SPIFLASH_TEST decode.
 
-UNLIKE EVERY OTHER DECODE TEST IN THIS SUITE, there is no captured device response to check
-against -- nothing on disk has ever run this command. So these tests pin the STRUCTURE that
-NayaCore's own format string forces (one status + five return codes per partition, 2 + N x 6
-bytes total, signed return codes, the 0-4 status enum) and pin that everything else is refused
-or reported raw.
-
-That distinction matters and is asserted explicitly below: `validated` is False, and it must stay
-False until a real response has been compared against it. A test suite that goes green on
-synthetic vectors it also authored proves the code does what the author meant, not that the
-author was right about the device.
+Until 2026-09-10 there was no captured device response to check against, so these tests pinned
+the STRUCTURE that NayaCore's own format string forces (one status + five return codes per
+partition, 2 + N x 6 bytes total, signed return codes, the 0-4 status enum) and that everything
+else is refused or reported raw. Both halves of a healthy board have now answered
+(device/out/spi-flash-selftest-20260910.json, test_spi_flash_live_capture.py), which confirmed
+the lengths, the arithmetic and the status byte, and left one thing open: the return-code order
+inside a partition, which an all-zero board cannot distinguish. `validated` is True and the
+`validation` field says exactly that.
 
 No hardware.
 """
@@ -139,7 +137,8 @@ def test_the_undecoded_header_stays_raw_and_the_bytes_are_kept():
 def test_this_decode_still_declares_itself_unvalidated():
     """The honest flag. Flip it only when a real device response has been compared against this,
     and add that capture as a fixture in the same change."""
-    assert S.decode(HEALTHY_5)["validated"] is False
+    assert S.decode(HEALTHY_5)["validated"] is True
+    assert "return-code order" in S.decode(HEALTHY_5)["validation"], "the remaining gap must be named"
 
 
 def test_partitions_are_reported_by_index_and_not_given_invented_names():

@@ -461,10 +461,11 @@ class DeviceService:
             t = self._transport_for(dev.port, dest)
             responses = t.send_command(dest, C.CAT_FLASH, C.FLASH_TEST, timeout=3.0)
             payload = _first_payload(responses)
-            # `raw` stays and callers should keep showing it: this decode is derived from
-            # NayaCore's output format rather than from a captured response, and is the one
-            # decode in this codebase that has never been checked against a device. It reports
-            # `validated: False` for exactly that reason. See device/spi_flash_test.py.
+            # `raw` stays and callers should keep showing it. The decode was derived from
+            # NayaCore's output format and checked against both halves of a healthy board on
+            # 2026-09-10; the one thing a healthy board cannot confirm is the order of the five
+            # return codes inside a partition, which the decode's `validation` field says.
+            # See device/spi_flash_test.py.
             decoded = spi_flash_test.decode(payload)
             decoded.pop("raw", None)
             return {

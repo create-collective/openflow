@@ -34,11 +34,21 @@ WHAT IS DELIBERATELY NOT DECODED. Two things, and both would be guesses:
     "Layout/Log/Reserve/Setting/M_Firmware"; there is no "Log" string in the binary at all, which
     is a good illustration of why the names are not being asserted here.)
 
-STATUS: NOT YET VALIDATED AGAINST A DEVICE. Unlike ble_status.py, there is no captured response
-on disk to check this against, so nothing here is cross-validated -- the structure follows from
-the format string and the two lengths, but the byte ORDER within a partition is inferred from
-the order NayaCore prints them in. One live capture settles the leading bytes and confirms the
-ordering. Until then `decode` keeps `raw` and every caller should show it.
+STATUS: VALIDATED AGAINST A DEVICE, 2026-09-10, with one honest gap. Both halves of a healthy
+Create on firmware 3.41.0 answered (device/out/spi-flash-selftest-20260910.json):
+
+    left   0100 030000000000 x5      32 bytes: five partitions, all Mounted, every code 0
+    right  0100 000000000000 03.. 03.. 20 bytes: three partitions, #0 Not Detected, #1-2 Mounted
+
+That confirms the two lengths, the 2 + N x 6 arithmetic, the status byte as the FIRST of each
+six, and the status values (3 Mounted, 0 Not Detected). The header read `01 00` on both halves:
+byte 0 = 1 is consistent with the Slot1 (MCUboot secondary image, RAW) status being Detected,
+which is what a raw image slot should say; byte 1 is 0 on both and is not the partition count.
+It stays reported raw as `headerUnknown`, with that reading noted.
+
+THE GAP: the order of the five return codes within a partition is still the order NayaCore
+PRINTS them. Every code read 0, so a healthy board cannot distinguish the orderings; only a
+failing partition can, and none has been seen. `validation` says so.
 
 This module is DIAGNOSIS ONLY. FORMAT_PARTITION stays refused in commands.py: the destructive
 repair is the dangerous half and the useful half carries no risk. No hardware.
@@ -100,9 +110,14 @@ def decode(raw) -> dict:
         "layout": f"{len(raw)}-byte",
         "partitionCount": count,
         "raw": raw.hex(),
-        # See the module docstring: order and meaning unpinned, so it stays raw.
+        # See the module docstring: read as `01 00` on both halves of a healthy board; byte 0 fits
+        # the Slot1 (secondary image, RAW) status "Detected", byte 1 is not the partition count.
+        # Kept raw rather than named.
         "headerUnknown": raw[:_HEADER].hex(),
-        "validated": False,
+        "validated": True,
+        "validation": "lengths, partition count, status byte and status values confirmed on a "
+                      "3.41.0 board (2026-09-10); return-code order within a partition follows "
+                      "NayaCore's print order and has only been seen all-zero",
     }
 
     partitions = []
