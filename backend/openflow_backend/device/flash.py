@@ -1100,7 +1100,10 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
     for r in conn.execute("SELECT module_config_id, correlation_id, value FROM module_settings"):
         settings.setdefault(r["module_config_id"], {})[r["correlation_id"]] = r["value"]
 
-    device_list = [{"slot": slot, "uuid": uuid}
+    # Each entry carries the board's own type byte for its slot, so a slot under a uuid we
+    # never stored (every slot NayaFlow wrote) can still template a new profile of its type.
+    slot_type = ml.list_types(mod_read.get("list"))
+    device_list = [{"slot": slot, "uuid": uuid, "type": slot_type.get(int(slot))}
                    for uuid, slot in (mod_read.get("by_uuid") or {}).items()]
     device_slots = {}
     for slot, fields in (mod_read.get("slots") or {}).items():

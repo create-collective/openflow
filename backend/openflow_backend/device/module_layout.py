@@ -50,6 +50,23 @@ class LayoutError(Exception):
     """The requested layout cannot be flashed safely."""
 
 
+def list_types(list_hex) -> dict:
+    """{slot: module type} from the module LIST's per-entry type byte.
+
+    The list is the one place the board states what each slot IS. It is what lets a slot whose
+    uuid the app has never seen -- every slot NayaFlow wrote, since its uuids are its own -- be
+    used as a template for a new profile of that type, and be compared by content on a read,
+    instead of being treated as a slot of unknown type."""
+    if not list_hex:
+        return {}
+    by_code = {code: typ for typ, code in MODULE_TYPE_CODE.items()}
+    try:
+        entries = R.parse_module_config_list(bytes.fromhex(list_hex))
+    except ValueError:
+        return {}
+    return {e["slot"]: by_code[e["flag"]] for e in entries if e["flag"] in by_code}
+
+
 def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
          captured_from=None):
     """Work out the module layout to flash.
@@ -68,6 +85,11 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
                   if cid and cid not in ("transparent", "disabled")}
 
     existing = {e["uuid"]: e["slot"] for e in device_list}
+    # What the board says each slot holds, from the list's type byte, keyed like `existing`.
+    # Needed for templating: a slot NayaFlow wrote carries a uuid no profile of ours has, so
+    # config_types knows nothing about it, and without this a docked, fully readable Touch
+    # counted as "nothing of that type on the keyboard" (seen 2026-09-10).
+    board_types = {e["uuid"]: e["type"] for e in device_list if e.get("type")}
     slot_for = {cid: existing[cid] for cid in referenced if cid in existing}
 
     # A capture has its own uuid but IS the config in the slot it was taken from, so it claims
@@ -110,7 +132,7 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
             # still match, the overlay comes out identical and no config write is needed.
             src = device_slots.get(slot_for[cid]) or device_slots.get(str(slot_for[cid]))
         else:
-            src = _template_slot(typ, config_types, existing, device_slots)
+            src = _template_slot(typ, config_types, existing, device_slots, board_types)
         if src is None:
             if cid in allocated:
                 # A genuinely new slot cannot be written without a complete config to copy: a
@@ -163,16 +185,20 @@ def _bays(bays_by_layer, base, slot_for, base_order):
     return out
 
 
-def _template_slot(module_type, config_types, existing, device_slots):
+def _template_slot(module_type, config_types, existing, device_slots, board_types=None):
     """A slot of the same module type whose fields we can copy.
 
     Prefers the SMALLEST, which is the one without trailing junk from a previous config: Track
     Left is 15 fields and Track Right 36, and copying the latter would carry 21 orphaned fields
     into the new slot.
+
+    A slot's type comes from the board's own list byte first (`board_types`), then from the
+    app's profile of that uuid. The board's word wins because it is the slot's CONTENTS being
+    copied, and it is the only source for a slot whose uuid the app does not hold.
     """
     best = None
     for cid, slot in existing.items():
-        if config_types.get(cid) != module_type:
+        if ((board_types or {}).get(cid) or config_types.get(cid)) != module_type:
             continue
         fields = device_slots.get(slot)
         if fields is None:

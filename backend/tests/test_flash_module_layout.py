@@ -11,6 +11,7 @@ No hardware.
 from __future__ import annotations
 
 import sqlite3
+import pytest
 import sys
 from pathlib import Path
 from unittest import mock
@@ -475,3 +476,57 @@ def test_a_garbage_setting_value_cannot_corrupt_a_field():
     out = ml.overlay(dict(template), "TUNE", {}, {}, {"scroll_speed": 4000})
     assert out[0x01] == (R.KEY_PRESS, bytes([255]))
     print("  a bad value leaves the field alone; an out-of-range one clamps")
+
+
+# --- a slot the app has no profile for still templates a new profile of its type ------------
+
+FOREIGN_TOUCH = "e820b755-0c20-4071-bfe5-10a1d6066be8"     # NayaFlow's own uuid for its Touch
+TOUCH_NEW = "a2049967-1c42-4569-897d-3654604132d8"         # "CompanionTesting", app-authored
+
+
+def _foreign_board(with_list=True):
+    """The 2026-09-10 board: four slots written by NayaFlow under ITS uuids. The app matched
+    each by content to a stock profile, so none of these uuids is in module_configs."""
+    by_uuid = {"b6e4d8c3-7a14-409a-b003-7fa611b95e7a": 1,
+               "bca3594f-35ce-485d-a913-afeb6b047944": 2,
+               "8e5650ef-7f03-4292-8781-6fd090783560": 3,
+               FOREIGN_TOUCH: 4}
+    read = {"by_uuid": by_uuid, "slots": {s: list(MOD_READ["slots"][s]) for s in (1, 2, 3, 4)}}
+    if with_list:
+        codes = {1: 2, 2: 1, 3: 1, 4: 0}          # Tune, Track, Track, Touch -- the list's byte
+        read["list"] = R.encode_module_config_list(
+            [(slot, slot, codes[slot], ml._uuid16(u)) for u, slot in by_uuid.items()]).hex()
+    return read
+
+
+def _foreign_desired(read):
+    d = F.DesiredState()
+    d.profile_id = PID
+    layer1 = {"touch:keyboard_right": TOUCH_NEW}
+    for order in (0, 1):
+        d.layers[order], d.leds[order] = {}, {}
+    conn = _db({0: {}, 1: layer1})
+    conn.execute("INSERT INTO module_configs VALUES (?,?,?,NULL)", (TOUCH_NEW, "CompanionTesting", "TOUCH"))
+    conn.commit()
+    try:
+        return d, F.apply_module_layout(d, conn, read)
+    finally:
+        conn.close()
+
+
+def test_a_new_touch_profile_templates_from_a_touch_the_app_has_no_uuid_for():
+    """Seen 2026-09-10: a docked, fully readable Touch, and "cannot add a TOUCH profile: nothing
+    of that type is on the keyboard". The board's list byte says slot 4 IS a Touch; that has to
+    be enough, since every slot NayaFlow wrote carries a uuid we do not hold."""
+    d, layout = _foreign_desired(_foreign_board())
+    assert layout["allocated"] == [TOUCH_NEW]
+    assert layout["slot_for"][TOUCH_NEW] == 5
+    assert len(layout["templates"][TOUCH_NEW]) == len(MOD_READ["slots"][4]), "copied from slot 4"
+    print("  new Touch templated from the foreign slot 4")
+
+
+def test_without_the_list_the_same_board_still_cannot_template():
+    """Pins WHY the fix works: it is the list's type byte, not a guess from the slot contents."""
+    with pytest.raises(ml.LayoutError, match="nothing of that type"):
+        _foreign_desired(_foreign_board(with_list=False))
+    print("  no list byte -> still refused, as before")

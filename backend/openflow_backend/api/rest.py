@@ -870,19 +870,9 @@ def _build_entries(read: dict) -> list:
 
 
 def _list_types(list_hex) -> dict:
-    """{slot: module type} from the module LIST's per-entry type byte.
-
-    The list is the one place the board states what each slot IS. It is what lets a slot whose
-    uuid the app has never seen still be compared by content against profiles of its type,
-    instead of being reported as unknown and left alone."""
-    if not list_hex:
-        return {}
-    by_code = {code: typ for typ, code in module_layout.MODULE_TYPE_CODE.items()}
-    try:
-        entries = remap.parse_module_config_list(bytes.fromhex(list_hex))
-    except ValueError:
-        return {}
-    return {e["slot"]: by_code[e["flag"]] for e in entries if e["flag"] in by_code}
+    """{slot: module type} from the list's type byte. Lives in module_layout so the flash
+    planner and this read path agree on what a slot is."""
+    return module_layout.list_types(list_hex)
 
 
 def _compare(module_type: str, fields: dict, app_bindings: dict):
