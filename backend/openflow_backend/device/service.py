@@ -174,9 +174,31 @@ class DeviceService:
     def _dest_for_side(self, side: str) -> int:
         return C.SIDE_DEST.get(side, C.DEST_LEFT)
 
+    # A cached transport can be dead without knowing it. After the board power-cycles, pyserial
+    # still reports the port open, but the handle belongs to a device instance Windows has already
+    # torn down, and the first write fails with "WriteFile failed (PermissionError(13, 'The device
+    # does not recognize the command.'))". Discovery drops such a transport on error; the RPC
+    # paths did not, so after a power cycle every LED / read / flash call failed until the backend
+    # was restarted (seen 2026-09-10, board power-cycled during a test with the app open).
+    # Two defences: a cheap liveness check on the cached handle before it is handed out, and one
+    # retry on a fresh handle when a write fails before anything was sent.
+    _DEAD_HANDLE = ("Write to ", "Serial port not open")
+
+    @staticmethod
+    def _alive(t) -> bool:
+        """False when the underlying serial handle rejects even a status query."""
+        ser = getattr(t, "_ser", None)
+        if ser is None:
+            return True            # not a real serial transport (tests); trust is_connected
+        try:
+            ser.in_waiting
+            return True
+        except Exception:
+            return False
+
     def _transport_for(self, port: str, dest: int) -> SerialTransport:
         t = self._transports.get(port)
-        if t is not None and t.is_connected:
+        if t is not None and t.is_connected and self._alive(t):
             return t
         # (Re)connect.
         if t is not None:
@@ -196,6 +218,24 @@ class DeviceService:
                 t.disconnect()
             except Exception:
                 pass
+
+    def _with_transport(self, side: str, fn):
+        """Run fn(transport, dest, dev) under the lock; once more on a fresh handle if the cached
+        one turns out to be dead. Only a failure that means NOTHING WAS SENT is retried (a write
+        that failed at the driver, or a port that is not open). A timeout is not: the command may
+        have landed, and re-sending it is the caller's decision."""
+        with self._lock:
+            dev = self._require_side(side)
+            dest = self._dest_for_side(dev.side)
+            t = self._transport_for(dev.port, dest)
+            try:
+                return fn(t, dest, dev)
+            except TransportError as e:
+                if not str(e).startswith(self._DEAD_HANDLE):
+                    raise
+                self._drop(dev.port)
+                t = self._transport_for(dev.port, dest)   # raises "Cannot open" if it is gone
+                return fn(t, dest, dev)
 
     def shutdown(self) -> None:
         with self._lock:
@@ -379,10 +419,7 @@ class DeviceService:
     LED_TARGET = 0
 
     def led(self, side: str, action: str, value: int | None = None) -> dict:
-        with self._lock:
-            dev = self._require_side(side)
-            dest = self._dest_for_side(dev.side)
-            t = self._transport_for(dev.port, dest)
+        def go(t, dest, dev):
             if action == "brightness":
                 if value is None:
                     raise ValueError("brightness requires a value 0-255")
@@ -398,16 +435,15 @@ class DeviceService:
             else:
                 raise ValueError(f"unknown LED action: {action}")
             return {"ok": True, "side": dev.side, "action": action, "value": value}
+        return self._with_transport(side, go)
 
     # --- text protocol ---------------------------------------------------------
 
     def text_command(self, side: str, command: str, force: bool = False) -> dict:
-        with self._lock:
-            dev = self._require_side(side)
-            dest = self._dest_for_side(dev.side)
-            t = self._transport_for(dev.port, dest)
+        def go(t, dest, dev):
             reply = t.send_text(command, allow_dangerous=force)
             return {"ok": True, "side": dev.side, "command": command, "reply": reply}
+        return self._with_transport(side, go)
 
     def dump_settings(self, side: str) -> dict:
         return self.text_command(side, "dump_settings")
@@ -421,11 +457,7 @@ class DeviceService:
         the raw read for db.keymap_import to translate + persist. Read-only."""
         from . import keymap_read
 
-        with self._lock:
-            dev = self._require_side(side)
-            dest = self._dest_for_side(dev.side)
-            t = self._transport_for(dev.port, dest)
-            return keymap_read.read_keymap(t, dest)
+        return self._with_transport(side, lambda t, dest, dev: keymap_read.read_keymap(t, dest))
 
     def read_module_configs(self, side: str = "left") -> dict:
         """Read the module config list + every non-empty slot. Read-only.
@@ -439,11 +471,7 @@ class DeviceService:
         from . import keymap_read
         from . import flash as F
 
-        with self._lock:
-            dev = self._require_side(side)
-            dest = self._dest_for_side(dev.side)
-            t = self._transport_for(dev.port, dest)
-            read = keymap_read.read_module_configs(t, dest)
+        read = self._with_transport(side, lambda t, dest, dev: keymap_read.read_module_configs(t, dest))
         return {
             "list": read["list"].hex(),
             "by_uuid": F.slot_map_for(read["list"]),
@@ -455,10 +483,7 @@ class DeviceService:
 
     def spi_flash_test(self, side: str) -> dict:
         """Read-only SPI flash self-test (0xFA/0x1001). Does NOT format/erase."""
-        with self._lock:
-            dev = self._require_side(side)
-            dest = self._dest_for_side(dev.side)
-            t = self._transport_for(dev.port, dest)
+        def go(t, dest, dev):
             responses = t.send_command(dest, C.CAT_FLASH, C.FLASH_TEST, timeout=3.0)
             payload = _first_payload(responses)
             # `raw` stays and callers should keep showing it. The decode was derived from
@@ -475,6 +500,7 @@ class DeviceService:
                 "diagnosis": decoded,
                 "summary": spi_flash_test.summary(decoded),
             }
+        return self._with_transport(side, go)
 
     def clear_ble_devices(self, side: str, force: bool = False) -> dict:
         """Clear BLE bonds (text: clear_bonds). Destructive: requires force."""
@@ -484,10 +510,7 @@ class DeviceService:
 
     def keyscan(self, side: str, duration: float, callback: Callable[[dict], None]) -> None:
         """Toggle keyscan mode on, stream events for `duration`s, then toggle off."""
-        with self._lock:
-            dev = self._require_side(side)
-            dest = self._dest_for_side(dev.side)
-            t = self._transport_for(dev.port, dest)
+        def go(t, dest, dev):
             t.send_command(dest, C.CAT_SYSTEM, C.SYS_TOGGLE_KEYSCAN_MODE, b"\x01")
             try:
                 def on_frame(frame: bytes) -> None:
@@ -506,6 +529,7 @@ class DeviceService:
                 t.listen(duration, on_frame)
             finally:
                 t.send_command(dest, C.CAT_SYSTEM, C.SYS_TOGGLE_KEYSCAN_MODE, b"\x00")
+        self._with_transport(side, go)
 
     # --- helpers ---------------------------------------------------------------
 

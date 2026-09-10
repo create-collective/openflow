@@ -201,11 +201,36 @@ def test_every_captured_blob_decodes():
 
 def test_revision_moves_between_the_two_captures_and_the_rest_does_not():
     """What tells us `revision` is a counter and not a firmware revision: it is the ONLY thing
-    that differs across a power cycle of the same keyboard."""
+    that differs across a power cycle of the same keyboard.
+
+    `activeProfile` is deliberately NOT in the invariant set any more: it is a setting the user
+    changes with a BT_DEVICE_n key, and the 2026-09-10 capture below proves it. It was constant
+    across the earlier captures only because nobody had pressed one."""
     blobs = {raw for _name, raw in _captured_blobs()}
     if len(blobs) < 2:
         pytest.skip("need two distinct captures to compare")
     decoded = [B.decode(b) for b in blobs]
     assert len({d["revision"] for d in decoded}) > 1, "revision did not move"
-    for key in ("profileCount", "activeProfile", "localAddress", "headerUnknown"):
+    for key in ("profileCount", "localAddress", "headerUnknown"):
         assert len({d[key] for d in decoded}) == 1, f"{key} moved unexpectedly"
+
+
+def test_active_profile_follows_the_bt_device_key_with_the_same_numbering():
+    """2026-09-10: every capture up to then had profile 2 active. The user pressed BT_DEVICE_1
+    (wire record `00 03000000 01000000`, ZMK `&bt BT_SEL 1`), the board was power-cycled, and the
+    next capture shows profile 1 active with nothing else in the blob changed. Three facts from
+    one press: the status byte and the key argument share one numbering (no off-by-one), the
+    selection is persisted across a power cycle, and index 0 -- which NayaFlow's palette never
+    selects, BT_DEVICE_1..4 being 1..4 -- is a fifth slot the user cannot reach from a key."""
+    blobs = dict(_captured_blobs())
+    before = blobs.get("verify-probe-after-nayaflow.json")
+    after = blobs.get("after-a3-outputs-test-20260910.json")
+    if not (before and after):
+        pytest.skip("the two captures around the BT_DEVICE_1 press are not on disk")
+    b, a = B.decode(before), B.decode(after)
+    assert b["activeProfile"] == 2 and a["activeProfile"] == 1
+    assert [p["isActive"] for p in a["profiles"]] == [False, True, False, False, False]
+    assert not any(p["hasPeerData"] for p in a["profiles"]), "no host was ever bonded"
+    for key in ("profileCount", "localAddress", "headerUnknown"):
+        assert a[key] == b[key]
+    assert a["splitLink"]["peerAddress"] == b["splitLink"]["peerAddress"]
