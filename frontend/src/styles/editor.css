@@ -2241,10 +2241,13 @@
 /* Palette search: one box over every tab. Results are rows, not keycaps, because the point
    of a result is its name and what it does, which a 44px cell cannot show. */
 .palette-search {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: block;
   width: 100%;
   box-sizing: border-box;
-  margin: 6px 0 4px;
+  margin: 0 0 8px;
   padding: 6px 10px;
   font: inherit;
   font-size: 13px;

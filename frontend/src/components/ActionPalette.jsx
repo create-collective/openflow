@@ -160,16 +160,18 @@ export default function ActionPalette({
         ))}
       </div>
 
-      <input
-        className="palette-search"
-        type="search"
-        value={query}
-        placeholder="Search every action — e.g. wireless, brightness, paste"
-        onChange={(e) => setQuery(e.target.value)}
-        aria-label="Search all actions"
-      />
-
       <div className="palette-body">
+        {/* Inside the body, not beside it: .palette is a two-column grid (tabs | body) and a
+            third direct child would push the body into the tab column. Sticky so it stays put
+            while the list scrolls. */}
+        <input
+          className="palette-search"
+          type="search"
+          value={query}
+          placeholder="Search every action — e.g. wireless, brightness, paste"
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search all actions"
+        />
         {disabled && !["keyboard", "apps", "mouse"].includes(tab?.id) && (
           <div className="palette-disabled">{disabledHint}</div>
         )}
