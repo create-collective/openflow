@@ -364,6 +364,20 @@ class DeviceService:
         "resume": C.LED_RESUME,
     }
 
+    # Every 0xED command's payload begins with a target byte, ahead of the command's own data.
+    # A SHORT payload is not rejected -- the device zero-fills the missing trailing bytes -- so
+    # sending a bare [value] for a two-parameter command sets the target to that value and the
+    # VALUE ITSELF TO ZERO, while acking exactly like a correct frame. That is what `brightness`
+    # and `effect` did here: brightness was inert and effect always selected effect 0.
+    #
+    # MEASURED on the board 2026-09-09, since nothing about it is visible in a response:
+    #     [10]      -> off     (target 10, level 0)     [0, 15]   -> dim
+    #     [100]     -> off     (target 100, level 0)    [3, 100]  -> full
+    #     [200, 15] -> dim     -- the target's VALUE is ignored; only its position matters
+    # The one-parameter commands below are correct as they stand: their only parameter IS the
+    # target, so an empty payload zero-fills to target 0, and LEDS_OFF with no payload works.
+    LED_TARGET = 0
+
     def led(self, side: str, action: str, value: int | None = None) -> dict:
         with self._lock:
             dev = self._require_side(side)
@@ -372,11 +386,13 @@ class DeviceService:
             if action == "brightness":
                 if value is None:
                     raise ValueError("brightness requires a value 0-255")
-                t.send_command(dest, C.CAT_LED, C.LED_ADJUST_BRIGHTNESS, bytes([value & 0xFF]))
+                t.send_command(dest, C.CAT_LED, C.LED_ADJUST_BRIGHTNESS,
+                               bytes([self.LED_TARGET, value & 0xFF]))
             elif action == "effect":
                 if value is None:
                     raise ValueError("effect requires an index")
-                t.send_command(dest, C.CAT_LED, C.LED_SELECT_EFFECT, bytes([value & 0xFF]))
+                t.send_command(dest, C.CAT_LED, C.LED_SELECT_EFFECT,
+                               bytes([self.LED_TARGET, value & 0xFF]))
             elif action in self._LED_ACTIONS:
                 t.send_command(dest, C.CAT_LED, self._LED_ACTIONS[action])
             else:
