@@ -91,6 +91,11 @@ export const api = {
 
   led: (side, action, value) => req("POST", "/rpc/led", { side, action, value }),
   restoreLighting: (side = "left") => req("POST", "/rpc/restore-lighting", { side }),
+  bleProfiles: (side = "left") => req("GET", `/api/ble/profiles?side=${side}`),
+  selectBleProfile: (side, index) =>
+    req("POST", "/rpc/select-ble-profile", { side, index, confirm: "SELECT" }),
+  clearBleProfile: (side, index) =>
+    req("POST", "/rpc/clear-ble-profile", { side, index, confirm: "CLEAR" }),
   textCommand: (side, command, force = false) =>
     req("POST", "/rpc/text-command", { side, command, force }),
   dumpSettings: (side) => req("POST", "/rpc/dump-settings", { side }),

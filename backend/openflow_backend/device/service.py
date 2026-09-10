@@ -463,6 +463,74 @@ class DeviceService:
                     "animations": {i: K.LAYER_ANIMATIONS.get(a, a) for i, a in anims.items()}}
         return self._with_transport(side, go)
 
+    # --- Bluetooth profile slots ----------------------------------------------
+    # Five slots, 0-4. NayaCore's own validation strings fix the wire form of SELECT and CLEAR:
+    # "Invalid parameter size (%1) for SEL/CLEAR_BLE_PROFILE, should be 1" and "Invalid profile
+    # (%1) for SEL/CLEAR_BLE_PROFILE, should be less than 5" -- one byte, the slot index.
+    # NayaFlow's keys reach 1-4 only; slot 0 is never offered and is most likely the dongle's,
+    # so it is reported as reserved and refused unless the caller says otherwise. The active slot
+    # and its numbering were measured 2026-09-10: BT_DEVICE_n selects slot n, the status blob
+    # reports the same n, and it persists across a power cycle (tests/test_ble_status.py).
+    # Selecting over the cable is assumed to do what the key does; the read-back after the
+    # write says whether the half agreed.
+    BLE_SLOTS = 5
+    BLE_RESERVED_SLOT = 0
+
+    def _check_slot(self, index, allow_reserved: bool) -> int:
+        if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < self.BLE_SLOTS:
+            raise ValueError(f"Bluetooth slot must be 0-{self.BLE_SLOTS - 1}, got {index!r}")
+        if index == self.BLE_RESERVED_SLOT and not allow_reserved:
+            raise ValueError("slot 0 is reserved: NayaFlow never selects it and it is most likely "
+                             "the dongle's. Pass allowReserved to override.")
+        return index
+
+    def ble_profiles(self, side: str = "left") -> dict:
+        """The five Bluetooth slots as the half reports them: which is active, which hold a bond."""
+        def go(t, dest, dev):
+            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_STATUS))
+            if p is None:
+                raise TransportError(f"the {dev.side} half returned no Bluetooth status")
+            d = ble_status.decode(p)
+            slots = [{"index": pr["index"], "active": bool(pr["isActive"]),
+                      "bonded": bool(pr["hasPeerData"]),
+                      "reserved": pr["index"] == self.BLE_RESERVED_SLOT,
+                      "flags": pr["activeFlags"]}
+                     for pr in d.get("profiles") or []]
+            return {"ok": True, "side": dev.side, "activeProfile": d.get("activeProfile"),
+                    "slots": slots, "localAddress": d.get("localAddress"), "statusRaw": p.hex()}
+        return self._with_transport(side, go)
+
+    def select_ble_profile(self, side: str, index: int, allow_reserved: bool = False) -> dict:
+        """Make slot `index` the active one -- what the BT_DEVICE_n key does. Read back after."""
+        index = self._check_slot(index, allow_reserved)
+
+        def go(t, dest, dev):
+            t.send_command(dest, C.CAT_BLE, C.BLE_SELECT_PROFILE, bytes([index]))
+            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_STATUS))
+            now = ble_status.decode(p).get("activeProfile") if p else None
+            return {"ok": now == index, "side": dev.side, "requested": index, "activeProfile": now,
+                    "note": None if now == index else
+                    "the half took the command but still reports a different active slot"}
+        return self._with_transport(side, go)
+
+    def clear_ble_profile(self, side: str, index: int, force: bool = False) -> dict:
+        """Drop slot `index`'s bond and start pairing for it -- what the BT_CLEAR key does to the
+        selected slot. Destructive: the bond is gone. Requires force."""
+        index = self._check_slot(index, allow_reserved=False)
+        if not force:
+            raise DangerousCommandError("clearing a Bluetooth slot drops its bond and starts "
+                                        "pairing; confirm explicitly")
+
+        def go(t, dest, dev):
+            t.send_command(dest, C.CAT_BLE, C.BLE_CLEAR_PROFILE, bytes([index]))
+            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_STATUS))
+            d = ble_status.decode(p) if p else {}
+            still = next((pr for pr in d.get("profiles") or [] if pr["index"] == index), None)
+            return {"ok": True, "side": dev.side, "cleared": index,
+                    "activeProfile": d.get("activeProfile"),
+                    "bonded": bool(still["hasPeerData"]) if still else None}
+        return self._with_transport(side, go)
+
     # --- text protocol ---------------------------------------------------------
 
     def text_command(self, side: str, command: str, force: bool = False) -> dict:

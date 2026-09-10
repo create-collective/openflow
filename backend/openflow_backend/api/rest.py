@@ -573,6 +573,46 @@ async def led(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/api/ble/profiles")
+async def ble_profiles(side: str = "left") -> dict:
+    """The five Bluetooth slots: active, bonded, reserved. One status read."""
+    svc = get_service()
+    try:
+        return await run_in_threadpool(svc.ble_profiles, side)
+    except (TransportError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/select-ble-profile")
+async def select_ble_profile(body: dict = Body(...)) -> dict:
+    """Switch the keyboard's active Bluetooth slot -- the same as pressing BT n on it, so typing
+    moves to that slot's host. Gated like every other write to the keyboard."""
+    if body.get("confirm") != "SELECT":
+        raise HTTPException(status_code=400,
+                            detail='refusing: this changes which Bluetooth slot the keyboard uses, '
+                                   'the same as pressing BT n on it. Send {"confirm": "SELECT"}.')
+    svc = get_service()
+    try:
+        return await run_in_threadpool(svc.select_ble_profile, body.get("side", "left"),
+                                       body.get("index"), bool(body.get("allowReserved")))
+    except (TransportError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/clear-ble-profile")
+async def clear_ble_profile(body: dict = Body(...)) -> dict:
+    """Drop a slot's bond and start pairing for it. Destructive; needs its own token."""
+    if body.get("confirm") != "CLEAR":
+        raise HTTPException(status_code=400,
+                            detail='refusing: this drops the bond in that slot. Send {"confirm": "CLEAR"}.')
+    svc = get_service()
+    try:
+        return await run_in_threadpool(svc.clear_ble_profile, body.get("side", "left"),
+                                       body.get("index"), True)
+    except (TransportError, DangerousCommandError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/rpc/restore-lighting")
 async def restore_lighting(body: dict = Body(default={})) -> dict:
     """Both halves back to the stored colours and animation. One layer-list write; see
