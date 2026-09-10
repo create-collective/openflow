@@ -1,0 +1,18 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="scroll-up__SCROLL_UP">
+    <g class="scroll-up__content">
+      <rect width="14" height="20" x="18" y="16" stroke="#fff" stroke-width="2" class="scroll-up__content" rx="7"/>
+      <rect width="2" height="5" x="24" y="18" fill="#fff" class="scroll-up__content" rx="1"/>
+    </g>
+    <g class="scroll-up__instance">
+      <g class="scroll-up__content">
+        <path fill="#fff" d="m29 11.7266-.94.94L25 9.61329l-3.06 3.05331-.94-.94 4-3.99997 4 3.99997Z"/>
+        <path fill="#fff" d="m29 7.33329-.94.94L25 5.21996l-3.06 3.05333-.94-.94 4-4 4 4Z"/>
+      </g>
+    </g>
+    <g class="scroll-up__content">
+      <path fill="#fff" d="M11 10h2v1h-2zm0-3h2v1h-2zm-1 6h3v1h-3zm-1 3h4v1H9zm-2 3h5v2H7zm2 4h4v1H9zm1 3h3v1h-3zm1 3h2v1h-2zm0 3h2v1h-2z" class="scroll-up__content"/>
+    </g>
+  </g>
+</svg>

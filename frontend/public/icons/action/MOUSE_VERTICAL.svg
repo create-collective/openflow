@@ -1,0 +1,18 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="mouse-vertical__MOUSE_VERTICAL">
+    <path stroke="#fff" stroke-width="1.5" d="M18.62 23.2561 7.39657 10.3706l-.01669 17.088 3.86482-2.5126 1.7511 4.6833 2.81-1.0506-1.751-4.6833 4.5652-.6393Z" class="mouse-vertical__content"/>
+    <g class="mouse-vertical__instance">
+      <g class="mouse-vertical__content">
+        <path fill="#fff" d="m24 15.7267.94.94L28 13.6134l3.06 3.0533.94-.94-4-4-4 4Z"/>
+        <path fill="#fff" d="m24 11.3334.94.94L28 9.22004l3.06 3.05336.94-.94-4-4.00003-4 4.00003Z"/>
+      </g>
+    </g>
+    <g class="mouse-vertical__instance">
+      <g class="mouse-vertical__content">
+        <path fill="#fff" d="m32 24.2734-.94-.94L28 26.3867l-3.06-3.0533-.94.94 4 4 4-4Z"/>
+        <path fill="#fff" d="m32 28.6667-.94-.94L28 30.78l-3.06-3.0533-.94.94 4 4 4-4Z"/>
+      </g>
+    </g>
+  </g>
+</svg>

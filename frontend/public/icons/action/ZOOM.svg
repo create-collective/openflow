@@ -1,0 +1,24 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 48 48">
+  <g class="zoom__ZOOM">
+    <g class="zoom__Group zoom__1">
+      <g class="zoom__instance">
+        <path fill="#fff" d="m15.2241 36.4172-4.3228-.0048-.0047-4.3227H9.5672v5.6568h5.6569v-1.3293Z" class="zoom__content"/>
+      </g>
+      <g class="zoom__instance">
+        <path fill="#fff" d="m36.1157 15.5255-.0047-4.3228-4.3228-.0047V9.86864h5.6569v5.65686h-1.3294Z" class="zoom__content"/>
+      </g>
+    </g>
+    <g class="zoom__Group zoom__2">
+      <g class="zoom__instance">
+        <path fill="#fff" d="m9.40333 14.0325 4.32277-.0048.0047-4.32274h1.3294v5.65684H9.40333v-1.3293Z" class="zoom__content"/>
+      </g>
+      <g class="zoom__instance">
+        <path fill="#fff" d="m33.2812 37.9103.0047-4.3227 4.3228-.0048v-1.3293h-5.6569v5.6568h1.3294Z" class="zoom__content"/>
+      </g>
+    </g>
+    <g class="zoom__instance">
+      <path fill="#fff" d="M26.5033 25.5034h-.5267l-.1867-.18c.6534-.76 1.0467-1.7467 1.0467-2.82 0-2.3934-1.94-4.3334-4.3333-4.3334-2.3934 0-4.3334 1.94-4.3334 4.3334 0 2.3933 1.94 4.3333 4.3334 4.3333 1.0733 0 2.06-.3933 2.82-1.0467l.18.1867v.5267l3.3333 3.3266.9933-.9933-3.3266-3.3333Zm-4 0c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3Z" class="zoom__content"/>
+    </g>
+  </g>
+</svg>

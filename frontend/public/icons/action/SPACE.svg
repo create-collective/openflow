@@ -1,0 +1,8 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="space__SPACE">
+    <g class="space__instance">
+      <path fill="#fff" d="M26 17v4H14v-4h-2v6h16v-6h-2Z" class="space__content"/>
+    </g>
+  </g>
+</svg>

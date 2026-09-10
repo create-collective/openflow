@@ -1,0 +1,12 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="scroll-vertical__SCROLL_VERTICAL">
+    <g class="scroll-vertical__content">
+      <rect width="14" height="20" x="18" y="9" stroke="#fff" stroke-width="2" class="scroll-vertical__content" rx="7"/>
+      <rect width="2" height="5" x="24" y="11" fill="#fff" class="scroll-vertical__content" rx="1"/>
+    </g>
+    <g class="scroll-vertical__content">
+      <path fill="#fff" d="M11 10h2v1h-2zm0-3h2v1h-2zm-1 6h3v1h-3zm-1 3h4v1H9zm-2 3h5v2H7zm2 4h4v1H9zm1 3h3v1h-3zm1 3h2v1h-2zm0 3h2v1h-2z" class="scroll-vertical__content"/>
+    </g>
+  </g>
+</svg>

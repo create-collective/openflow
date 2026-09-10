@@ -5,6 +5,7 @@ import LayersIcon from "./LayersIcon";
 import AppShortcutPicker from "./AppShortcutPicker";
 import VirtualKeyboard from "./VirtualKeyboard";
 import VirtualMouse from "./VirtualMouse";
+import { ActionIcon, iconNameFor } from "../lib/icons";
 
 // The action selector, shared by the keymap editor and by module gestures.
 //
@@ -191,7 +192,10 @@ export default function ActionPalette({
                   title={describe(r.action)}
                   onClick={() => !disabled && onPick(r.pick)}
                 >
-                  <span className="palette-result-name">{r.action.name || r.action.label}</span>
+                  <span className="palette-result-name">
+                    <ActionIcon name={iconNameFor(r.action.code, catalog.names)} size={16} className="inline" />
+                    {r.action.name || r.action.label}
+                  </span>
                   <span className="palette-result-where">{r.tab.title || r.tab.id} · {r.cat}</span>
                   {r.action.tooltip && <span className="palette-result-tip">{r.action.tooltip}</span>}
                 </button>
@@ -299,7 +303,16 @@ export default function ActionPalette({
                       onClick={() => !disabled && !a.comingSoon
                         && onPick({ actionCode: a.code, actionType: a.actionType })}
                     >
-                      {tab.id === "shortcuts" ? formatCombo(a.code) : a.label}
+                      {(() => {
+                        // NayaFlow's keycap look: the icon alone where one exists, the name on
+                        // hover. Letters and digits keep their text (lib/icons.jsx). The wide
+                        // module grid shows sentences, so there the icon sits before the text.
+                        const icon = iconNameFor(a.code, catalog.names);
+                        if (tab.id === "shortcuts") return formatCombo(a.code);
+                        if (!icon) return a.label;
+                        if (tab.id === "module") return <><ActionIcon name={icon} size={16} className="inline" />{a.label}</>;
+                        return <ActionIcon name={icon} size={22} />;
+                      })()}
                     </button>
                   ))}
                 </div>

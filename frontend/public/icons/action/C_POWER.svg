@@ -1,0 +1,8 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="c-power__C_POWER">
+    <g class="c-power__instance">
+      <path fill="#fff" d="M21 11h-2v10h2V11Zm4.83 2.17-1.42 1.42C25.99 15.86 27 17.81 27 20c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42l-1.41-1.41C12.23 14.82 11 17.26 11 20c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83Z" class="c-power__content"/>
+    </g>
+  </g>
+</svg>

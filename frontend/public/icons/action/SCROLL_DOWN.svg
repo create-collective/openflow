@@ -1,0 +1,18 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="scroll-down__SCROLL_DOWN">
+    <g class="scroll-down__content">
+      <rect width="14" height="20" x="18" y="4" stroke="#fff" stroke-width="2" class="scroll-down__content" rx="7"/>
+      <rect width="2" height="5" x="24" y="6" fill="#fff" class="scroll-down__content" rx="1"/>
+    </g>
+    <g class="scroll-down__instance">
+      <g class="scroll-down__content">
+        <path fill="#fff" d="m29 28.2734-.94-.94L25 30.3867l-3.06-3.0533-.94.94 4 4 4-4Z"/>
+        <path fill="#fff" d="m29 32.6667-.94-.94L25 34.78l-3.06-3.0533-.94.94 4 4 4-4Z"/>
+      </g>
+    </g>
+    <g class="scroll-down__content">
+      <path fill="#fff" d="M11 10h2v1h-2zm0-3h2v1h-2zm-1 6h3v1h-3zm-1 3h4v1H9zm-2 3h5v2H7zm2 4h4v1H9zm1 3h3v1h-3zm1 3h2v1h-2zm0 3h2v1h-2z" class="scroll-down__content"/>
+    </g>
+  </g>
+</svg>

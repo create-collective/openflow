@@ -1,0 +1,8 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="toggle-sidebar__TOGGLE_SIDEBAR">
+    <g class="toggle-sidebar__instance">
+      <path fill="#fff" d="M19 29h-6c-.55 0-1.0208-.1958-1.4125-.5875C11.1958 28.0208 11 27.55 11 27V13c0-.55.1958-1.0208.5875-1.4125C11.9792 11.1958 12.45 11 13 11h6v18Zm2-10v-8h6c.55 0 1.0208.1958 1.4125.5875C28.8042 11.9792 29 12.45 29 13v6h-8Zm2-2h4v-3.5c0-.2761-.2239-.5-.5-.5H23v4Zm-2 12v-8h8v6c0 .55-.1958 1.0208-.5875 1.4125C28.0208 28.8042 27.55 29 27 29h-6Zm2-2h3.5c.2761 0 .5-.2239.5-.5V23h-4v4Z" class="toggle-sidebar__Vector"/>
+    </g>
+  </g>
+</svg>

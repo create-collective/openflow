@@ -1,0 +1,12 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="mouse-left__MOUSE_LEFT">
+    <path stroke="#fff" stroke-width="1.5" d="M22.62 23.2561 11.3966 10.3706l-.0167 17.088 3.8648-2.5126 1.7511 4.6833 2.81-1.0506-1.751-4.6833 4.5652-.6393Z" class="mouse-left__content"/>
+    <g class="mouse-left__instance">
+      <g class="mouse-left__content">
+        <path fill="#fff" d="m31.7266 16 .94-.94L29.6133 12l3.0533-3.06-.94-.94-4 4 4 4Z"/>
+        <path fill="#fff" d="m27.3333 16 .94-.94L25.2199 12l3.0534-3.06-.94-.94-4 4 4 4Z"/>
+      </g>
+    </g>
+  </g>
+</svg>

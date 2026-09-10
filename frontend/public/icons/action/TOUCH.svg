@@ -1,0 +1,6 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+  <g class="touch__TOUCH">
+    <path fill="#fff" fill-rule="evenodd" d="M3 12c0-4.97056 4.02944-9 9-9h6c1.6569 0 3 1.34315 3 3v6c0 4.9706-4.0294 9-9 9-4.97056 0-9-4.0294-9-9Zm15-5.25c.4142 0 .75-.33579.75-.75s-.3358-.75-.75-.75-.75.33579-.75.75.3358.75.75.75Z" class="touch__Subtract" clip-rule="evenodd"/>
+  </g>
+</svg>

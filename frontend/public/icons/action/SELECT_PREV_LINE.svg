@@ -1,0 +1,13 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="select-prev-line__SELECT_PREV_LINE">
+    <g class="select-prev-line__instance">
+      <path fill="#fff" d="m13.3001 23.3-2.6-2.6c-.2-.2-.3-.4333-.3-.7 0-.2667.1-.5.3-.7l2.6-2.6c.1834-.1833.4125-.2792.6875-.2875.275-.0083.5125.0875.7125.2875.1834.1833.275.4167.275.7 0 .2833-.0916.5167-.275.7l-.875.9h6.175c.2834 0 .5209.0958.7125.2875.1917.1917.2875.4292.2875.7125s-.0958.5208-.2875.7125c-.1916.1917-.4291.2875-.7125.2875h-6.175l.9.9c.1834.1833.275.4125.275.6875s-.1.5125-.3.7125c-.1833.1833-.4166.275-.7.275-.2833 0-.5166-.0917-.7-.275Z" class="select-prev-line__content"/>
+      <path fill="#fff" d="M24 15h2v10h-2z" class="select-prev-line__Rectangle select-prev-line__48"/>
+      <path fill="#fff" d="M30 23h-6v2h6z" class="select-prev-line__Rectangle select-prev-line__49"/>
+    </g>
+    <g class="select-prev-line__instance">
+      <path fill="#fff" d="M13 29c-.55 0-1.0208-.1958-1.4125-.5875C11.1958 28.0208 11 27.55 11 27h2v2Zm-2-16c0-.55.1958-1.0208.5875-1.4125C11.9792 11.1958 12.45 11 13 11v2h-2Zm4 16v-2h2v2h-2Zm0-16v-2h2v2h-2Zm4 16v-2h2v2h-2Zm0-16v-2h2v2h-2Zm4 16v-2h2v2h-2Zm0-16v-2h2v2h-2Zm4 16v-2h2c0 .55-.1958 1.0208-.5875 1.4125C28.0208 28.8042 27.55 29 27 29Zm0-16v-2c.55 0 1.0208.1958 1.4125.5875C28.8042 11.9792 29 12.45 29 13h-2Z" class="select-prev-line__content"/>
+    </g>
+  </g>
+</svg>

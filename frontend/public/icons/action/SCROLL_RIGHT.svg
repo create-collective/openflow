@@ -1,0 +1,18 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="scroll-right__SCROLL_RIGHT">
+    <g class="scroll-right__content">
+      <rect width="14" height="20" x="7" y="14" stroke="#fff" stroke-width="2" class="scroll-right__content" rx="7"/>
+      <rect width="2" height="5" x="13" y="16" fill="#fff" class="scroll-right__content" rx="1"/>
+    </g>
+    <g class="scroll-right__instance">
+      <g class="scroll-right__content">
+        <path fill="#fff" d="m26.2733 28-.94-.94L28.3866 24l-3.0533-3.06.94-.94 4 4-4 4Z"/>
+        <path fill="#fff" d="m30.6666 28-.94-.94L32.7799 24l-3.0533-3.06.94-.94 4 4-4 4Z"/>
+      </g>
+    </g>
+    <g class="scroll-right__content">
+      <path fill="#fff" d="M10 8v1h1V8zM7 8v1h1V8zm6-1v2h1V7zm3-1v3h1V6zm3-2v4h2V4zm4 2v3h1V6zm3 1v2h1V7zm3 1v1h1V8zm3 0v1h1V8z" class="scroll-right__content"/>
+    </g>
+  </g>
+</svg>

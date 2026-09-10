@@ -2279,3 +2279,22 @@
 .palette-result-where { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
 .palette-result-tip { grid-column: 1 / -1; color: var(--text-dim); font-size: 12px; }
 .skp-act-name { color: var(--text-dim); font-weight: 400; font-size: 12px; }
+
+
+/* NayaFlow's keycap icons, painted through a mask so the vendor's white fills take the
+   current text colour in either theme. Sized inline by the component. */
+.naya-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex: none;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.naya-icon.inline { margin-right: 6px; }
+.palette-key .naya-icon { display: block; margin: 0 auto; }
+.kc-main .naya-icon { display: block; }

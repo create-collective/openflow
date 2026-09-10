@@ -1,0 +1,8 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="tab__TAB">
+    <g class="tab__instance">
+      <path fill="#fff" d="M20.09 15.41 23.67 19H9.5v2h14.17l-3.59 3.59L21.5 26l6-6-6-6-1.41 1.41ZM28.5 14v12h2V14h-2Z" class="tab__content"/>
+    </g>
+  </g>
+</svg>

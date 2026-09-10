@@ -508,6 +508,8 @@ def _describe(action: dict, names: dict) -> dict:
             out["tooltip"] = nf["tooltip"]
         if nf.get("category"):
             out["nayaflowCategory"] = nf["category"]
+        if nf.get("icon"):
+            out["icon"] = nf["icon"]
     elif not out.get("name"):
         out["name"] = action["label"]
     return out
@@ -524,7 +526,7 @@ def get_catalog() -> dict:
         for c in t.get("categories") or []:
             actions = [_describe(a, names) for a in c.get("actions") or []]
             for a in actions:
-                flat.setdefault(a["code"], {k: a[k] for k in ("label", "name", "tooltip", "alias")
+                flat.setdefault(a["code"], {k: a[k] for k in ("label", "name", "tooltip", "alias", "icon")
                                             if k in a})
             cats.append({**c, "actions": actions})
         tabs.append({**t, "categories": cats})

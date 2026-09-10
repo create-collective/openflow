@@ -1,0 +1,9 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="minimize-all__MINIMIZE_ALL">
+    <g class="minimize-all__instance">
+      <path fill="#fff" d="M15 29c-.2833 0-.5208-.0958-.7125-.2875C14.0958 28.5208 14 28.2833 14 28s.0958-.5208.2875-.7125C14.4792 27.0958 14.7167 27 15 27h10c.2833 0 .5208.0958.7125.2875.1917.1917.2875.4292.2875.7125s-.0958.5208-.2875.7125C25.5208 28.9042 25.2833 29 25 29H15Z" class="minimize-all__content"/>
+    </g>
+    <path fill="#fff" d="M9 31h22v2H9z" class="minimize-all__Rectangle minimize-all__47"/>
+  </g>
+</svg>

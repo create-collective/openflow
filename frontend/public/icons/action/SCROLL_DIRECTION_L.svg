@@ -1,0 +1,13 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="scroll-direction-l__SCROLL_DIRECTION_L">
+    <g class="scroll-direction-l__content">
+      <rect width="14" height="20" x="15" y="9" stroke="#fff" stroke-width="2" class="scroll-direction-l__content" rx="7"/>
+      <rect width="2" height="5" x="21" y="11" fill="#fff" class="scroll-direction-l__content" rx="1"/>
+    </g>
+    <g class="scroll-direction-l__content">
+      <path fill="#fff" d="M8 10h2v1H8zm0-3h2v1H8zm-1 6h3v1H7zm-1 3h4v1H6zm-2 3h5v2H4zm2 4h4v1H6zm1 3h3v1H7zm1 3h2v1H8zm0 3h2v1H8z" class="scroll-direction-l__content"/>
+    </g>
+    <path fill="#fff" d="M32.2116 35v-7h1v6.21h3.21V35h-4.21Z" class="scroll-direction-l__content"/>
+  </g>
+</svg>

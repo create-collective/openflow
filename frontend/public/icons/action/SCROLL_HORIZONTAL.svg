@@ -1,0 +1,12 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="scroll-horizontal__SCROLL_HORIZONTAL">
+    <g class="scroll-horizontal__content">
+      <rect width="14" height="20" x="13" y="14" stroke="#fff" stroke-width="2" class="scroll-horizontal__content" rx="7"/>
+      <rect width="2" height="5" x="19" y="16" fill="#fff" class="scroll-horizontal__content" rx="1"/>
+    </g>
+    <g class="scroll-horizontal__content">
+      <path fill="#fff" d="M10 8v1h1V8zM7 8v1h1V8zm6-1v2h1V7zm3-1v3h1V6zm3-2v4h2V4zm4 2v3h1V6zm3 1v2h1V7zm3 1v1h1V8zm3 0v1h1V8z" class="scroll-horizontal__content"/>
+    </g>
+  </g>
+</svg>

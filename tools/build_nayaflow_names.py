@@ -34,9 +34,12 @@ def build() -> dict:
         # ending "Restart your keyboard to". Mark that rather than guess how the sentence ended.
         if tooltip and tooltip[-1] not in ".!?)":
             tooltip += "…"
+        icon = re.search(r"icon=([A-Za-z0-9_]+)", e.get("notes") or "")
         out[code] = {"name": (e.get("label") or "").strip(),
                      "tooltip": tooltip,
-                     "category": e.get("category") or ""}
+                     "category": e.get("category") or "",
+                     # The keycap icon NayaFlow draws, by file name under icons/action/.
+                     "icon": icon.group(1) if icon else ""}
     return dict(sorted(out.items()))
 
 

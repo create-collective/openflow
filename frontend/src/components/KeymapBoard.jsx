@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ModuleBayPicker from "./ModuleBayPicker";
 import { keyLegend } from "../lib/keylabels";
+import { ActionIcon, iconNameFor } from "../lib/icons";
 import { deviceColor } from "../lib/color";
 import LayersIcon from "./LayersIcon";
 import WindowsIcon from "./WindowsIcon";
@@ -56,7 +57,7 @@ function contrastText(hex) {
 
 // One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked,
 // with the resolved legend centered per-shape.
-function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline }) {
+function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, names }) {
   const shape = SHAPES[POS_SHAPE[pos]] || SHAPES.Ve;
   const [, , vbw, vbh] = shape.viewBox.split(" ").map(Number);
   const w = vbw * KEY_UNIT, h = vbh * KEY_UNIT;
@@ -116,7 +117,15 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline }
       {!legend.layer && (legend.main || legend.sub) && (
         <span className="kc-legend" style={{ top: shape.legend.top, left: shape.legend.left, color: textColor }}>
           {legend.sub && <span className="kc-sub" style={{ color: textColor }}>{legend.sub}</span>}
-          <span className="kc-main">{isWinKey ? <WindowsIcon size={15} /> : legend.main}</span>
+          {(() => {
+            // The cap draws NayaFlow's icon where the action has one; otherwise the text legend.
+            const icon = !isWinKey && data?.binding && iconNameFor(data.binding.actionCode, names);
+            return (
+              <span className="kc-main">
+                {isWinKey ? <WindowsIcon size={15} /> : icon ? <ActionIcon name={icon} size={15} /> : legend.main}
+              </span>
+            );
+          })()}
         </span>
       )}
       {behaviours > 1 && (
@@ -217,10 +226,10 @@ export default function KeymapBoard(props) {
     ledOutline = false, moduleLed = null, onModuleLed = null,
     onSelectModule = null, moduleAssign = {}, showModulePalette = false, onAssignModule = null,
     pickedModule = null, onPickModule = null, layerMap = {}, bays = null,
-    allowModuleDrag = true,
+    allowModuleDrag = true, names = {},
   } = props;
   const [openBay, setOpenBay] = useState(null);
-  const kp = { keysByPosition, mode, selectedPosition, onSelectKey, layerMap, ledOutline };
+  const kp = { keysByPosition, mode, selectedPosition, onSelectKey, layerMap, ledOutline, names };
 
   return (
     <div className="keymap-board2">

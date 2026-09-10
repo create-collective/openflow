@@ -1,4 +1,5 @@
 import { actionText } from "../lib/keylabels";
+import { ActionIcon, iconNameFor } from "../lib/icons";
 
 // The bottom-left binding editor: the selected key's Behavior -> Action rows.
 // Pick a behavior slot (Tap/Hold enabled; richer OneKey slots coming soon),
@@ -49,6 +50,7 @@ export default function SelectedKeyPanel({
               const name = nf?.name && nf.name !== text ? nf.name : null;
               return (
                 <span className="skp-act" title={nf ? [nf.name, nf.tooltip, `(${b.actionCode})`].filter(Boolean).join("\n") : undefined}>
+                  <ActionIcon name={b && iconNameFor(b.actionCode, names)} size={14} className="inline" />
                   {text}
                   {name && <span className="skp-act-name"> — {name}</span>}
                 </span>

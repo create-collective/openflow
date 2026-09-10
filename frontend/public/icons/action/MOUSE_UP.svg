@@ -1,0 +1,12 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="mouse-up__MOUSE_UP">
+    <path stroke="#fff" stroke-width="1.5" d="M22.62 23.2561 11.3966 10.3706l-.0167 17.088 3.8648-2.5126 1.7511 4.6833 2.81-1.0506-1.751-4.6833 4.5652-.6393Z" class="mouse-up__content"/>
+    <g class="mouse-up__instance">
+      <g class="mouse-up__content">
+        <path fill="#fff" d="m24 15.7267.94.94L28 13.6134l3.06 3.0533.94-.94-4-4-4 4Z"/>
+        <path fill="#fff" d="m24 11.3334.94.94L28 9.22004l3.06 3.05336.94-.94-4-4.00003-4 4.00003Z"/>
+      </g>
+    </g>
+  </g>
+</svg>

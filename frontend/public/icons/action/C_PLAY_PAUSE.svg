@@ -1,0 +1,11 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="c-play-pause__C_PLAY_PAUSE">
+    <g class="c-play-pause__instance">
+      <path fill="#fff" d="M10.4167 14.1666v11.6667L19.5834 20l-9.1667-5.8334Z" class="c-play-pause__content"/>
+    </g>
+    <g class="c-play-pause__instance">
+      <path fill="#fff" d="M20 25.8333h3.3333V14.1666H20v11.6667Zm6.6667-11.6667v11.6667H30V14.1666h-3.3333Z" class="c-play-pause__content"/>
+    </g>
+  </g>
+</svg>

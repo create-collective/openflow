@@ -477,6 +477,7 @@ export default function Bindings() {
             selectedPosition={selectedPos}
             onSelectKey={(pos) => { setSelectedPos(pos); setActiveSlot("tap"); }}
             layerMap={layerMap}
+            names={catalog?.names || {}}
             moduleAssign={moduleAssign}
             showModulePalette
             onAssignModule={assignModule}

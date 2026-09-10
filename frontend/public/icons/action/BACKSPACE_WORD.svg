@@ -1,0 +1,9 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 40 40">
+  <g class="backspace-word__BACKSPACE_WORD">
+    <g class="backspace-word__instance">
+      <path fill="#fff" d="M29 19H14.83l3.58-3.59L17 14l-6 6 6 6 1.41-1.41L14.83 21H29v-2Z" class="backspace-word__content"/>
+    </g>
+    <path fill="#fff" d="M9 31h22v2H9z" class="backspace-word__Rectangle backspace-word__47"/>
+  </g>
+</svg>
