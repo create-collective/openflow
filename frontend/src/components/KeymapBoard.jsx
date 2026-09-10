@@ -122,7 +122,7 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, 
             const icon = !isWinKey && data?.binding && iconNameFor(data.binding.actionCode, names);
             return (
               <span className="kc-main">
-                {isWinKey ? <WindowsIcon size={15} /> : icon ? <ActionIcon name={icon} size={15} /> : legend.main}
+                {isWinKey ? <WindowsIcon size={15} /> : icon ? <ActionIcon name={icon} size={19} /> : legend.main}
               </span>
             );
           })()}
@@ -150,7 +150,7 @@ function Column({ col, align, ...kp }) {
     }}>
       {col.keys.map((pos) => (
         <KeyCap key={pos} pos={pos} data={kp.keysByPosition[pos]} mode={kp.mode} ledOutline={kp.ledOutline}
-          selected={kp.selectedPosition === pos} onSelectKey={kp.onSelectKey} layerMap={kp.layerMap} />
+          selected={kp.selectedPosition === pos} onSelectKey={kp.onSelectKey} layerMap={kp.layerMap} names={kp.names} />
       ))}
     </div>
   );
@@ -292,8 +292,8 @@ export default function KeymapBoard(props) {
           <ModuleSlot id="right" pos={89} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} moduleLed={moduleLed} onModuleLed={onModuleLed} />
         </div>
         <div className="kb-thumbs">
-          <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} ledOutline={ledOutline} />)}</div>
-          <div className="kb-thumb-group">{RIGHT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} ledOutline={ledOutline} />)}</div>
+          <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} ledOutline={ledOutline} names={names} />)}</div>
+          <div className="kb-thumb-group">{RIGHT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} ledOutline={ledOutline} names={names} />)}</div>
         </div>
       </div>
 

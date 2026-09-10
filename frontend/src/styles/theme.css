@@ -36,6 +36,7 @@
   --border: var(--neutral20);
   --border-strong: var(--neutral30);
   --text: var(--neutral95);
+  --icon: var(--neutral100);        /* keycap icons: pure white, their glyphs are thin */
   --text-muted: var(--neutral60);
   --text-dim: var(--neutral50);
 

@@ -2287,7 +2287,9 @@
   display: inline-block;
   vertical-align: middle;
   flex: none;
-  background-color: currentColor;
+  /* --icon rather than currentColor: NayaFlow's glyphs are thin strokes inset in a 40-unit
+     box, and at keycap size the theme's off-white text colour reads as grey. */
+  background-color: var(--icon, currentColor);
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
@@ -2297,4 +2299,7 @@
 }
 .naya-icon.inline { margin-right: 6px; }
 .palette-key .naya-icon { display: block; margin: 0 auto; }
+.palette-key.disabled .naya-icon { opacity: 0.85; }
 .kc-main .naya-icon { display: block; }
+/* A cap painted with an LED colour computes its own legend colour; the icon follows it. */
+.kc-legend[style*="color"] .naya-icon { background-color: currentColor; }
