@@ -157,10 +157,16 @@ AXIS_HALVES = {
                                       "default": "mouse - MOUSE_DOWN - MOUSE_UP"},
         "horizontal:touch:1_finger":  {"-": 0x07, "+": 0x08, "category": 0,
                                       "default": "mouse - MOUSE_LEFT - MOUSE_RIGHT"},
-        "horizontal:touch:2_fingers": {"-": 0x0D, "+": 0x0E, "category": 4,
-                                      "default": "mouse - SCROLL_LEFT - SCROLL_RIGHT"},
-        "vertical:touch:2_fingers":   {"-": 0x0F, "+": 0x10, "category": 6,
+        # Category 4 is the VERTICAL scroll pair and category 6 the HORIZONTAL one, on the Touch
+        # exactly as on the Tune. Measured 2026-09-10 (create-companion census): with distinct keys
+        # in all four halves, an up-swipe fired 0x0d and a down-swipe 0x0e; left fired 0x0f and
+        # right 0x10. These two entries were paired the other way round until then -- the field
+        # map had flagged exactly that as the open question -- so a "horizontal" binding landed on
+        # vertical swipes. Signs are the ordinary ones: minus is up / left.
+        "vertical:touch:2_fingers":   {"-": 0x0D, "+": 0x0E, "category": 4,
                                       "default": "mouse - SCROLL_UP - SCROLL_DOWN"},
+        "horizontal:touch:2_fingers": {"-": 0x0F, "+": 0x10, "category": 6,
+                                      "default": "mouse - SCROLL_LEFT - SCROLL_RIGHT"},
     },
 }
 

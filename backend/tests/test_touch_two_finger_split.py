@@ -150,3 +150,27 @@ if __name__ == "__main__":
         print(fn.__name__)
         fn()
     print("\nOK")
+
+
+# --- the axis pairing itself, measured -----------------------------------------------------
+
+def test_the_touch_two_finger_axes_are_paired_the_way_the_pad_fires_them():
+    """2026-09-10, create-companion census with Ctrl+F13..F16 in the four halves: an up-swipe
+    fired the key in 0x0d and a down-swipe 0x0e; left fired 0x0f and right 0x10. The table had
+    these two pairs the other way round, exactly the open question the field map recorded."""
+    h = MF.axis_halves("TOUCH")
+    assert (h["vertical:touch:2_fingers"]["-"], h["vertical:touch:2_fingers"]["+"]) == (0x0D, 0x0E)
+    assert (h["horizontal:touch:2_fingers"]["-"], h["horizontal:touch:2_fingers"]["+"]) == (0x0F, 0x10)
+
+
+def test_scroll_category_means_the_same_axis_on_every_module():
+    """The firmware's two scroll categories are not per module: 4 is vertical and 6 is
+    horizontal on the Tune (measured 2026-09-04) and on the Touch (2026-09-10). A table that
+    gives the same category two different axes on two modules is wrong on one of them."""
+    by_cat = {}
+    for module in ("TUNE", "TOUCH"):
+        for gesture, half in MF.axis_halves(module).items():
+            if half["category"] in (4, 6):
+                axis = gesture.split(":")[0]
+                by_cat.setdefault(half["category"], set()).add(axis)
+    assert by_cat == {4: {"vertical"}, 6: {"horizontal"}}, by_cat
