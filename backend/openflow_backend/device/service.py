@@ -437,6 +437,32 @@ class DeviceService:
             return {"ok": True, "side": dev.side, "action": action, "value": value}
         return self._with_transport(side, go)
 
+    def restore_lighting(self, side: str = "left") -> dict:
+        """Put both halves back to the stored colours and animation after an LED effect key.
+
+        Reads the layer list and writes it straight back. Measured 2026-09-10: that one frame, sent
+        to the left, clears a runtime effect on BOTH halves, and nothing else does short of a power
+        cycle. NayaFlow has no equivalent; its flash only writes the list when layers change, which
+        is why "flash from NayaFlow" never restored lighting either. Every OpenFlow flash now ends
+        with the same write (flash._lighting_restore_ops); this is the button for when nothing
+        needs flashing."""
+        from . import flash as F
+        from . import keymap_read as K
+        from . import remap as R
+
+        def go(t, dest, dev):
+            r = [x for x in t._send_raw(K._build(dest, K.READ_LAYER_LIST), 2.0) if x.valid]
+            raw = bytes(r[0].payload) if r else b""
+            idxs, uuids, anims = K.parse_layer_list(raw)
+            if not idxs:
+                raise TransportError("the board returned no layer list; nothing to restore")
+            payload = F.lighting_restore_payload({i: R.layer_uuid_bytes(u) for i, u in uuids.items()}, anims)
+            for frame in R.frames_for(dest, R.WRITE_LAYER_LIST, payload):
+                t._send_raw(frame, 2.0)
+            return {"ok": True, "side": dev.side, "layers": len(idxs),
+                    "animations": {i: K.LAYER_ANIMATIONS.get(a, a) for i, a in anims.items()}}
+        return self._with_transport(side, go)
+
     # --- text protocol ---------------------------------------------------------
 
     def text_command(self, side: str, command: str, force: bool = False) -> dict:

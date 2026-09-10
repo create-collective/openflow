@@ -114,7 +114,12 @@ def test_diff_plan_is_sparse() -> None:
 
     plan = F.compute_plan(desired, current)
     labels = [op.label for op in plan]
-    assert labels == [f"layer {li}"], f"expected only the changed layer, got {labels}"
+    # The trailing layer-list write is not a diff: every flash ends with it so the board's
+    # lighting comes back (measured 2026-09-10, test_lighting_restore.py) -- but only with a
+    # complete identity table, and this fixture is a read from before uuids were captured, so
+    # it carries none. Either way, everything before it must be exactly the one changed layer.
+    tail = [F.LIGHTING_RESTORE_LABEL] if desired.layer_uuids else []
+    assert labels == [f"layer {li}"] + tail, f"expected only the changed layer, got {labels}"
     print(f"Diff plan OK: one-key change -> {labels}")
 
 

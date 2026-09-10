@@ -11,6 +11,8 @@ Write order (from the captured flashes, docs/write-protocol-spec.md), all to des
   -> WRITE_MODULE_CONFIG_DATA per changed slot
   -> WRITE_LED_MAP per changed layer
   -> SYSTEM SET_TIMEOUTS (only if timeouts changed)
+  -> WRITE_LAYER_LIST again, the FULL table, always (restores lighting -- see
+     _lighting_restore_ops; measured 2026-09-10)
   -> verification reads + diff
 
 Everything here is dry unless `flash(..., dry_run=False)` is called with a live transport.
@@ -858,7 +860,40 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
                            f"blank module slot {slot}"))
     if desired.timeouts and (full or current is None or desired.timeouts != current.timeouts):
         ops.append(WriteOp(SYS_SET_TIMEOUTS, R.encode_timeouts(*desired.timeouts), "timeouts", cat=CAT_SYSTEM))
+    # --- last: the full layer list, which is what puts the lighting back --------------------
+    ops.extend(_lighting_restore_ops(desired, ops))
     return ops
+
+
+LIGHTING_RESTORE_LABEL = "layer list (restore lighting)"
+
+
+def lighting_restore_payload(layer_uuids: dict[int, bytes], layer_animations: dict[int, int]) -> bytes:
+    """The full layer table, byte-identical to what the board holds when the uuids and animations
+    came from it. This is the one write that clears a runtime LED effect."""
+    entries = [(i, u, layer_animations.get(i, 0)) for i, u in sorted(layer_uuids.items())]
+    return R.encode_layer_list_entries(entries)
+
+
+def _lighting_restore_ops(desired: DesiredState, ops: list[WriteOp]) -> list[WriteOp]:
+    """End every flash with the FULL layer list.
+
+    Measured 2026-09-10 (docs/plan-status.md item 4): a runtime LED effect -- engaged with an LED
+    key or the 0xED select-effect command -- survives layer data, LED map and module writes, and
+    NayaFlow's own flash never clears it because, exactly like _layer_list_ops, it writes the list
+    only when a layer is added, removed or re-identified. Writing the list, even byte-identical,
+    drops BOTH halves back to the stored animation and colours, from one frame sent to the left.
+    So a flash ends with it, whether or not anything above changed: after "Flash", the board shows
+    the profile, lighting included.
+
+    Same guard as _layer_list_ops -- a complete identity table or nothing, never a partial one.
+    Skipped when the ops above already carry this exact payload (a board flashed from scratch)."""
+    if not desired.layer_uuids or set(desired.layer_uuids) != set(desired.layers):
+        return []
+    payload = lighting_restore_payload(desired.layer_uuids, desired.layer_animations)
+    if any(op.sub == R.WRITE_LAYER_LIST and op.payload == payload for op in ops):
+        return []
+    return [WriteOp(R.WRITE_LAYER_LIST, payload, LIGHTING_RESTORE_LABEL)]
 
 
 def _list_differs(desired: DesiredState, current: DesiredState | None) -> bool:

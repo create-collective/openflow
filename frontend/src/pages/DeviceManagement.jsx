@@ -49,6 +49,17 @@ export default function DeviceManagement() {
     }
   }
 
+  // One layer-list write to the left puts BOTH halves back to the stored colours and animation
+  // after an LED effect key (breathe, swirl, speed, colour...) changed them at runtime. Nothing
+  // else clears that short of a power cycle, and NayaFlow has no button for it.
+  async function restoreLighting() {
+    try {
+      await api.restoreLighting("left");
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
   return (
     <div>
       <h1 className="page-title">Device Manager</h1>
@@ -59,6 +70,13 @@ export default function DeviceManagement() {
       <div className="btn-row" style={{ marginBottom: 16, alignItems: "center" }}>
         <button className="btn" onClick={refresh} disabled={loading}>
           {loading ? "Reading…" : "Refresh status"}
+        </button>
+        <button
+          className="btn"
+          onClick={restoreLighting}
+          title="Puts both halves back to the profile's stored colours and animation. Use it after a lighting key (breathe, swirl, speed, colour) changed them. Flashing does this too."
+        >
+          Restore lighting
         </button>
         {/* Says which of the two this is. Restored from the last read, it is a record with a
             time on it; read just now, it is what the keyboard says. The page no longer reads

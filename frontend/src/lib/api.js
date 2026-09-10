@@ -90,6 +90,7 @@ export const api = {
   setModuleLed: (body) => req("POST", "/rpc/set-module-led", body),
 
   led: (side, action, value) => req("POST", "/rpc/led", { side, action, value }),
+  restoreLighting: (side = "left") => req("POST", "/rpc/restore-lighting", { side }),
   textCommand: (side, command, force = false) =>
     req("POST", "/rpc/text-command", { side, command, force }),
   dumpSettings: (side) => req("POST", "/rpc/dump-settings", { side }),

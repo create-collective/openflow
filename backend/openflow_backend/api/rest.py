@@ -573,6 +573,17 @@ async def led(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/rpc/restore-lighting")
+async def restore_lighting(body: dict = Body(default={})) -> dict:
+    """Both halves back to the stored colours and animation. One layer-list write; see
+    DeviceService.restore_lighting."""
+    svc = get_service()
+    try:
+        return await run_in_threadpool(svc.restore_lighting, body.get("side", "left"))
+    except (TransportError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/rpc/text-command")
 async def text_command(body: dict = Body(...)) -> dict:
     svc = get_service()
