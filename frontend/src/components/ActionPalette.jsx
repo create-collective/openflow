@@ -186,10 +186,10 @@ export default function ActionPalette({
               {results.map((r) => (
                 <button
                   key={r.key}
-                  className="palette-result"
-                  disabled={disabled}
+                  className={"palette-result" + (disabled ? " disabled" : "")}
+                  aria-disabled={disabled || undefined}
                   title={describe(r.action)}
-                  onClick={() => onPick(r.pick)}
+                  onClick={() => !disabled && onPick(r.pick)}
                 >
                   <span className="palette-result-name">{r.action.name || r.action.label}</span>
                   <span className="palette-result-where">{r.tab.title || r.tab.id} · {r.cat}</span>
@@ -264,12 +264,11 @@ export default function ActionPalette({
                     return (
                       <button
                         key={l.id}
-                        className={"palette-key layer" + (block ? " soon" : "")}
-                        disabled={disabled || !!block}
+                        className={"palette-key layer" + (block ? " soon" : "") + (disabled ? " disabled" : "")}
+                        aria-disabled={disabled || !!block || undefined}
                         title={block ? block : `${lt.label}: ${l.name}`}
-                        onClick={() =>
-                          onPick({ actionCode: lt.prefix + l.id, actionType: lt.frontendType })
-                        }
+                        onClick={() => !disabled && !block
+                          && onPick({ actionCode: lt.prefix + l.id, actionType: lt.frontendType })}
                       >
                         <LayersIcon size={13} /> {i}
                       </button>
@@ -291,10 +290,14 @@ export default function ActionPalette({
                   {cat.actions.map((a, i) => (
                     <button
                       key={a.code + "-" + i}
-                      className={"palette-key" + (a.comingSoon ? " soon" : "")}
-                      disabled={disabled || a.comingSoon}
+                      // Disabled by CLASS, not attribute: a disabled control gets no hover, so
+                      // its title never showed -- and the palette is disabled whenever no key
+                      // is selected, which is exactly when people read it to decide.
+                      className={"palette-key" + (a.comingSoon ? " soon" : "") + (disabled ? " disabled" : "")}
+                      aria-disabled={disabled || a.comingSoon || undefined}
                       title={a.comingSoon ? `${a.name || a.label} (coming soon)` : describe(a)}
-                      onClick={() => onPick({ actionCode: a.code, actionType: a.actionType })}
+                      onClick={() => !disabled && !a.comingSoon
+                        && onPick({ actionCode: a.code, actionType: a.actionType })}
                     >
                       {tab.id === "shortcuts" ? formatCombo(a.code) : a.label}
                     </button>
