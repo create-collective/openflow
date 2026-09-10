@@ -308,10 +308,15 @@ export default function ActionPalette({
                         // hover. Letters and digits keep their text (lib/icons.jsx). The wide
                         // module grid shows sentences, so there the icon sits before the text.
                         const icon = iconNameFor(a.code, catalog.names);
-                        if (tab.id === "shortcuts") return formatCombo(a.code);
+                        if (tab.id === "shortcuts") {
+                          // A shortcut is its chord; the icon says what the chord does.
+                          return icon
+                            ? <><ActionIcon name={icon} size={22} /><span className="palette-combo">{formatCombo(a.code)}</span></>
+                            : formatCombo(a.code);
+                        }
                         if (!icon) return a.label;
                         if (tab.id === "module") return <><ActionIcon name={icon} size={16} className="inline" />{a.label}</>;
-                        return <ActionIcon name={icon} size={32} />;
+                        return <ActionIcon name={icon} size={34} />;
                       })()}
                     </button>
                   ))}

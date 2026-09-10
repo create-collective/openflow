@@ -2304,3 +2304,16 @@
 .kc-main .naya-icon { display: block; }
 /* A cap painted with an LED colour computes its own legend colour; the icon follows it. */
 .kc-legend[style*="color"] .naya-icon { background-color: currentColor; }
+
+/* Shortcut cells with an icon: the icon above, the chord beneath. */
+.palette-grid.combo .palette-key:has(> .naya-icon) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 58px;
+  padding: 4px;
+}
+.palette-grid.combo .palette-key:has(> .naya-icon) .naya-icon { margin: 0; }
+.palette-combo { font-size: 11px; letter-spacing: 0.5px; }

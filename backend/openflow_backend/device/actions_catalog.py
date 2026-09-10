@@ -493,9 +493,16 @@ def nayaflow_names() -> dict:
         return {}
 
 
+# Icons for the few entries that are ours, not NayaFlow's. The Windows Alt+Tab pair is the
+# Windows twin of NayaFlow's Cmd+Tab pair, so it borrows those icons.
+_ICON_OVERRIDES = {"LALT + TAB": "PREV_APP", "LALT + LSHIFT + TAB": "NEXT_APP"}
+
+
 def _describe(action: dict, names: dict) -> dict:
     """One palette entry with NayaFlow's name and tooltip attached. Never drops a field."""
     out = dict(action)
+    if action["code"] in _ICON_OVERRIDES:
+        out["icon"] = _ICON_OVERRIDES[action["code"]]
     nf = names.get(action["code"])
     if nf:
         if nf.get("name") and nf["name"].strip().lower() != (action.get("name") or "").strip().lower():

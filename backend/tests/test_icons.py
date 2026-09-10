@@ -58,3 +58,15 @@ def test_most_of_the_palette_has_an_icon():
     acts = list(_actions())
     with_icon = sum(1 for a in acts if a.get("icon"))
     assert with_icon >= 360, with_icon
+
+
+def test_the_shortcuts_tab_is_iconed_including_our_own_alt_tab_pair():
+    """190 of the 192 shortcut chords match NayaFlow's exactly and carry its icon; the Windows
+    Alt+Tab pair is ours and borrows the Cmd+Tab pair's icons."""
+    tab = next(t for t in AC.get_catalog()["tabs"] if t["id"] == "shortcuts")
+    acts = [a for c in tab["categories"] for a in c["actions"]]
+    assert sum(1 for a in acts if a.get("icon")) == len(acts),         [a["code"] for a in acts if not a.get("icon")]
+    by = {a["code"]: a for a in acts}
+    assert by["LALT + TAB"]["icon"] == "PREV_APP" and by["LALT + LSHIFT + TAB"]["icon"] == "NEXT_APP"
+    for a in acts:
+        assert (ICON_DIR / f"{a['icon']}.svg").exists(), a["icon"]
