@@ -2299,6 +2299,7 @@
 }
 .naya-icon.inline { margin-right: 6px; }
 .palette-key .naya-icon { display: block; margin: 0 auto; }
+.palette-key:has(> .naya-icon) { padding: 2px; }   /* icon-only cap: 36px of the 40 for the glyph */
 .palette-key.disabled .naya-icon { opacity: 0.85; }
 .kc-main .naya-icon { display: block; }
 /* A cap painted with an LED colour computes its own legend colour; the icon follows it. */

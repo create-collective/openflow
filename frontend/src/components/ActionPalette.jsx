@@ -311,7 +311,7 @@ export default function ActionPalette({
                         if (tab.id === "shortcuts") return formatCombo(a.code);
                         if (!icon) return a.label;
                         if (tab.id === "module") return <><ActionIcon name={icon} size={16} className="inline" />{a.label}</>;
-                        return <ActionIcon name={icon} size={30} />;
+                        return <ActionIcon name={icon} size={32} />;
                       })()}
                     </button>
                   ))}

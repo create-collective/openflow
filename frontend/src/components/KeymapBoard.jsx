@@ -122,7 +122,11 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, 
             const icon = !isWinKey && data?.binding && iconNameFor(data.binding.actionCode, names);
             return (
               <span className="kc-main">
-                {isWinKey ? <WindowsIcon size={15} /> : icon ? <ActionIcon name={icon} size={19} /> : legend.main}
+                {isWinKey ? <WindowsIcon size={15} />
+                  // Sized from the cap, not fixed: NayaFlow's glyphs are inset in their box, so
+                  // two thirds of the cap's shorter side is what reads at a glance.
+                  : icon ? <ActionIcon name={icon} size={Math.round(Math.min(w, h) * 0.68)} />
+                  : legend.main}
               </span>
             );
           })()}
