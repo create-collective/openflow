@@ -1,37 +1,37 @@
 {
  "A": {
   "name": "A",
-  "tooltip": "A",
+  "tooltip": "A…",
   "category": "Basic / Letters"
  },
  "AMPERSAND": {
   "name": "&",
-  "tooltip": "&",
+  "tooltip": "&…",
   "category": "Basic / Symbols"
  },
  "ASTERISK": {
   "name": "*",
-  "tooltip": "*",
+  "tooltip": "*…",
   "category": "Basic / Symbols"
  },
  "AT_SIGN": {
   "name": "@",
-  "tooltip": "@",
+  "tooltip": "@…",
   "category": "Basic / Symbols"
  },
  "B": {
   "name": "B",
-  "tooltip": "B",
+  "tooltip": "B…",
   "category": "Basic / Letters"
  },
  "BACKSLASH": {
   "name": "\\ and |",
-  "tooltip": "\\ and |",
+  "tooltip": "\\ and |…",
   "category": "Basic / Symbols"
  },
  "BACKSPACE": {
   "name": "Backspace",
-  "tooltip": "Backspace",
+  "tooltip": "Backspace…",
   "category": "Basic / Control"
  },
  "BT_CLEAR": {
@@ -66,27 +66,27 @@
  },
  "C": {
   "name": "C",
-  "tooltip": "C",
+  "tooltip": "C…",
   "category": "Basic / Letters"
  },
  "CAPSLOCK": {
   "name": "Caps Lock",
-  "tooltip": "Caps Lock",
+  "tooltip": "Caps Lock…",
   "category": "Extended / Locks"
  },
  "CARET": {
   "name": "^",
-  "tooltip": "^",
+  "tooltip": "^…",
   "category": "Basic / Symbols"
  },
  "COLON": {
   "name": ":",
-  "tooltip": ":",
+  "tooltip": ":…",
   "category": "Basic / Symbols"
  },
  "COMMA": {
   "name": ", and <",
-  "tooltip": ", and <",
+  "tooltip": ", and <…",
   "category": "Basic / Symbols"
  },
  "C_BRIGHTNESS_DEC": {
@@ -101,7 +101,7 @@
  },
  "C_FAST_FORWARD": {
   "name": "Fast Forward",
-  "tooltip": "Fast Forward",
+  "tooltip": "Fast Forward…",
   "category": "Extended / System"
  },
  "C_MUTE": {
@@ -111,12 +111,12 @@
  },
  "C_NEXT": {
   "name": "Next Track",
-  "tooltip": "Next Track",
+  "tooltip": "Next Track…",
   "category": "Extended / System"
  },
  "C_PLAY_PAUSE": {
   "name": "Play / Pause",
-  "tooltip": "Play/Pause",
+  "tooltip": "Play/Pause…",
   "category": "Extended / System"
  },
  "C_POWER": {
@@ -126,12 +126,12 @@
  },
  "C_PREVIOUS": {
   "name": "Previous Track",
-  "tooltip": "Previous Track",
+  "tooltip": "Previous Track…",
   "category": "Extended / System"
  },
  "C_REWIND": {
   "name": "Rewind",
-  "tooltip": "Rewind",
+  "tooltip": "Rewind…",
   "category": "Extended / System"
  },
  "C_VOL_DOWN": {
@@ -141,17 +141,17 @@
  },
  "C_VOL_UP": {
   "name": "Volume Up",
-  "tooltip": "Increase volume",
+  "tooltip": "Increase volume…",
   "category": "Extended / System"
  },
  "D": {
   "name": "D",
-  "tooltip": "D",
+  "tooltip": "D…",
   "category": "Basic / Letters"
  },
  "DELETE": {
   "name": "Delete",
-  "tooltip": "Delete",
+  "tooltip": "Delete…",
   "category": "Basic / Control"
  },
  "DISABLE": {
@@ -161,37 +161,37 @@
  },
  "DOLLAR": {
   "name": "$",
-  "tooltip": "$",
+  "tooltip": "$…",
   "category": "Basic / Symbols"
  },
  "DOUBLE_QUOTES": {
   "name": "“",
-  "tooltip": "“",
+  "tooltip": "“…",
   "category": "Basic / Symbols"
  },
  "DOWN": {
   "name": "Down Arrow",
-  "tooltip": "Down Arrow Key",
+  "tooltip": "Down Arrow Key…",
   "category": "Extended / Navigation"
  },
  "E": {
   "name": "E",
-  "tooltip": "E",
+  "tooltip": "E…",
   "category": "Basic / Letters"
  },
  "END": {
   "name": "End",
-  "tooltip": "End",
+  "tooltip": "End…",
   "category": "Extended / Navigation"
  },
  "EQUAL": {
   "name": "= and +",
-  "tooltip": "= and +",
+  "tooltip": "= and +…",
   "category": "Basic / Symbols"
  },
  "ESC": {
   "name": "Escape",
-  "tooltip": "Escape",
+  "tooltip": "Escape…",
   "category": "Basic / Control"
  },
  "EXCLAMATION": {
@@ -201,302 +201,302 @@
  },
  "F": {
   "name": "F",
-  "tooltip": "F",
+  "tooltip": "F…",
   "category": "Basic / Letters"
  },
  "F1": {
   "name": "F1",
-  "tooltip": "Function Key 1",
+  "tooltip": "Function Key 1…",
   "category": "Extended / Function Keys"
  },
  "F10": {
   "name": "F10",
-  "tooltip": "Function Key 10",
+  "tooltip": "Function Key 10…",
   "category": "Extended / Function Keys"
  },
  "F11": {
   "name": "F11",
-  "tooltip": "Function Key 11",
+  "tooltip": "Function Key 11…",
   "category": "Extended / Function Keys"
  },
  "F12": {
   "name": "F12",
-  "tooltip": "Function Key 12",
+  "tooltip": "Function Key 12…",
   "category": "Extended / Function Keys"
  },
  "F13": {
   "name": "F13",
-  "tooltip": "Function Key 13",
+  "tooltip": "Function Key 13…",
   "category": "Extended / Function Keys"
  },
  "F14": {
   "name": "F14",
-  "tooltip": "Function Key 14",
+  "tooltip": "Function Key 14…",
   "category": "Extended / Function Keys"
  },
  "F15": {
   "name": "F15",
-  "tooltip": "Function Key 15",
+  "tooltip": "Function Key 15…",
   "category": "Extended / Function Keys"
  },
  "F16": {
   "name": "F16",
-  "tooltip": "Function Key 16",
+  "tooltip": "Function Key 16…",
   "category": "Extended / Function Keys"
  },
  "F17": {
   "name": "F17",
-  "tooltip": "Function Key 17",
+  "tooltip": "Function Key 17…",
   "category": "Extended / Function Keys"
  },
  "F18": {
   "name": "F18",
-  "tooltip": "Function Key 18",
+  "tooltip": "Function Key 18…",
   "category": "Extended / Function Keys"
  },
  "F19": {
   "name": "F19",
-  "tooltip": "Function Key 19",
+  "tooltip": "Function Key 19…",
   "category": "Extended / Function Keys"
  },
  "F2": {
   "name": "F2",
-  "tooltip": "Function Key 2",
+  "tooltip": "Function Key 2…",
   "category": "Extended / Function Keys"
  },
  "F20": {
   "name": "F20",
-  "tooltip": "Function Key 20",
+  "tooltip": "Function Key 20…",
   "category": "Extended / Function Keys"
  },
  "F21": {
   "name": "F21",
-  "tooltip": "Function Key 21",
+  "tooltip": "Function Key 21…",
   "category": "Extended / Function Keys"
  },
  "F22": {
   "name": "F22",
-  "tooltip": "Function Key 22",
+  "tooltip": "Function Key 22…",
   "category": "Extended / Function Keys"
  },
  "F23": {
   "name": "F23",
-  "tooltip": "Function Key 23",
+  "tooltip": "Function Key 23…",
   "category": "Extended / Function Keys"
  },
  "F24": {
   "name": "F24",
-  "tooltip": "Function Key 24",
+  "tooltip": "Function Key 24…",
   "category": "Extended / Function Keys"
  },
  "F3": {
   "name": "F3",
-  "tooltip": "Function Key 3",
+  "tooltip": "Function Key 3…",
   "category": "Extended / Function Keys"
  },
  "F4": {
   "name": "F4",
-  "tooltip": "Function Key 4",
+  "tooltip": "Function Key 4…",
   "category": "Extended / Function Keys"
  },
  "F5": {
   "name": "F5",
-  "tooltip": "Function Key 5",
+  "tooltip": "Function Key 5…",
   "category": "Extended / Function Keys"
  },
  "F6": {
   "name": "F6",
-  "tooltip": "Function Key 6",
+  "tooltip": "Function Key 6…",
   "category": "Extended / Function Keys"
  },
  "F7": {
   "name": "F7",
-  "tooltip": "Function Key 7",
+  "tooltip": "Function Key 7…",
   "category": "Extended / Function Keys"
  },
  "F8": {
   "name": "F8",
-  "tooltip": "Function Key 8",
+  "tooltip": "Function Key 8…",
   "category": "Extended / Function Keys"
  },
  "F9": {
   "name": "F9",
-  "tooltip": "Function Key 9",
+  "tooltip": "Function Key 9…",
   "category": "Extended / Function Keys"
  },
  "G": {
   "name": "G",
-  "tooltip": "G",
+  "tooltip": "G…",
   "category": "Basic / Letters"
  },
  "GRAVE": {
   "name": "` and ~",
-  "tooltip": "` and ~",
+  "tooltip": "` and ~…",
   "category": "Basic / Symbols"
  },
  "GREATER_THAN": {
   "name": ">",
-  "tooltip": ">",
+  "tooltip": ">…",
   "category": "Basic / Symbols"
  },
  "H": {
   "name": "H",
-  "tooltip": "H",
+  "tooltip": "H…",
   "category": "Basic / Letters"
  },
  "HASH": {
   "name": "#",
-  "tooltip": "#",
+  "tooltip": "#…",
   "category": "Basic / Symbols"
  },
  "HOME": {
   "name": "Home",
-  "tooltip": "Home",
+  "tooltip": "Home…",
   "category": "Extended / Navigation"
  },
  "I": {
   "name": "I",
-  "tooltip": "I",
+  "tooltip": "I…",
   "category": "Basic / Letters"
  },
  "INSERT": {
   "name": "Insert",
-  "tooltip": "Insert",
+  "tooltip": "Insert…",
   "category": "Basic / Control"
  },
  "INT1": {
   "name": "International 1",
-  "tooltip": "HID International 1 Key",
+  "tooltip": "HID International 1 Key…",
   "category": "Extended / International"
  },
  "INT2": {
   "name": "International 2",
-  "tooltip": "HID International 2 Key",
+  "tooltip": "HID International 2 Key…",
   "category": "Extended / International"
  },
  "INT3": {
   "name": "International 3",
-  "tooltip": "HID International 3 Key",
+  "tooltip": "HID International 3 Key…",
   "category": "Extended / International"
  },
  "INT4": {
   "name": "International 4",
-  "tooltip": "HID International 4 Key",
+  "tooltip": "HID International 4 Key…",
   "category": "Extended / International"
  },
  "INT5": {
   "name": "International 5",
-  "tooltip": "HID International 5 Key",
+  "tooltip": "HID International 5 Key…",
   "category": "Extended / International"
  },
  "INT6": {
   "name": "International 6",
-  "tooltip": "HID International 6 Key",
+  "tooltip": "HID International 6 Key…",
   "category": "Extended / International"
  },
  "J": {
   "name": "J",
-  "tooltip": "J",
+  "tooltip": "J…",
   "category": "Basic / Letters"
  },
  "K": {
   "name": "K",
-  "tooltip": "K",
+  "tooltip": "K…",
   "category": "Basic / Letters"
  },
  "KP_DIVIDE": {
   "name": "Keypad ÷",
-  "tooltip": "Keypad Divide",
+  "tooltip": "Keypad Divide…",
   "category": "Extended / Keypad"
  },
  "KP_DOT": {
   "name": "Keypad ·",
-  "tooltip": "Keypad Dot",
+  "tooltip": "Keypad Dot…",
   "category": "Extended / Keypad"
  },
  "KP_MINUS": {
   "name": "Keypad -",
-  "tooltip": "Keypad Minus",
+  "tooltip": "Keypad Minus…",
   "category": "Extended / Keypad"
  },
  "KP_MULTIPLY": {
   "name": "Keypad ×",
-  "tooltip": "Keypad Multiply",
+  "tooltip": "Keypad Multiply…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_0": {
   "name": "Keypad 0",
-  "tooltip": "Keypad 0",
+  "tooltip": "Keypad 0…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_1": {
   "name": "Keypad 1",
-  "tooltip": "Keypad 1",
+  "tooltip": "Keypad 1…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_2": {
   "name": "Keypad 2",
-  "tooltip": "Keypad 2",
+  "tooltip": "Keypad 2…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_3": {
   "name": "Keypad 3",
-  "tooltip": "Keypad 3",
+  "tooltip": "Keypad 3…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_4": {
   "name": "Keypad 4",
-  "tooltip": "Keypad 4",
+  "tooltip": "Keypad 4…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_5": {
   "name": "Keypad 5",
-  "tooltip": "Keypad 5",
+  "tooltip": "Keypad 5…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_6": {
   "name": "Keypad 6",
-  "tooltip": "Keypad 6",
+  "tooltip": "Keypad 6…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_7": {
   "name": "Keypad 7",
-  "tooltip": "Keypad 7",
+  "tooltip": "Keypad 7…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_8": {
   "name": "Keypad 8",
-  "tooltip": "Keypad 8",
+  "tooltip": "Keypad 8…",
   "category": "Extended / Keypad"
  },
  "KP_NUMBER_9": {
   "name": "Keypad 9",
-  "tooltip": "Keypad 9",
+  "tooltip": "Keypad 9…",
   "category": "Extended / Keypad"
  },
  "KP_NUMLOCK": {
   "name": "Num Lock",
-  "tooltip": "Keypad Numlock",
+  "tooltip": "Keypad Numlock…",
   "category": "Extended / Locks"
  },
  "KP_PLUS": {
   "name": "Keypad +",
-  "tooltip": "Keypad Plus",
+  "tooltip": "Keypad Plus…",
   "category": "Extended / Keypad"
  },
  "K_APP": {
   "name": "Application (Context Menu)",
-  "tooltip": "Menu",
+  "tooltip": "Menu…",
   "category": "Extended / Navigation"
  },
  "L": {
   "name": "L",
-  "tooltip": "L",
+  "tooltip": "L…",
   "category": "Basic / Letters"
  },
  "LALT": {
   "name": "Alt",
-  "tooltip": "Alt / Option",
+  "tooltip": "Alt / Option…",
   "category": "Basic / Modifiers"
  },
  "LALT + A": {
@@ -546,7 +546,7 @@
  },
  "LALT + LGUI + ESC": {
   "name": "Force Quit Application",
-  "tooltip": "Force Quit Application",
+  "tooltip": "Force Quit Application…",
   "category": "Integrations / MacOS"
  },
  "LALT + LGUI + F": {
@@ -571,12 +571,12 @@
  },
  "LALT + LGUI + SPACE": {
   "name": "Spotlight From Finder",
-  "tooltip": "Open Spotlight From Finder",
+  "tooltip": "Open Spotlight From Finder…",
   "category": "Integrations / MacOS"
  },
  "LALT + LGUI + W": {
   "name": "Close All Windows of Application",
-  "tooltip": "Close All Windows of Application",
+  "tooltip": "Close All Windows of Application…",
   "category": "Integrations / MacOS"
  },
  "LALT + LSHIFT + ESC": {
@@ -586,12 +586,12 @@
  },
  "LALT + LSHIFT + LGUI + NUMBER_4": {
   "name": "Screenshot Cursor Clipboard",
-  "tooltip": "Screenshot Cursor Selection to Clipboard",
+  "tooltip": "Screenshot Cursor Selection to Clipboard…",
   "category": "Integrations / MacOS"
  },
  "LALT + LSHIFT + LGUI + Q": {
   "name": "Log Out Mac",
-  "tooltip": "Log Out Mac",
+  "tooltip": "Log Out Mac…",
   "category": "Integrations / MacOS"
  },
  "LALT + PG_DN": {
@@ -626,52 +626,52 @@
  },
  "LANG1": {
   "name": "Language 1",
-  "tooltip": "HID Language 1 Key",
+  "tooltip": "HID Language 1 Key…",
   "category": "Extended / International"
  },
  "LANG2": {
   "name": "Language 2",
-  "tooltip": "HID Language 2 Key",
+  "tooltip": "HID Language 2 Key…",
   "category": "Extended / International"
  },
  "LANG3": {
   "name": "Language 3",
-  "tooltip": "HID Language 3 Key",
+  "tooltip": "HID Language 3 Key…",
   "category": "Extended / International"
  },
  "LANG4": {
   "name": "Language 4",
-  "tooltip": "HID Language 4 Key",
+  "tooltip": "HID Language 4 Key…",
   "category": "Extended / International"
  },
  "LANG5": {
   "name": "Language 5",
-  "tooltip": "HID Language 5 Key",
+  "tooltip": "HID Language 5 Key…",
   "category": "Extended / International"
  },
  "LANG6": {
   "name": "Language 6",
-  "tooltip": "HID Language 6 Key",
+  "tooltip": "HID Language 6 Key…",
   "category": "Extended / International"
  },
  "LANG7": {
   "name": "Language 7",
-  "tooltip": "HID Language 7 Key",
+  "tooltip": "HID Language 7 Key…",
   "category": "Extended / International"
  },
  "LANG8": {
   "name": "Language 8",
-  "tooltip": "HID Language 8 Key",
+  "tooltip": "HID Language 8 Key…",
   "category": "Extended / International"
  },
  "LANG9": {
   "name": "Language 9",
-  "tooltip": "HID Language 9 Key",
+  "tooltip": "HID Language 9 Key…",
   "category": "Extended / International"
  },
  "LCTRL": {
   "name": "Control",
-  "tooltip": "Control",
+  "tooltip": "Control…",
   "category": "Basic / Modifiers"
  },
  "LCTRL + A": {
@@ -746,27 +746,27 @@
  },
  "LCTRL + LEFT": {
   "name": "Switch to Previous Screen",
-  "tooltip": "Switch to Previous Screen",
+  "tooltip": "Switch to Previous Screen…",
   "category": "Integrations / MacOS"
  },
  "LCTRL + LGUI + F": {
   "name": "Fullscreen",
-  "tooltip": "Fullscreen",
+  "tooltip": "Fullscreen…",
   "category": "Integrations / MacOS"
  },
  "LCTRL + LGUI + N": {
   "name": "New Folder with Selection",
-  "tooltip": "New Folder with Selection",
+  "tooltip": "New Folder with Selection…",
   "category": "Integrations / MacOS"
  },
  "LCTRL + LGUI + SPACE": {
   "name": "Character Viewer",
-  "tooltip": "Open Character Viewer",
+  "tooltip": "Open Character Viewer…",
   "category": "Integrations / MacOS"
  },
  "LCTRL + LSHIFT + C_POWER": {
   "name": "Display Sleep",
-  "tooltip": "Display Sleep",
+  "tooltip": "Display Sleep…",
   "category": "Integrations / MacOS"
  },
  "LCTRL + LSHIFT + ESC": {
@@ -801,7 +801,7 @@
  },
  "LCTRL + RIGHT": {
   "name": "Switch to Next Screen",
-  "tooltip": "Switch to Next Screen",
+  "tooltip": "Switch to Next Screen…",
   "category": "Integrations / MacOS"
  },
  "LCTRL + T": {
@@ -941,32 +941,32 @@
  },
  "LEFT": {
   "name": "Left Arrow",
-  "tooltip": "Left Arrow Key",
+  "tooltip": "Left Arrow Key…",
   "category": "Extended / Navigation"
  },
  "LEFT_BRACE": {
   "name": "{",
-  "tooltip": "{",
+  "tooltip": "{…",
   "category": "Basic / Symbols"
  },
  "LEFT_BRACKET": {
   "name": "[ and {",
-  "tooltip": "[ and {",
+  "tooltip": "[ and {…",
   "category": "Basic / Symbols"
  },
  "LEFT_PARENTHESIS": {
   "name": "(",
-  "tooltip": "(",
+  "tooltip": "(…",
   "category": "Basic / Symbols"
  },
  "LESS_THAN": {
   "name": "<",
-  "tooltip": "<",
+  "tooltip": "<…",
   "category": "Basic / Symbols"
  },
  "LGUI": {
   "name": "Meta",
-  "tooltip": "Win Key / Command / Meta",
+  "tooltip": "Win Key / Command / Meta…",
   "category": "Basic / Modifiers"
  },
  "LGUI + A": {
@@ -991,7 +991,7 @@
  },
  "LGUI + COMMA": {
   "name": "Open Preferences",
-  "tooltip": "Open Preferences",
+  "tooltip": "Open Preferences…",
   "category": "Integrations / MacOS"
  },
  "LGUI + CTRL + F": {
@@ -1041,7 +1041,7 @@
  },
  "LGUI + GRAVE": {
   "name": "Switch to Previous Window",
-  "tooltip": "Switch to Previous Window",
+  "tooltip": "Switch to Previous Window…",
   "category": "Integrations / MacOS"
  },
  "LGUI + H": {
@@ -1261,7 +1261,7 @@
  },
  "LGUI + Q": {
   "name": "Quit Application",
-  "tooltip": "Quit Application",
+  "tooltip": "Quit Application…",
   "category": "Integrations / MacOS"
  },
  "LGUI + RIGHT_BRACKET": {
@@ -1281,7 +1281,7 @@
  },
  "LGUI + SPACE": {
   "name": "Spotlight",
-  "tooltip": "Open Spotlight",
+  "tooltip": "Open Spotlight…",
   "category": "Integrations / MacOS"
  },
  "LGUI + T": {
@@ -1291,7 +1291,7 @@
  },
  "LGUI + TAB": {
   "name": "Switch to Previous App",
-  "tooltip": "Switch to Previous App",
+  "tooltip": "Switch to Previous App…",
   "category": "Integrations / MacOS"
  },
  "LGUI + U": {
@@ -1311,7 +1311,7 @@
  },
  "LGUI + W": {
   "name": "Close Window",
-  "tooltip": "Close Window",
+  "tooltip": "Close Window…",
   "category": "Integrations / MacOS"
  },
  "LGUI + X": {
@@ -1326,7 +1326,7 @@
  },
  "LSHIFT": {
   "name": "Shift",
-  "tooltip": "Shift",
+  "tooltip": "Shift…",
   "category": "Basic / Modifiers"
  },
  "LSHIFT + DOWN": {
@@ -1436,12 +1436,12 @@
  },
  "LSHIFT + LGUI + GRAVE": {
   "name": "Switch to Next Window",
-  "tooltip": "Switch to Next Window",
+  "tooltip": "Switch to Next Window…",
   "category": "Integrations / MacOS"
  },
  "LSHIFT + LGUI + N": {
   "name": "New Folder",
-  "tooltip": "New Folder",
+  "tooltip": "New Folder…",
   "category": "Integrations / MacOS"
  },
  "LSHIFT + LGUI + NUMBER_0": {
@@ -1451,22 +1451,22 @@
  },
  "LSHIFT + LGUI + NUMBER_3": {
   "name": "Screenshot",
-  "tooltip": "Screenshot",
+  "tooltip": "Screenshot…",
   "category": "Integrations / MacOS"
  },
  "LSHIFT + LGUI + NUMBER_4": {
   "name": "Screenshot Cursor",
-  "tooltip": "Screenshot Cursor",
+  "tooltip": "Screenshot Cursor…",
   "category": "Integrations / MacOS"
  },
  "LSHIFT + LGUI + NUMBER_5": {
   "name": "Open Screenshot Dialog",
-  "tooltip": "Open Screenshot Dialog",
+  "tooltip": "Open Screenshot Dialog…",
   "category": "Integrations / MacOS"
  },
  "LSHIFT + LGUI + TAB": {
   "name": "Switch to Next App",
-  "tooltip": "Switch to Next App",
+  "tooltip": "Switch to Next App…",
   "category": "Integrations / MacOS"
  },
  "LSHIFT + LGUI + Z": {
@@ -1496,7 +1496,7 @@
  },
  "M": {
   "name": "M",
-  "tooltip": "M",
+  "tooltip": "M…",
   "category": "Basic / Letters"
  },
  "M1": {
@@ -1526,27 +1526,27 @@
  },
  "MINUS": {
   "name": "- and _",
-  "tooltip": "- and _",
+  "tooltip": "- and _…",
   "category": "Basic / Symbols"
  },
  "MODULE_FORCE_CHARGING": {
   "name": "Activate Module Recovery Mode",
-  "tooltip": "Activate Recovery Mode to recover module from a critically drained battery. Your module will not be functional while in recovery mode. Restart your keyboard to",
+  "tooltip": "Activate Recovery Mode to recover module from a critically drained battery. Your module will not be functional while in recovery mode. Restart your keyboard to…",
   "category": "Extended / Configuration Toggles"
  },
  "N": {
   "name": "N",
-  "tooltip": "N",
+  "tooltip": "N…",
   "category": "Basic / Letters"
  },
  "NON_US_BACKSLASH": {
   "name": "Non US \\",
-  "tooltip": "Non US Backslash",
+  "tooltip": "Non US Backslash…",
   "category": "Extended / International"
  },
  "NON_US_HASH": {
   "name": "Non US # and ~",
-  "tooltip": "Non US Hash",
+  "tooltip": "Non US Hash…",
   "category": "Extended / International"
  },
  "NUMBER_0": {
@@ -1561,52 +1561,52 @@
  },
  "NUMBER_2": {
   "name": "2 and @",
-  "tooltip": "2 and @",
+  "tooltip": "2 and @…",
   "category": "Basic / Numbers"
  },
  "NUMBER_3": {
   "name": "3 and #",
-  "tooltip": "3 and #",
+  "tooltip": "3 and #…",
   "category": "Basic / Numbers"
  },
  "NUMBER_4": {
   "name": "4 and $",
-  "tooltip": "4 and $",
+  "tooltip": "4 and $…",
   "category": "Basic / Numbers"
  },
  "NUMBER_5": {
   "name": "5 and %",
-  "tooltip": "5 and %",
+  "tooltip": "5 and %…",
   "category": "Basic / Numbers"
  },
  "NUMBER_6": {
   "name": "6 and ^",
-  "tooltip": "6 and ^",
+  "tooltip": "6 and ^…",
   "category": "Basic / Numbers"
  },
  "NUMBER_7": {
   "name": "7 and &",
-  "tooltip": "7 and &",
+  "tooltip": "7 and &…",
   "category": "Basic / Numbers"
  },
  "NUMBER_8": {
   "name": "8 and *",
-  "tooltip": "8 and *",
+  "tooltip": "8 and *…",
   "category": "Basic / Numbers"
  },
  "NUMBER_9": {
   "name": "9 and (",
-  "tooltip": "9 and (",
+  "tooltip": "9 and (…",
   "category": "Basic / Numbers"
  },
  "O": {
   "name": "O",
-  "tooltip": "O",
+  "tooltip": "O…",
   "category": "Basic / Letters"
  },
  "P": {
   "name": "P",
-  "tooltip": "P",
+  "tooltip": "P…",
   "category": "Basic / Letters"
  },
  "PAGE_DOWN": {
@@ -1621,52 +1621,52 @@
  },
  "PAUSE_BREAK": {
   "name": "Pause / Break",
-  "tooltip": "Pause/Break",
+  "tooltip": "Pause/Break…",
   "category": "Extended / Locks"
  },
  "PERCENT": {
   "name": "%",
-  "tooltip": "%",
+  "tooltip": "%…",
   "category": "Basic / Symbols"
  },
  "PERIOD": {
   "name": ". and >",
-  "tooltip": ". and >",
+  "tooltip": ". and >…",
   "category": "Basic / Symbols"
  },
  "PG_DN": {
   "name": "Page Down",
-  "tooltip": "Page Down",
+  "tooltip": "Page Down…",
   "category": "Extended / Navigation"
  },
  "PG_UP": {
   "name": "Page Up",
-  "tooltip": "Page Up",
+  "tooltip": "Page Up…",
   "category": "Extended / Navigation"
  },
  "PIPE": {
   "name": "|",
-  "tooltip": "|",
+  "tooltip": "|…",
   "category": "Basic / Symbols"
  },
  "PIPE2": {
   "name": "| 2",
-  "tooltip": "Pipe 2",
+  "tooltip": "Pipe 2…",
   "category": "Extended / International"
  },
  "PLUS": {
   "name": "+",
-  "tooltip": "+",
+  "tooltip": "+…",
   "category": "Basic / Symbols"
  },
  "PRINTSCREEN": {
   "name": "Print Screen",
-  "tooltip": "Print Screen",
+  "tooltip": "Print Screen…",
   "category": "Extended / System"
  },
  "Q": {
   "name": "Q",
-  "tooltip": "Q",
+  "tooltip": "Q…",
   "category": "Basic / Letters"
  },
  "QUESTION": {
@@ -1676,42 +1676,42 @@
  },
  "R": {
   "name": "R",
-  "tooltip": "R",
+  "tooltip": "R…",
   "category": "Basic / Letters"
  },
  "RALT": {
   "name": "Right Alt",
-  "tooltip": "Right Alt / Option",
+  "tooltip": "Right Alt / Option…",
   "category": "Basic / Modifiers"
  },
  "RCTRL": {
   "name": "Right Control",
-  "tooltip": "Right Control",
+  "tooltip": "Right Control…",
   "category": "Basic / Modifiers"
  },
  "RETURN": {
   "name": "Enter",
-  "tooltip": "Enter",
+  "tooltip": "Enter…",
   "category": "Basic / Control"
  },
  "RGUI": {
   "name": "Right Meta",
-  "tooltip": "Right Win Key / Command / Meta",
+  "tooltip": "Right Win Key / Command / Meta…",
   "category": "Basic / Modifiers"
  },
  "RIGHT": {
   "name": "Right Arrow",
-  "tooltip": "Right Arrow Key",
+  "tooltip": "Right Arrow Key…",
   "category": "Extended / Navigation"
  },
  "RIGHT_BRACE": {
   "name": "}",
-  "tooltip": "}",
+  "tooltip": "}…",
   "category": "Basic / Symbols"
  },
  "RIGHT_BRACKET": {
   "name": "] and }",
-  "tooltip": "] and }",
+  "tooltip": "] and }…",
   "category": "Basic / Symbols"
  },
  "RIGHT_PARENTHESIS": {
@@ -1721,17 +1721,17 @@
  },
  "RSHIFT": {
   "name": "Right Shift",
-  "tooltip": "Right Shift",
+  "tooltip": "Right Shift…",
   "category": "Basic / Modifiers"
  },
  "S": {
   "name": "S",
-  "tooltip": "S",
+  "tooltip": "S…",
   "category": "Basic / Letters"
  },
  "SCROLLLOCK": {
   "name": "Scroll Lock",
-  "tooltip": "Scroll Lock",
+  "tooltip": "Scroll Lock…",
   "category": "Extended / Locks"
  },
  "SEMICOLON": {
@@ -1741,7 +1741,7 @@
  },
  "SINGLE_QUOTE": {
   "name": "‘ and “",
-  "tooltip": "‘ and “",
+  "tooltip": "‘ and “…",
   "category": "Basic / Symbols"
  },
  "SLASH": {
@@ -1751,27 +1751,27 @@
  },
  "SPACE": {
   "name": "Space",
-  "tooltip": "Space",
+  "tooltip": "Space…",
   "category": "Basic / Control"
  },
  "T": {
   "name": "T",
-  "tooltip": "T",
+  "tooltip": "T…",
   "category": "Basic / Letters"
  },
  "TAB": {
   "name": "Tab",
-  "tooltip": "Tab",
+  "tooltip": "Tab…",
   "category": "Basic / Control"
  },
  "TILDE": {
   "name": "~",
-  "tooltip": "~",
+  "tooltip": "~…",
   "category": "Basic / Symbols"
  },
  "TILDE2": {
   "name": "~ 2",
-  "tooltip": "Tilde 2",
+  "tooltip": "Tilde 2…",
   "category": "Extended / International"
  },
  "TRANSPARENT": {
@@ -1781,17 +1781,17 @@
  },
  "U": {
   "name": "U",
-  "tooltip": "U",
+  "tooltip": "U…",
   "category": "Basic / Letters"
  },
  "UNDERSCORE": {
   "name": "_",
-  "tooltip": "_",
+  "tooltip": "_…",
   "category": "Basic / Symbols"
  },
  "UP": {
   "name": "Up Arrow",
-  "tooltip": "Up Arrow Key",
+  "tooltip": "Up Arrow Key…",
   "category": "Extended / Navigation"
  },
  "USB_DEVICE": {
@@ -1801,27 +1801,27 @@
  },
  "V": {
   "name": "V",
-  "tooltip": "V",
+  "tooltip": "V…",
   "category": "Basic / Letters"
  },
  "W": {
   "name": "W",
-  "tooltip": "W",
+  "tooltip": "W…",
   "category": "Basic / Letters"
  },
  "X": {
   "name": "X",
-  "tooltip": "X",
+  "tooltip": "X…",
   "category": "Basic / Letters"
  },
  "Y": {
   "name": "Y",
-  "tooltip": "Y",
+  "tooltip": "Y…",
   "category": "Basic / Letters"
  },
  "Z": {
   "name": "Z",
-  "tooltip": "Z",
+  "tooltip": "Z…",
   "category": "Basic / Letters"
  },
  "[LALT] + LSHIFT + TAB": {

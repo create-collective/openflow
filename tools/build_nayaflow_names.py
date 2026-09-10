@@ -30,8 +30,10 @@ def build() -> dict:
             continue                                   # first (US) entry wins
         m = re.search(r"tooltip=([^;]*)", e.get("notes") or "")
         tooltip = (m.group(1).strip() if m else "")
-        # The scrape carries a few mojibake quotes ("�solid�"); plain quotes read better.
-        tooltip = tooltip.replace("�", "'")
+        # One tooltip (MODULE_FORCE_CHARGING) is cut off inside the binary's string table itself,
+        # ending "Restart your keyboard to". Mark that rather than guess how the sentence ended.
+        if tooltip and tooltip[-1] not in ".!?)":
+            tooltip += "…"
         out[code] = {"name": (e.get("label") or "").strip(),
                      "tooltip": tooltip,
                      "category": e.get("category") or ""}
