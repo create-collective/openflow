@@ -212,6 +212,9 @@ def firmware_default(module_type: str, gesture: str):
 # into 0x0b / 0x05-0x08 is untested (tools/touch_one_finger_probe.py is the experiment); until
 # it is, "put something else there" is a guess with the cursor as the stake. Decided 2026-09-09.
 FIRMWARE_LOCKED = {t: set(g) for t, g in FIRMWARE_DEFAULTS.items()}
+# Probed on hardware 2026-09-10: a keypress written into the one-finger or two-finger tap field
+# reads back fine and is IGNORED -- the tap still clicks. The locks below are the firmware's,
+# not a UI convention (docs/module-field-map.md, 0x0b / 0x0c).
 LOCKED_REASON = "Driven by the module firmware; NayaFlow locks it too."
 
 
