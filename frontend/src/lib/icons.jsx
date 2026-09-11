@@ -7,14 +7,16 @@ import iconNames from "./iconNames.json";
 
 const HAVE = new Set(iconNames);
 
-// Letters and digits stay as text: crisper than a drawn glyph, and what a keycap already says.
-const TEXT_LIKE = /^(?:[A-Z]|NUMBER_\d)$/;
-
-/** The icon name to draw for an action code, or null when text is the better legend. */
+// Letters and digits were held back as text on the grounds that a glyph is crisper than a drawn
+// one. It made them the ODD ONES OUT: every other legend on the board is a Naya icon at icon
+// size, so the alphanumerics rendered in our own font at our own size and the board looked like
+// two different keyboards. Naya ships all 26 letters and NUMBER_0-9, so they are drawn too, and
+// the set is internally consistent until we have an icon set of our own.
+/** The icon name to draw for an action code, or null when there is no icon for it. */
 export function iconNameFor(code, names) {
   const entry = names && names[code];
   const icon = entry && entry.icon;
-  if (!icon || !HAVE.has(icon) || TEXT_LIKE.test(icon)) return null;
+  if (!icon || !HAVE.has(icon)) return null;
   return icon;
 }
 
