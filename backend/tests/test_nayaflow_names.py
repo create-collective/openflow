@@ -86,3 +86,44 @@ def test_a_missing_names_file_degrades_to_our_own_labels(monkeypatch, tmp_path):
     by = {a["code"]: a for t in AC.get_catalog()["tabs"] for c in t.get("categories") or []
           for a in c.get("actions") or []}
     assert by["BT_OUT"]["name"] == "Wireless" and "tooltip" not in by["BT_OUT"]
+
+
+# --- tooltips are the vendor's text, whole, and nothing we invented ------------------------- #
+
+def test_no_tooltip_is_marked_truncated_any_more():
+    """THE BUG. An ellipsis was appended to any tooltip not ending in `.!?)`, to flag the single
+    one the scrape cut short. It fired on 178 of 377, because most tooltips are short labels with
+    no terminal punctuation -- users were shown "Escape…", "Shift…", "A…", implying held-back text
+    that never existed. Search ranks tooltips last partly because of this, and the palette and the
+    bound-key panel both display them."""
+    names = json.loads(NAMES.read_text(encoding="utf-8"))
+    marked = {c: v["tooltip"] for c, v in names.items() if v["tooltip"].endswith("…")}
+    assert not marked, marked
+
+
+def test_the_one_genuinely_cut_tooltip_carries_its_real_ending():
+    """MODULE_FORCE_CHARGING was the reason the rule existed; the scrape stopped at "keyboard to".
+
+    The ending is RECOVERED, not authored: it is taken verbatim from NayaFlow 1.25.1's own string
+    table and corroborated against an independent build (1.17.3's app.asar), which carries the
+    identical sentence. If this ever has to be re-derived, that is where it comes from."""
+    t = json.loads(NAMES.read_text(encoding="utf-8"))["MODULE_FORCE_CHARGING"]["tooltip"]
+    assert t.endswith("Restart your keyboard to turn OFF this mode.")
+    assert t.startswith("Activate Recovery Mode to recover module from a critically drained")
+
+
+def test_short_labels_keep_their_own_wording_untouched():
+    """The other side of it: no punctuation is added to a label either. A tooltip is the vendor's
+    string, byte for byte, or it is the recovered one."""
+    names = json.loads(NAMES.read_text(encoding="utf-8"))
+    for code, want in [("A", "A"), ("ESC", "Escape"), ("LSHIFT", "Shift")]:
+        assert names[code]["tooltip"] == want, (code, names[code]["tooltip"])
+
+
+def test_nearly_every_tooltip_ends_in_punctuation_or_is_a_short_label():
+    """A guard against a future scrape quietly truncating sentences. Anything that reads as prose
+    -- more than seven words -- must terminate properly; short labels are exempt because that is
+    what they are."""
+    bad = [(c, v["tooltip"]) for c, v in json.loads(NAMES.read_text(encoding="utf-8")).items()
+           if len(v["tooltip"].split()) > 7 and v["tooltip"][-1:] not in (".", "!", "?", ")", "")]
+    assert not bad, bad

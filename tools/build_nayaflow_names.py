@@ -23,6 +23,34 @@ APP = ROOT / "openflow" if (ROOT / "openflow" / "backend").is_dir() else ROOT
 OUT = APP / "backend" / "openflow_backend" / "device" / "nayaflow_names.json"
 
 
+# The scrape cut exactly ONE tooltip short, and this is its real ending.
+#
+# An ellipsis used to be appended to any tooltip not ending in `.!?)`, to mark that one. The rule
+# fired on 178 of 377 entries, because most tooltips are short labels that legitimately carry no
+# terminal punctuation -- "Escape" was shown to users as "Escape…", implying text we were hiding
+# and had never held. It was our own invention, not the vendor's data.
+#
+# Which ones were genuinely cut was then settled by measurement rather than by a heuristic: every
+# scraped tooltip was searched for in NayaFlow 1.25.1's own string table as a quoted literal.
+# 356 of 366 appear complete, terminated by the closing quote. Seven did not match for reasons
+# that are not truncation -- BACKSLASH is escaped in the dump, and six carry curly quotes
+# (U+2018/201C/201D) -- and all of them already end in punctuation or are single symbols. Exactly
+# one was a strict PREFIX of a longer literal:
+#
+#     MODULE_FORCE_CHARGING   scraped: "... Restart your keyboard to"
+#                             actual:  "... Restart your keyboard to turn OFF this mode."
+#
+# The ending below is taken verbatim from that string table and corroborated against an
+# independent build, NayaFlow 1.17.3's app.asar, which carries the identical sentence. It is
+# recovered text, not authored text; nothing here is guessed.
+RECOVERED = {
+    "MODULE_FORCE_CHARGING":
+        "Activate Recovery Mode to recover module from a critically drained battery. Your module "
+        "will not be functional while in recovery mode. Restart your keyboard to turn OFF this "
+        "mode.",
+}
+
+
 def build() -> dict:
     data = json.loads(SRC.read_text(encoding="utf-8"))
     out: dict = {}
@@ -32,10 +60,7 @@ def build() -> dict:
             continue                                   # first (US) entry wins
         m = re.search(r"tooltip=([^;]*)", e.get("notes") or "")
         tooltip = (m.group(1).strip() if m else "")
-        # One tooltip (MODULE_FORCE_CHARGING) is cut off inside the binary's string table itself,
-        # ending "Restart your keyboard to". Mark that rather than guess how the sentence ended.
-        if tooltip and tooltip[-1] not in ".!?)":
-            tooltip += "…"
+        tooltip = RECOVERED.get(code, tooltip)
         icon = re.search(r"icon=([A-Za-z0-9_]+)", e.get("notes") or "")
         out[code] = {"name": (e.get("label") or "").strip(),
                      "tooltip": tooltip,
