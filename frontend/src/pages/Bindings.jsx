@@ -8,7 +8,7 @@ import { setModuleRead, subscribeDeviceState, getDeviceState,
          deviceHasBeenRead } from "../lib/deviceState";
 import { setShortcutTable } from "../lib/shortcutNames";
 import { POS_LABEL } from "../lib/layout";
-import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
+import { downloadJSON, pickJSONFile, pickProfileFile, safeName } from "../lib/files";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
 import ProfileBar from "../components/ProfileBar";
@@ -252,11 +252,20 @@ export default function Bindings() {
     },
     onImport: async () => {
       try {
-        const data = await pickJSONFile();
-        if (!data) return;
-        const r = await api.importProfile(data);
+        const picked = await pickProfileFile();
+        if (!picked) return;
+        let firstId;
+        if (picked.kind === "json") {
+          const r = await api.importProfile(picked.data);
+          firstId = r.id;
+        } else {
+          // a NayaFlow user-data.db or backup zip: converted server-side, each profile it
+          // holds becomes a new profile here; the current data is never replaced
+          const r = await api.importProfileFile(picked.file);
+          firstId = r.imported?.[0]?.id;
+        }
         await load();
-        switchProfile(r.id);
+        if (firstId) switchProfile(firstId);
       } catch (e) { setErr(e.message); }
     },
   };

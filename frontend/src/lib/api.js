@@ -112,6 +112,15 @@ export const api = {
   openBackupFolder: () => req("POST", "/rpc/open-backup-folder", {}),
   createBackup: () => req("POST", "/rpc/create-backup", {}),
   restoreBackup: (name) => req("POST", "/rpc/restore-backup", { name }),
+  // A NayaFlow database or backup zip, converted server-side and imported as new profiles.
+  importProfileFile: async (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(BASE + "/rpc/import-profile-file", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Import failed");
+    return data;
+  },
   importBackupFile: async (file) => {
     const form = new FormData();
     form.append("file", file);

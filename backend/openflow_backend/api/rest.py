@@ -10,8 +10,11 @@ not-implemented status rather than 404 so the UI can surface state cleanly.
 from __future__ import annotations
 
 import sqlite3
+import json
+import io
 
 import platform
+from pathlib import Path
 
 from fastapi import APIRouter, Body, File, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -216,6 +219,51 @@ async def restore_backup(body: dict = Body(...)) -> dict:
     try:
         return await run_in_threadpool(bak.restore_backup, body["name"])
     except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/import-profile-file")
+async def import_profile_file(file: UploadFile = File(...)) -> dict:
+    """"Load profile from file": an OpenFlow profile export (.json), a NayaFlow user-data.db,
+    or a NayaFlow backup .zip that bundles one. A database is converted in a throwaway copy
+    (db.nayaflow_convert) and each profile it holds is imported as a NEW profile beside the
+    user's own -- nothing installs over the current data, unlike /rpc/import-backup-file."""
+    import tempfile
+    import zipfile
+    from ..db import nayaflow_convert as ncv
+
+    raw = await file.read()
+    name = (file.filename or "upload").lower()
+
+    def _go() -> dict:
+        if name.endswith(".json"):
+            data = json.loads(raw.decode("utf-8"))
+            r = prof.import_profile(data)
+            return {"ok": True, "source": "json", "imported": [{"id": r["id"], "name": r["name"]}]}
+        db_bytes = raw
+        if name.endswith(".zip"):
+            with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+                member = next((n for n in zf.namelist() if n.lower().endswith(".db")), None)
+                if member is None:
+                    raise ValueError("the zip holds no .db file")
+                db_bytes = zf.read(member)
+        elif not name.endswith(".db"):
+            raise ValueError("expected a .json profile export, a NayaFlow user-data.db, or its backup .zip")
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td) / "upload.db"
+            tmp.write_bytes(db_bytes)
+            payloads = ncv.to_json_payloads(tmp)
+        if not payloads:
+            raise ValueError("that database holds no profiles")
+        imported = []
+        for payload in payloads:
+            r = prof.import_profile(payload)
+            imported.append({"id": r["id"], "name": r["name"]})
+        return {"ok": True, "source": "nayaflow-db", "imported": imported}
+
+    try:
+        return await run_in_threadpool(_go)
+    except (ValueError, KeyError, sqlite3.DatabaseError, UnicodeDecodeError, json.JSONDecodeError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
