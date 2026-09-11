@@ -1008,8 +1008,14 @@ def _apply(plan, rendered, transport, desired, reader) -> dict:
             # full layer and leave the keymap half written. The payload byte echoes the layer
             # or slot index (observed live in C1-C4); it is recorded, not gated on.
             if flags not in (0x00, 0x01):
+                # 0xEA is the firmware saying no to the VALUE (measured 2026-09-11: a 10 s idle
+                # timeout is acked with 0xEA and not stored). Anything else is a transport or
+                # framing problem. Both stop the flash; the reason should say which.
+                reason = ("rejected by the firmware (ack flag 0xEA): the value is outside what it "
+                          "accepts, and nothing was stored" if flags == R.ACK_REJECTED
+                          else "bad or missing ack — not continuing")
                 return {"status": "aborted", "op": label, "frame": i, "ack_flags": flags,
-                        "sent": sent, "reason": "bad or missing ack — not continuing"}
+                        "sent": sent, "reason": reason}
     result = {"status": "sent", "ops": len(plan), "frames": len(sent), "sent": sent}
     if reader is not None:
         readback = reader()                       # a fresh device read as a DesiredState

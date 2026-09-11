@@ -47,13 +47,17 @@ SETTINGS_SCHEMA = [
              "desc": "How long the keyboard waits before deciding a key is held.",
              "min": 10, "max": 1000, "default": 200, "unit": "ms", "provenance": VERIFIED,
              "device_key": "8fe34f61-df0c-48c9-b0f7-ee9bfbaa2a05"},
+            # `min_nonzero`: the firmware refuses 1-29 s (measured 2026-09-11, ack 0xEA, value
+            # unchanged) and takes 0 as off. The writer enforces it; the description says it.
             {"id": "idle_timeout_s", "label": "Idle Timeout (s)", "kind": "slider",
-             "desc": "Wait before disabling LEDs to save battery. 0 = off.",
+             "desc": "Wait before disabling LEDs to save battery. 0 = off; otherwise at least 30 s.",
              "min": 0, "max": 6000, "default": 90, "unit": "s", "provenance": VERIFIED,
+             "min_nonzero": 30,
              "device_key": "ded8e734-b10b-48c9-9ab1-536904e2c3de"},
             {"id": "sleep_timeout_s", "label": "Sleep Timeout (s)", "kind": "slider",
-             "desc": "Idle before deep sleep (lighting, BT, memory). 0 = off.",
+             "desc": "Idle before deep sleep (lighting, BT, memory). 0 = off; otherwise at least 30 s.",
              "min": 0, "max": 6000, "default": 300, "unit": "s", "provenance": VERIFIED,
+             "min_nonzero": 30,
              "device_key": "f198f968-2c42-4df6-8fdd-97de148cad1a"},
             # The three LED settings below have known correlation ids but OpenFlow emits no write
             # for them -- the flash only sends SYS_SET_TIMEOUTS and folds term/flavour into
@@ -229,6 +233,10 @@ def set_setting(key: str, value) -> dict:
     if field is None:
         raise ValueError(f"unknown setting: {key}")
     val = _coerce(field, value)
+    floor = field.get("min_nonzero")
+    if floor and 0 < val < floor:
+        raise ValueError(f"{field['label']}: the keyboard refuses values under {floor} s "
+                         f"(0 turns it off); {val} would not be stored")
     # The row is keyed by the correlation UUID for device fields, and holds the WIRE value --
     # both halves matter. Writing "tapping_term_ms"/"Balanced" instead of the UUID/"balanced" is
     # what made every device setting inert; matching only one of the two would still be inert.

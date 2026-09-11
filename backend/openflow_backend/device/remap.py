@@ -516,8 +516,32 @@ def encode_layer_list(entries: list[tuple[int, int, bytes]]) -> bytes:
     return bytes(out)
 
 
+# The firmware's own floor for the three timeouts, measured 2026-09-11 on 3.41.0 by writing
+# values and reading them back: idle 29 s and sleep 20 s and sleep-on-battery 15 s were REFUSED
+# (the ack comes back with flag 0xEA and the stored value does not move), 30 s and up were
+# stored, and 0 is accepted for idle and sleep as "off". Idle may exceed sleep (400 s over
+# 300 s was stored), so there is no ordering rule, only the floor. Enforced here so a value the
+# firmware would refuse never goes out looking like a write.
+TIMEOUT_FLOOR_MS = 30000
+ACK_REJECTED = 0xEA           # the ack flag the firmware answers a refused value with
+
+
+def validate_timeouts(idle_ms: int, sleep_ms: int, sleep_batt_ms: int) -> None:
+    for name, v, off_ok in (("idle", idle_ms, True), ("sleep", sleep_ms, True),
+                            ("sleep on battery", sleep_batt_ms, False)):
+        if v == 0 and off_ok:
+            continue
+        if not 0 <= v <= 0xFFFFFFFF:
+            raise RemapEncodeError(f"{name} timeout {v} ms is out of range")
+        if v < TIMEOUT_FLOOR_MS:
+            raise RemapEncodeError(f"{name} timeout {v} ms is below the firmware's floor of "
+                                   f"{TIMEOUT_FLOOR_MS // 1000} s"
+                                   + (" (0 turns it off)" if off_ok else ""))
+
+
 def encode_timeouts(idle_ms: int, sleep_ms: int, sleep_batt_ms: int) -> bytes:
-    """SYSTEM 0xFE/0x100A payload: three u32 LE milliseconds."""
+    """SYSTEM 0xFE/0x100A payload: three u32 LE milliseconds. Refuses what the firmware would."""
+    validate_timeouts(idle_ms, sleep_ms, sleep_batt_ms)
     return b"".join((v & 0xFFFFFFFF).to_bytes(4, "little") for v in (idle_ms, sleep_ms, sleep_batt_ms))
 
 
