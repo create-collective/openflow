@@ -58,6 +58,20 @@ export const MOUSE_MOTION = [
   },
 ];
 
+// Single DIRECTIONS, for one half of a split axis. Each is the two-word motion record the
+// stock pair writes for that half, with the direction's own category -- so a half can hold
+// "scroll left" on its own, or a horizontal swipe can be made to scroll vertically.
+export const MOUSE_DIRECTIONS = [
+  { code: "SCROLL_UP", label: "Scroll up", hint: "Wheel up, one direction." },
+  { code: "SCROLL_DOWN", label: "Scroll down", hint: "Wheel down, one direction." },
+  { code: "SCROLL_LEFT", label: "Scroll left", hint: "Wheel left, one direction." },
+  { code: "SCROLL_RIGHT", label: "Scroll right", hint: "Wheel right, one direction." },
+  { code: "MOUSE_UP", label: "Cursor up", hint: "Move the pointer up, one direction." },
+  { code: "MOUSE_DOWN", label: "Cursor down", hint: "Move the pointer down, one direction." },
+  { code: "MOUSE_LEFT", label: "Cursor left", hint: "Move the pointer left, one direction." },
+  { code: "MOUSE_RIGHT", label: "Cursor right", hint: "Move the pointer right, one direction." },
+];
+
 /** What a pick sends. Buttons are a single action; motion is a direction pair. */
 export function mousePick(code) {
   return { actionCode: code, actionType: code.includes(" - ") ? "value" : "mouse" };

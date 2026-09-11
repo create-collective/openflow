@@ -341,7 +341,32 @@ def motion_name(module_type: str, field: int, category: int, selector: int):
             if half_selector(h, sign) == selector:
                 return names[i]
         return None
-    return None
+    # A motion of ANOTHER category sitting in an axis field: a split half bound to a single
+    # direction (a horizontal swipe made to scroll vertically, say). The device stores the
+    # category in the record, so the name follows the record, not the field.
+    return MOTION_NAMES.get((category, selector))
+
+
+def _motion_directions() -> dict:
+    """{direction name: (category, selector)} for every single motion the device knows.
+
+    Derived from the axis defaults rather than declared again: each pair "mouse - A - B" with
+    category c says A is (c, -1) and B is (c, +1). The same name must come out the same
+    everywhere, which is checked at import so a table edit cannot make SCROLL_UP mean two
+    things. Eight names: SCROLL_UP/DOWN (category 4), SCROLL_LEFT/RIGHT (6), MOUSE_LEFT/RIGHT
+    (0), MOUSE_DOWN/UP (1).
+    """
+    out: dict = {}
+    for module in AXIS_HALVES:
+        for h in AXIS_HALVES[module].values():
+            names = split_pair(h.get("default"))
+            if None in names:
+                continue
+            for name, sign in zip(names, ("-", "+")):
+                pair = (h["category"], half_selector(h, sign))
+                if out.setdefault(name, pair) != pair:
+                    raise AssertionError(f"{name} is {out[name]} in one axis and {pair} in another")
+    return out
 
 
 def half_selector(half: dict, sign: str) -> int:
@@ -418,3 +443,13 @@ def split_pair(code):
         return (None, None)
     parts = [p.strip() for p in str(code).split(" - ")]
     return (parts[-2], parts[-1]) if len(parts) >= 2 else (None, None)
+
+
+# Built last: it walks AXIS_HALVES through split_pair and half_selector, defined above.
+MOTION_DIRECTIONS = _motion_directions()
+MOTION_NAMES = {v: k for k, v in MOTION_DIRECTIONS.items()}
+
+
+def motion_record(code: str):
+    """(category, selector) for a single direction bound to a split half, or None."""
+    return MOTION_DIRECTIONS.get(code)

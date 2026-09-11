@@ -1,4 +1,4 @@
-import { MOUSE_BUTTONS, MOUSE_MOTION, mousePick } from "../lib/mousedict";
+import { MOUSE_BUTTONS, MOUSE_DIRECTIONS, MOUSE_MOTION, mousePick } from "../lib/mousedict";
 
 // A mouse you click to bind, mirroring VirtualKeyboard: standalone, `{disabled, onPick}`, layout
 // externalised to lib/mousedict.js.
@@ -14,7 +14,9 @@ import { MOUSE_BUTTONS, MOUSE_MOTION, mousePick } from "../lib/mousedict";
 //
 // `motion` is false in the KEY context: a key position has no axis, so only buttons make sense
 // there. Buttons themselves DO work on a key -- measured 2026-09-07, see actions_catalog.py.
-export default function VirtualMouse({ disabled, onPick, disabledHint, motion = true }) {
+// `directions` is set while a split-axis HALF is selected: the pairs give way to the eight
+// single directions, which are what a half can hold besides a key.
+export default function VirtualMouse({ disabled, onPick, disabledHint, motion = true, directions = false }) {
   const pick = (code) => { if (!disabled) onPick(mousePick(code)); };
   const btn = (area) => MOUSE_BUTTONS.find((b) => b.area === area);
 
@@ -50,7 +52,22 @@ export default function VirtualMouse({ disabled, onPick, disabledHint, motion = 
         </div>
       </div>
 
-      {motion && <div className="vm-motion">
+      {directions && <div className="vm-motion">
+        <div className="vm-side-title">
+          Single direction — for this half of a split axis
+        </div>
+        <div className="vm-motion-grid">
+          {MOUSE_DIRECTIONS.map((m) => (
+            <button key={m.code} className="vm-motion-btn" disabled={disabled}
+              title={m.hint} onClick={() => pick(m.code)}>
+              <span className="vm-btn-label">{m.label}</span>
+              <span className="vm-btn-code">{m.code.startsWith("SCROLL") ? "wheel" : "pointer"}</span>
+            </button>
+          ))}
+        </div>
+      </div>}
+
+      {motion && !directions && <div className="vm-motion">
         <div className="vm-side-title">
           Motion — binds to an axis, not a tap
         </div>

@@ -58,6 +58,7 @@ export default function ActionPalette({
   filter,                 // (action, tabId) => boolean, for per-action-type constraints
   disabledHint = "Select a key on the map first.",
   className = "",
+  mouseDirections = false,  // a split-axis half is selected: single directions, not pairs
 }) {
   const [tabId, setTabId] = useState(defaultTab);
   const [query, setQuery] = useState("");
@@ -257,7 +258,7 @@ export default function ActionPalette({
           // modules only. Buttons work in both contexts -- measured 2026-09-07, see the mouse
           // tab's note in device/actions_catalog.py.
           <VirtualMouse disabled={disabled} onPick={onPick} disabledHint={disabledHint}
-                        motion={context !== "key"} />
+                        motion={context !== "key"} directions={context !== "key" && mouseDirections} />
         ) : tab?.id === "apps" ? (
           <AppShortcutPicker disabled={disabled} onPick={onPick} disabledHint={disabledHint} />
         ) : tab?.id === "keyboard" ? (

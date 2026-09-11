@@ -336,6 +336,13 @@ def _encode_gesture(idx, code):
     """
     if code in R.MOUSE_MASK:
         return (R.TWO_WORD, R.encode_two_word(R.MOUSE_CATEGORY, R.MOUSE_MASK[code]))
+    motion = module_fields.motion_record(code)
+    if motion is not None:
+        # A single direction on a split half (SCROLL_LEFT on its own, say): the same two-word
+        # record the stock pair writes for that half, with the direction's own category, so a
+        # horizontal swipe can be made to scroll vertically. Until 2026-09-11 a split half could
+        # only take a key, and the directions themselves were not offered anywhere.
+        return (R.TWO_WORD, R.encode_two_word(*motion))
     if not R.encodable(code):
         # LED brightness and friends. The board already carries an empty keypress on those
         # gestures, and the template passes it through untouched -- writing something of our

@@ -10,6 +10,7 @@ import { api } from "../lib/api";
 import SettingField from "../components/SettingField";
 import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import useDoneFlag from "../lib/useDoneFlag";
+import { MOUSE_DIRECTIONS } from "../lib/mousedict";
 
 // Module configuration (Touch / Track / Tune). Grouped list on the left; the
 // selected config's bindings (module visual + always-on gestures + per-target
@@ -40,6 +41,9 @@ function cleanCode(code) {
 // uglier one is the one that sticks around after the click.
 function makeLabelFor(actions) {
   const byCode = new Map((actions || []).filter((a) => a.code).map((a) => [a.code, a.label]));
+  // The eight single directions a split half can hold are not catalog actions -- they are the
+  // halves of the motion pairs -- so their names come from the mouse dictionary.
+  for (const d of MOUSE_DIRECTIONS) if (!byCode.has(d.code)) byCode.set(d.code, d.label);
   return (code) => (code && byCode.get(code)) || cleanCode(code);
 }
 
@@ -557,8 +561,9 @@ export default function Modules() {
     // Every direction pair we know lives in the module tab's Cursor/Scroll/Media categories,
     // and it is grid-rendered, so `filter` genuinely applies there.
     if (isPair) return ["module"];
-    // A half takes a single key, which is what its old dropdown offered and nothing more.
-    if (selectedBinding.axisHalf) return ["keyboard", "basic", "extended", "shortcuts", "apps"];
+    // A half takes a single key, or -- since 2026-09-11 -- a single motion direction from the
+    // mouse tab, which renders the eight directions instead of the pairs for a half.
+    if (selectedBinding.axisHalf) return ["keyboard", "mouse", "basic", "extended", "shortcuts", "apps"];
     return undefined;
   }, [selectedBinding]);
 
@@ -961,6 +966,7 @@ export default function Modules() {
             disabled={!selectedBinding}
             disabledHint="Select a gesture above to bind it."
             filter={paletteFilter}
+            mouseDirections={!!selectedBinding?.axisHalf}
             tabIds={paletteTabIds}
             defaultTab={paletteTabIds && !paletteTabIds.includes("keyboard") ? paletteTabIds[0] : "keyboard"}
             onPick={pickFromPalette}
