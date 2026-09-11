@@ -17,9 +17,10 @@ sys.path.insert(0, str(_BACKEND / "openflow_backend" / "_vendor"))
 
 from openflow_backend.device import actions_catalog as AC   # noqa: E402
 
-ROOT = _BACKEND.parents[1]
-ICON_DIR = ROOT / "openflow" / "frontend" / "public" / "icons" / "action"
-ICON_NAMES = ROOT / "openflow" / "frontend" / "src" / "lib" / "iconNames.json"
+# backend/ and frontend/ are siblings in both layouts (NayaOS keeps them under openflow/).
+FRONTEND = _BACKEND.parent / "frontend"
+ICON_DIR = FRONTEND / "public" / "icons" / "action"
+ICON_NAMES = FRONTEND / "src" / "lib" / "iconNames.json"
 
 
 def _actions():

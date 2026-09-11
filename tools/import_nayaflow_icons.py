@@ -24,8 +24,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "extracted" / "NayaFlow-1.25.1" / "asar" / "dist" / "renderer" / "assets" / "icons" / "action"
-DST = ROOT / "openflow" / "frontend" / "public" / "icons" / "action"
-NAMES = ROOT / "openflow" / "frontend" / "src" / "lib" / "iconNames.json"
+# NayaOS keeps the app under openflow/; the OpenFlow repo has frontend/ at the top.
+APP = ROOT / "openflow" if (ROOT / "openflow" / "frontend").is_dir() else ROOT
+DST = APP / "frontend" / "public" / "icons" / "action"
+NAMES = APP / "frontend" / "src" / "lib" / "iconNames.json"
 
 PROVENANCE = """# NayaFlow action icons
 

@@ -29,7 +29,9 @@ from openflow_backend.device import flash as F              # noqa: E402
 from openflow_backend.device import keymap_read as K        # noqa: E402
 from openflow_backend.device import remap as R              # noqa: E402
 
-CAPTURE = _BACKEND.parents[1] / "device" / "out" / "after-a3-outputs-test-20260910.json"
+# The repo root is wherever `device/` lives: two levels up in NayaOS, one in the OpenFlow repo.
+_REPO = next(p for p in _BACKEND.parents if (p / "device").is_dir())
+CAPTURE = _REPO / "device" / "out" / "after-a3-outputs-test-20260910.json"
 ORDER_TO_LAYER = {0: "L0", 1: "L1", 2: "L2"}
 LAYER_ORDER = {"L0": 0, "L1": 1, "L2": 2}
 BAYS = set(range(0x4A, 0x52))

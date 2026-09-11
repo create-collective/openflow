@@ -20,7 +20,8 @@ sys.path.insert(0, str(_BACKEND / "openflow_backend" / "_vendor"))
 
 from openflow_backend.device import actions_catalog as AC   # noqa: E402
 
-ROOT = _BACKEND.parents[1]
+# The repo root is wherever tools/ lives: two levels up in NayaOS, one in the OpenFlow repo.
+ROOT = next(p for p in _BACKEND.parents if (p / "tools" / "build_nayaflow_names.py").is_file())
 NAMES = _BACKEND / "openflow_backend" / "device" / "nayaflow_names.json"
 
 

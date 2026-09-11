@@ -18,7 +18,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "docs" / "reference" / "nayaflow-key-palette.json"
-OUT = ROOT / "openflow" / "backend" / "openflow_backend" / "device" / "nayaflow_names.json"
+# NayaOS keeps the app under openflow/; the OpenFlow repo has backend/ at the top.
+APP = ROOT / "openflow" if (ROOT / "openflow" / "backend").is_dir() else ROOT
+OUT = APP / "backend" / "openflow_backend" / "device" / "nayaflow_names.json"
 
 
 def build() -> dict:
