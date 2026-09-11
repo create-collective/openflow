@@ -93,13 +93,14 @@ def test_an_imported_track_profile_is_tagged_with_its_side_when_that_is_unambigu
     which the picker now offers in either bay."""
     live = _live(tmp_path, monkeypatch)
     data = {"version": 1, "kind": "profile", "profile": {"name": "Sides"}, "macros": [],
-            "layers": [{"srcId": "L0", "name": "Base", "orderId": 0, "keys": []}],
+            "layers": [{"srcId": "L0", "name": "Base", "orderId": 0, "keys": []},
+                       {"srcId": "L1", "name": "Alt", "orderId": 1, "keys": []}],
             "modules": {"configs": [
                 {"srcId": "left-only", "name": "Left only", "type": "TRACK", "bindings": [], "settings": []},
                 {"srcId": "both", "name": "Both docks", "type": "TRACK", "bindings": [], "settings": []},
                 {"srcId": "tune", "name": "A Tune", "type": "TUNE", "bindings": [], "settings": []},
             ], "configBindings": [
-                {"srcLayerId": "L0", "srcConfigId": "left-only", "bindingLocation": "track:keyboard_left", "state": None},
+                {"srcLayerId": "L1", "srcConfigId": "left-only", "bindingLocation": "track:keyboard_left", "state": None},
                 {"srcLayerId": "L0", "srcConfigId": "both", "bindingLocation": "track:keyboard_left", "state": None},
                 {"srcLayerId": "L0", "srcConfigId": "both", "bindingLocation": "track:keyboard_right", "state": None},
                 {"srcLayerId": "L0", "srcConfigId": "tune", "bindingLocation": "tune:keyboard_left", "state": None},
