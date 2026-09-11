@@ -24,6 +24,16 @@ router = APIRouter()
 POLL_INTERVAL_S = 2.0
 
 
+def compose(devices: list, snapshot: dict) -> tuple[str, dict]:
+    """The devices event: enumeration plus the poll loop's last snapshot. The signature the
+    stream compares leaves timestamps out, so a tick that changed nothing sends nothing."""
+    payload = {"devices": devices, "status": snapshot}
+    quiet = {"devices": devices,
+             "status": {"halves": [{k: v for k, v in h.items() if k != "at"}
+                                   for h in snapshot.get("halves", [])]}}
+    return json.dumps(quiet, sort_keys=True), payload
+
+
 @router.get("/sse")
 async def sse(request: Request) -> EventSourceResponse:
     svc = get_service()
@@ -35,12 +45,12 @@ async def sse(request: Request) -> EventSourceResponse:
             if await request.is_disconnected():
                 break
             devices = await run_in_threadpool(svc.list_devices)
-            signature = json.dumps(devices, sort_keys=True)
+            signature, payload = compose(devices, svc.snapshot())
             if signature != last_signature:
                 last_signature = signature
                 yield {
                     "event": "sse:naya-devices-stream",
-                    "data": json.dumps({"devices": devices}),
+                    "data": json.dumps(payload),
                 }
             await asyncio.sleep(POLL_INTERVAL_S)
 

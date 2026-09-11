@@ -4,6 +4,7 @@ import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { hydrateDeviceState, invalidateDeviceState } from "./lib/deviceState";
 import { api } from "./lib/api";
 import { useSSE } from "./lib/useSSE";
+import DeviceChip from "./components/DeviceChip";
 import Hub from "./pages/Hub.jsx";
 import DeviceManagement from "./pages/DeviceManagement.jsx";
 import Troubleshooting from "./pages/Troubleshooting.jsx";
@@ -46,6 +47,7 @@ function Sidebar() {
         <span className="brand-dot" />
         OpenFlow
       </div>
+      <DeviceChip status={data?.status} />
       {NAV.map((item) => (
         <NavLink
           key={item.to}

@@ -168,6 +168,11 @@ class DeviceService:
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._transports: dict[str, SerialTransport] = {}
+        # Live status (see tick): side -> the last tick's snapshot; port -> identity read once;
+        # battery samples folded across ticks, keyed "side" and "side:module".
+        self._live: dict[str, dict] = {}
+        self._identity: dict[str, dict] = {}
+        self._samples: dict[str, list] = {}
 
     # --- connection management -------------------------------------------------
 
@@ -256,6 +261,120 @@ class DeviceService:
             }
             for d in find_naya_serial_ports()
         ]
+
+    # --- live status: one light tick per half, on the app's timer -----------------------------
+    # The keyboard never pushes battery on its own. NayaFlow's bar looks live because NayaCore
+    # holds each half's port and polls it on a 6 s tick (its DETECT_MODULE job; the failed ticks
+    # in its log land six seconds apart). This is the same thing, done here: keyboard battery,
+    # module presence and module battery, one sample each per tick, under the service lock so a
+    # tick waits behind a flash rather than interleaving with it. Identity -- firmware, hardware
+    # id, radio address -- never changes while plugged in, so it is read once per port and kept.
+    # The full status read (status_all) stays as it is for the Information page.
+    TICK_SAMPLES = 5          # ticks folded into the reported battery; nayactl samples 5 per read
+
+    def _fold(self, key: str, mv: int | None) -> int | None:
+        """A rolling median over the last TICK_SAMPLES readings, one reading per tick."""
+        if mv is None:
+            return None
+        buf = self._samples.setdefault(key, [])
+        buf.append(mv)
+        del buf[:-self.TICK_SAMPLES]
+        return sorted(buf)[len(buf) // 2]
+
+    def _mark_disconnected(self, side: str, port: str | None, why: str) -> dict:
+        from datetime import datetime, timezone
+        if port:
+            self._drop(port)
+            self._identity.pop(port, None)
+        for k in [k for k in self._samples if k == side or k.startswith(side + ":")]:
+            self._samples.pop(k, None)
+        snap = {"side": side, "port": port, "connected": False, "error": why,
+                "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        self._live[side] = snap
+        return snap
+
+    def tick(self, dev) -> dict:
+        """One light query of a half. `dev` is an enumerated port (find_naya_serial_ports)."""
+        from datetime import datetime, timezone
+        with self._lock:
+            dest = self._dest_for_side(dev.side)
+            try:
+                t = self._transport_for(dev.port, dest)
+                ident = self._identity.get(dev.port)
+                if ident is None:
+                    ident = {}
+                    p = _first_payload(t.send_command(dest, C.CAT_SYSTEM, C.SYS_GET_FW_VERSION))
+                    if p is not None:
+                        ident["firmwareVersion"] = format_fw_version(p)
+                    p = _first_payload(t.send_command(dest, C.CAT_SYSTEM, C.SYS_GET_HW_ID_NUMBER))
+                    if p is not None:
+                        try:
+                            ident["hardwareId"] = p.decode("ascii")
+                        except (UnicodeDecodeError, ValueError):
+                            ident["hardwareId"] = hexline(p)
+                    p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_ADDRESS))
+                    if p is not None and len(p) >= 6:
+                        ident["bleAddress"] = ":".join(f"{b:02X}" for b in p[:6])
+                    self._identity[dev.port] = ident
+
+                snap: dict = {"side": dev.side, "port": dev.port, "description": dev.description,
+                              "serialNumber": dev.serial_number, "connected": True, **ident}
+                p = _first_payload(t.send_command(dest, C.CAT_SYSTEM, C.SYS_GET_KB_BATTERY_LEVEL, timeout=0.5))
+                mv = self._fold(dev.side, _to_millivolts((p[0] << 8) | p[1]) if p is not None and len(p) >= 2 else None)
+                if mv is not None:
+                    snap["batteryMillivolts"] = mv
+                    snap["batteryPercent"] = _battery_percent(mv)
+
+                # Module: presence from DETECT, type from the handshake address (see status_all).
+                handshake = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_SEND_HANDSHAKE, timeout=1.5))
+                detect = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_DETECT))
+                module = None
+                if detect is not None and len(detect) >= 1 and detect[0] != 0:
+                    addr = handshake[1] if handshake is not None and len(handshake) >= 2 else None
+                    if addr is None:
+                        ap = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_ADDRESS))
+                        addr = ap[0] if ap is not None and len(ap) >= 1 else None
+                    module = {"type": C.module_type_from_address(addr)}
+                    if addr is not None:
+                        module["address"] = addr
+                        module["docked"] = C.module_side_from_address(addr)
+                    mp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_PRECISE_BATTERY))
+                    mmv = None
+                    if mp is not None and len(mp) >= 2:
+                        voltage = (mp[0] << 8) | mp[1]
+                        valid = (mp[2] == 0) if len(mp) >= 3 else True
+                        if valid and voltage > 0:
+                            mmv = _to_millivolts(voltage)
+                    mmv = self._fold(f"{dev.side}:module", mmv)
+                    if mmv is not None:
+                        module["batteryMillivolts"] = mmv
+                        module["batteryPercent"] = _battery_percent(mmv)
+                else:
+                    self._samples.pop(f"{dev.side}:module", None)
+                snap["module"] = module
+                snap["at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                self._live[dev.side] = snap
+                return snap
+            except TransportError as e:
+                return self._mark_disconnected(dev.side, dev.port, str(e))
+
+    def tick_all(self) -> dict:
+        """Tick every enumerated half; a half that is no longer enumerated is marked gone."""
+        seen = set()
+        for dev in find_naya_serial_ports():
+            seen.add(dev.side)
+            self.tick(dev)
+        with self._lock:
+            for side, snap in list(self._live.items()):
+                if side not in seen and snap.get("connected"):
+                    self._mark_disconnected(side, snap.get("port"), "no longer on the USB bus")
+        return self.snapshot()
+
+    def snapshot(self) -> dict:
+        """The last tick's view of every half. In-memory; no device I/O."""
+        with self._lock:
+            halves = [dict(v) for _k, v in sorted(self._live.items())]
+        return {"halves": halves}
 
     # --- status ----------------------------------------------------------------
 

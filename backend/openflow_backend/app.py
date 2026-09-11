@@ -26,14 +26,30 @@ async def _auto_backup_loop():
             pass  # never let a backup failure take down the app
 
 
+# NayaCore's interval. Each tick is a few short round trips per half under the service lock;
+# a flash in progress simply delays it.
+DEVICE_POLL_INTERVAL_S = 6.0
+
+
+async def _device_poll_loop():
+    from .api.state import get_service
+    while True:
+        try:
+            await asyncio.to_thread(get_service().tick_all)
+        except Exception:
+            pass  # a bad tick is a missed reading, never a crashed app
+        await asyncio.sleep(DEVICE_POLL_INTERVAL_S)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    task = asyncio.create_task(_auto_backup_loop())
+    tasks = [asyncio.create_task(_auto_backup_loop()), asyncio.create_task(_device_poll_loop())]
     yield
-    task.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await task
+    for task in tasks:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
     shutdown_service()
 
 

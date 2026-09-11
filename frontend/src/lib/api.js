@@ -28,6 +28,7 @@ export const api = {
   // half, so it is opt-in: Device Manager does not need it, the Information page does.
   statusDeep: () => req("GET", "/api/status?verbose=1"),
   statusLastDeep: () => req("GET", "/api/status/last?deep=1"),
+  statusLive: () => req("GET", "/api/status/live"),
   statusLast: () => req("GET", "/api/status/last"),
   diagnostics: () => req("GET", "/api/diagnostics/report"),
   readKeyboard: (body = {}) => req("POST", "/rpc/read-keyboard", body),

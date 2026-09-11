@@ -573,6 +573,12 @@ async def led(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/api/status/live")
+async def status_live() -> dict:
+    """What the poll loop last saw: per half, connection, battery, docked module. No device I/O."""
+    return get_service().snapshot()
+
+
 @router.get("/api/ble/profiles")
 async def ble_profiles(side: str = "left") -> dict:
     """The five Bluetooth slots: active, bonded, reserved. One status read."""
