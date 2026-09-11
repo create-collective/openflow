@@ -42,11 +42,17 @@ export default function Color() {
   const [hue, setHue] = useState(120);
   const [sat, setSat] = useState(100);
   const [hex, setHex] = useState("#00ff00");
+  // The action catalogue, purely for its `names` -- KeymapBoard needs it to draw NayaFlow's
+  // keycap icons. Without it `names` defaults to {} and every cap silently falls back to its
+  // text legend, which is why this board used to render in a different face and size from the
+  // identical board on Bindings.
+  const [names, setNames] = useState({});
 
   const load = useCallback(async () => {
     try {
-      const ud = await api.userdata();
+      const [ud, acts] = await Promise.all([api.userdata(), api.actions()]);
       setProfiles(ud.profiles || []);
+      setNames(acts?.names || {});
     } catch (e) {
       setErr(e.message);
     }
@@ -240,7 +246,7 @@ export default function Color() {
             <div className="board-actions"><FlashButton variant="toolbar" /></div>
           </div>
           <KeymapBoard keysByPosition={boardKeys} mode="color" onSelectKey={onKey} layerMap={layerMap}
-            moduleLed={layer?.moduleLed} onModuleLed={paintModule} />
+            names={names} moduleLed={layer?.moduleLed} onModuleLed={paintModule} />
         </div>
       </div>
 
