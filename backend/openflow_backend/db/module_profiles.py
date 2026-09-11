@@ -315,6 +315,19 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
                 for sign, code in zip(("-", "+"), got):
                     if code:
                         extra.append((gesture, sign, code, "key"))
+            # The slot's setting values (speeds, acceleration, tick feedback) come along too.
+            # Until 2026-09-11 a capture carried none, so it flashed back with the fields
+            # templated from the board -- right by accident -- while the Settings tab showed the
+            # app's defaults rather than what the keyboard runs.
+            for srow in (e.get("settings") or []):
+                dev = srow.get("device")
+                if dev is None:
+                    continue
+                val = "true" if dev is True else "false" if dev is False else str(int(dev))
+                conn.execute(
+                    "INSERT INTO module_settings (value, type, correlation_id, module_config_id, "
+                    "updated_at, created_at) VALUES (?,?,?,?,?,?)",
+                    (val, "device", srow["id"], cid, now, now))
             flat = [(g, d, c, t) for (g, d), (c, t) in rows.items()] + extra
             for gesture, direction, code, atype in sorted(flat):
                 conn.execute(

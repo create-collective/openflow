@@ -297,6 +297,33 @@ def setting_is_writable(module_type: str, setting_id: str) -> bool:
     return setting_id in setting_fields(module_type)
 
 
+# Settings the app stores as booleans; on the wire they are the same one-byte field as the rest.
+TOGGLE_SETTINGS = {"pointer_accel_on", "toggle_ticks"}
+_ONE_BYTE = 0x01      # the record type a setting field carries (module_layout.encode_setting)
+
+
+def decode_settings(module_type: str, fields: dict) -> dict:
+    """{setting id: value} for the setting fields a slot actually holds, typed the way the app
+    stores them: int for sliders, bool for toggles.
+
+    The inverse of module_layout.encode_setting. Read off the reference board 2026-09-11: every
+    module carries pointer speed 10 / accel 50 / accel on at 0x00-0x03, a Touch stores scroll
+    speed 50 where a Track or Tune stores 10, and the Tune adds tick strength 75 and ticks on at
+    0x06 / 0x07. Only a one-byte 0x01 record counts; anything else in a setting index (a Track's
+    axis two-words at 0x05-0x07, an empty field) is not a setting value and is left out.
+    """
+    out = {}
+    for sid, idx in setting_fields(module_type).items():
+        rec = fields.get(idx)
+        if not rec:
+            continue
+        typ, val = rec
+        if typ != _ONE_BYTE or len(val) != 1:
+            continue
+        out[sid] = bool(val[0]) if sid in TOGGLE_SETTINGS else int(val[0])
+    return out
+
+
 def motion_name(module_type: str, field: int, category: int, selector: int):
     """The action_code a two-word MOTION record in an axis field stands for, or None.
 

@@ -894,14 +894,32 @@ export default function Modules() {
 
               {tab === "settings" && (
                 <div style={{ marginTop: 16, maxWidth: 640 }}>
-                  {config.settingsSchema.map((f) => (
-                    // Shared control, not a second copy. `writable` is this schema's word for
-                    // the same thing `provenance` says on the Settings page: a field we have
-                    // capture evidence for is flashed, one we do not is app-only.
-                    <SettingField key={f.id}
-                      f={{ ...f, provenance: f.writable === false ? "app" : "verified" }}
-                      onChange={setSetting} />
-                  ))}
+                  {config.settingsSchema.map((f) => {
+                    // What the keyboard holds for this setting, from the last read of the slot
+                    // this profile is on. Settings are read but never silently adopted: a
+                    // differing board value is shown with one click to take it.
+                    const live = (onDevice?.settings || []).find((x) => x.id === f.id);
+                    return (
+                      <div key={f.id}>
+                        {/* Shared control, not a second copy. `writable` is this schema's word
+                            for the same thing `provenance` says on the Settings page: a field
+                            we have capture evidence for is flashed, one we do not is app-only. */}
+                        <SettingField
+                          f={{ ...f, provenance: f.writable === false ? "app" : "verified" }}
+                          onChange={setSetting} />
+                        {live && live.differs && (
+                          <div className="phase-note" style={{ marginTop: -6, marginBottom: 10 }}>
+                            On the keyboard: <strong>{String(live.device)}</strong>
+                            <button className="btn" style={{ marginLeft: 8 }}
+                              onClick={() => setSetting(f.id, live.device)}
+                              title="Set this profile's value to what the keyboard holds.">
+                              Use the keyboard's value
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>

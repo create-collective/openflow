@@ -884,11 +884,19 @@ def _build_entries(read: dict) -> list:
             # Nothing of this type in the app at all: compare against nothing, capture from nothing.
             ref_id, ref_name = None, f"{mtype.title()} module"
             gestures, differs = _compare(mtype, fields, {})
+        # The slot's speeds and tick feedback against the reference profile's. Not part of the
+        # match (gestures decide that); shown as drift, and imported whole by a capture.
+        stored = {r["correlation_id"]: r["value"] for r in conn.execute(
+            "SELECT correlation_id, value FROM module_settings WHERE module_config_id = ?",
+            (ref_id,))} if ref_id else {}
+        settings = _settings_rows(mtype, fields, stored)
         entry = {"uuid": uuid, "slot": slot, "name": ref_name, "type": mtype,
                  "fieldCount": len(fields), "gestures": gestures, "differs": differs,
                  "trailing": max(0, len(fields) - _EXPECTED_FIELDS.get(mtype, len(fields))),
                  # What a capture of this slot starts from (module_profiles.capture_from_device).
-                 "templateId": ref_id}
+                 "templateId": ref_id,
+                 "settings": settings,
+                 "settingsDiffer": sum(1 for x in settings if x["differs"])}
         if cfg is None:
             entry["foreign"] = True          # matched by content, or captured -- never by uuid
 
@@ -913,6 +921,34 @@ def _list_types(list_hex) -> dict:
     """{slot: module type} from the list's type byte. Lives in module_layout so the flash
     planner and this read path agree on what a slot is."""
     return module_layout.list_types(list_hex)
+
+
+def _settings_rows(module_type: str, fields: dict, stored: dict) -> list:
+    """The slot's setting fields against what the app holds for a profile: one row per setting
+    the flash can write, {id, label, device, app, differs}.
+
+    `stored` is the profile's module_settings rows ({id: value string}); a setting with no row
+    compares against its schema default, which is what the flash would write for it. Settings
+    do not take part in the content match -- gestures decide that -- but the drift is reported,
+    and a capture imports the device's values (module_profiles.capture_from_device)."""
+    device = module_fields.decode_settings(module_type, fields)
+    schema = ud.SETTINGS_SCHEMA.get(module_type, ud._COMMON_POINTER)
+    rows = []
+    for f in schema:
+        if f["id"] not in device:
+            continue
+        raw = stored.get(f["id"], f["default"])
+        if f["kind"] == "toggle":
+            app = raw if isinstance(raw, bool) else str(raw).strip().lower() == "true"
+        else:
+            try:
+                app = int(float(raw))
+            except (TypeError, ValueError):
+                app = f["default"]
+        dev = device[f["id"]]
+        rows.append({"id": f["id"], "label": f["label"], "device": dev, "app": app,
+                     "differs": dev != app})
+    return rows
 
 
 def _compare(module_type: str, fields: dict, app_bindings: dict):

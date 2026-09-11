@@ -93,7 +93,8 @@ def _db(app_bindings):
         CREATE TABLE module_config_bindings (profile_id TEXT, layer_id TEXT,
                                              module_config_id TEXT, binding_location TEXT,
                                              state TEXT, updated_at TEXT, created_at TEXT);
-        CREATE TABLE module_settings (module_config_id TEXT, correlation_id TEXT, value TEXT);
+        CREATE TABLE module_settings (module_config_id TEXT, correlation_id TEXT, value TEXT,
+                                      type TEXT, updated_at TEXT, created_at TEXT);
     """)
     conn.execute("INSERT INTO module_configs (name,type,size,order_id,icon_id,variant,id,"
                  "updated_at,created_at) VALUES ('Naya Track Left',?,0,0,NULL,'TRACK_LEFT',?,'','')",
