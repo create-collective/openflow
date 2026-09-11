@@ -34,8 +34,10 @@ OUT = APP / "backend" / "openflow_backend" / "device" / "nayaflow_names.json"
 # scraped tooltip was searched for in NayaFlow 1.25.1's own string table as a quoted literal.
 # 356 of 366 appear complete, terminated by the closing quote. Seven did not match for reasons
 # that are not truncation -- BACKSLASH is escaped in the dump, and six carry curly quotes
-# (U+2018/201C/201D) -- and all of them already end in punctuation or are single symbols. Exactly
-# one was a strict PREFIX of a longer literal:
+# (U+2018/201C/201D) -- and all of them already end in punctuation or are single symbols. The
+# remaining three were a strict PREFIX of a longer literal, but two of those only because the dump
+# holds a copy with a trailing space ("Open Character Viewer ", "Hide the windows of the front
+# app. "), and both already end properly. Exactly one was genuinely cut:
 #
 #     MODULE_FORCE_CHARGING   scraped: "... Restart your keyboard to"
 #                             actual:  "... Restart your keyboard to turn OFF this mode."
