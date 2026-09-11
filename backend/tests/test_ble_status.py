@@ -211,8 +211,12 @@ def test_revision_moves_between_the_two_captures_and_the_rest_does_not():
         pytest.skip("need two distinct captures to compare")
     decoded = [B.decode(b) for b in blobs]
     assert len({d["revision"] for d in decoded}) > 1, "revision did not move"
-    for key in ("profileCount", "localAddress", "headerUnknown"):
+    for key in ("profileCount", "localAddress"):
         assert len({d[key] for d in decoded}) == 1, f"{key} moved unexpectedly"
+    # Header byte 6 carries hostConnected and moves once a host is bonded (the 2026-09-11 full
+    # read is such a capture); bytes 7-8 have read 02 01 on every capture.
+    assert {d["headerUnknown"][2:] for d in decoded} == {"0201"}
+    assert all(d["localAddrValid"] for d in decoded)
 
 
 def test_active_profile_follows_the_bt_device_key_with_the_same_numbering():

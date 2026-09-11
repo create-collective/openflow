@@ -81,7 +81,35 @@ _ADDED_TABLES = [
 ]
 
 
+def _apply_schema_columns(conn) -> None:
+    """Any plain column OpenFlow's BASE schema has that this database lacks.
+
+    An older NayaFlow database is missing whatever NayaFlow added after it was made: a beta-era
+    user-data.db imported 2026-09-11 had no `layers.animation_id`, and every page answered "no
+    such column" until it was added. The OpenFlow-added columns below never covered those,
+    because they only list what OpenFlow itself bolted on. ALTER TABLE can add plain columns
+    only, so a PRIMARY KEY or a NOT NULL column without a default is left alone (none of the
+    base schema's later columns are either)."""
+    ref = sqlite3.connect(":memory:")
+    try:
+        ref.executescript(_schema_sql())
+        for (name,) in ref.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall():
+            present = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()
+            if present is None:
+                continue
+            have = {r[1] for r in conn.execute(f"PRAGMA table_info({name})")}
+            for _cid, cname, ctype, notnull, dflt, pk in ref.execute(f"PRAGMA table_info({name})"):
+                if cname in have or pk or (notnull and dflt is None):
+                    continue
+                decl = (ctype or "TEXT") + (f" DEFAULT {dflt}" if dflt is not None else "")
+                conn.execute(f"ALTER TABLE {name} ADD COLUMN {cname} {decl}")
+    finally:
+        ref.close()
+
+
 def _apply_added_columns(conn) -> None:
+    _apply_schema_columns(conn)
     for table, column, decl in _ADDED_COLUMNS:
         cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
         if column not in cols:

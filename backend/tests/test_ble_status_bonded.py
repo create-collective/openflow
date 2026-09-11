@@ -44,21 +44,33 @@ def test_the_bonded_slot_lights_every_bit_and_names_its_host():
         assert d["profiles"][other]["peerAddress"] is None
 
 
-def test_the_header_says_a_host_is_connected_only_on_the_bonded_capture():
+def test_the_header_says_a_host_is_connected_only_with_a_bond():
     d = _bonded()
     assert d["hostConnected"] is True and d["localAddrValid"] is True and d["advertising"] is False
-    for _name, raw in TB._captured_blobs():
+    seen_unbonded = False
+    for name, raw in TB._captured_blobs():
         e = B.decode(raw)
-        assert e["hostConnected"] is False and e["localAddrValid"] is True, _name
+        assert e["localAddrValid"] is True, name
+        bonded = any(p["bonded"] for p in e["profiles"])
+        # hostConnected is set exactly on the captures that carry a bond (the 2026-09-11 full
+        # read is one), never on the unbonded ones.
+        assert e["hostConnected"] is bonded, name
+        seen_unbonded = seen_unbonded or not bonded
+    assert seen_unbonded, "no unbonded capture on disk to contrast against"
 
 
 def test_an_active_unbonded_slot_has_only_the_active_bit():
-    """Every earlier capture: the active slot reads 0x08 and nothing else."""
+    """On every capture without a bond, the active slot reads 0x08 and nothing else."""
+    checked = 0
     for name, raw in TB._captured_blobs():
         e = B.decode(raw)
+        if e["hostConnected"]:
+            continue                       # a bonded capture; the test above covers it
         act = e["profiles"][e["activeProfile"]]
         assert act["flags"] == {**{k: False for k in B.PROFILE_FLAG_BITS}, "active": True}, name
         assert not act["bonded"] and not act["connected"] and act["peerAddress"] is None
+        checked += 1
+    assert checked > 0
 
 
 def test_everything_else_in_the_bonded_capture_matches_the_board_we_know():

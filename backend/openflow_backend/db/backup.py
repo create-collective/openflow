@@ -84,6 +84,7 @@ def restore_backup(name: str) -> dict:
     # Snapshot current state first, then restore.
     create_backup(kind="pre-restore")
     shutil.copyfile(src, db_path())
+    _upgrade_installed()
     return {"ok": True}
 
 
@@ -119,4 +120,16 @@ def import_db_bytes(raw: bytes, filename: str) -> dict:
 
     create_backup(kind="pre-import")
     db_path().write_bytes(db_bytes)
+    _upgrade_installed()
     return {"ok": True, "profiles": n}
+
+
+def _upgrade_installed() -> None:
+    """Bring a just-installed database up to OpenFlow's schema.
+
+    The additive migrations (layer animation, module colours, variants, captured_from, the
+    launch-step table, the settings-key carry-over) ran only at startup, so a NayaFlow database
+    imported while the app was running -- an older one especially -- answered every page with
+    "no such column" until the next launch (seen 2026-09-11 with a beta-era user-data.db)."""
+    from .database import init_db
+    init_db()
