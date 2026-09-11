@@ -99,11 +99,12 @@ def test_to_json_translates_the_beta_forms_and_stashes_them(tmp_path):
         {("scroll_speed", "50"), ("pointer_speed", "3"), ("pointer_accel_on", "false")}
     assert {(s["correlation_id"], s["value"]) for s in cfg["Naya Track"]["settings"]} == {("pointer_speed", "10"), ("MS-99", "7")}
     # per-direction rows -> axis row + halves; empty per-direction rows dropped
-    niri = {(b["behavior"], b["direction"]): (b["action_type"], b["action_code"]) for b in cfg["Naya Track Niri"]["bindings"]}
-    assert niri[("vertical:track", "-")] == ("combo", "LGUI + UP") and niri[("vertical:track", "+")] == ("combo", "LGUI + DOWN")
-    assert niri[("vertical:track", "+")] != niri.get(("rotate:track", "+"))
-    assert ("vertical:track", "+") in niri and any(b["behavior"] == "vertical:track" and b["action_type"] == "value"
-                                                  for b in cfg["Naya Track Niri"]["bindings"])
+    # keyed by action type too: the "+" half and the synthesised axis row share behaviour + direction
+    niri = {(b["behavior"], b["direction"], b["action_type"]): b["action_code"] for b in cfg["Naya Track Niri"]["bindings"]}
+    assert niri[("vertical:track", "-", "combo")] == "LGUI + UP"
+    assert niri[("vertical:track", "+", "combo")] == "LGUI + DOWN"
+    assert niri[("vertical:track", "+", "value")] == "mouse - MOUSE_DOWN - MOUSE_UP", "the axis row OpenFlow needs"
+    assert not any(k[0] == "rotate:track" for k in niri), "empty per-direction rows are dropped, no axis synthesised"
     assert not any(b["behavior"].startswith(("track_", "clockwise", "counter_clockwise")) for b in cfg["Naya Track Niri"]["bindings"])
     # invert cleared, stashed by config name
     assert all(b["invert"] == 0 for b in cfg["Naya Track"]["bindings"])
