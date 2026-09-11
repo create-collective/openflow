@@ -26,7 +26,9 @@ const NAV = [
   { to: "/colormapping", label: "LED Map" },
   { to: "/module-configuration", label: "Modules" },
   { to: "/macro", label: "Macros" },
-  { to: "/device-management", label: "Device Manager" },
+  // Device Manager left the nav on 2026-09-11: its halves, its lighting buttons and its live
+  // status all live on Information (Device / Connections / Troubleshooting) and in the chip
+  // below the brand. The route stays so a saved link still opens.
   { to: "/information", label: "Information" },
   { to: "/settings", label: "Settings" },
 ];

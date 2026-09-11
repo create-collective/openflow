@@ -2317,3 +2317,8 @@
 }
 .palette-grid.combo .palette-key:has(> .naya-icon) .naya-icon { margin: 0; }
 .palette-combo { font-size: 11px; letter-spacing: 0.5px; }
+
+
+/* Information page tabs: the segmented control, sized as a page-level strip. */
+.info-tabs { margin: 4px 0 14px; }
+.info-tabs .seg-btn { padding: 8px 16px; font-size: 13px; }
