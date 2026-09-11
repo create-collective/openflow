@@ -62,8 +62,12 @@ export default function BleSlots({ side = "left" }) {
             {s.reserved ? "Slot 0 — reserved (dongle)" : `Slot ${s.index} (BT ${s.index})`}
           </span>
           <span className="v" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span title={s.active ? "The keyboard sends to this slot when on wireless output." : (s.bonded ? "A host is paired here." : "Nothing is paired here.")}>
-              {s.active ? "● Active" : s.bonded ? "Paired" : "Empty"}
+            <span title={[
+              s.active ? "The keyboard sends to this slot when on wireless output." : null,
+              s.connected ? "The paired host is connected right now." : s.bonded ? "A host is paired here." : "Nothing is paired here.",
+              s.peerAddress ? `Host: ${s.peerAddress}` : null,
+            ].filter(Boolean).join("\n")}>
+              {(s.active ? "● Active" : "") + (s.connected ? (s.active ? ", connected" : "Connected") : s.bonded ? (s.active ? ", paired" : "Paired") : s.active ? "" : "Empty")}
             </span>
             {!s.reserved && (
               <>

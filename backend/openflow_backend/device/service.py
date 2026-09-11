@@ -492,11 +492,14 @@ class DeviceService:
                 raise TransportError(f"the {dev.side} half returned no Bluetooth status")
             d = ble_status.decode(p)
             slots = [{"index": pr["index"], "active": bool(pr["isActive"]),
-                      "bonded": bool(pr["hasPeerData"]),
+                      "bonded": bool(pr.get("bonded") or pr["hasPeerData"]),
+                      "connected": bool(pr.get("connected")),
+                      "peerAddress": pr.get("peerAddress"),
                       "reserved": pr["index"] == self.BLE_RESERVED_SLOT,
                       "flags": pr["activeFlags"]}
                      for pr in d.get("profiles") or []]
             return {"ok": True, "side": dev.side, "activeProfile": d.get("activeProfile"),
+                    "hostConnected": bool(d.get("hostConnected")),
                     "slots": slots, "localAddress": d.get("localAddress"), "statusRaw": p.hex()}
         return self._with_transport(side, go)
 

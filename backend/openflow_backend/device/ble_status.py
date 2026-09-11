@@ -61,6 +61,23 @@ PROVENANCE = {
     # reboot, 14 after) rather than a firmware revision, so the vendor's name may itself mislead.
     "revision":             "EXPERIMENTAL",
     "activeFlags":          "EXPERIMENTAL",
+    # 2026-09-11, the first capture with a host bonded (device/out/ble-status-paired-20260911.txt):
+    # the bonded slot's flags byte went 0x08 -> 0x7f and header byte 6 went 0x04 -> 0x06 while
+    # everything else held. `active` (0x08) was already pinned by activeProfile; `hostConnected`
+    # (header 0x02) is pinned by that capture; the other six profile bits all flipped together,
+    # so their individual names follow NayaCore's own parser (as nayactl carries it) and stay
+    # EXPERIMENTAL until a bonded-but-disconnected capture separates them.
+    "hostConnected":        "VERIFIED",
+    "flags.active":         "VERIFIED",
+    "flags.bonded":         "EXPERIMENTAL",
+    "flags.connected":      "EXPERIMENTAL",
+    "peerAddress(profile)": "VERIFIED",
+}
+
+# Profile flags byte, bit by bit. Names from NayaCore's parser; see the confidence table.
+PROFILE_FLAG_BITS = {
+    "configured": 0x01, "bonded": 0x02, "connected": 0x04, "active": 0x08,
+    "hasPeerAddr": 0x10, "encrypted": 0x20, "authenticated": 0x40,
 }
 
 
@@ -94,9 +111,13 @@ def decode(raw) -> dict:
     out["revision"] = int.from_bytes(raw[0:4], "big")
     out["profileCount"] = raw[4]
     out["activeProfile"] = raw[5]
-    # Bytes 6-8 are one of {advertisingStatus, hostConnected, localAddrValid, globalConnMode} --
-    # the string table offers four names for three slots, and both captures read 04 02 01, so
-    # there is no variation to separate them. Left raw ON PURPOSE.
+    # Byte 6 is a bitfield: 0x04 on every capture without a host, 0x06 once a host was bonded and
+    # connected (2026-09-11) -- so bit 1 is hostConnected, bit 2 the local-address-valid flag that
+    # is always set, and bit 0 (advertising, per NayaCore) has not yet been seen set. Bytes 7-8
+    # (02 01 on every capture) stay raw.
+    out["advertising"] = bool(raw[6] & 0x01)
+    out["hostConnected"] = bool(raw[6] & 0x02)
+    out["localAddrValid"] = bool(raw[6] & 0x04)
     out["headerUnknown"] = raw[6:9].hex()
     out["localAddress"] = _mac(raw[9:15])
 
@@ -117,6 +138,15 @@ def decode(raw) -> dict:
             # captures, so they are a constant prefix (static capability, most likely) and cannot
             # indicate per-profile state. Including them made every profile look populated.
             "hasPeerData": any(blk[5:]),
+            # The bits, now that a bond has been seen to set them (0x7f on the bonded, connected,
+            # active slot; 0x08 on an active unbonded one; 0x00 on the rest).
+            "flags": {name: bool(blk[1] & bit) for name, bit in PROFILE_FLAG_BITS.items()},
+            "bonded": bool(blk[1] & PROFILE_FLAG_BITS["bonded"]),
+            "connected": bool(blk[1] & PROFILE_FLAG_BITS["connected"]),
+            "securityLevel": blk[2],
+            # The host's address, at +6, as NayaCore reads it: 4C:82:A9:7F:44:24 on the bonded
+            # capture, the owner's PC adapter. Zero and reported as None when no peer is stored.
+            "peerAddress": _mac(blk[6:12]) if blk[1] & PROFILE_FLAG_BITS["hasPeerAddr"] else None,
             "raw": blk.hex(),
         })
     out["profiles"] = profiles
