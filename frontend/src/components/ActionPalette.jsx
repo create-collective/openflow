@@ -108,33 +108,83 @@ export default function ActionPalette({
   // the tooltip, plus the 5,000-odd application shortcuts by name and chord. The names are
   // the key -- "wireless" finds BT_OUT, "brightness" finds the LED keys, "paste" finds every
   // app's paste chord -- which is why this waited on the names work.
+  //
+  // RANKED, because it was not. Hits used to be pushed in iteration order and never sorted, so
+  // "windows" answered with nine macOS entries before the first Windows one -- not because they
+  // matched better but because the module and shortcuts TABS are walked before the app-shortcut
+  // corpus. Three things fix it: score by where and how well the query landed, drop duplicates,
+  // and cap AFTER sorting rather than during the walk (the old cap returned early from inside
+  // the tab loop, so a broad query could never reach the shortcuts at all).
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!catalog || q.length < 2) return null;
-    const hit = (...fields) => fields.some((f) => f && String(f).toLowerCase().includes(q));
+
+    // Where a hit landed, best first. A whole-word match beats a match inside a longer word:
+    // "windows" should prefer "Cycle windows" over "Windows Terminal profile 2".
+    // Built by hand rather than with a constructed RegExp: the query is user text, so it
+    // would have to be escaped, and an escaping slip there is both a crash and a ReDoS.
+    const alnum = (ch) => !!ch && /[a-z0-9]/.test(ch);
+    const isWordHit = (v) => {
+      for (let i = v.indexOf(q); i !== -1; i = v.indexOf(q, i + 1)) {
+        if (!alnum(v[i - 1]) && !alnum(v[i + q.length])) return true;
+      }
+      return false;
+    };
+    const score = (f, weight) => {
+      if (!f) return 0;
+      const v = String(f).toLowerCase();
+      if (v === q) return weight + 3;
+      if (isWordHit(v)) return weight + 2;
+      if (v.startsWith(q)) return weight + 1;
+      return v.includes(q) ? weight : 0;
+    };
+    // Field weights. The code is what actually gets flashed, so an exact code match wins outright.
+    // `group` matters more than it looks: the Windows entries live in a group literally called
+    // "Windows & desktops", which is the strongest signal of intent we hold and was previously
+    // used only to match, never to rank. Tooltips rank last -- 178 of 377 are truncated by the
+    // scrape, so a hit in one is the least trustworthy kind.
+    // The best field decides the rank; the others break ties. Without that second term,
+    // "Cycle windows" (in the group "Windows & desktops") and "Minimize All Windows of App"
+    // (in "MacOS") both scored a whole-word hit on the name and tied at 42, and the tie fell to
+    // walk order -- which is how macOS kept leading a search for "windows". Corroboration across
+    // fields is exactly what separates them, so it is summed and used underneath the primary.
+    const rate = (o) => {
+      const all = [score(o.code, 50), score(o.label, 40), score(o.name, 40),
+                   score(o.alias, 30), score(o.group, 20), score(o.tooltip, 10)];
+      const best = Math.max(...all);
+      return best === 0 ? 0 : best * 1000 + all.reduce((a, b) => a + b, 0);
+    };
+
     const out = [];
+    const seen = new Set();          // by what would be bound, so the same chord cannot list twice
+    const push = (key, r) => { if (!seen.has(key)) { seen.add(key); out.push(r); } };
+
     for (const t of tabs) {
       for (const c of t.categories || []) {
         for (const a of c.actions || []) {
           if (a.comingSoon) continue;
-          if (hit(a.code, a.label, a.name, a.alias, a.tooltip)) {
-            out.push({ key: `${t.id}/${a.code}`, tab: t, cat: c.name, action: a,
-                       pick: { actionCode: a.code, actionType: a.actionType } });
-          }
-          if (out.length >= 80) return out;
+          const s = rate({ code: a.code, label: a.label, name: a.name, alias: a.alias,
+                           group: c.name, tooltip: a.tooltip });
+          if (s) push(`${a.actionType}/${a.code}`,
+                      { key: `${t.id}/${a.code}`, tab: t, cat: c.name, action: a, score: s,
+                        pick: { actionCode: a.code, actionType: a.actionType } });
         }
       }
     }
     for (const [code, sc] of Object.entries(catalog.shortcuts || {})) {
-      if (hit(code, sc.name, sc.chord, sc.group)) {
-        out.push({ key: `apps/${code}`, tab: { id: "apps", title: "Application shortcuts" },
-                   cat: sc.group || "Shortcut", action: { code, label: sc.name, name: sc.name, tooltip: sc.chord },
-                   pick: { actionCode: sc.chord || code,
-                           actionType: (sc.chord || code).includes(" + ") ? "shortcut_alias" : "key" } });
-      }
-      if (out.length >= 80) break;
+      const s = rate({ code, name: sc.name, label: sc.name, group: sc.group, tooltip: sc.chord });
+      if (!s) continue;
+      const bind = sc.chord || code;
+      push(`shortcut/${bind}`,
+           { key: `apps/${code}`, tab: { id: "apps", title: "Application shortcuts" },
+             cat: sc.group || "Shortcut",
+             action: { code, label: sc.name, name: sc.name, tooltip: sc.chord }, score: s,
+             pick: { actionCode: bind,
+                     actionType: bind.includes(" + ") ? "shortcut_alias" : "key" } });
     }
-    return out;
+    // Stable within a score: the walk order above is itself meaningful (the tab strip is ordered
+    // by how often it is reached for), so equal-scoring hits keep it rather than being shuffled.
+    return out.sort((a, b) => b.score - a.score).slice(0, 80);
   }, [catalog, tabs, query]);
 
   if (!catalog || !tabs.length) return null;
