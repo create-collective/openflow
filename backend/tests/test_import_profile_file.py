@@ -85,3 +85,30 @@ def test_junk_is_refused_with_a_reason(tmp_path, monkeypatch):
     assert r.status_code == 400 and "expected" in r.text
     r = client.post("/rpc/import-profile-file", files={"file": ("bad.db", b"not a database", "application/octet-stream")})
     assert r.status_code == 400
+
+
+def test_an_imported_track_profile_is_tagged_with_its_side_when_that_is_unambiguous(tmp_path, monkeypatch):
+    """The Bindings bay picker offers Track profiles by side tag. An import derives the tag from
+    the payload's own bay assignments: one side -> that side; both sides or none -> untagged,
+    which the picker now offers in either bay."""
+    live = _live(tmp_path, monkeypatch)
+    data = {"version": 1, "kind": "profile", "profile": {"name": "Sides"}, "macros": [],
+            "layers": [{"srcId": "L0", "name": "Base", "orderId": 0, "keys": []}],
+            "modules": {"configs": [
+                {"srcId": "left-only", "name": "Left only", "type": "TRACK", "bindings": [], "settings": []},
+                {"srcId": "both", "name": "Both docks", "type": "TRACK", "bindings": [], "settings": []},
+                {"srcId": "tune", "name": "A Tune", "type": "TUNE", "bindings": [], "settings": []},
+            ], "configBindings": [
+                {"srcLayerId": "L0", "srcConfigId": "left-only", "bindingLocation": "track:keyboard_left", "state": None},
+                {"srcLayerId": "L0", "srcConfigId": "both", "bindingLocation": "track:keyboard_left", "state": None},
+                {"srcLayerId": "L0", "srcConfigId": "both", "bindingLocation": "track:keyboard_right", "state": None},
+                {"srcLayerId": "L0", "srcConfigId": "tune", "bindingLocation": "tune:keyboard_left", "state": None},
+            ]}}
+    r = client.post("/rpc/import-profile-file", files={"file": ("sides.json", json.dumps(data).encode(), "application/json")})
+    assert r.status_code == 200, r.text
+    c = sqlite3.connect(live)
+    try:
+        tags = {name: v for name, v in c.execute("SELECT name, variant FROM module_configs WHERE name IN ('Left only','Both docks','A Tune')")}
+    finally:
+        c.close()
+    assert tags == {"Left only": "TRACK_LEFT", "Both docks": None, "A Tune": "TUNE"}

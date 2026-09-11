@@ -171,9 +171,14 @@ export default function Bindings() {
       profilesFor: (type, side) => {
         const t = type.toUpperCase();
         const want = t === "TRACK" && side ? `TRACK_${side.toUpperCase()}` : null;
+        // A Track profile with NO side tag is offered in both bays. Imported profiles arrive
+        // that way (a beta-era NayaFlow had one Track profile for both docks, 2026-09-11), and
+        // the two stock side profiles differ only in button order, so nothing is unsafe about
+        // it -- the wrong side just means the buttons come out mirrored.
         return (moduleProfiles || [])
-          .filter((m) => m.type === t && (!want || m.variant === want))
-          .map((m) => ({ id: m.id, name: m.name, onBoard: liveIds.has(m.id) }));
+          .filter((m) => m.type === t && (!want || !m.variant || m.variant === want))
+          .map((m) => ({ id: m.id, name: m.name + (want && !m.variant ? " (no side set)" : ""),
+                         onBoard: liveIds.has(m.id) }));
       },
       selectedFor,
       // True when this layer says nothing and the value shown comes from the base layer.

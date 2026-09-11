@@ -188,17 +188,34 @@ def _modules_payload(conn, profile_id: str) -> dict:
     return {"configBindings": mcbs, "configs": configs}
 
 
-def _create_module_configs(conn, configs, now) -> dict:
-    """Create module configs from a payload; return src->new id map."""
+def _create_module_configs(conn, configs, now, config_bindings=None) -> dict:
+    """Create module configs from a payload; return src->new id map.
+
+    A Track profile is tagged with its side when the payload's own bay assignments use it on
+    one side only; used on both, or not at all, it stays untagged and the Bindings page offers
+    it in either bay. Symmetric modules take their type's single variant."""
+    sides: dict[str, set] = {}
+    for mcb in config_bindings or []:
+        loc = mcb.get("bindingLocation") or ""
+        if mcb.get("srcConfigId") and loc.endswith(("_left", "_right")):
+            sides.setdefault(mcb["srcConfigId"], set()).add(loc.rsplit("_", 1)[1].upper())
     cmap = {}
     for c in configs:
         nid = _uid()
         cmap[c["srcId"]] = nid
+        variant = c.get("variant")
+        if not variant:
+            t = (c.get("type") or "").upper()
+            if t == "TRACK":
+                used = sides.get(c["srcId"], set())
+                variant = f"TRACK_{next(iter(used))}" if len(used) == 1 else None
+            elif t in ("TOUCH", "TUNE"):
+                variant = {"TOUCH": "TOUCH_WINDOWS", "TUNE": "TUNE"}.get(t)
         conn.execute(
-            "INSERT INTO module_configs (name, order_id, icon_id, description, size, type, id, updated_at, created_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO module_configs (name, order_id, icon_id, description, size, type, variant, id, updated_at, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
             (c["name"], c.get("orderId", 0), c.get("iconId"), c.get("description"),
-             c.get("size", 0), c["type"], nid, now, now),
+             c.get("size", 0), c["type"], variant, nid, now, now),
         )
         for b in c.get("bindings", []):
             conn.execute(
@@ -221,7 +238,7 @@ def _import_modules(conn, profile_id, modules, now, layer_map, create_configs: b
     if not modules:
         return
     if create_configs:
-        cmap = _create_module_configs(conn, modules.get("configs", []), now)
+        cmap = _create_module_configs(conn, modules.get("configs", []), now, modules.get("configBindings", []))
     else:
         # duplicate within same DB: module configs are global, keep the existing ones
         cmap = {c["srcId"]: c["srcId"] for c in modules.get("configs", [])}
