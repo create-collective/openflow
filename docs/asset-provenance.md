@@ -28,8 +28,11 @@ copyleft.
 
 - **Brand accent color** — Naya's `--naya-green: #1dd791` is **not** used.
   OpenFlow uses its own accent (`--accent`, currently placeholder `#19c3d4`).
-- **860 `action` icons** (`.../assets/icons/action/`) — Naya-original; redraw or
-  map to Material equivalents.
+- **860 `action` icons** (`.../assets/icons/action/`) — Naya-original. **Decision
+  2026-09-10 (project owner): shipped as-is** in `frontend/public/icons/action/`, on the
+  grounds that Naya is defunct and the icons serve the community it left behind. No
+  licence is claimed; `frontend/public/icons/action/PROVENANCE.md` records the source.
+  Painted through a CSS mask so the files stay untouched.
 - **`internal/` + `ui` icon sets, all branding images** (logos, page
   backgrounds in `.../assets/images/`) — do not copy.
 - **UI copy / i18n `expression` strings** — Naya-authored text; rewrite. (The
