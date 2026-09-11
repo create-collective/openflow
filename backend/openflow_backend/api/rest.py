@@ -818,6 +818,11 @@ def _build_entries(read: dict) -> list:
         # per-half rows a split writes. Collapsing on behavior alone made the two halves
         # overwrite each other, so whichever row the query happened to return last became "the"
         # app value -- and on a split axis that is one of the halves, not the combined row.
+        # Every profile's settings rows, read here while the connection is open: the slot loop
+        # below runs after the close (the tests' KeepOpen harness hid that on 2026-09-11).
+        stored_settings: dict = {}
+        for r in conn.execute("SELECT module_config_id, correlation_id, value FROM module_settings"):
+            stored_settings.setdefault(r["module_config_id"], {})[r["correlation_id"]] = r["value"]
         bindings = {}
         for r in conn.execute("SELECT module_config_id, behavior, action_code, direction, invert "
                               "FROM module_bindings"):
@@ -886,10 +891,7 @@ def _build_entries(read: dict) -> list:
             gestures, differs = _compare(mtype, fields, {})
         # The slot's speeds and tick feedback against the reference profile's. Not part of the
         # match (gestures decide that); shown as drift, and imported whole by a capture.
-        stored = {r["correlation_id"]: r["value"] for r in conn.execute(
-            "SELECT correlation_id, value FROM module_settings WHERE module_config_id = ?",
-            (ref_id,))} if ref_id else {}
-        settings = _settings_rows(mtype, fields, stored)
+        settings = _settings_rows(mtype, fields, stored_settings.get(ref_id, {}) if ref_id else {})
         entry = {"uuid": uuid, "slot": slot, "name": ref_name, "type": mtype,
                  "fieldCount": len(fields), "gestures": gestures, "differs": differs,
                  "trailing": max(0, len(fields) - _EXPECTED_FIELDS.get(mtype, len(fields))),

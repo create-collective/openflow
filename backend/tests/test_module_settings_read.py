@@ -113,3 +113,23 @@ def test_a_capture_imports_the_devices_setting_values():
         "SELECT correlation_id, value FROM module_settings WHERE module_config_id=?", (cid,))}
     assert rows == {"pointer_speed": "10", "scroll_speed": "10", "pointer_accel": "50",
                     "pointer_accel_on": "true"}
+
+
+def test_the_entry_builder_does_not_touch_the_database_after_closing_it():
+    """The KeepOpen harness ignores close(); the real connection does not, and the first live
+    read after the settings change answered 500 "Cannot operate on a closed database"."""
+    from test_module_capture import _DEVICE
+    conn = _db(dict(_DEVICE))
+
+    class Closing:
+        def __init__(self, c): self._c = c; self.closed = False
+        def execute(self, *a, **k):
+            if self.closed:
+                raise AssertionError("query after close()")
+            return self._c.execute(*a, **k)
+        def close(self): self.closed = True
+        def __getattr__(self, n): return getattr(self._c, n)
+
+    with mock.patch.object(rest, "db_connect", lambda: Closing(conn)):
+        e = rest._build_entries(_read_with_settings(TRACK))[0]
+    assert e["settings"], "settings still come through"
