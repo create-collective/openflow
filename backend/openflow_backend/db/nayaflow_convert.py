@@ -158,6 +158,17 @@ def to_json_payloads(db: Path) -> list[dict]:
             pids = [r["id"] for r in conn.execute("SELECT id FROM profiles ORDER BY order_id")]
             for i, pid in enumerate(pids):
                 payload = prof._profile_payload(conn, pid)
+                # Re-apply invert onto the LIVE binding entries. _normalise_beta cleared it from
+                # the working copy (so the metadata stash below is the exact round-trip record),
+                # but OpenFlow's own flash reads `invert` off these entries and flips the selector
+                # signs -- clearing it here silently dropped the owner's inversion on every import.
+                # Stashed by module_config_id -> [behavior]; entries carry srcId + behavior.
+                for cfg in payload.get("modules", {}).get("configs", []):
+                    inv = set(stash["invert"].get(cfg.get("srcId"), []))
+                    if inv:
+                        for b in cfg.get("bindings", []):
+                            if b.get("behavior") in inv:
+                                b["invert"] = 1
                 payload["nayaflowSource"] = {
                     "file": db.name, "gooseVersions": goose, "profileId": pid,
                     "beta": {"settingsIds": {names.get(k, k): v for k, v in stash["settings"].items()},

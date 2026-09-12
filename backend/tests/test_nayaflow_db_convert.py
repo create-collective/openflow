@@ -106,8 +106,14 @@ def test_to_json_translates_the_beta_forms_and_stashes_them(tmp_path):
     assert niri[("vertical:track", "+", "value")] == "mouse - MOUSE_DOWN - MOUSE_UP", "the axis row OpenFlow needs"
     assert not any(k[0] == "rotate:track" for k in niri), "empty per-direction rows are dropped, no axis synthesised"
     assert not any(b["behavior"].startswith(("track_", "clockwise", "counter_clockwise")) for b in cfg["Naya Track Niri"]["bindings"])
-    # invert cleared, stashed by config name
-    assert all(b["invert"] == 0 for b in cfg["Naya Track"]["bindings"])
+    # invert is carried onto the LIVE entries -- OpenFlow's flash reads it off these and flips the
+    # selector signs, so clearing it (as this once did) silently dropped an owner's inversion on
+    # import. It is ALSO stashed by config name for an exact round-trip back to the beta schema.
+    inv_axes = {b["behavior"] for b in cfg["Naya Track"]["bindings"] if b["invert"]}
+    assert inv_axes == {"horizontal:track", "vertical:track"}, inv_axes
+    # a non-inverted binding stays 0
+    assert all(b["invert"] == 0 for b in cfg["Naya Track"]["bindings"]
+               if b["behavior"] not in inv_axes)
     beta = d["nayaflowSource"]["beta"]
     assert sorted(beta["invert"]["Naya Track"]) == ["horizontal:track", "vertical:track"]
     assert beta["settingsIds"]["Naya Touch Windows"]["pointer_speed"] == "MS-3"
@@ -133,6 +139,14 @@ def test_the_json_imports_into_openflow_as_a_new_profile(tmp_path, monkeypatch):
         setts = {s["correlation_id"]: s["value"] for s in conn.execute(
             "SELECT correlation_id, value FROM module_settings ms JOIN module_configs mc ON mc.id = ms.module_config_id WHERE mc.name='Naya Touch Windows'")}
         assert setts["pointer_speed"] == "3" and setts["pointer_accel_on"] == "false"
+        # THE END-TO-END GUARD: the beta db's inverted Track axes must reach OpenFlow's own db as
+        # invert=1, because that is what the flash path reads to flip the selector signs. When the
+        # converter cleared invert (stashing it only for a db round-trip), an imported backup
+        # flashed the axes non-inverted and the owner's inversion was silently lost.
+        inv = {r["behavior"] for r in conn.execute(
+            "SELECT mb.behavior FROM module_bindings mb JOIN module_configs mc ON mc.id = mb.module_config_id "
+            "WHERE mc.name='Naya Track' AND mb.invert=1")}
+        assert inv == {"horizontal:track", "vertical:track"}, inv
     finally:
         conn.close()
 

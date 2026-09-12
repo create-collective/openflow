@@ -292,8 +292,15 @@ def encode_axis(module_type, gesture, spec):
     NayaFlow wrote when the gesture was split (capture 2026-09-03).
 
     `invert` flips the two signs. That is the whole of it at the device level -- there is no
-    invert flag anywhere in the config, and NayaFlow never wrote one, which is why its own invert
-    control does nothing.
+    invert flag in the on-device records; the direction lives in the selector signs, and inverting
+    means swapping them.
+
+    (Earlier this comment claimed NayaFlow never stored an invert flag and that its invert control
+    did nothing. Both are wrong: NayaFlow's database carries `invert=1` on inverted axes -- the
+    stock Track axes, and an owner's file confirmed on 2026-09-12 whose inversion works on hardware
+    -- and it is honoured. OpenFlow reads that flag and applies it here by flipping the signs; the
+    DB stays the source of truth for whether an axis is inverted, since the flip is not recoverable
+    from a plain read once written.)
     """
     half = module_fields.axis_halves(module_type).get(gesture)
     if half is None:
