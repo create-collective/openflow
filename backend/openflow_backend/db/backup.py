@@ -88,6 +88,24 @@ def restore_backup(name: str) -> dict:
     return {"ok": True}
 
 
+def _has_beta_forms(conn) -> bool:
+    """True if the database stores split Track axes as per-direction rows (the beta schema).
+
+    That is the one beta form a raw restore cannot handle: OpenFlow reads a split axis as an axis
+    row plus a per-half row, not as separate track_up/track_down/... rows. The invert flag and the
+    MS-n setting ids survive a restore unchanged (both columns exist in OpenFlow's own schema and
+    the app already tolerates them), so this keys ONLY on the per-direction rows -- and off the
+    converter's own map, so the detector and the normaliser cannot disagree about what "beta" is.
+    """
+    from .nayaflow_convert import BETA_HALVES
+    try:
+        rows = conn.execute("SELECT DISTINCT behavior FROM module_bindings").fetchall()
+    except sqlite3.DatabaseError:
+        return False
+    behaviors = {r[0] for r in rows}
+    return bool(behaviors & set(BETA_HALVES))
+
+
 def import_db_bytes(raw: bytes, filename: str) -> dict:
     """Install an uploaded database as the current data. Accepts a raw .db or a
     NayaFlow backup .zip (which bundles user-data.db) — OpenFlow uses NayaFlow's
@@ -112,6 +130,19 @@ def import_db_bytes(raw: bytes, filename: str) -> dict:
             ).fetchone()
             if not has_profiles:
                 raise ValueError("not a NayaFlow/OpenFlow database (no profiles table)")
+            # Refuse a beta-schema database HERE, before it overwrites the user's data. This path
+            # installs the raw bytes and only adds missing columns; it does NOT run the beta->
+            # reference normalisation the converter does, so a beta database's split Track axes
+            # (stored as per-direction rows -- track_up/track_down/... -- that OpenFlow reads as
+            # axis rows) would be silently mis-read after a restore. The per-profile "Load profile
+            # from file" path converts each profile and imports it beside the user's own, which is
+            # the correct home for a foreign database anyway. Detected off the converter's own
+            # per-direction map so the two cannot drift apart.
+            if _has_beta_forms(conn):
+                raise ValueError(
+                    "this looks like a NayaFlow beta database (its Track axes use per-direction "
+                    "rows). Restoring it raw would mis-read those axes. Use \"Load profile from "
+                    "file\" instead -- it converts each profile and imports it beside your own.")
             n = conn.execute("SELECT COUNT(*) FROM profiles").fetchone()[0]
         finally:
             conn.close()

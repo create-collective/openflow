@@ -63,6 +63,60 @@ def test_an_imported_beta_database_gets_the_missing_columns_at_once(tmp_path, mo
     assert {"variant", "captured_from"} <= _columns(live, "module_configs")
 
 
+def _beta_db_with_per_direction_rows(path: Path) -> bytes:
+    """A beta database whose Track axes are stored as per-direction rows -- the one beta form a
+    raw restore cannot handle, and the one the guard must catch."""
+    conn = sqlite3.connect(path)
+    conn.executescript("""
+        CREATE TABLE profiles (name TEXT, order_id INT, state TEXT, icon_id TEXT, author_name TEXT,
+                               description TEXT, id TEXT, updated_at TEXT, created_at TEXT);
+        CREATE TABLE module_configs (name TEXT, order_id INT, icon_id TEXT, author_name TEXT,
+                                     description TEXT, size INT, type TEXT, id TEXT, updated_at TEXT, created_at TEXT);
+        CREATE TABLE module_bindings (action_id TEXT, action_code TEXT, action_type TEXT, behavior TEXT,
+                                      invert INT, threshold INT, direction TEXT, mode INT,
+                                      module_config_id TEXT, id TEXT, updated_at TEXT, created_at TEXT);
+        INSERT INTO profiles VALUES ('Beta', 0, 'ON_BOARD', NULL, NULL, NULL, 'p1', '', '');
+        INSERT INTO module_configs VALUES ('Naya Track', 0, NULL, NULL, NULL, 0, 'TRACK', 'm1', '', '');
+        INSERT INTO module_bindings VALUES (NULL,'LGUI + UP','combo','track_up:track',0,0,'+',0,'m1','b1','','');
+    """)
+    conn.commit(); conn.close()
+    return path.read_bytes()
+
+
+def test_a_raw_restore_of_a_beta_database_is_refused_with_guidance(tmp_path, monkeypatch):
+    """The medium sanitisation gap: import_db_bytes writes raw bytes and only adds columns, so a
+    beta database's per-direction Track rows would be silently mis-read. It must refuse, and point
+    at the converter path instead, BEFORE it overwrites the user's data."""
+    import pytest
+    data = tmp_path / "data"; data.mkdir(); (data / "backups").mkdir()
+    live = data / "user-data.db"
+    monkeypatch.setattr(bak, "db_path", lambda: live)
+    monkeypatch.setattr(bak, "backups_dir", lambda: data / "backups")
+    monkeypatch.setattr(dbm, "db_path", lambda: live, raising=False)
+    monkeypatch.setattr(dbm, "connect", lambda path=None: _row_conn(live))
+    dbm.init_db(live)
+    before = live.read_bytes()
+    raw = _beta_db_with_per_direction_rows(tmp_path / "beta.db")
+    with pytest.raises(ValueError, match="beta database"):
+        bak.import_db_bytes(raw, "user-data-beta.db")
+    assert live.read_bytes() == before, "the live database must be untouched when the import is refused"
+    assert not list((data / "backups").glob("*")), "no pre-import backup should be taken for a refused import"
+
+
+def test_a_plain_old_database_without_per_direction_rows_still_restores(tmp_path, monkeypatch):
+    """The guard must be narrow: an ordinary older NayaFlow database (missing columns, but no beta
+    per-direction rows) still restores and upgrades, unchanged from before."""
+    data = tmp_path / "data"; data.mkdir(); (data / "backups").mkdir()
+    live = data / "user-data.db"
+    monkeypatch.setattr(bak, "db_path", lambda: live)
+    monkeypatch.setattr(bak, "backups_dir", lambda: data / "backups")
+    monkeypatch.setattr(dbm, "db_path", lambda: live, raising=False)
+    monkeypatch.setattr(dbm, "connect", lambda path=None: _row_conn(live))
+    dbm.init_db(live)
+    raw = _beta_db(tmp_path / "old.db")
+    assert bak.import_db_bytes(raw, "old.db") == {"ok": True, "profiles": 1}
+
+
 def _row_conn(path):
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
