@@ -12,7 +12,6 @@ const REPOS = {
 const TABS = [
   { id: "behavior", label: "Behavior" },
   { id: "interface", label: "Interface" },
-  { id: "connection", label: "Connection" },
   { id: "update", label: "Software Update" },
   { id: "backup", label: "Backup" },
   { id: "troubleshooting", label: "Troubleshooting" },
@@ -61,7 +60,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (tab === "backup") api.backups().then(setBackups).catch(() => {});
-    if (tab === "connection" || tab === "info") api.status().then((r) => setStatus(r.halves || [])).catch(() => {});
+    if (tab === "info") api.status().then((r) => setStatus(r.halves || [])).catch(() => {});
   }, [tab]);
 
   async function setSetting(key, value) {
@@ -127,22 +126,6 @@ export default function Settings() {
             <>
               {tab === "behavior" && <SettingsGroups groups={behaviorGroups} onChange={setSetting} />}
               {tab === "interface" && <SettingsGroups groups={interfaceGroups} onChange={setSetting} />}
-
-              {tab === "connection" && (
-                <div style={{ maxWidth: 640 }}>
-                  <h3>Naya Device Connection</h3>
-                  {status.length === 0 && <div className="empty">No device detected.</div>}
-                  {status.map((h) => (
-                    <div className="kv" key={h.port}>
-                      <span className="k">{h.description}</span>
-                      <span className="v">{h.connected ? (h.bleAddress || "connected") : "disconnected"}</span>
-                    </div>
-                  ))}
-                  <div className="phase-note" style={{ marginTop: 24 }}>
-                    Bluetooth slots (which host the keyboard talks to) are on the Information page.
-                  </div>
-                </div>
-              )}
 
               {tab === "update" && (
                 <div style={{ maxWidth: 640 }}>
