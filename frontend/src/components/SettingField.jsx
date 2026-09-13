@@ -17,12 +17,30 @@ const PROVENANCE = {
          + "affect how the board behaves.",
   },
   app: { label: "app only", title: "An OpenFlow preference. Never sent to the keyboard." },
+  host: {
+    label: "host-side",
+    title: "Handled on the computer (Create Companion's model), not flashed to the keyboard. "
+         + "There is no firmware setting behind it, so this is not something to probe.",
+  },
 };
 
 export default function SettingField({ f, onChange }) {
   // Toggles were excluded here, so led_scan_mode and tray_battery could never be reset.
   const changed = f.default !== undefined && f.value !== f.default;
   const prov = PROVENANCE[f.provenance];
+  // A setting that has no home yet in the browser dev build -- the system-tray battery needs the
+  // Electron shell. Shown, but inert and labelled, rather than offering a switch that does nothing.
+  if (f.deferred) {
+    return (
+      <div className="setting setting-deferred">
+        <div className="setting-head">
+          <strong>{f.label}</strong>
+          <span className="gesture-badge prov-app" title={f.deferred}>{f.deferred_badge || "desktop app"}</span>
+        </div>
+        <div className="setting-desc">{f.desc}</div>
+      </div>
+    );
+  }
   const resetLabel = f.kind === "toggle" ? (f.default ? "on" : "off") : `${f.default}${f.unit || ""}`;
   return (
     <div className="setting">

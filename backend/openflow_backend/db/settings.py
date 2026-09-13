@@ -19,6 +19,7 @@ from .database import connect
 VERIFIED = "verified"          # a capture or live probe proves this reaches the device
 EXPERIMENTAL = "experimental"  # plausibly device-backed, unproven -> this is the probe queue
 APP_ONLY = "app"               # intentionally local; not a gap
+HOST_SIDE = "host"             # a host-side model (Create Companion), never flashed -- not a probe
 
 # Grouped schema. kind: slider | toggle | select.
 #
@@ -83,23 +84,24 @@ SETTINGS_SCHEMA = [
         "group": "OneKey Timing",
         "scope": "device",
         # No correlation id exists for these anywhere -- they are OUR model, not one we have seen
-        # NayaFlow or the firmware carry, and nothing in the flash path reads them. Said plainly
-        # rather than claiming "Flashed to the device" as this group used to.
-        "desc": "Global timing for multi-behavior keys (Dygma-style model). Not yet sent to the "
-                "keyboard -- no correlation id has been captured for these.",
+        # NayaFlow or the firmware carry, and nothing in the flash path reads them. They are the
+        # host-side OneKey timing model, Create Companion's territory -- hence provenance HOST_SIDE,
+        # not EXPERIMENTAL, which would wrongly imply a firmware setting waiting to be probed.
+        "desc": "Global timing for multi-behavior keys (Dygma-style model). Applied host-side by "
+                "Create Companion, not flashed to the keyboard -- the firmware has no setting for these.",
         "fields": [
             {"id": "onekey_tap_timeout_ms", "label": "Tap Timeout (ms)", "kind": "slider",
              "desc": "Window to register a second tap (double-tap detection).",
-             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": EXPERIMENTAL},
+             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": HOST_SIDE},
             {"id": "onekey_holdstart_ms", "label": "Hold Start (ms)", "kind": "slider",
              "desc": "Minimum time from keydown before a hold triggers.",
-             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": EXPERIMENTAL},
+             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": HOST_SIDE},
             {"id": "onekey_waitfor_ms", "label": "Wait For Release (ms)", "kind": "slider",
              "desc": "Delay before a held action repeats (release for a single output).",
-             "min": 0, "max": 1000, "default": 500, "unit": "ms", "provenance": EXPERIMENTAL},
+             "min": 0, "max": 1000, "default": 500, "unit": "ms", "provenance": HOST_SIDE},
             {"id": "onekey_overlap_pct", "label": "Overlap (%)", "kind": "slider",
              "desc": "Overlap tolerated during fast typing before a hold triggers.",
-             "min": 0, "max": 100, "default": 20, "unit": "%", "provenance": EXPERIMENTAL},
+             "min": 0, "max": 100, "default": 20, "unit": "%", "provenance": HOST_SIDE},
         ],
     },
     {
@@ -110,13 +112,14 @@ SETTINGS_SCHEMA = [
             {"id": "language", "label": "Language", "kind": "select",
              "desc": "Application language.", "options": ["English"], "default": "English",
              "provenance": APP_ONLY},
-            {"id": "input_source", "label": "Input Source", "kind": "select",
-             "desc": "Keyboard layout used for legends.",
-             "options": ["QWERTY", "AZERTY", "QWERTZ", "Dvorak", "Colemak"], "default": "QWERTY",
-             "provenance": APP_ONLY},
+            # Input Source (keyboard-legend layout) moved to a dropdown on the virtual keyboard
+            # itself, where it is actually applied -- it did nothing as a global preference here.
             {"id": "tray_battery", "label": "Show Battery in Tray", "kind": "toggle",
-             "desc": "Show battery status in the system tray / menu bar.", "default": False,
-             "provenance": APP_ONLY},
+             "desc": "Show battery status in the system tray / menu bar. Available in the desktop "
+                     "app; the tray does not exist in the browser build.", "default": False,
+             "provenance": APP_ONLY,
+             "deferred": "Ships with the desktop (Electron) app -- there is no system tray to draw "
+                         "into from the browser dev build.", "deferred_badge": "desktop app"},
             {"id": "interface_scaling", "label": "Interface Scaling", "kind": "slider",
              "desc": "Zoom the interface. 0 = default.",
              "min": -500, "max": 500, "default": 0, "unit": "", "provenance": APP_ONLY},
