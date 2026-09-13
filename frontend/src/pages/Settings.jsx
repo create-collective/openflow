@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { applyInterfaceScaling } from "../lib/scaling";
 import { pickFile } from "../lib/files";
 import SettingField from "../components/SettingField";
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
@@ -72,6 +73,7 @@ export default function Settings() {
     // already told once.
     const before = settings?.groups.flatMap((g) => g.fields).find((f) => f.id === key)?.value;
     apply(value);
+    if (key === "interface_scaling") applyInterfaceScaling(value);
     try {
       await api.setSetting(key, value);
     } catch (e) {

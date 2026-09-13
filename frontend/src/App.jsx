@@ -3,6 +3,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { hydrateDeviceState, invalidateDeviceState } from "./lib/deviceState";
 import { api } from "./lib/api";
+import { applyInterfaceScaling, scalingFromSettings } from "./lib/scaling";
 import { useSSE } from "./lib/useSSE";
 import DeviceChip from "./components/DeviceChip";
 import Hub from "./pages/Hub.jsx";
@@ -80,6 +81,14 @@ function RouteBoundary({ children }) {
 
 
 export default function App() {
+  // Apply the saved interface scaling once at startup, before anything renders at the wrong size.
+  // Live changes are applied by the Settings page as the slider moves; this is the on-load pass.
+  useEffect(() => {
+    api.settings().then((s) => {
+      const v = scalingFromSettings(s);
+      if (v !== null) applyInterfaceScaling(v);
+    }).catch(() => {});
+  }, []);
   return (
     <div className="app">
       <Sidebar />
