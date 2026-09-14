@@ -93,3 +93,40 @@ def test_getattr_delegates_to_the_inner_transport():
     inner = Inner(); inner.is_connected = True; inner._ser = object()
     t = dl.LoggingTransport(inner, "COM-TEST")
     assert t.is_connected is True and t._ser is inner._ser
+
+
+def test_entries_are_appended_to_a_daily_file_and_old_ones_pruned(tmp_path, monkeypatch):
+    """The log must survive to a file (a keyboard sits plugged in for months), rotated per day and
+    pruned past the retention window so it cannot grow without bound."""
+    import time
+    from openflow_backend import config
+    monkeypatch.setattr(config, "data_dir", lambda: tmp_path)
+    dl._pruned = False
+    # a stale log file from 30 days ago must be pruned
+    old = (tmp_path / "logs"); old.mkdir(parents=True, exist_ok=True)
+    stale = old / "device-2000-01-01.log"; stale.write_text("old\n", encoding="utf-8")
+    import os
+    os.utime(stale, (time.time() - 30 * 86400, time.time() - 30 * 86400))
+
+    t = dl.LoggingTransport(Inner(), "COM-TEST")
+    dl.clear()
+    t.send_command(0x50, 0xED, 0x1008, bytes([0, 40]))
+
+    files = list((tmp_path / "logs").glob("device-*.log"))
+    assert not stale.exists(), "a log older than the retention window is pruned"
+    today = [f for f in files if f.name != "device-2000-01-01.log"]
+    assert len(today) == 1, today
+    assert "LED" in today[0].read_text(encoding="utf-8")
+
+
+def test_a_logging_failure_never_breaks_device_io(tmp_path, monkeypatch):
+    """If the log file cannot be written, the send must still happen -- logging is never load-bearing."""
+    from openflow_backend import config
+    def boom():
+        raise OSError("disk full")
+    monkeypatch.setattr(config, "logs_dir", boom, raising=False)
+    dl._pruned = False
+    t = dl.LoggingTransport(Inner(), "COM-TEST")
+    dl.clear()
+    t.send_command(0x50, 0xED, 0x1008, b"")     # must not raise
+    assert t._inner.sent, "the command still reached the device despite the log write failing"

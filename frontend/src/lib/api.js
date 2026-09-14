@@ -34,6 +34,7 @@ export const api = {
   firmwareCatalog: () => req("GET", "/api/firmware-catalog"),
   deviceLog: (limit = 200) => req("GET", `/api/device-log?limit=${limit}`),
   clearDeviceLog: () => req("POST", "/rpc/clear-device-log", {}),
+  openLogsFolder: () => req("POST", "/rpc/open-logs-folder", {}),
   readKeyboard: (body = {}) => req("POST", "/rpc/read-keyboard", body),
   readModules: (body = {}) => req("POST", "/rpc/read-modules", body),
   moduleVariants: () => req("GET", "/api/module-variants"),

@@ -48,6 +48,7 @@ export default function Settings() {
   const [companion, setCompanion] = useState(null);
   const [firmware, setFirmware] = useState(null);
   const [devlog, setDevlog] = useState([]);
+  const [logmeta, setLogmeta] = useState({});
   const [out, setOut] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -63,7 +64,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (tab === "backup") api.backups().then(setBackups).catch(() => {});
-    if (tab === "logging") api.deviceLog().then((r) => setDevlog(r.entries || [])).catch(() => {});
+    if (tab === "logging") api.deviceLog().then((r) => { setDevlog(r.entries || []); setLogmeta(r); }).catch(() => {});
     if (tab === "software") { api.status().then((r) => setStatus(r.halves || [])).catch(() => {}); api.firmwareCatalog().then(setFirmware).catch(() => {}); }
   }, [tab]);
 
@@ -212,13 +213,15 @@ export default function Settings() {
                   <div className="setting-head" style={{ marginTop: 18 }}>
                     <strong>Device I/O log</strong>
                     <div className="setting-ctl">
-                      <button className="btn" disabled={busy} onClick={() => api.deviceLog().then((r) => setDevlog(r.entries || []))}>Refresh</button>
+                      <button className="btn" disabled={busy} onClick={() => api.deviceLog().then((r) => { setDevlog(r.entries || []); setLogmeta(r); })}>Refresh</button>
                       <button className="btn" disabled={busy} onClick={() => { api.clearDeviceLog().then(() => setDevlog([])); }}>Clear</button>
+                      {logmeta.dir && <button className="btn" disabled={busy} onClick={() => api.openLogsFolder()}>Open log folder</button>}
                     </div>
                   </div>
                   <div className="setting-desc" style={{ marginBottom: 8 }}>
                     Every command, text query and raw frame exchanged with a connected keyboard, newest last.
-                    In-memory and device-bytes only. This is where a "flash failed" that actually landed shows what really happened.
+                    Device bytes only. Also written to a daily file under the log folder{logmeta.retentionDays ? `, kept ${logmeta.retentionDays} days` : ""}.
+                    This is where a "flash failed" that actually landed shows what really happened.
                   </div>
                   {devlog.length === 0
                     ? <div className="empty">No device I/O recorded yet. Read or flash the keyboard, then Refresh.</div>

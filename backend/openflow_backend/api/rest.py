@@ -93,9 +93,12 @@ def _firmware_catalog() -> list[dict]:
 @router.get("/api/device-log")
 async def device_log(limit: int = 200) -> dict:
     """Recent device I/O -- every command/text/raw exchange with a connected keyboard, newest last.
-    In-memory, bounded; device bytes only, nothing user-identifying."""
+    In-memory for the quick view; also appended to a daily file under the logs folder (kept
+    RETENTION_DAYS). Device bytes only, nothing user-identifying."""
     from ..device import device_log as dl
-    return {"entries": dl.entries(limit)}
+    from ..config import logs_dir
+    return {"entries": dl.entries(limit), "dir": str(logs_dir()),
+            "retentionDays": dl.RETENTION_DAYS}
 
 
 @router.post("/rpc/clear-device-log")
@@ -103,6 +106,22 @@ async def clear_device_log() -> dict:
     from ..device import device_log as dl
     dl.clear()
     return {"ok": True}
+
+
+@router.post("/rpc/open-logs-folder")
+async def open_logs_folder(body: dict = Body(default={})) -> dict:
+    import os
+    import subprocess
+    import sys
+    from ..config import logs_dir
+    d = logs_dir()
+    if sys.platform == "win32":
+        os.startfile(str(d))  # type: ignore[attr-defined]  # noqa: S606
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", str(d)])
+    else:
+        subprocess.Popen(["xdg-open", str(d)])
+    return {"ok": True, "dir": str(d)}
 
 
 @router.get("/api/firmware-catalog")

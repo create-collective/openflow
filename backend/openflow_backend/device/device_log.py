@@ -14,19 +14,73 @@ from __future__ import annotations
 
 import time
 from collections import deque
+from datetime import datetime
+from pathlib import Path
 from threading import Lock
 
-_MAX = 500
+_MAX = 500                 # entries kept in memory for the tab's quick view
+RETENTION_DAYS = 14        # days of daily log files kept on disk; older are pruned
 _log: deque[dict] = deque(maxlen=_MAX)
 _lock = Lock()
 _seq = 0
+_pruned = False
+
+
+def _log_path(day: str | None = None) -> Path | None:
+    """Today's device log file under the data dir's logs/, or None if the dir is unavailable."""
+    try:
+        from ..config import logs_dir
+        day = day or datetime.now().strftime("%Y-%m-%d")
+        return logs_dir() / f"device-{day}.log"
+    except Exception:
+        return None
+
+
+def prune_old(days: int = RETENTION_DAYS) -> int:
+    """Delete device-*.log files older than `days`. A keyboard can sit plugged in for years;
+    the on-disk log must not grow without bound. Returns how many were removed."""
+    try:
+        from ..config import logs_dir
+        d = logs_dir()
+    except Exception:
+        return 0
+    cutoff = time.time() - days * 86400
+    removed = 0
+    for f in d.glob("device-*.log"):
+        try:
+            if f.stat().st_mtime < cutoff:
+                f.unlink()
+                removed += 1
+        except OSError:
+            pass
+    return removed
+
+
+def _append_to_file(entry: dict) -> None:
+    """One line per exchange, appended to today's file. Best-effort: a logging failure must never
+    break device I/O, so every error here is swallowed."""
+    global _pruned
+    p = _log_path()
+    if p is None:
+        return
+    try:
+        if not _pruned:            # prune once per process, lazily on first write
+            _pruned = True
+            prune_old()
+        line = (f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  {entry['kind']:<8} "
+                f"{entry['port']:<8} {'ok ' if entry['ok'] else 'ERR'} {entry['ms']:>7}ms  "
+                f"{entry['detail']}\n")
+        with p.open("a", encoding="utf-8") as fh:
+            fh.write(line)
+    except OSError:
+        pass
 
 
 def record(kind: str, port: str, detail: str, *, ok: bool, ms: float, extra: dict | None = None) -> None:
     global _seq
     with _lock:
         _seq += 1
-        _log.append({
+        entry = {
             "seq": _seq,
             "at": time.strftime("%H:%M:%S", time.localtime()),
             "ts": round(time.time(), 3),
@@ -36,7 +90,9 @@ def record(kind: str, port: str, detail: str, *, ok: bool, ms: float, extra: dic
             "ok": ok,
             "ms": round(ms, 1),
             **(extra or {}),
-        })
+        }
+        _log.append(entry)
+        _append_to_file(entry)
 
 
 def entries(limit: int = 200) -> list[dict]:
