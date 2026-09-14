@@ -177,22 +177,22 @@ export default function Settings() {
 
               {tab === "troubleshooting" && (
                 <div style={{ maxWidth: 640 }}>
-                  <h3>Troubleshooting <span className="pill">device</span></h3>
+                  <h3>Troubleshooting <span className="pill danger">destructive</span></h3>
+                  <p className="page-sub" style={{ marginBottom: 12 }}>
+                    Actions that erase device data, kept apart from the safe, read-only diagnostics.
+                    Those (lighting restore, SPI self-test, diagnostics report, dump settings) live on
+                    the <strong>Information &rsaquo; Troubleshooting</strong> tab.
+                  </p>
                   <DeviceGate connected={connected}>
                     <div className="setting">
-                      <div className="setting-head"><strong>Test &amp; Repair SPI-Flash</strong>
-                        <button className="btn" disabled={busy} onClick={() => run("SPI flash test", () => api.sendCommand("repair_flash", [], { side: "left" }))}>Test</button></div>
-                      <div className="setting-desc">Tests Create's flash memory (read-only self-test).</div>
-                    </div>
-                    <div className="setting">
                       <div className="setting-head"><strong>Clear BLE Devices</strong>
-                        <button className="btn danger" disabled={busy} onClick={() => { if (confirm("Clear all Bluetooth bonds?")) run("Clear BLE", () => api.sendCommand("clear_ble_devices", [], { side: "left", force: true })); }}>Clear</button></div>
+                        <button className="btn danger" disabled={busy} onClick={() => { if (confirm("Clear all Bluetooth bonds? If the halves are bonded to each other they will need re-pairing.")) run("Clear BLE", () => api.sendCommand("clear_ble_devices", [], { side: "left", force: true })); }}>Clear</button></div>
                       <div className="setting-desc">Forces the Create to forget all Bluetooth connections.</div>
                     </div>
                     <div className="setting">
                       <div className="setting-head"><strong>Clear All Keymap Data</strong>
-                        <button className="btn danger" disabled={busy} onClick={() => run("Clear keymap", () => api.sendCommand("clear_data", [], { side: "left", force: true }))}>Clear</button></div>
-                      <div className="setting-desc">Wipes on-device keymaps (REMAP clear). Phase-2 device op.</div>
+                        <button className="btn danger" disabled={busy} onClick={() => { if (confirm("Wipe ALL on-device keymaps? This cannot be undone.")) run("Clear keymap", () => api.sendCommand("clear_data", [], { side: "left", force: true })); }}>Clear</button></div>
+                      <div className="setting-desc">Wipes on-device keymaps (REMAP clear).</div>
                     </div>
                   </DeviceGate>
                   {out && <pre className="settings-out">{out}</pre>}

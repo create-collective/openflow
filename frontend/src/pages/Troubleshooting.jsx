@@ -375,18 +375,11 @@ export default function Troubleshooting() {
                 </button>
               </div>
               <div className="info-sub">Recovery</div>
-              <div className="setting-desc" style={{ marginBottom: 10 }}>
-                Clears Bluetooth bonds on the <strong>{side}</strong> half. If the halves are bonded
-                to each other they will need re-pairing afterwards.
+              <div className="setting-desc">
+                Destructive recovery -- clearing Bluetooth bonds, wiping keymaps -- lives on the
+                <strong> Settings &rsaquo; Troubleshooting</strong> tab, kept apart from these
+                read-only diagnostics so an erase is always a deliberate trip.
               </div>
-              <button className="btn danger" disabled={busy}
-                onClick={() => {
-                  if (confirm(`Clear all Bluetooth bonds on the ${side} half?`)) {
-                    run("Clear BLE devices", () => api.sendCommand("clear_ble_devices", [], { side, force: true }));
-                  }
-                }}>
-                Clear BLE devices ({side})
-              </button>
             </div>
             <div className="card info-card">
               <div className="info-card-head"><h3>Software</h3></div>
