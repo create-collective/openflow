@@ -18,11 +18,25 @@ Blender, Maya, 3ds Max, Houdini, Unity, SketchUp, Nuke, Sublime Text and the Jet
 MIT requires the copyright notice and permission notice be retained; the upstream LICENSE applies
 to the data in that file.
 
+## NayaFlow key geometry
+
+`docs/reference/create-key-geometry.json` and `.svg` (written by `tools/export_key_geometry.js`)
+hold the keycap silhouettes NayaFlow 1.25.1 draws -- 34 inline SVG paths copied verbatim from its
+renderer bundle -- and where its board component places each of the 74 keys, the two module
+slots and the 14 side LED bars, measured by rendering that component against the app's own
+compiled CSS. The artwork and layout are Naya's; the extraction, the measurement and the file
+shape are ours. The same silhouettes already drive OpenFlow's board
+(`openflow/frontend/src/lib/keyshapes.js`). Naya wound down in 2026 and the assets are used to
+keep the hardware serviceable; see `openflow/frontend/public/icons/action/PROVENANCE.md` for the
+same decision on the icon set.
+
 ## Not included
 
-**NayaFlow's icon assets.** `docs/reference/nayaflow-action-names.json` records the NAMES from
-NayaFlow's action icon set, which we use as a canonical vocabulary. No SVG from that application
-is copied into this repository -- the artwork is Naya's own work and is not ours to redistribute.
+**NayaFlow's icon assets, originally.** `docs/reference/nayaflow-action-names.json` records the
+NAMES from NayaFlow's action icon set, which we use as a canonical vocabulary. The icons
+themselves were held back until 2026-09-10, when the owner decided to ship them for the
+community the vendor abandoned; they now live under `openflow/frontend/public/icons/action/`
+with their own PROVENANCE.md.
 
 **VS Code default keybindings.** Convenience mirrors of these exist on GitHub but at least one
 carries no LICENSE file, which under default copyright means all rights reserved regardless of
