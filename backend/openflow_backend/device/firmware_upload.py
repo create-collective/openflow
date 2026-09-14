@@ -1,10 +1,16 @@
 """Writing a firmware image to a half in MCUboot recovery.
 
-NOT EXECUTED. No code in this repository calls `upload()`, no route exposes it, and it refuses
-to run unless a caller passes an explicit arming token that has to be computed from the
-device's own reported state. It exists so the procedure is written down, reviewed and
-interlocked BEFORE the day it is needed, rather than improvised against a keyboard that is
-already broken.
+NEVER RUN ON HARDWARE. The only route here is /rpc/flash-firmware, which refuses at a
+module-level gate (FIRMWARE_FLASH_ENABLED, ships False) before this file is even imported; and
+`flash()` refuses to run unless the caller passes an explicit arming token that has to be
+computed from the device's own reported state. It exists so the procedure is written down,
+reviewed and interlocked BEFORE the day it is needed, rather than improvised against a keyboard
+that is already broken.
+
+THE SEQUENCE is NayaCore's, and it is stock MCUboot/SMP in every release the company shipped
+(nayaHistory/FLASHING-PROCEDURE.md): upload the image to the secondary slot, mark it pending,
+reset so the bootloader swaps. `upload()` is the first step only; `flash()` is all three, with
+a slot re-read between upload and mark so a wrong image is never marked bootable.
 
 It has never been run against hardware. The read path in recovery.py has (2026-09-08, both slot
 hashes matched the catalogue), so the framing, transport and CBOR decoding underneath are
@@ -51,6 +57,11 @@ from . import recovery as rec
 
 SMP_OP_WRITE = 2
 SMP_ID_IMAGE_UPLOAD = 1
+# Standard mcumgr ids (Zephyr and mynewt agree, and NayaCore speaks stock SMP in every release --
+# nayaHistory/FLASHING-PROCEDURE.md). `image state` WRITE marks an uploaded image pending;
+# `os reset` makes MCUboot swap to it on the boot that follows.
+SMP_ID_IMAGE_STATE = rec.SMP_ID_IMAGE_STATE      # 0: read lists slots, write sets pending
+SMP_ID_OS_RESET = 5
 # Conservative. The transport fragments anything larger across continuation frames, and a
 # smaller chunk costs throughput on an operation that runs once, while a too-large one is
 # rejected by a bootloader whose buffer we are guessing at.
@@ -217,7 +228,8 @@ def build_chunk_request(slot: int, offset: int, data: bytes, *, total: int | Non
 def upload(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
            chunk: int = DEFAULT_CHUNK, allow_older: bool = False, progress=None,
            state: dict | None = None) -> dict:
-    """Write an image to a half in recovery. NOTHING IN THIS REPOSITORY CALLS THIS.
+    """Write an image to a half in recovery. Called only by flash(); on its own it leaves an
+    image in the secondary slot that never boots.
 
     `arm` must equal the hash the device reports for its running image -- see plan().arm_token.
     That is deliberately not a boolean: an arming flag can be left switched on, and a token tied
@@ -251,4 +263,93 @@ def upload(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
         seq += 1
         if progress:
             progress(sent, len(raw))
-    return {"ok": True, "written": sent, "slot": slot, "image": Path(image_path).name}
+    return {"ok": True, "written": sent, "slot": slot, "image": Path(image_path).name,
+            "port": p.port}
+
+
+# --- activating the uploaded image: the two steps upload() stops short of ------------------- #
+
+def build_set_pending_request(image_hash: bytes | None, *, confirm: bool = False,
+                              seq: int = 0) -> bytes:
+    """`image state` WRITE: mark the image with this hash for the next boot. Pure; sends nothing.
+
+    `confirm=False` is MCUboot's TEST mode: the bootloader swaps the image in for ONE boot and
+    swaps back if that image never confirms itself -- the safety net a first flash on a donor
+    unit wants. `confirm=True` makes the swap permanent at once. With `confirm=True` and no hash
+    the request confirms whatever is currently running (mcumgr's `image confirm`), which is the
+    follow-up a test-booted image needs before its next reset.
+
+    The hash is the one the DEVICE reports for the slot (`image state` read): the SHA-256 of the
+    decrypted image, i.e. the catalogue's plaintextSha256 -- not the hash of the encrypted file.
+    """
+    if image_hash is None:
+        if not confirm:
+            raise ValueError("marking an image pending needs its hash; only confirm may omit it")
+        body: dict = {"confirm": True}
+    else:
+        if len(image_hash) != 32:
+            raise ValueError("an image hash is 32 bytes")
+        body = {"hash": bytes(image_hash), "confirm": bool(confirm)}
+    return rec.encode_request(SMP_OP_WRITE, rec.SMP_GROUP_IMAGE, SMP_ID_IMAGE_STATE,
+                              payload=_cbor_encode(body), seq=seq)
+
+
+def build_reset_request(*, seq: int = 0) -> bytes:
+    """`os reset`: reboot so MCUboot performs the swap. Empty CBOR map payload. Pure."""
+    return rec.encode_request(SMP_OP_WRITE, rec.SMP_GROUP_OS, SMP_ID_OS_RESET, seq=seq)
+
+
+def _hex(h) -> str:
+    return h.hex() if isinstance(h, (bytes, bytearray)) else str(h or "").lower()
+
+
+def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
+          chunk: int = DEFAULT_CHUNK, allow_older: bool = False, confirm: bool = False,
+          progress=None, state: dict | None = None) -> dict:
+    """The whole NayaCore sequence: upload -> re-read the slot -> mark pending -> reset.
+
+    Every upload() interlock applies (it runs first, on one device read shared with the plan).
+    Then one more: the slot is re-read and its hash must be the catalogued plaintext hash of the
+    image we meant to write. If it is not, nothing further is sent, nothing is marked bootable
+    and the primary image is untouched -- the failure mode stays "nothing changed".
+
+    Default `confirm=False` boots the new image in MCUboot test mode; it reverts on the following
+    reset unless confirmed (build_set_pending_request(None, confirm=True) once it is up). That
+    confirm is deliberately a separate, later decision.
+
+    GATED: reached only through the FIRMWARE_FLASH_ENABLED endpoint. Never run on hardware.
+    """
+    if state is None:
+        state = rec.read_running_image(catalog)      # one read, shared by plan() and upload()
+    result = upload(image_path, catalog, arm=arm, slot=slot, chunk=chunk,
+                    allow_older=allow_older, progress=progress, state=state)
+    p = plan(image_path, catalog, slot=slot, chunk=chunk, allow_older=allow_older, state=state)
+
+    want = _hex(p.target.get("plaintextSha256"))
+    if len(want) != 64:
+        raise UploadRefused(
+            f"{p.image_path.name} has no catalogued plaintext hash, so the slot it landed in "
+            "cannot be checked before it is marked bootable. Not marking anything; the primary "
+            "image is untouched.")
+    after = rec.image_state(p.port)
+    landed = next((i for i in after.get("images") or [] if i.get("slot") == slot), None)
+    got = _hex(landed.get("hash")) if landed else ""
+    if got != want:
+        raise UploadRefused(
+            f"after upload, slot {slot} reports {got or 'no image'} but {p.image_path.name} "
+            f"should read {want}. It is NOT marked bootable; the primary image is untouched.")
+
+    reply = rec._talk(p.port, build_set_pending_request(bytes.fromhex(want), confirm=confirm,
+                                                        seq=1), timeout=5.0)
+    if reply.get("rc", 0):
+        raise UploadRefused(
+            f"the bootloader refused to mark slot {slot} pending (rc={reply['rc']}). Nothing "
+            "was reset; the primary image is untouched.")
+    # The device reboots while answering this, so a short or missing reply is the expected
+    # outcome of a reset that worked, not an error to surface.
+    try:
+        rec._talk(p.port, build_reset_request(seq=2), timeout=2.0)
+    except Exception:      # noqa: BLE001 -- see above
+        pass
+    result.update({"marked": "confirm" if confirm else "test", "hash": want, "reset": True})
+    return result

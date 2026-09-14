@@ -65,6 +65,22 @@ async def info_system() -> dict:
     }
 
 
+def _firmware_catalog_raw() -> list[dict]:
+    """The catalogue entries verbatim -- the shape firmware_upload.plan() checks (`side`,
+    `generation`, full `plaintextSha256`, `withheldBecause`). _firmware_catalog() below is the UI
+    summary and must NOT be handed to the flasher: it drops `side` and truncates the hash, which
+    would make every image fail the side check."""
+    from pathlib import Path as _P
+    for parent in _P(__file__).resolve().parents:
+        cand = parent / "docs" / "reference" / "firmware-catalog.json"
+        if cand.is_file():
+            try:
+                return json.loads(cand.read_text(encoding="utf-8")).get("images", [])
+            except (ValueError, OSError):
+                return []
+    return []
+
+
 def _firmware_catalog() -> list[dict]:
     """The bundled firmware images, summarised for the Software page. Reads the committed
     catalogue metadata (versions + hashes, NOT the gitignored image tree), walked for so it works
@@ -145,12 +161,24 @@ async def flash_firmware(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=(
             "Firmware flashing is wired but disabled until it is verified on a donor unit. "
             "Nothing was sent."))
+    import os
+    from pathlib import Path as _P
     from ..device import firmware_upload as fw
-    svc = get_service()
+    name = str(body["image"])
+    path = _P(name)
+    if not path.is_absolute():
+        # The images are vendor material and live outside the repo; OPENFLOW_FIRMWARE_DIR says
+        # where. A bare catalogue filename with no dir set fails plan()'s "no such image" check.
+        d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
+        path = _P(d) / name if d else path
     try:
+        # flash() = upload -> re-read slot -> mark pending -> reset (NayaCore's stock-MCUboot
+        # sequence). Default confirm=False boots the image in MCUboot TEST mode so it reverts on
+        # the next reset unless confirmed -- deliberately a separate, later decision.
         return await run_in_threadpool(
-            fw.upload, body["image"], _firmware_catalog(), arm=body.get("arm", ""),
-            slot=int(body.get("slot", 1)))
+            fw.flash, path, _firmware_catalog_raw(), arm=body.get("arm", ""),
+            slot=int(body.get("slot", 1)), allow_older=bool(body.get("allow_older", False)),
+            confirm=bool(body.get("confirm", False)))
     except (fw.UploadRefused, TransportError, ValueError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 

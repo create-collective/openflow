@@ -182,3 +182,100 @@ def test_chunk_count_matches_the_image_size(images):
     p = fw.plan(images / "kb_fwl.bin", CATALOG, state=state_ok(), chunk=100)
     assert p.chunks == 41, p.chunks          # 4096 / 100 rounded up
     assert p.image_sha256 == hashlib.sha256(b"\x00" * 4096).hexdigest()
+
+
+# --- the swap: mark pending + reset (what upload() alone never does) ------------------------- #
+# Ids are stock mcumgr: image group 1 / state 0 / upload 1; os group 0 / reset 5. NayaCore speaks
+# stock SMP in every release (nayaHistory/FLASHING-PROCEDURE.md), so these are not guesses.
+
+def _decode_header(frame: bytes) -> dict:
+    import base64
+    import struct
+    body = base64.b64decode(frame[2:-1])[2:-2]
+    return {"op": body[0] & 0x07, "group": struct.unpack(">H", body[4:6])[0], "id": body[7]}
+
+
+def test_mark_pending_is_an_image_state_write_carrying_hash_and_confirm_flag():
+    sha = hashlib.sha256(b"x").digest()
+    f = fw.build_set_pending_request(sha)
+    assert _decode_header(f) == {"op": 2, "group": 1, "id": 0}
+    assert _decode_request(f) == {"hash": sha, "confirm": False}          # MCUboot TEST mode
+    assert _decode_request(fw.build_set_pending_request(sha, confirm=True)) == {"hash": sha, "confirm": True}
+    assert _decode_request(fw.build_set_pending_request(None, confirm=True)) == {"confirm": True}
+    with pytest.raises(ValueError, match="needs its hash"):
+        fw.build_set_pending_request(None)
+    with pytest.raises(ValueError, match="32 bytes"):
+        fw.build_set_pending_request(b"short")
+
+
+def test_reset_is_an_os_reset_write_with_an_empty_map():
+    f = fw.build_reset_request()
+    assert _decode_header(f) == {"op": 2, "group": 0, "id": 5}
+    assert _decode_request(f) == {}
+
+
+def _fake_bootloader(landed_hash_hex: str, log: list):
+    """Answers like MCUboot: a chunk -> the next offset; a state read -> slot 1 holds
+    `landed_hash_hex`; anything else -> rc 0. Records (header, body) of every frame."""
+    def talk(port, frame, timeout=2.0):
+        h, body = _decode_header(frame), _decode_request(frame)
+        log.append((h, body))
+        if h == {"op": 2, "group": 1, "id": 1}:
+            return {"rc": 0, "off": body["off"] + len(body["data"])}
+        if h == {"op": 0, "group": 1, "id": 0}:
+            return {"images": [{"slot": 0, "hash": bytes.fromhex(RUNNING_HASH)},
+                               {"slot": 1, "hash": bytes.fromhex(landed_hash_hex)}]}
+        return {"rc": 0}
+    return talk
+
+
+def _kinds(log):
+    return [(h["group"], h["id"], h["op"]) for h, _ in log]
+
+
+def test_flash_is_upload_then_slot_check_then_mark_then_reset_in_that_order(images, monkeypatch):
+    log = []
+    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    r = fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(), chunk=1024)
+    assert _kinds(log)[:4] == [(1, 1, 2)] * 4                       # 4096 B / 1024 = 4 chunks
+    assert _kinds(log)[4:] == [(1, 0, 0), (1, 0, 2), (0, 5, 2)]     # read, mark, reset
+    assert log[5][1] == {"hash": bytes.fromhex(RUNNING_HASH), "confirm": False}
+    assert r["marked"] == "test" and r["hash"] == RUNNING_HASH and r["reset"] is True
+
+
+def test_flash_confirm_true_marks_permanent(images, monkeypatch):
+    log = []
+    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    r = fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(),
+                 chunk=1024, confirm=True)
+    assert log[5][1]["confirm"] is True and r["marked"] == "confirm"
+
+
+def test_flash_never_marks_a_slot_whose_hash_is_not_the_target(images, monkeypatch):
+    """The upload landed, but the slot does not read back as the image we meant. Stop dead:
+    no mark, no reset, primary untouched."""
+    log = []
+    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader("ab" * 32, log))
+    with pytest.raises(fw.UploadRefused, match="NOT marked bootable"):
+        fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(), chunk=1024)
+    assert _kinds(log)[-1] == (1, 0, 0), "must stop right after the slot read"
+    assert (1, 0, 2) not in _kinds(log) and (0, 5, 2) not in _kinds(log)
+
+
+def test_flash_never_marks_an_image_with_no_catalogued_plaintext_hash(images, monkeypatch):
+    """kb_fwl_old.bin carries a stub hash. Without a full one the slot cannot be verified, so
+    nothing after the upload is sent -- not even the state read."""
+    log = []
+    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    with pytest.raises(fw.UploadRefused, match="no catalogued plaintext hash"):
+        fw.flash(images / "kb_fwl_old.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(),
+                 chunk=1024, allow_older=True)
+    assert set(_kinds(log)) == {(1, 1, 2)}, "only upload chunks may have been sent"
+
+
+def test_flash_refuses_without_the_arm_token_before_sending_anything(images, monkeypatch):
+    def boom(*a, **k):
+        raise AssertionError("a frame was sent despite the arm check failing")
+    monkeypatch.setattr(fw.rec, "_talk", boom)
+    with pytest.raises(fw.UploadRefused, match="not armed"):
+        fw.flash(images / "kb_fwl.bin", CATALOG, arm="", state=state_ok())

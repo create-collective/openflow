@@ -237,6 +237,10 @@ def _talk(port: str, frame: bytes, timeout: float = 2.0) -> dict:
     # / The device does not recognize the command", because the bootloader's CDC does not
     # implement the comm-state queries that call makes. Draining by read instead of by
     # reset_input_buffer avoids the query entirely.
+    # 115200 is not what NayaCore uses (it opens at 1,000,000 -- nayaHistory/FLASHING-
+    # PROCEDURE.md), and it does not matter: this port is USB CDC-ACM, where the baud setting is
+    # cosmetic and bytes move at USB bulk speed. Both slot hashes read correctly at this rate on
+    # 2026-09-08. Do not "fix" it into a bug; change it only if a live unit ever proves it matters.
     with serial.Serial(port=port, baudrate=115200,
                        bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
                        stopbits=serial.STOPBITS_ONE, timeout=0.1,
