@@ -65,6 +65,37 @@ async def info_system() -> dict:
     }
 
 
+def _firmware_catalog() -> list[dict]:
+    """The bundled firmware images, summarised for the Software page. Reads the committed
+    catalogue metadata (versions + hashes, NOT the gitignored image tree), walked for so it works
+    in either checkout layout. Returns [] rather than raising if it is not present."""
+    from pathlib import Path as _P
+    for parent in _P(__file__).resolve().parents:
+        cand = parent / "docs" / "reference" / "firmware-catalog.json"
+        if cand.is_file():
+            try:
+                data = json.loads(cand.read_text(encoding="utf-8"))
+            except (ValueError, OSError):
+                return []
+            out = []
+            for img in data.get("images", []):
+                out.append({
+                    "file": img.get("file"),
+                    "createFirmware": img.get("createFirmware"),
+                    "side": img.get("side"),
+                    "source": img.get("source"),
+                    "sha256": (img.get("plaintextSha256") or img.get("blobSha256") or "")[:16],
+                })
+            return out
+    return []
+
+
+@router.get("/api/firmware-catalog")
+async def firmware_catalog() -> dict:
+    """Firmware versions bundled/known to OpenFlow, for the Software page's firmware list."""
+    return {"reference": REFERENCE_FIRMWARE, "images": _firmware_catalog()}
+
+
 @router.get("/api/ui/state")
 async def ui_state() -> dict:
     svc = get_service()

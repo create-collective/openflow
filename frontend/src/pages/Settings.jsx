@@ -6,17 +6,17 @@ import SettingField from "../components/SettingField";
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
 const REPOS = {
   app: "traviswye/openflow",
+  companion: "traviswye/create-companion",
   firmware: "traviswye/openflow-firmware",
 };
 
 const TABS = [
   { id: "behavior", label: "Behavior" },
   { id: "interface", label: "Interface" },
-  { id: "update", label: "Software Update" },
   { id: "backup", label: "Backup" },
   { id: "troubleshooting", label: "Troubleshooting" },
   { id: "logging", label: "Logging" },
-  { id: "info", label: "Software Info" },
+  { id: "software", label: "Software" },
 ];
 
 function SettingsGroups({ groups, onChange }) {
@@ -45,6 +45,8 @@ export default function Settings() {
   const [backups, setBackups] = useState({ backups: [], dir: "" });
   const [sys, setSys] = useState(null);
   const [update, setUpdate] = useState(null);
+  const [companion, setCompanion] = useState(null);
+  const [firmware, setFirmware] = useState(null);
   const [out, setOut] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -60,7 +62,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (tab === "backup") api.backups().then(setBackups).catch(() => {});
-    if (tab === "info") api.status().then((r) => setStatus(r.halves || [])).catch(() => {});
+    if (tab === "software") { api.status().then((r) => setStatus(r.halves || [])).catch(() => {}); api.firmwareCatalog().then(setFirmware).catch(() => {}); }
   }, [tab]);
 
   async function setSetting(key, value) {
@@ -90,16 +92,19 @@ export default function Settings() {
     finally { setBusy(false); }
   }
 
-  async function checkUpdate() {
-    setUpdate({ checking: true });
+  // One opt-in release check, reused for OpenFlow and Create Companion -- no forced updater.
+  async function checkRelease(repo, current, setter) {
+    setter({ checking: true });
     try {
-      const res = await fetch(`https://api.github.com/repos/${REPOS.app}/releases/latest`);
+      const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
       if (!res.ok) throw new Error(res.status === 404 ? "No public releases yet" : `GitHub ${res.status}`);
       const d = await res.json();
       const latest = (d.tag_name || "").replace(/^v/, "");
-      setUpdate({ latest, current: sys?.backendVersion, ahead: latest && latest !== sys?.backendVersion });
-    } catch (e) { setUpdate({ error: e.message }); }
+      setter({ latest, current, ahead: latest && latest !== current });
+    } catch (e) { setter({ error: e.message }); }
   }
+  const checkUpdate = () => checkRelease(REPOS.app, sys?.backendVersion, setUpdate);
+  const checkCompanion = () => checkRelease(REPOS.companion, null, setCompanion);
 
   // Route by SCOPE, not by name. This was `group !== "Interface"` vs `=== "Interface"`, so
   // "OneKey Timing" landed on the Behavior tab by accident and any group added to the backend
@@ -126,29 +131,6 @@ export default function Settings() {
             <>
               {tab === "behavior" && <SettingsGroups groups={behaviorGroups} onChange={setSetting} />}
               {tab === "interface" && <SettingsGroups groups={interfaceGroups} onChange={setSetting} />}
-
-              {tab === "update" && (
-                <div style={{ maxWidth: 640 }}>
-                  <h3>Software Update</h3>
-                  <div className="kv"><span className="k">OpenFlow version</span><span className="v">{sys?.backendVersion}</span></div>
-                  <div className="btn-row" style={{ margin: "14px 0" }}>
-                    <button className="btn primary" onClick={checkUpdate}>Check GitHub for updates</button>
-                  </div>
-                  {update?.checking && <div className="page-sub">Checking…</div>}
-                  {update?.error && <div className="phase-note">{update.error}</div>}
-                  {update?.latest && (
-                    <div className="kv"><span className="k">Latest release</span>
-                      <span className="v">{update.latest}{update.ahead ? " (update available)" : " (up to date)"}</span></div>
-                  )}
-                  <p className="page-sub" style={{ marginTop: 16 }}>
-                    OpenFlow has no forced updater — this is an opt-in check against GitHub Releases.
-                  </p>
-                  <div className="settings-links">
-                    <a href={`https://github.com/${REPOS.app}`} target="_blank" rel="noreferrer">OpenFlow on GitHub ↗</a>
-                    <a href={`https://github.com/${REPOS.firmware}`} target="_blank" rel="noreferrer">Firmware on GitHub ↗</a>
-                  </div>
-                </div>
-              )}
 
               {tab === "backup" && (
                 <div style={{ maxWidth: 720 }}>
@@ -230,11 +212,29 @@ export default function Settings() {
                 </div>
               )}
 
-              {tab === "info" && (
+              {tab === "software" && (
                 <div style={{ maxWidth: 640 }}>
-                  <h3>Software &amp; Firmware Info</h3>
+                  <h3>Software &amp; Firmware</h3>
+
                   <div className="kv"><span className="k">OpenFlow</span><span className="v">{sys?.backendVersion}</span></div>
                   <div className="kv"><span className="k">OS</span><span className="v">{sys?.os} {sys?.arch}</span></div>
+                  <div className="btn-row" style={{ margin: "10px 0" }}>
+                    <button className="btn" onClick={checkUpdate}>Check OpenFlow for updates</button>
+                    <button className="btn" onClick={checkCompanion}>Check Create Companion</button>
+                  </div>
+                  {update?.checking && <div className="page-sub">Checking OpenFlow…</div>}
+                  {update?.error && <div className="phase-note">OpenFlow: {update.error}</div>}
+                  {update?.latest && <div className="kv"><span className="k">OpenFlow latest</span>
+                    <span className="v">{update.latest}{update.ahead ? " (update available)" : " (up to date)"}</span></div>}
+                  {companion?.checking && <div className="page-sub">Checking Create Companion…</div>}
+                  {companion?.error && <div className="phase-note">Create Companion: {companion.error}</div>}
+                  {companion?.latest && <div className="kv"><span className="k">Create Companion latest</span>
+                    <span className="v">{companion.latest}</span></div>}
+                  <p className="page-sub" style={{ marginTop: 4 }}>
+                    Opt-in checks against GitHub Releases. OpenFlow has no forced updater.
+                  </p>
+
+                  <h3 style={{ marginTop: 22 }}>Device firmware</h3>
                   {status.filter((h) => h.connected).map((h) => (
                     <div key={h.port}>
                       <div className="kv"><span className="k">{h.description} firmware</span><span className="v">{h.firmwareVersion || "—"}</span></div>
@@ -242,13 +242,31 @@ export default function Settings() {
                     </div>
                   ))}
                   {!connected && <p className="page-sub">Connect the keyboard to read device firmware versions.</p>}
-                  <div className="settings-links" style={{ marginTop: 16 }}>
-                    <a href={`https://github.com/${REPOS.app}`} target="_blank" rel="noreferrer">OpenFlow source ↗</a>
-                    <a href={`https://github.com/${REPOS.firmware}`} target="_blank" rel="noreferrer">Firmware source ↗</a>
-                  </div>
-                  <p className="page-sub" style={{ marginTop: 12 }}>
-                    Firmware is open-sourced on GitHub as images are dumped/obtained.
+                  {firmware?.reference && (
+                    <div className="kv"><span className="k">Naya ships (reference)</span>
+                      <span className="v">Create {firmware.reference.createFirmware} · module {firmware.reference.moduleFirmware}</span></div>
+                  )}
+
+                  <h3 style={{ marginTop: 22 }}>Bundled firmware images</h3>
+                  <p className="page-sub" style={{ marginBottom: 8 }}>
+                    Images OpenFlow knows, keyed by the hash the device reports. The images themselves
+                    are open-sourced as they are dumped/obtained.
                   </p>
+                  {(firmware?.images || []).length === 0
+                    ? <div className="empty">No firmware images catalogued.</div>
+                    : firmware.images.map((im) => (
+                      <div className="skp-row" key={im.file} style={{ cursor: "default" }}>
+                        <span className="skp-beh">{im.side || "?"}</span>
+                        <span className="skp-act" style={{ flex: 1 }}>Create {im.createFirmware} · {im.file}</span>
+                        <span className="v" style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>{im.sha256}…</span>
+                      </div>
+                    ))}
+
+                  <div className="settings-links" style={{ marginTop: 16 }}>
+                    <a href={`https://github.com/${REPOS.app}`} target="_blank" rel="noreferrer">OpenFlow ↗</a>
+                    <a href={`https://github.com/${REPOS.companion}`} target="_blank" rel="noreferrer">Create Companion ↗</a>
+                    <a href={`https://github.com/${REPOS.firmware}`} target="_blank" rel="noreferrer">Firmware ↗</a>
+                  </div>
                 </div>
               )}
             </>

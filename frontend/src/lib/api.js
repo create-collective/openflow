@@ -31,6 +31,7 @@ export const api = {
   statusLive: () => req("GET", "/api/status/live"),
   statusLast: () => req("GET", "/api/status/last"),
   diagnostics: () => req("GET", "/api/diagnostics/report"),
+  firmwareCatalog: () => req("GET", "/api/firmware-catalog"),
   readKeyboard: (body = {}) => req("POST", "/rpc/read-keyboard", body),
   readModules: (body = {}) => req("POST", "/rpc/read-modules", body),
   moduleVariants: () => req("GET", "/api/module-variants"),
