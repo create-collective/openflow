@@ -267,6 +267,43 @@ async def import_profile_file(file: UploadFile = File(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/rpc/convert-db-to-json")
+async def convert_db_to_json(file: UploadFile = File(...)) -> dict:
+    """Convert a NayaFlow user-data.db (or its backup .zip) to OpenFlow profile JSON, WITHOUT
+    importing anything. The other half of backup portability: "Load profile from file" already
+    imports a .db, this hands back the JSON so a .db backup can be kept, shared or diffed as text.
+    Reads a throwaway copy; nothing on disk or in the live database is touched."""
+    import tempfile
+    import zipfile
+    from ..db import nayaflow_convert as ncv
+
+    raw = await file.read()
+    name = (file.filename or "upload").lower()
+
+    def _go() -> dict:
+        db_bytes = raw
+        if name.endswith(".zip"):
+            with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+                member = next((n for n in zf.namelist() if n.lower().endswith(".db")), None)
+                if member is None:
+                    raise ValueError("the zip holds no .db file")
+                db_bytes = zf.read(member)
+        elif not name.endswith(".db"):
+            raise ValueError("expected a NayaFlow user-data.db or its backup .zip")
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td) / "upload.db"
+            tmp.write_bytes(db_bytes)
+            payloads = ncv.to_json_payloads(tmp)
+        if not payloads:
+            raise ValueError("that database holds no profiles")
+        return {"ok": True, "profiles": payloads}
+
+    try:
+        return await run_in_threadpool(_go)
+    except (ValueError, KeyError, sqlite3.DatabaseError, UnicodeDecodeError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/rpc/import-backup-file")
 async def import_backup_file(file: UploadFile = File(...)) -> dict:
     """Install an uploaded .db or NayaFlow backup .zip as the current data."""

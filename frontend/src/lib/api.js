@@ -121,6 +121,15 @@ export const api = {
     if (!res.ok) throw new Error(data.detail || "Import failed");
     return data;
   },
+  // Convert a NayaFlow .db / backup .zip to OpenFlow profile JSON, without importing it.
+  convertDbToJson: async (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(BASE + "/rpc/convert-db-to-json", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Convert failed");
+    return data;
+  },
   importBackupFile: async (file) => {
     const form = new FormData();
     form.append("file", file);

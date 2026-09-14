@@ -113,3 +113,27 @@ def test_an_imported_track_profile_is_tagged_with_its_side_when_that_is_unambigu
     finally:
         c.close()
     assert tags == {"Left only": "TRACK_LEFT", "Both docks": None, "A Tune": "TUNE"}
+
+
+def test_convert_db_to_json_returns_profiles_without_importing(tmp_path, monkeypatch):
+    """The backup-portability other half: a .db converts to profile JSON and NOTHING is imported.
+    A backup should be keepable/shareable as text without silently altering the live data."""
+    live = _live(tmp_path, monkeypatch)
+    before = _names(live)
+    raw = _beta_db(tmp_path / "beta.db").read_bytes()
+    r = client.post("/rpc/convert-db-to-json",
+                    files={"file": ("user-data-beta.db", raw, "application/octet-stream")})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["ok"] and len(body["profiles"]) == 1
+    assert body["profiles"][0]["kind"] == "profile"
+    assert body["profiles"][0]["profile"]["name"] == "Naya Default Windows"
+    assert _names(live) == before, "convert must not import -- the live database is unchanged"
+
+
+def test_convert_db_to_json_refuses_a_json_file(tmp_path, monkeypatch):
+    """Convert is for databases; a .json is already JSON. Refuse clearly rather than mis-handle."""
+    _live(tmp_path, monkeypatch)
+    r = client.post("/rpc/convert-db-to-json",
+                    files={"file": ("x.json", b"{}", "application/json")})
+    assert r.status_code == 400 and "user-data.db" in r.text

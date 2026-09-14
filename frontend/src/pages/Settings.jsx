@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { applyInterfaceScaling } from "../lib/scaling";
-import { pickFile } from "../lib/files";
+import { pickFile, downloadJSON, safeName } from "../lib/files";
 import SettingField from "../components/SettingField";
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
 const REPOS = {
@@ -165,6 +165,17 @@ export default function Settings() {
                       if (!confirm("Import this backup as your current data? Your current data is snapshotted first.")) return;
                       run("Import backup", async () => { const r = await api.importBackupFile(f); setBackups(await api.backups()); return r; });
                     }}>Import backup file…</button>
+                    <button className="btn" disabled={busy} onClick={async () => {
+                      const f = await pickFile(".db,.zip");
+                      if (!f) return;
+                      run("Convert to JSON", async () => {
+                        const r = await api.convertDbToJson(f);
+                        for (const p of r.profiles) {
+                          downloadJSON(`${safeName(p.profile?.name || "profile")}.json`, p);
+                        }
+                        return { converted: r.profiles.length, saved: r.profiles.map((p) => p.profile?.name) };
+                      });
+                    }}>Convert database to JSON…</button>
                   </div>
                   <p className="page-sub" style={{ marginBottom: 12 }}>
                     Import a NayaFlow backup (its <code>.zip</code> or the <code>user-data.db</code> inside) — OpenFlow uses the same
