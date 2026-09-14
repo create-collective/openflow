@@ -65,10 +65,14 @@ SETTINGS_SCHEMA = [
             # NayaCore sends them live and PR #6 recovered the opcodes. api/rest set_setting sends
             # them live when a keyboard is connected.
             #
-            # led_action_override: WIRED (svc.led_setting "layer_override", 0x1014) but its effect --
-            # how long an LED action overrides the colourmap -- is not eye-observable, so it is not
-            # yet confirmed on hardware and is not auto-applied. Stays experimental until a
-            # behavioural test (engage an LED colour key, switch layers, watch whether it clears).
+            # led_action_override: WIRED (svc.led_setting "layer_override", 0x1014) and it REACHES
+            # the device -- 0x1014 acks and a behavioural change was seen on 2026-09-14 -- but the
+            # behavioural test could not cleanly verify it, because the per-layer animation feature
+            # (layer 0 solid / 1 breathe / 2 swirl) overlays the override and confounds every
+            # observation of "did the override clear on a layer change". So the enum->int mapping is
+            # still a guess (assumed 0 = until restart, 1 = until layer change) and it stays
+            # experimental and NOT auto-applied until a capture of NayaCore sending 0x1014, or a
+            # test on a profile with all per-layer animations set to solid, settles the semantics.
             {"id": "led_action_override", "label": "LED Action Override", "kind": "select",
              "desc": "How long an LED action overrides the colourmap.",
              "options": ["until keyboard restart", "until next layer change"],
