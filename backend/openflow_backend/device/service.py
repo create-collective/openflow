@@ -558,6 +558,38 @@ class DeviceService:
             return {"ok": True, "side": dev.side, "action": action, "value": value}
         return self._with_transport(side, go)
 
+    # Persistent LED SETTINGS, distinct from the live commands above. NayaFlow never sent these on
+    # flash (two captures, 2026-09-01 -- see docs/write-protocol-spec.md rule 12); NayaCore sends
+    # them live, and PR #6 on nayactl recovered the opcodes. Not in the vendored nayactl yet --
+    # defined here, and flagged for the next upstream PR alongside PID 0x0137. All are CAT_LED and,
+    # like the live commands, carry [target, value] with the target pinned to 0.
+    _LED_SET_SCANMODE = 0x1012        # SET_SCANMODE_PWM        -> led_scan_mode (bool)
+    _LED_SET_MAX_BRIGHTNESS = 0x1013  # SET_LED_MAX_BRIGHTNESS  -> led_max_brightness (0-100)
+    _LED_SET_LAYER_OVERRIDE = 0x1014  # SET_LED_LAYER_OVERRIDE  -> led_action_override (enum int)
+    _LED_SETTINGS = {
+        "scan_mode": _LED_SET_SCANMODE,
+        "max_brightness": _LED_SET_MAX_BRIGHTNESS,
+        "layer_override": _LED_SET_LAYER_OVERRIDE,
+    }
+
+    def led_setting(self, side: str, setting: str, value: int) -> dict:
+        """Send one persistent LED setting live. UNVERIFIED on hardware -- this is the testing
+        surface. max_brightness (0x1013) is a persistent ceiling: 0 darks the array and survives a
+        reboot, so the caller (and the test) must restore a non-zero value; it is refused as 0 here
+        as a guard, since nothing legitimately wants a permanent-dark write from this path."""
+        sub = self._LED_SETTINGS.get(setting)
+        if sub is None:
+            raise ValueError(f"unknown LED setting: {setting} (have {sorted(self._LED_SETTINGS)})")
+        v = int(value) & 0xFF
+        if setting == "max_brightness" and v == 0:
+            raise ValueError("refusing to set max_brightness to 0: it darks the board persistently. "
+                             "Use a value 1-100.")
+
+        def go(t, dest, dev):
+            t.send_command(dest, C.CAT_LED, sub, bytes([self.LED_TARGET, v]))
+            return {"ok": True, "side": dev.side, "setting": setting, "value": v, "subcmd": sub}
+        return self._with_transport(side, go)
+
     def restore_lighting(self, side: str = "left") -> dict:
         """Put both halves back to the stored colours and animation after an LED effect key.
 

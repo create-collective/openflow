@@ -250,12 +250,43 @@ async def get_settings() -> dict:
     return await run_in_threadpool(settings_db.get_settings)
 
 
+# LED settings that reach the device as a LIVE command (not on flash), verified on hardware
+# 2026-09-13. Changing the setting saves it AND, if a keyboard is connected, sends it live -- which
+# is what makes these actually take effect from the UI. led_action_override is deliberately absent:
+# it is wired (svc.led_setting "layer_override") but its effect is not eye-confirmed, so it stays
+# save-only and experimental until a behavioural test.
+_LED_LIVE_SETTINGS = {
+    "led_max_brightness": ("max_brightness", lambda v: int(v)),
+    "led_scan_mode": ("scan_mode", lambda v: 1 if v in (True, 1, "true", "True") else 0),
+}
+
+
 @router.post("/rpc/set-setting")
 async def set_setting(body: dict = Body(...)) -> dict:
+    key, value = body["key"], body["value"]
     try:
-        return await run_in_threadpool(settings_db.set_setting, body["key"], body["value"])
+        result = await run_in_threadpool(settings_db.set_setting, key, value)
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+    # Apply live if this is a device-live LED setting and a keyboard is connected. Best-effort:
+    # the setting is already saved, so a device that is absent or errors does not fail the save --
+    # it is reported so the UI can say "saved, not applied (no device)".
+    live = _LED_LIVE_SETTINGS.get(key)
+    if live:
+        setting, to_int = live
+        svc = get_service()
+        try:
+            devices = await run_in_threadpool(svc.list_devices)
+            if devices:
+                await run_in_threadpool(svc.led_setting, "left", setting, to_int(value))
+                result["applied"] = True
+            else:
+                result["applied"] = False
+                result["applyNote"] = "saved; no keyboard connected to apply it live"
+        except (TransportError, ValueError) as e:
+            result["applied"] = False
+            result["applyNote"] = f"saved, but applying to the device failed: {e}"
+    return result
 
 
 @router.get("/api/backups")
@@ -718,6 +749,19 @@ async def led(body: dict = Body(...)) -> dict:
     try:
         return await run_in_threadpool(
             svc.led, body.get("side", "left"), body["action"], body.get("value")
+        )
+    except (TransportError, ValueError, KeyError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/led-setting")
+async def led_setting(body: dict = Body(...)) -> dict:
+    """Send a persistent LED setting live (scan_mode / max_brightness / layer_override). The
+    testing surface for these -- UNVERIFIED on hardware. max_brightness=0 is refused (dark-board)."""
+    svc = get_service()
+    try:
+        return await run_in_threadpool(
+            svc.led_setting, body.get("side", "left"), body["setting"], body["value"]
         )
     except (TransportError, ValueError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))

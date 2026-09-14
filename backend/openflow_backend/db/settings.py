@@ -60,9 +60,15 @@ SETTINGS_SCHEMA = [
              "min": 0, "max": 6000, "default": 300, "unit": "s", "provenance": VERIFIED,
              "min_nonzero": 30,
              "device_key": "f198f968-2c42-4df6-8fdd-97de148cad1a"},
-            # The three LED settings below have known correlation ids but OpenFlow emits no write
-            # for them -- the flash only sends SYS_SET_TIMEOUTS and folds term/flavour into
-            # hold-tap records. Storing them under the right key is necessary but not sufficient.
+            # These LED settings reach the device as a LIVE command (0xED/0x1012-14), not on flash
+            # -- NayaFlow never sent them in either 2026-09-01 capture (write-protocol-spec rule 12);
+            # NayaCore sends them live and PR #6 recovered the opcodes. api/rest set_setting sends
+            # them live when a keyboard is connected.
+            #
+            # led_action_override: WIRED (svc.led_setting "layer_override", 0x1014) but its effect --
+            # how long an LED action overrides the colourmap -- is not eye-observable, so it is not
+            # yet confirmed on hardware and is not auto-applied. Stays experimental until a
+            # behavioural test (engage an LED colour key, switch layers, watch whether it clears).
             {"id": "led_action_override", "label": "LED Action Override", "kind": "select",
              "desc": "How long an LED action overrides the colourmap.",
              "options": ["until keyboard restart", "until next layer change"],
@@ -70,13 +76,18 @@ SETTINGS_SCHEMA = [
              "device_key": "385426f7-e454-4174-babe-4ca4a670cbe2",
              "device_values": {"until keyboard restart": "until_keyboard_restart",
                                "until next layer change": "until_layer_change"}},
+            # VERIFIED on hardware 2026-09-13: setting it to 30 dimmed the whole board, 100 restored
+            # it. min is 1, not 0 -- 0 is a PERSISTENT dark-board (SET_LED_MAX_BRIGHTNESS survives a
+            # reboot), so the slider cannot reach it and svc.led_setting refuses it as defence.
             {"id": "led_max_brightness", "label": "LED Maximum Brightness", "kind": "slider",
              "desc": "Cap LED brightness. Lowering it improves battery life.",
-             "min": 0, "max": 100, "default": 100, "unit": "%", "provenance": EXPERIMENTAL,
+             "min": 1, "max": 100, "default": 100, "unit": "%", "provenance": VERIFIED,
              "device_key": "321fe22c-74e0-48cf-a954-326bf4391fd7"},
+            # VERIFIED on hardware 2026-09-13: toggling it produced an observable flicker on camera
+            # as the PWM changed; the command acks and is a real NayaCore opcode (0x1012).
             {"id": "led_scan_mode", "label": "LED Scan Mode", "kind": "toggle",
              "desc": "PWM scanning to cut power / extend LED life. Disable when filming.",
-             "default": True, "provenance": EXPERIMENTAL,
+             "default": True, "provenance": VERIFIED,
              "device_key": "66770f52-e917-4f17-b775-6308b1e4281a"},
         ],
     },
