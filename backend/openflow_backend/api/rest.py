@@ -81,9 +81,14 @@ def _firmware_catalog() -> list[dict]:
             for img in data.get("images", []):
                 out.append({
                     "file": img.get("file"),
-                    "createFirmware": img.get("createFirmware"),
-                    "side": img.get("side"),
-                    "source": img.get("source"),
+                    "target": img.get("target"),                    # keyboard | module
+                    "component": img.get("component"),              # left/right or touch/track/tune
+                    "generation": img.get("generation"),           # A/B flash generation (keyboard)
+                    "version": img.get("createFirmware") or img.get("moduleFirmware"),
+                    "versionConfidence": img.get("versionConfidence"),
+                    "bundle": img.get("bundle") or img.get("source"),
+                    "flashable": img.get("flashable", False),
+                    "note": img.get("note"),
                     "sha256": (img.get("plaintextSha256") or img.get("blobSha256") or "")[:16],
                 })
             return out
@@ -122,6 +127,32 @@ async def open_logs_folder(body: dict = Body(default={})) -> dict:
     else:
         subprocess.Popen(["xdg-open", str(d)])
     return {"ok": True, "dir": str(d)}
+
+
+# Firmware flashing is wired but GATED at the module level, exactly like the recovery ops: even
+# with an arm token and force, the endpoint refuses while this is False, so it ships visible-but-
+# inert until it is tested on a donor unit. Flip to True (per target) only after that test.
+FIRMWARE_FLASH_ENABLED = False
+
+
+@router.post("/rpc/flash-firmware")
+async def flash_firmware(body: dict = Body(...)) -> dict:
+    """Flash a catalogued firmware image. WIRED BUT DISABLED until tested on a donor unit -- refuses
+    here before touching the interlocked upload path (device/firmware_upload.py), which itself
+    requires an arm token equal to the hash the device just reported. Two gates, neither bypassable
+    from the UI."""
+    if not FIRMWARE_FLASH_ENABLED:
+        raise HTTPException(status_code=400, detail=(
+            "Firmware flashing is wired but disabled until it is verified on a donor unit. "
+            "Nothing was sent."))
+    from ..device import firmware_upload as fw
+    svc = get_service()
+    try:
+        return await run_in_threadpool(
+            fw.upload, body["image"], _firmware_catalog(), arm=body.get("arm", ""),
+            slot=int(body.get("slot", 1)))
+    except (fw.UploadRefused, TransportError, ValueError, KeyError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/api/recovery-ops")

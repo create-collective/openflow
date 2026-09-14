@@ -312,20 +312,37 @@ export default function Settings() {
                       <span className="v">Create {firmware.reference.createFirmware} · module {firmware.reference.moduleFirmware}</span></div>
                   )}
 
-                  <h3 style={{ marginTop: 22 }}>Bundled firmware images</h3>
-                  <p className="page-sub" style={{ marginBottom: 8 }}>
-                    Images OpenFlow knows, keyed by the hash the device reports. The images themselves
-                    are open-sourced as they are dumped/obtained.
+                  <h3 style={{ marginTop: 22 }}>Firmware library</h3>
+                  <p className="page-sub" style={{ marginBottom: 10 }}>
+                    Every firmware image OpenFlow has classified, by what it targets and which
+                    NayaFlow release bundled it — so a specific version can be picked for an
+                    up/downgrade. Flashing is wired but <strong>disabled</strong> until it is tested
+                    on a donor unit. Images are open-sourced as they are dumped/obtained.
                   </p>
-                  {(firmware?.images || []).length === 0
-                    ? <div className="empty">No firmware images catalogued.</div>
-                    : firmware.images.map((im) => (
-                      <div className="skp-row" key={im.file} style={{ cursor: "default" }}>
-                        <span className="skp-beh">{im.side || "?"}</span>
-                        <span className="skp-act" style={{ flex: 1 }}>Create {im.createFirmware} · {im.file}</span>
-                        <span className="v" style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>{im.sha256}…</span>
+                  {(() => {
+                    const imgs = firmware?.images || [];
+                    if (!imgs.length) return <div className="empty">No firmware images catalogued.</div>;
+                    // group: keyboard by version, then modules by version, uncertain last
+                    const key = (im) => `${im.target === "module" ? "Module" : "Keyboard"} firmware ${im.version || "(unknown version)"}`;
+                    const groups = {};
+                    for (const im of imgs) (groups[key(im)] ||= []).push(im);
+                    const order = Object.keys(groups).sort((a, b) => (a.includes("unknown") ? 1 : 0) - (b.includes("unknown") ? 1 : 0) || a.localeCompare(b));
+                    return order.map((g) => (
+                      <div key={g} style={{ marginBottom: 14 }}>
+                        <div className="info-sub">{g} <span style={{ opacity: 0.5, fontWeight: 400 }}>· {groups[g][0].bundle}</span></div>
+                        {groups[g].map((im) => (
+                          <div className="skp-row" key={im.file} style={{ cursor: "default" }} title={im.note || ""}>
+                            <span className="skp-beh">{im.component || "?"}{im.generation ? ` · gen ${im.generation}` : ""}</span>
+                            <span className="skp-act" style={{ flex: 1 }}>{im.file}{im.versionConfidence === "unknown" ? " (version unconfirmed)" : ""}</span>
+                            <span className="v" style={{ fontFamily: "var(--font-mono)", opacity: 0.6 }}>{im.sha256 ? im.sha256 + "…" : "encrypted"}</span>
+                            <button className="btn" disabled title={im.flashable ? "Wired, enabled after testing on a donor unit" : "Not a flashable image"} style={{ marginLeft: 8 }}>
+                              {im.flashable ? "Flash (disabled)" : "—"}
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ));
+                  })()}
 
                   <div className="settings-links" style={{ marginTop: 16 }}>
                     <a href={`https://github.com/${REPOS.app}`} target="_blank" rel="noreferrer">OpenFlow ↗</a>

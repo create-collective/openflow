@@ -122,8 +122,12 @@ def test_upload_refuses_without_the_device_specific_arm_token(images, monkeypatc
             fw.upload(images / "kb_fwl.bin", CATALOG, arm=bad, state=state_ok())
 
 
-def test_nothing_in_the_app_calls_upload():
-    """The guard against this being wired up before a donor unit exists."""
+def test_upload_is_wired_only_through_the_gated_endpoint():
+    """The flasher is now wired (owner ask 2026-09-14), but the safety property is unchanged: the
+    upload path may be referenced ONLY by api/rest.py, and that reference must sit behind the hard
+    FIRMWARE_FLASH_ENABLED gate, which ships False. So even with an arm token the endpoint refuses
+    until a donor test flips the gate. If any other module starts importing firmware_upload, or the
+    gate default drifts to True, this fails."""
     root = _BACKEND / "openflow_backend"
     callers = []
     for f in root.rglob("*.py"):
@@ -131,8 +135,14 @@ def test_nothing_in_the_app_calls_upload():
             continue
         text = f.read_text(encoding="utf-8", errors="ignore")
         if "firmware_upload" in text:
-            callers.append(str(f.relative_to(root)))
-    assert not callers, f"firmware_upload is referenced by {callers}; it must stay uncalled"
+            callers.append(f.relative_to(root).as_posix())
+    assert callers == ["api/rest.py"], (
+        f"firmware_upload must be referenced only by api/rest.py; found {callers}")
+    rest = (root / "api" / "rest.py").read_text(encoding="utf-8")
+    assert "FIRMWARE_FLASH_ENABLED = False" in rest, (
+        "the flasher gate must default to False -- it is wired but disabled until a donor test")
+    # the gate must actually guard the endpoint, not merely be defined
+    assert "if not FIRMWARE_FLASH_ENABLED:" in rest
 
 
 # --- request shape --------------------------------------------------------------------------- #
