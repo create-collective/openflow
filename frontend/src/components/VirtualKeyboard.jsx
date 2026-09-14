@@ -1,6 +1,7 @@
 import { useState } from "react";
 import WindowsIcon from "./WindowsIcon";
-import { MAIN_ROWS, NAV_ROWS, NUMPAD, VK_MODIFIERS, FKEYS_EXTRA, resolveVirtualKey } from "../lib/keydict";
+import { MAIN_ROWS, NAV_ROWS, NUMPAD, VK_MODIFIERS, FKEYS_EXTRA, resolveVirtualKey, CODE_FOR_GLYPH } from "../lib/keydict";
+import { LAYOUTS, LAYOUT_IDS } from "../lib/layouts";
 
 const UNIT = 42; // px per keyboard unit (a normal 1u key)
 const w = (u) => Math.max(0, u * UNIT - 2); // inner width; 2px goes to the 1px margins
@@ -16,6 +17,24 @@ export default function VirtualKeyboard({ disabled, onPick,
   const [mods, setMods] = useState({});
   const [fmore, setFmore] = useState(false);
   const [mac, setMac] = useState(false);
+  const [layout, setLayout] = useState(() => {
+    try { return LAYOUTS[localStorage.getItem("openflow.vk.layout")] ? localStorage.getItem("openflow.vk.layout") : "qwerty"; }
+    catch { return "qwerty"; }
+  });
+  const chooseLayout = (id) => {
+    setLayout(id);
+    try { localStorage.setItem("openflow.vk.layout", id); } catch { /* private mode: keep it in memory */ }
+  };
+  // Cosmetic relabel: show the layout's glyph, and bind the keycode that GLYPH names (so the "A"
+  // key binds A wherever a layout draws it). A glyph with no US keycode -- an AZERTY accent --
+  // has nothing to bind, so the key keeps its own code and the accent is display-only.
+  const lay = (k) => {
+    const o = LAYOUTS[layout].overrides[k.code];
+    if (!o) return k;
+    const shiftGlyph = o.s ?? (k.shift ? k.shift[1] : null);
+    const shift = shiftGlyph == null ? null : [CODE_FOR_GLYPH[shiftGlyph] ?? (k.shift ? k.shift[0] : k.code), shiftGlyph];
+    return { ...k, glyph: o.g, code: CODE_FOR_GLYPH[o.g] ?? k.code, shift };
+  };
   const shift = !!mods.shift;
   const toggle = (id) => setMods((m) => ({ ...m, [id]: !m[id] }));
   const held = VK_MODIFIERS.filter((m) => mods[m.id]).map((m) => m.code);
@@ -38,6 +57,7 @@ export default function VirtualKeyboard({ disabled, onPick,
     if (k.gap) return <span key={ci} className="vk-gap" style={{ width: w(k.u) }} />;
     if (k.more === "fkeys") {
       return (
+
         <span key={ci} className="vk-fmore" style={{ width: w(k.u) }}>
           <button className="vk-key" disabled={disabled} title="More function keys (F13–F24)"
             onClick={() => setFmore((v) => !v)}>
@@ -53,6 +73,7 @@ export default function VirtualKeyboard({ disabled, onPick,
         </span>
       );
     }
+    k = lay(k);
     const alt = altOf(k);
     return (
       <button
@@ -114,6 +135,13 @@ export default function VirtualKeyboard({ disabled, onPick,
         <label className={"vk-mod" + (mac ? " on" : "")} title="Relabel modifiers as macOS (⌘ / ⌥) — the bindings are identical">
           <input type="checkbox" checked={mac} onChange={() => setMac((v) => !v)} />
           Mac
+        </label>
+        <span className="vk-mods-sep" />
+        <label className="vk-mod vk-layout-pick" title="Relabel the virtual keyboard. Cosmetic only — a key still binds the keycode its label names.">
+          Layout
+          <select className="mac-input vk-layout-select" value={layout} onChange={(e) => chooseLayout(e.target.value)}>
+            {LAYOUT_IDS.map((id) => <option key={id} value={id}>{LAYOUTS[id].label}</option>)}
+          </select>
         </label>
         {/* Say what the next click will actually bind. Held modifiers DO build a chord, but
             nothing on screen said so -- they read as a display toggle, like Mac beside them --

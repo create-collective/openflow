@@ -83,13 +83,20 @@ export const MEDIA = [
 export const GLYPH = {};
 // base code -> its shifted code (e.g. NUMBER_9 -> LEFT_PARENTHESIS).
 export const BASE_TO_SHIFT = {};
+// The reverse of GLYPH: a displayed glyph -> the action code that produces it. Used by the
+// cosmetic layout dropdown so a relabelled key binds the keycode its LABEL names (bind-by-label):
+// the AZERTY "A" key -- wherever the layout draws it -- binds A. A glyph with no keycode here
+// (an accented AZERTY key, say) has no US usage to bind, so the caller keeps the key's own code.
+export const CODE_FOR_GLYPH = {};
 
 const addGlyph = (k) => {
   if (!k || !k.code) return; // skip gaps / expander markers
   GLYPH[k.code] = k.glyph;
+  if (typeof k.glyph === "string" && !(k.glyph in CODE_FOR_GLYPH)) CODE_FOR_GLYPH[k.glyph] = k.code;
   if (k.shift) {
     GLYPH[k.shift[0]] = k.shift[1];
     BASE_TO_SHIFT[k.code] = k.shift[0];
+    if (!(k.shift[1] in CODE_FOR_GLYPH)) CODE_FOR_GLYPH[k.shift[1]] = k.shift[0];
   }
 };
 for (const rows of [MAIN_ROWS, NAV_ROWS]) for (const row of rows) for (const k of row) addGlyph(k);
