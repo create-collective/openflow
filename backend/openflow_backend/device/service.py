@@ -572,6 +572,29 @@ class DeviceService:
         "layer_override": _LED_SET_LAYER_OVERRIDE,
     }
 
+    def run_recovery_op(self, side: str, op_id: str, opts: dict | None = None, *, force: bool = False) -> dict:
+        """Run one recovery/troubleshooting procedure. DISABLED ops refuse even with force -- they
+        are wired for review and gated until each is tested on a donor unit. Every op also requires
+        force=True, so the UI confirmation is not the only guard. The exact frame is built by
+        recovery_ops.frame_for (pinned by tests), so what ships is what was reviewed."""
+        from . import recovery_ops as ro
+        from .commands import CommandError   # lazy: commands imports this module at load
+        op = ro.BY_ID.get(op_id)
+        if op is None:
+            raise ValueError(f"unknown recovery op: {op_id}")
+        if not op.enabled:
+            raise CommandError(f"{op.label} is wired but disabled until it is tested on a donor "
+                               f"unit ({op.needs}). Nothing was sent.")
+        if not force:
+            raise CommandError(f"{op.label} is a device write and needs an explicit confirmation.")
+        cat, sub, payload = ro.frame_for(op_id, opts or {})
+
+        def go(t, dest, dev):
+            t.send_command(dest, cat, sub, payload, allow_dangerous=True)
+            return {"ok": True, "side": dev.side, "op": op_id,
+                    "sent": {"cat": cat, "sub": sub, "payload": payload.hex()}}
+        return self._with_transport(side, go)
+
     def led_setting(self, side: str, setting: str, value: int) -> dict:
         """Send one persistent LED setting live. UNVERIFIED on hardware -- this is the testing
         surface. max_brightness (0x1013) is a persistent ceiling: 0 darks the array and survives a

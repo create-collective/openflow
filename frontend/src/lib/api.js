@@ -35,6 +35,8 @@ export const api = {
   deviceLog: (limit = 200) => req("GET", `/api/device-log?limit=${limit}`),
   clearDeviceLog: () => req("POST", "/rpc/clear-device-log", {}),
   openLogsFolder: () => req("POST", "/rpc/open-logs-folder", {}),
+  recoveryOps: () => req("GET", "/api/recovery-ops"),
+  runRecoveryOp: (op, opts = {}, force = true) => req("POST", "/rpc/run-recovery-op", { op, opts, force }),
   readKeyboard: (body = {}) => req("POST", "/rpc/read-keyboard", body),
   readModules: (body = {}) => req("POST", "/rpc/read-modules", body),
   moduleVariants: () => req("GET", "/api/module-variants"),

@@ -124,6 +124,27 @@ async def open_logs_folder(body: dict = Body(default={})) -> dict:
     return {"ok": True, "dir": str(d)}
 
 
+@router.get("/api/recovery-ops")
+async def recovery_ops_list() -> dict:
+    """The recovery/troubleshooting procedures for the UI: label, danger, whether enabled, and the
+    confirmation text. No device access; the ops themselves are wired but gated (see recovery_ops)."""
+    from ..device import recovery_ops as ro
+    return {"ops": ro.public_list()}
+
+
+@router.post("/rpc/run-recovery-op")
+async def run_recovery_op(body: dict = Body(...)) -> dict:
+    """Run one recovery op. Refuses a disabled op (all are, until donor-unit testing) and requires
+    force. The frame is built and pinned by tests, so a disabled op cannot fire even by mistake."""
+    svc = get_service()
+    try:
+        return await run_in_threadpool(
+            svc.run_recovery_op, body.get("side", "left"), body["op"],
+            body.get("opts") or {}, force=bool(body.get("force", False)))
+    except (CommandError, TransportError, ValueError, KeyError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/api/firmware-catalog")
 async def firmware_catalog() -> dict:
     """Firmware versions bundled/known to OpenFlow, for the Software page's firmware list."""

@@ -49,6 +49,7 @@ export default function Settings() {
   const [firmware, setFirmware] = useState(null);
   const [devlog, setDevlog] = useState([]);
   const [logmeta, setLogmeta] = useState({});
+  const [recovery, setRecovery] = useState([]);
   const [out, setOut] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -65,6 +66,7 @@ export default function Settings() {
   useEffect(() => {
     if (tab === "backup") api.backups().then(setBackups).catch(() => {});
     if (tab === "logging") api.deviceLog().then((r) => { setDevlog(r.entries || []); setLogmeta(r); }).catch(() => {});
+    if (tab === "troubleshooting") api.recoveryOps().then((r) => setRecovery(r.ops || [])).catch(() => {});
     if (tab === "software") { api.status().then((r) => setStatus(r.halves || [])).catch(() => {}); api.firmwareCatalog().then(setFirmware).catch(() => {}); }
   }, [tab]);
 
@@ -192,12 +194,45 @@ export default function Settings() {
                         <button className="btn danger" disabled={busy} onClick={() => { if (confirm("Clear all Bluetooth bonds? If the halves are bonded to each other they will need re-pairing.")) run("Clear BLE", () => api.sendCommand("clear_ble_devices", [], { side: "left", force: true })); }}>Clear</button></div>
                       <div className="setting-desc">Forces the Create to forget all Bluetooth connections.</div>
                     </div>
-                    <div className="setting">
-                      <div className="setting-head"><strong>Clear All Keymap Data</strong>
-                        <button className="btn danger" disabled={busy} onClick={() => { if (confirm("Wipe ALL on-device keymaps? This cannot be undone.")) run("Clear keymap", () => api.sendCommand("clear_data", [], { side: "left", force: true })); }}>Clear</button></div>
-                      <div className="setting-desc">Wipes on-device keymaps (REMAP clear).</div>
-                    </div>
                   </DeviceGate>
+
+                  <h3 style={{ marginTop: 26 }}>Recovery procedures</h3>
+                  <p className="page-sub" style={{ marginBottom: 12 }}>
+                    Device-recovery procedures recovered from the vendor software. Each is wired and
+                    its exact command is pinned by tests, but they stay <strong>disabled</strong> until
+                    each is verified on a spare/donor unit — a mistaken one can leave a keyboard worse
+                    off. Every one runs only behind a confirmation.
+                  </p>
+                  {["reset", "recovery", "destructive"].map((danger) => {
+                    const ops = recovery.filter((o) => o.danger === danger);
+                    if (!ops.length) return null;
+                    const heading = { reset: "Resets", recovery: "Recovery", destructive: "Destructive" }[danger];
+                    return (
+                      <div key={danger} style={{ marginBottom: 14 }}>
+                        <div className="info-sub">{heading}</div>
+                        {ops.map((op) => (
+                          <div className="setting" key={op.id}>
+                            <div className="setting-head">
+                              <strong>{op.label}</strong>
+                              <span className={"gesture-badge prov-" + (op.danger === "destructive" ? "experimental" : "app")}>{op.danger}</span>
+                              <div className="setting-ctl">
+                                <button className={"btn" + (op.danger === "destructive" ? " danger" : "")}
+                                  disabled={!op.enabled || busy || !connected}
+                                  title={!op.enabled ? `Wired, enabled after testing on a ${op.needs}` : op.confirm}
+                                  onClick={() => { if (confirm(op.confirm)) run(op.label, () => api.runRecoveryOp(op.id)); }}>
+                                  {op.enabled ? "Run" : "Disabled"}
+                                </button>
+                              </div>
+                            </div>
+                            <div className="setting-desc">
+                              {op.desc}{!op.enabled && <> — <em>wired, enabled after testing on a {op.needs}.</em></>}
+                              <span className="devlog-detail" style={{ display: "block", opacity: 0.5, fontFamily: "var(--font-mono)", fontSize: 11 }}>{op.command}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
                   {out && <pre className="settings-out">{out}</pre>}
                 </div>
               )}

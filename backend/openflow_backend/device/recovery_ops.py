@@ -1,0 +1,174 @@
+"""Recovery / troubleshooting procedures recovered from the NayaFlow / NayaCore v6.11.0 teardown.
+
+Every one of these is a DEVICE WRITE, most destructive. They are wired and their exact frames are
+pinned by tests, but every op ships DISABLED (`enabled=False`): the send path refuses a disabled
+op even with force, so nothing here can run until it is enabled one at a time on a donor unit. The
+UI lists them (gated, behind a per-op confirmation) so the eventual test just flips `enabled`.
+
+Correctness is checked against NayaCore's own strings, not guessed:
+  * opcodes are nayactl's (device/remap.py + _vendor/nayactl/constants.py);
+  * payload SHAPES come from NayaCore v6.11.0's validation strings in
+    extracted/NayaFlow-1.25.1/strings/core-strings.txt (e.g. "Invalid parameter size (%1) for
+    SET_HOST_OS, should be 1"; "Invalid host_os (%1) ... should be less than %2"; the [SET HOST OS
+    0x / MODULE BATTERY RECOVERY 0x / RESET MODULE 0x ...] send-log formats at 5719-5758);
+  * each op records whether its payload is CONFIRMED (a validation string / capture pins it) or
+    INFERRED (opcode known, exact bytes unproven -- the reason it stays disabled until tested).
+
+The pairing-repair SEQUENCE (the sharpest gap) is NayaCore's, recovered as the state-machine names
+CheckBLEFWVersion -> WaitForPairAddress -> StorePairedHalfAddressBeforeClear -> ClearConnections ->
+VerifyConnectionsCleared -> (exchange) -> Respawn -> RecheckBLEStatus -> WaitForBLEStatus ->
+VerifyBLEFWVersion. The load-bearing safety property: STORE the partner address BEFORE clearing --
+clear first and the only copy of what to restore is gone. That ordering is enforced by the guided
+op below.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Callable
+
+from .._vendor.nayactl import constants as C
+from . import remap as R
+
+CONFIRMED = "confirmed"   # a NayaCore validation string or a capture pins the payload
+INFERRED = "inferred"     # opcode known, exact bytes unproven -- keep disabled until a donor test
+
+
+@dataclass(frozen=True)
+class RecoveryOp:
+    id: str
+    label: str
+    desc: str
+    danger: str                       # "reset" | "recovery" | "destructive"
+    cat: int
+    sub: int
+    provenance: str                   # CONFIRMED | INFERRED (payload shape)
+    confirm: str                      # the exact text the UI must show before running
+    enabled: bool = False             # gated until tested on a donor unit
+    args: tuple = ()                  # names of required args (e.g. ("mac",), ("os",))
+    build_payload: Callable[[dict], bytes] | None = None   # args -> payload; default empty
+    needs: str = "donor unit"         # why it is disabled / what unblocks it
+
+    def payload(self, opts: dict) -> bytes:
+        return self.build_payload(opts) if self.build_payload else b""
+
+
+def _mac_bytes(opts: dict) -> bytes:
+    mac = (opts.get("mac") or "").replace(":", "").replace("-", "")
+    raw = bytes.fromhex(mac)
+    if len(raw) != 6:
+        raise ValueError("a BLE address must be 6 bytes (12 hex digits)")
+    return raw
+
+
+def _host_os_byte(opts: dict) -> bytes:
+    # NayaCore: SET_HOST_OS payload is 1 byte, value < 2. Enum order from core-strings.txt
+    # (WINDOWS_OS then MAC_OS): 0 = Windows, 1 = macOS.
+    os = opts.get("os")
+    mapping = {"windows": 0, "win": 0, "mac": 1, "macos": 1}
+    if isinstance(os, int):
+        v = os
+    else:
+        v = mapping.get(str(os).lower())
+    if v not in (0, 1):
+        raise ValueError("host os must be 'windows' or 'mac' (0 or 1)")
+    return bytes([v])
+
+
+def _partition_byte(opts: dict) -> bytes:
+    # FORMAT_PARTITION targets one partition. The selector is INFERRED (a single index byte);
+    # confirm against a capture before enabling. Default 0 if not given.
+    return bytes([int(opts.get("partition", 0)) & 0xFF])
+
+
+REGISTRY: tuple[RecoveryOp, ...] = (
+    # --- resets: the mild recovery steps ------------------------------------------------------- #
+    RecoveryOp("reset_normal", "Restart Keyboard", "Reboot the keyboard normally.",
+               "reset", C.CAT_RESET, C.RESET_NORMAL, CONFIRMED,
+               "Restart the keyboard now?"),
+    RecoveryOp("reset_mcuboot", "Restart into Bootloader (MCUboot)",
+               "Reboot into the MCUboot bootloader (for firmware recovery). Exits on a power cycle.",
+               "reset", C.CAT_RESET, C.RESET_MCU_BOOT, CONFIRMED,
+               "Restart the keyboard into its MCUboot bootloader? It will stop working as a keyboard "
+               "until it is restarted again."),
+    RecoveryOp("reset_dfu", "Restart into DFU",
+               "Reboot into DFU mode (nRF firmware recovery). Exits on a power cycle.",
+               "reset", C.CAT_RESET, C.RESET_DFU, CONFIRMED,
+               "Restart the keyboard into DFU mode? It will stop working as a keyboard until it is "
+               "restarted again."),
+    RecoveryOp("reset_module", "Reset Docked Module",
+               "Soft-reset the docked module (Touch / Track / Tune).",
+               "reset", C.CAT_MODULE, C.MOD_RESET, INFERRED,
+               "Reset the docked module now?"),
+
+    # --- host OS -------------------------------------------------------------------------------- #
+    RecoveryOp("set_host_os", "Set Host OS",
+               "Tell the keyboard which OS it is plugged into (affects its own key handling).",
+               "reset", C.CAT_SYSTEM, C.SYS_SET_HOST_OS, CONFIRMED,
+               "Set the keyboard's host OS? This changes how the keyboard behaves.",
+               args=("os",), build_payload=_host_os_byte),
+
+    # --- module battery rescue ------------------------------------------------------------------ #
+    RecoveryOp("module_battery_recovery", "Recover Module Battery",
+               "The dead-module rescue for a module whose battery is critically drained.",
+               "recovery", C.CAT_SYSTEM, C.SYS_MODULE_BATTERY_RECOVERY, INFERRED,
+               "Run module battery recovery? Use this only for a module that will not charge."),
+
+    # --- pairing repair (the sharpest gap) ------------------------------------------------------ #
+    RecoveryOp("ble_set_pair_address", "Set Split-Link Address",
+               "Store the partner half's BLE address (step of re-pairing the two halves).",
+               "recovery", C.CAT_BLE, C.BLE_SET_PAIR_ADDRESS, CONFIRMED,
+               "Write the split-link partner address to this half?",
+               args=("mac",), build_payload=_mac_bytes),
+    RecoveryOp("ble_unpair_address", "Unpair One Address",
+               "Forget one paired BLE address.",
+               "recovery", C.CAT_BLE, C.BLE_UNPAIR_ADDRESS, CONFIRMED,
+               "Forget this paired address?",
+               args=("mac",), build_payload=_mac_bytes),
+    RecoveryOp("ble_unpair_all", "Unpair All",
+               "Forget every paired BLE address on this half.",
+               "recovery", C.CAT_BLE, C.BLE_UNPAIR_ALL, INFERRED,
+               "Forget ALL paired addresses on this half? The halves will need re-pairing."),
+    RecoveryOp("ble_clear_all_split_links", "Clear All Split Links",
+               "Clear the split-link state between the two halves (part of re-pairing).",
+               "recovery", C.CAT_BLE, C.BLE_CLEAR_ALL_SPLIT_LINKS, INFERRED,
+               "Clear the split link between the halves? They will need re-pairing afterwards."),
+
+    # --- destructive: flash + data -------------------------------------------------------------- #
+    RecoveryOp("clear_all_data", "Clear All Keymap Data",
+               "Wipe every on-device keymap (REMAP clear).",
+               "destructive", C.CAT_REMAP, R.CLEAR_ALL_DATA, INFERRED,
+               "Wipe ALL keymap data on the keyboard? This cannot be undone."),
+    RecoveryOp("format_partition", "Reformat Flash Partition",
+               "Reformat a corrupt SPI-flash partition (the destructive half of the flash repair).",
+               "destructive", C.CAT_FLASH, C.FLASH_FORMAT_PARTITION, INFERRED,
+               "Reformat a flash partition? Data on it is erased; only for a flash that fails its "
+               "self-test.", args=("partition",), build_payload=_partition_byte),
+    RecoveryOp("erase_chip", "Erase Flash Chip",
+               "Erase the entire external SPI-flash chip (the most destructive step).",
+               "destructive", C.CAT_FLASH, C.FLASH_ERASE_CHIP, INFERRED,
+               "ERASE the entire flash chip? This wipes firmware staging and all on-device data and "
+               "cannot be undone."),
+)
+
+BY_ID = {op.id: op for op in REGISTRY}
+
+
+def public_list() -> list[dict]:
+    """Registry for the UI: what each op is, its danger, whether it is enabled, its confirm text.
+    No frames, no device access."""
+    return [
+        {"id": o.id, "label": o.label, "desc": o.desc, "danger": o.danger,
+         "provenance": o.provenance, "enabled": o.enabled, "confirm": o.confirm,
+         "args": list(o.args), "needs": o.needs,
+         "command": f"{C.CATEGORY_NAMES.get(o.cat, hex(o.cat)) if hasattr(C, 'CATEGORY_NAMES') else hex(o.cat)}/{o.sub:#06x}"}
+        for o in REGISTRY
+    ]
+
+
+def frame_for(op_id: str, opts: dict | None = None) -> tuple[int, int, bytes]:
+    """(category, subcommand, payload) for an op -- the exact bytes it would send. Pure; no device.
+    This is what the tests pin, so a wrong opcode or payload shape is caught offline."""
+    op = BY_ID.get(op_id)
+    if op is None:
+        raise ValueError(f"unknown recovery op: {op_id}")
+    return op.cat, op.sub, op.payload(opts or {})
