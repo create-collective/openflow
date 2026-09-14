@@ -47,6 +47,7 @@ export default function Settings() {
   const [update, setUpdate] = useState(null);
   const [companion, setCompanion] = useState(null);
   const [firmware, setFirmware] = useState(null);
+  const [devlog, setDevlog] = useState([]);
   const [out, setOut] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -62,6 +63,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (tab === "backup") api.backups().then(setBackups).catch(() => {});
+    if (tab === "logging") api.deviceLog().then((r) => setDevlog(r.entries || [])).catch(() => {});
     if (tab === "software") { api.status().then((r) => setStatus(r.halves || [])).catch(() => {}); api.firmwareCatalog().then(setFirmware).catch(() => {}); }
   }, [tab]);
 
@@ -200,14 +202,39 @@ export default function Settings() {
               )}
 
               {tab === "logging" && (
-                <div style={{ maxWidth: 640 }}>
+                <div style={{ maxWidth: 860 }}>
                   <h3>Logging &amp; Diagnostics</h3>
                   <div className="setting">
                     <div className="setting-head"><strong>Diagnostics Report</strong>
                       <button className="btn" disabled={busy} onClick={() => run("Diagnostics", api.diagnostics)}>Generate</button></div>
                     <div className="setting-desc">Collects system + device info to help debug issues.</div>
                   </div>
-                  <p className="page-sub">Log-folder shortcuts are available in the desktop (Electron) build.</p>
+                  <div className="setting-head" style={{ marginTop: 18 }}>
+                    <strong>Device I/O log</strong>
+                    <div className="setting-ctl">
+                      <button className="btn" disabled={busy} onClick={() => api.deviceLog().then((r) => setDevlog(r.entries || []))}>Refresh</button>
+                      <button className="btn" disabled={busy} onClick={() => { api.clearDeviceLog().then(() => setDevlog([])); }}>Clear</button>
+                    </div>
+                  </div>
+                  <div className="setting-desc" style={{ marginBottom: 8 }}>
+                    Every command, text query and raw frame exchanged with a connected keyboard, newest last.
+                    In-memory and device-bytes only. This is where a "flash failed" that actually landed shows what really happened.
+                  </div>
+                  {devlog.length === 0
+                    ? <div className="empty">No device I/O recorded yet. Read or flash the keyboard, then Refresh.</div>
+                    : (
+                      <div className="devlog">
+                        {devlog.slice().reverse().map((e) => (
+                          <div key={e.seq} className={"devlog-row" + (e.ok ? "" : " devlog-err")}>
+                            <span className="devlog-at">{e.at}</span>
+                            <span className="devlog-kind">{e.kind}</span>
+                            <span className="devlog-port">{e.port}</span>
+                            <span className="devlog-detail">{e.detail}</span>
+                            <span className="devlog-ms">{e.ms}ms</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   {out && <pre className="settings-out">{out}</pre>}
                 </div>
               )}

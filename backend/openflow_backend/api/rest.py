@@ -90,6 +90,21 @@ def _firmware_catalog() -> list[dict]:
     return []
 
 
+@router.get("/api/device-log")
+async def device_log(limit: int = 200) -> dict:
+    """Recent device I/O -- every command/text/raw exchange with a connected keyboard, newest last.
+    In-memory, bounded; device bytes only, nothing user-identifying."""
+    from ..device import device_log as dl
+    return {"entries": dl.entries(limit)}
+
+
+@router.post("/rpc/clear-device-log")
+async def clear_device_log() -> dict:
+    from ..device import device_log as dl
+    dl.clear()
+    return {"ok": True}
+
+
 @router.get("/api/firmware-catalog")
 async def firmware_catalog() -> dict:
     """Firmware versions bundled/known to OpenFlow, for the Software page's firmware list."""

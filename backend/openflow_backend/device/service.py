@@ -202,19 +202,21 @@ class DeviceService:
             return False
 
     def _transport_for(self, port: str, dest: int) -> SerialTransport:
+        # The CACHE holds the real transport; the caller gets it wrapped in a LoggingTransport so
+        # every send is recorded (device_log). Wrapping on return, not in the cache, keeps the
+        # cached identity and the liveness check operating on the real handle.
+        from .device_log import LoggingTransport
         t = self._transports.get(port)
-        if t is not None and t.is_connected and self._alive(t):
-            return t
-        # (Re)connect.
-        if t is not None:
-            try:
-                t.disconnect()
-            except Exception:
-                pass
-        t = SerialTransport(port, dest)
-        t.connect()  # performs the mandatory CDC handshake
-        self._transports[port] = t
-        return t
+        if not (t is not None and t.is_connected and self._alive(t)):
+            if t is not None:
+                try:
+                    t.disconnect()
+                except Exception:
+                    pass
+            t = SerialTransport(port, dest)
+            t.connect()  # performs the mandatory CDC handshake
+            self._transports[port] = t
+        return LoggingTransport(t, port)
 
     def _drop(self, port: str) -> None:
         t = self._transports.pop(port, None)
