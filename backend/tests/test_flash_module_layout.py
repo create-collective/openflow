@@ -469,7 +469,15 @@ def test_ticks_per_rotation_is_written_as_degrees_per_detent():
     assert MF.setting_from_wire("ticks_per_rotation", 0) is None, "0 degrees means nothing"
     assert MF.setting_roundtrip("ticks_per_rotation", 100) == 90, "100 is not representable; 90 is"
     assert MF.setting_roundtrip("scroll_speed", 100) == 100, "identity for a plain byte"
-    print("  ticks per rotation -> degrees per detent, 360 / n, rounded")
+    # The slider offers only the counts a whole-degree byte can hold, each stable on a
+    # write-then-read; 100 is not one of them, 90 and 120 are, 180 (byte 2) is the ceiling.
+    steps = MF.setting_steps("ticks_per_rotation", 5, 180)
+    assert steps[0] == 5 and steps[-1] == 180 and 72 in steps and 90 in steps and 120 in steps
+    assert 100 not in steps and 170 not in steps
+    assert all(MF.setting_roundtrip("ticks_per_rotation", s) == s for s in steps)
+    assert steps == sorted(set(steps))
+    assert MF.setting_steps("scroll_speed", 1, 100) is None, "a plain byte has no step list"
+    print("  ticks per rotation -> degrees per detent, 360 / n, rounded; slider steps published")
 
 
 def test_a_garbage_setting_value_cannot_corrupt_a_field():

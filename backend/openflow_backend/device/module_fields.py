@@ -318,6 +318,23 @@ def setting_from_wire(setting_id: str, byte: int):
     return round(turn / byte) if byte > 0 else None
 
 
+def setting_steps(setting_id: str, lo: int, hi: int):
+    """The app values a degree-per-detent setting can actually hold between lo and hi, in
+    order: every count some whole-degree byte decodes to that also encodes back to the same
+    byte. None for a setting whose byte IS the app value. The UI snaps its slider to this
+    list so the number shown is the number the dial does (360 / whole degrees: ... 33, 36,
+    40, 45, 51, 60, 72, 90, 120, 180)."""
+    turn = DEGREES_PER_TURN.get(setting_id)
+    if turn is None:
+        return None
+    out = set()
+    for byte in range(1, 256):
+        v = setting_from_wire(setting_id, byte)
+        if v is not None and lo <= v <= hi and setting_roundtrip(setting_id, v) == v:
+            out.add(v)
+    return sorted(out)
+
+
 def setting_roundtrip(setting_id: str, value):
     """What the device holds after `value` is written and read back, in app units: the value
     itself for most settings; for a degree-per-detent one the nearest count the dial can do

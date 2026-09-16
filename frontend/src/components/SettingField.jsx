@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 // One setting control, shared by the Settings page and the Modules settings tab.
 //
 // The Modules tab carried an inlined copy of this: same markup, duplicated, supporting only
@@ -24,10 +26,35 @@ const PROVENANCE = {
   },
 };
 
+// A setting the device stores in another unit can only hold some values; the backend sends
+// them as `steps` (ticks per rotation: 360 / whole degrees, so 72, 90, 120, 180 but not 100).
+// The slider walks that list and the number box settles on the nearest entry when it loses
+// focus, so the number shown is always one the dial actually does.
+function nearestStep(steps, v) {
+  return steps.reduce((best, s) => (Math.abs(s - v) < Math.abs(best - v) ? s : best), steps[0]);
+}
+
 export default function SettingField({ f, onChange }) {
   // Toggles were excluded here, so led_scan_mode and tray_battery could never be reset.
   const changed = f.default !== undefined && f.value !== f.default;
   const prov = PROVENANCE[f.provenance];
+  const steps = Array.isArray(f.steps) && f.steps.length > 1 ? f.steps : null;
+  // The number box keeps what you are typing to itself until you leave it (blur or Enter).
+  // Committing on every keystroke had two faults: the clamp ran on the partial number, so
+  // in a field with a minimum of 5 the "1" of "100" became 5 and the rest piled onto it;
+  // and the Modules page saves and reloads on each change, which raced the next keystroke
+  // and dropped it. One commit per edit: clamp to the range, snap to a step if there are
+  // steps, then hand the value up once.
+  const [draft, setDraft] = useState(null);
+  const commitDraft = () => {
+    if (draft === null) return;
+    const n = Number(draft);
+    setDraft(null);
+    if (draft.trim() === "" || !Number.isFinite(n)) return;   // nothing typed: keep the value
+    let v = Math.min(f.max, Math.max(f.min, n));
+    if (steps) v = nearestStep(steps, v);
+    if (v !== f.value) onChange(f.id, v);
+  };
   // A setting that has no home yet in the browser dev build -- the system-tray battery needs the
   // Electron shell. Shown, but inert and labelled, rather than offering a switch that does nothing.
   if (f.deferred) {
@@ -69,16 +96,28 @@ export default function SettingField({ f, onChange }) {
             // is 0-6000 across ~600px, so one pixel is ten seconds and the exact value you want
             // is unreachable by dragging.
             <input type="number" className="mac-input setting-num"
-              min={f.min} max={f.max} value={f.value}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (Number.isFinite(n)) onChange(f.id, Math.min(f.max, Math.max(f.min, n)));
-              }} />
+              min={f.min} max={f.max} value={draft ?? f.value}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitDraft}
+              onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+              title={steps ? `The dial can do: ${steps.join(", ")}` : undefined} />
           )}
         </div>
       </div>
       <div className="setting-desc">{f.desc}</div>
-      {f.kind === "slider" && (
+      {f.kind === "slider" && steps && (
+        <div className="setting-slider">
+          <span className="setting-bound">{steps[0]}{f.unit}</span>
+          <input
+            type="range" min={0} max={steps.length - 1}
+            value={steps.indexOf(nearestStep(steps, Number(f.value)))}
+            onChange={(e) => onChange(f.id, steps[Number(e.target.value)])}
+            title={`${f.value} ticks per turn = one every ${(360 / Number(f.value)).toFixed(1)} degrees`}
+          />
+          <span className="setting-bound">{steps[steps.length - 1]}{f.unit}</span>
+        </div>
+      )}
+      {f.kind === "slider" && !steps && (
         <div className="setting-slider">
           <span className="setting-bound">{f.min}{f.unit}</span>
           <input

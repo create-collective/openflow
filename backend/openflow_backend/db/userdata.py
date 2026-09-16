@@ -507,10 +507,13 @@ SETTINGS_SCHEMA = {
     "TOUCH": _COMMON_POINTER,
     "TRACK": _COMMON_POINTER,
     "TUNE": _COMMON_POINTER + [
+        # NayaFlow's slider stops at 170, which its own rounding turns into the byte 2, i.e.
+        # 180 detents; the ceiling here is that representable value. The UI gets `steps`, the
+        # counts a whole-degree byte can hold, and snaps to them (module_fields.setting_steps).
         {"id": "ticks_per_rotation", "label": "Ticks Per Rotation",
-         "desc": "Number of tactile feedback ticks per full rotation (rounded to what the dial "
-                 "can do: the module stores whole degrees per tick, 360 / ticks)",
-         "kind": "slider", "min": 5, "max": 170, "default": 72},
+         "desc": "Number of tactile feedback ticks per full rotation. The dial stores whole "
+                 "degrees per tick (360 / ticks), so the slider offers the counts it can do.",
+         "kind": "slider", "min": 5, "max": 180, "default": 72},
         {"id": "tick_strength", "label": "Set Tick Strength",
          "desc": "Adjust the tactile feedback strength of crown ticks", "kind": "slider",
          "min": 0, "max": 100, "default": 75},
@@ -771,8 +774,15 @@ def get_modules() -> dict:
                 # Say which sliders actually reach the keyboard. Every one of them used to
                 # look applied; the ones we cannot place a field for still do not write, and
                 # the UI should admit that rather than imply otherwise.
-                settings_schema.append({**f, "value": cur,
-                                        "writable": module_fields.setting_is_writable(m["type"], f["id"])})
+                entry = {**f, "value": cur,
+                         "writable": module_fields.setting_is_writable(m["type"], f["id"])}
+                if f["kind"] == "slider":
+                    # A setting stored in a different unit on the wire can only hold some
+                    # values; publish them so the slider walks that list, not 1..n.
+                    steps = module_fields.setting_steps(f["id"], f["min"], f["max"])
+                    if steps:
+                        entry["steps"] = steps
+                settings_schema.append(entry)
             halves = module_fields.splittable_axes(m["type"])
             axes = []
             for gesture, spec in halves.items():   # already in display order
