@@ -67,6 +67,23 @@ def list_types(list_hex) -> dict:
     return {e["slot"]: by_code[e["flag"]] for e in entries if e["flag"] in by_code}
 
 
+# The bays the FIRST layer must arm. Layer 0 is where a module profile is pulled to both sides
+# of the board (so a module can be moved between bays) and every other layer inherits it unless
+# it arms a different profile of that type itself. A gap on layer 0 leaves that module
+# unconfigured on the keyboard: it runs its own animation and answers no gesture. Owner's rule,
+# 2026-09-16 (SCRUM-61). Float is not a module anyone owns, so it is not required.
+REQUIRED_BASE_BAYS = ("touch:keyboard_left", "touch:keyboard_right",
+                      "track:keyboard_left", "track:keyboard_right",
+                      "tune:keyboard_left", "tune:keyboard_right")
+
+
+def missing_base_bays(base_bays: dict) -> list[str]:
+    """The required bays the first layer leaves unarmed: neither a profile nor an explicit
+    "disabled". "transparent" is a gap here too -- there is nothing above layer 0 to inherit."""
+    return [loc for loc in REQUIRED_BASE_BAYS
+            if (base_bays or {}).get(loc) in (None, "", "transparent")]
+
+
 def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
          captured_from=None):
     """Work out the module layout to flash.

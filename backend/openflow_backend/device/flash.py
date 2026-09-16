@@ -1119,6 +1119,9 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
     base_order = min(order_of.values()) if order_of else 0
     layout = ml.plan(bays_by_layer, types, device_list, device_slots, base_order=base_order,
                      captured_from=captured_from)
+    # Reported, not enforced here: the preview shows the gaps and the flash route refuses them
+    # unless told otherwise, so a dry run can still describe a profile that is not ready.
+    layout["baseBayGaps"] = ml.missing_base_bays(bays_by_layer.get(base_order, {}))
 
     # The bay byte lives in the record's TYPE field with an empty param -- 014c0500 is
     # layer 1, position 0x4c, type 05 (slot 5), length 0.

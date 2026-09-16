@@ -64,6 +64,14 @@ export default function FlashButton({ variant = "sidebar" }) {
   // tools/check-undefined.mjs only looks at hooks and components, which is why it passed.
   const [dropped, setDropped] = useState([]);
   const readOk = hasReadDevice();
+  // Bays the first layer leaves unset. Layer 0 is where a module profile is pulled to both
+  // sides and every other layer inherits from; a gap there leaves that module unconfigured on
+  // the keyboard, so Confirm is off until it is filled (the route refuses it too).
+  const bayGaps = preview?.baseBayGaps || [];
+  const bayGapName = (loc) => {
+    const [type, side] = loc.split(":");
+    return `${type.charAt(0).toUpperCase() + type.slice(1)}, ${(side || "").replace("keyboard_", "")} bay`;
+  };
 
   // The dialog reports the result, but it gets closed. A flash is slow, irreversible and easy
   // to be unsure about, so the button carries the answer for a few seconds afterwards too.
@@ -254,6 +262,20 @@ export default function FlashButton({ variant = "sidebar" }) {
               </div>
             )}
 
+            {state === "preview" && bayGaps.length > 0 && (
+              <div className="phase-note flash-dropped">
+                <strong>
+                  Layer 0 leaves {bayGaps.length} module bay{bayGaps.length === 1 ? "" : "s"} unset:{" "}
+                  {bayGaps.map(bayGapName).join(", ")}
+                </strong>
+                <div>
+                  The first layer must choose a profile (or "disabled") for every module type on
+                  both sides; the other layers inherit it. A module with nothing on layer 0 runs
+                  unconfigured. Pick one on the Bindings board, then preview again.
+                </div>
+              </div>
+            )}
+
             {!readOk && !recovery && (
               <div className="phase-note">
                 Read the keyboard first (Bindings → Read from keyboard). Flashing without it
@@ -320,9 +342,11 @@ export default function FlashButton({ variant = "sidebar" }) {
                 <button
                   className="btn-primary"
                   onClick={confirmFlash}
-                  disabled={state === "writing" || (!readOk && !recovery)}
+                  disabled={state === "writing" || (!readOk && !recovery) || bayGaps.length > 0}
                   title={
-                    recovery
+                    bayGaps.length > 0
+                      ? "Layer 0 leaves a module bay unset; fill it on the Bindings board first"
+                      : recovery
                       ? "Overwrites the keyboard without reading it first"
                       : readOk
                       ? "Writes this profile to the keyboard, then reads it back to verify"

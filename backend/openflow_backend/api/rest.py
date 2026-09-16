@@ -404,16 +404,45 @@ async def read_keyboard(body: dict = Body(default={})) -> dict:
             pass    # a keymap read is still worth having if the module list is unreadable
     except TransportError as e:
         raise HTTPException(status_code=503, detail=str(e))
-    out = await run_in_threadpool(kmi.import_read, read, body.get("name"), slot_uuid)
-    # Report which module profiles the board carries, so reading from the Bindings page
-    # populates the same shared device state that reading from the Modules page does.
-    # The list is already in hand -- this costs no extra device round-trip.
+    # Resolve (and capture) the board's module slots BEFORE the keymap import binds the bays.
+    # Until 2026-09-16 the import ran first and recorded a bay only when the slot's uuid was
+    # already a config id, and the capture came after -- so a slot the app knew only by content
+    # (every NayaFlow-written slot, or one this very read captures) lost its bays, and layer 0
+    # came back with no Touch profile at all (SCRUM-61). Now the bay binds to the config the
+    # slot MATCHES, capture included, and the repoint below is only a safety net.
+    diff, slot_cfg = None, slot_uuid
     if mod_read is not None:
         try:
-            out.update(await run_in_threadpool(_module_diff, mod_read,
-                                               out.get("profileId")))
+            diff = await run_in_threadpool(_module_diff, mod_read, None)
+            slot_cfg = _slot_config_map(diff["modules"], mod_read.get("by_uuid")) or slot_uuid
         except Exception:
-            pass    # the keymap import is the payload that matters
+            diff = None    # the keymap import is the payload that matters
+    out = await run_in_threadpool(kmi.import_read, read, body.get("name"), slot_cfg)
+    # Report which module profiles the board carries, so reading from the Bindings page
+    # populates the same shared device state that reading from the Modules page does.
+    if diff is not None:
+        try:
+            repointed = await run_in_threadpool(
+                mprof.repoint_bays,
+                [(e.get("uuid"), e.get("matched")) for e in diff["modules"]],
+                out.get("profileId"))
+            out.update({**diff, "repointedBays": repointed})
+        except Exception:
+            pass
+    return out
+
+
+def _slot_config_map(entries: list, by_uuid: dict | None) -> dict:
+    """{device slot: app config id} for the keymap import to bind bays with: the config each
+    slot MATCHES by content (a capture the same read just minted, or a stock profile a
+    NayaFlow-written slot happens to equal), else the slot's own uuid for a slot whose uuid is
+    itself an app config. A bay names a slot; this is what turns the slot into a profile."""
+    slots = dict(by_uuid or {})
+    out = {}
+    for e in entries or []:
+        u = e.get("uuid")
+        if u in slots:
+            out[slots[u]] = e.get("matched") or u
     return out
 
 
@@ -1543,6 +1572,8 @@ def _flash_preview(profile_id: str | None = None, side: str = "left") -> dict:
     out = flash_mod.flash(desired, dry_run=True, full=True)
     out["profileId"] = desired.profile_id
     out["modules"] = _layout_summary(layout)
+    # Bays the first layer leaves unarmed. The UI blocks Confirm on these (SCRUM-61).
+    out["baseBayGaps"] = list((layout or {}).get("baseBayGaps") or [])
     # What removing the unreferenced slots WOULD do, reported but never done here. The preview
     # is how the user finds out these exist at all: an orphan is invisible otherwise, and slot 5
     # on the reference board has sat there unreferenced for weeks reading back as "unknown".
@@ -1645,6 +1676,14 @@ async def flash_write(body: dict = Body(default={})) -> dict:
                       if mod_read is not None else None)
         finally:
             conn.close()
+        # The first layer must arm every module bay (a profile or "disabled"); a gap leaves that
+        # module unconfigured on the board. Refused unless the caller says it knows (SCRUM-61).
+        gaps = list((layout or {}).get("baseBayGaps") or [])
+        if gaps and body.get("allowBaseBayGaps") is not True:
+            raise HTTPException(status_code=400, detail=(
+                "the first layer leaves module bays unset: " + ", ".join(gaps)
+                + ". Pick a profile (or 'disabled') for each on the Bindings board, or pass "
+                  "allowBaseBayGaps=true to flash anyway."))
 
         dev = svc._require_side(side)
         dest = svc._dest_for_side(dev.side)
