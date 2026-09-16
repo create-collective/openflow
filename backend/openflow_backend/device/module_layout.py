@@ -128,22 +128,31 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
             slot_for[cid] = existing[src]
 
     # Allocate the lowest free index for profiles the board does not carry yet. Slot 0 is the
-    # blank template, so allocation starts at 1.
+    # blank template, so allocation starts at 1. When no index is free, a slot holding a
+    # profile THIS keyboard profile does not reference is reused: the flash overwrites it and
+    # the list names the new profile there. That is the garbage collection a full board needs,
+    # done exactly as far as needed and reported as `reclaimed`; the slots left over are the
+    # orphans the preview still offers to remove. What is on the board must never block a
+    # flash of what the user chose (owner, 2026-09-16). The only refusal is more DISTINCT
+    # module profiles than the store holds, since nothing can fit those.
     taken = set(existing.values()) | set(slot_for.values())
-    allocated = []
+    free = [n for n in range(1, MAX_MODULE_SLOTS) if n not in taken]
+    orphan_slots = sorted(s for u, s in existing.items()
+                          if u not in referenced and s not in slot_for.values()
+                          and 1 <= s < MAX_MODULE_SLOTS)
+    allocated, reclaimed = [], {}
     for cid in sorted(referenced - set(slot_for)):
-        n = 1
-        while n in taken:
-            n += 1
-        if n >= MAX_MODULE_SLOTS:
-            need = len(referenced - set(slot_for))
+        if free:
+            n = free.pop(0)
+        elif orphan_slots:
+            n = orphan_slots.pop(0)
+            reclaimed[n] = next(u for u, s in existing.items() if s == n)
+        else:
             raise ValueError(
-                f"no free module slot for {need} more module profile(s): the board's module "
-                f"store is read as slots 1-{MAX_MODULE_SLOTS - 1} and they are taken. Remove "
-                "unused slots from the keyboard (the flash preview offers it) or arm fewer "
-                "distinct module profiles on this keyboard profile.")
+                f"this keyboard profile arms {len(referenced)} distinct module profiles across "
+                f"its layers, but the keyboard's module store holds {MAX_MODULE_SLOTS - 1} "
+                f"(slots 1-{MAX_MODULE_SLOTS - 1}). Arm fewer distinct module profiles.")
         slot_for[cid] = n
-        taken.add(n)
         allocated.append(cid)
 
     # Every referenced profile is templated, not just newly placed ones.
@@ -189,7 +198,10 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
 
     return {"slot_for": slot_for, "list_entries": list_entries, "templates": templates,
             "bays": _bays(bays_by_layer, base, slot_for, base_order), "allocated": allocated,
-            "claimed": claimed, "kept": kept}
+            "claimed": claimed, "kept": kept,
+            # {slot: uuid it held}: slots taken over from profiles this keyboard profile does
+            # not reference, because no index was free.
+            "reclaimed": reclaimed}
 
 
 def _bays(bays_by_layer, base, slot_for, base_order):

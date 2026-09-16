@@ -204,6 +204,14 @@ export default function FlashButton({ variant = "sidebar" }) {
                   )}
                   {g.wipes > 0 && <li><b>{g.wipes}</b> deleted-layer wipe{g.wipes === 1 ? "" : "s"}</li>}
                   {g.modules > 0 && <li><b>{g.modules}</b> module config{g.modules === 1 ? "" : "s"}</li>}
+                  {/* A full module store is garbage-collected as far as needed: a slot holding a
+                      profile this keyboard profile does not reference is written over. Said out
+                      loud, because the profile it held is gone from the board afterwards. */}
+                  {preview?.modules?.reclaimed?.length > 0 && (
+                    <li title="No free module slot was left, so a slot holding a module profile this keyboard profile does not use is written over.">
+                      reusing {preview.modules.reclaimed.map((r) => `slot ${r.slot} (was ${r.was})`).join(", ")}
+                    </li>
+                  )}
                   {g.timeouts > 0 && <li>timeouts</li>}
                   <li className="flash-diff-tot">
                     {s.total_frames} frames · {s.total_bytes} bytes → {s.dest}

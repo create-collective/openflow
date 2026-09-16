@@ -1612,11 +1612,15 @@ def _layout_summary(layout) -> dict | None:
         names = {r["id"]: r["name"] for r in conn.execute("SELECT id, name FROM module_configs")}
     finally:
         conn.close()
+    reclaimed = layout.get("reclaimed") or {}
     return {"available": True,
             "slots": [{"slot": slot, "id": cid, "name": names.get(cid, cid),
-                       "new": cid in layout["allocated"]}
+                       "new": cid in layout["allocated"],
+                       # The profile this slot held until now, when it is being reused.
+                       "replaces": names.get(reclaimed[slot], reclaimed[slot]) if slot in reclaimed else None}
                       for cid, slot in sorted(layout["slot_for"].items(), key=lambda x: x[1])],
-            "added": len(layout["allocated"])}
+            "added": len(layout["allocated"]),
+            "reclaimed": [{"slot": s, "was": names.get(u, u)} for s, u in sorted(reclaimed.items())]}
 
 
 @router.post("/rpc/flash")
