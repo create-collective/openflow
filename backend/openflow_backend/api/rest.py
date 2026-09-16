@@ -260,6 +260,47 @@ async def module_firmware_file(side: str = "left") -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/api/pairing-repair/plan")
+async def pairing_repair_plan() -> dict:
+    """The guided split-link repair, planned against a fresh deep read of both halves: what would
+    be stored before anything is cleared, every step with its exact frame, the arm token, and a
+    refusal instead when the halves are not in a state the sequence accepts. Reads only."""
+    from ..device import pairing_repair as pr
+    svc = get_service()
+    halves = await run_in_threadpool(svc.status_all, True)
+    try:
+        return pr.plan(halves).public()
+    except pr.PairingRefused as e:
+        return {"refused": str(e), "enabled": pr.PAIRING_REPAIR_ENABLED}
+
+
+@router.post("/rpc/pairing-repair")
+async def pairing_repair_run(body: dict = Body(...)) -> dict:
+    """Run the guided repair. WIRED BUT DISABLED (pairing_repair.PAIRING_REPAIR_ENABLED ships
+    False) and, underneath, every op it sends is a disabled recovery op; `arm` must be the token
+    of a plan made against the halves' current addresses, and `force` is required because the
+    sequence drops every Bluetooth bond on both halves."""
+    from ..device import pairing_repair as pr
+    svc = get_service()
+    halves = await run_in_threadpool(svc.status_all, True)
+    try:
+        p = pr.plan(halves)
+        return await run_in_threadpool(pr.execute, svc, p, arm=body.get("arm", ""),
+                                       force=bool(body.get("force", False)))
+    except (pr.PairingRefused, CommandError, TransportError, ValueError, KeyError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/pairing-repair/verify")
+async def pairing_repair_verify() -> dict:
+    """The check that follows the repair (and works on its own): both halves read deep, each
+    one's pair address compared with the other's own address, and the split link's state."""
+    from ..device import pairing_repair as pr
+    svc = get_service()
+    halves = await run_in_threadpool(svc.status_all, True)
+    return pr.verify(halves)
+
+
 @router.get("/api/recovery-ops")
 async def recovery_ops_list() -> dict:
     """The recovery/troubleshooting procedures for the UI: label, danger, whether enabled, and the

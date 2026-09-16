@@ -50,6 +50,7 @@ export default function Settings() {
   const [devlog, setDevlog] = useState([]);
   const [logmeta, setLogmeta] = useState({});
   const [recovery, setRecovery] = useState([]);
+  const [pairPlan, setPairPlan] = useState(null);
   const [out, setOut] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -233,6 +234,47 @@ export default function Settings() {
                       </div>
                     );
                   })}
+                  <h3 style={{ marginTop: 26 }}>Guided split-link repair</h3>
+                  <p className="page-sub" style={{ marginBottom: 12 }}>
+                    NayaFlow's pairing operation as one reviewed sequence: both halves' addresses are
+                    stored <strong>before</strong> anything is cleared, each half is pointed at the
+                    other, the old links and bonds are dropped, both halves restart, and the link is
+                    verified. Planning only reads. Running is wired but <strong>disabled</strong>
+                    until it is watched on a spare pair, and it forgets every Bluetooth host on both
+                    halves.
+                  </p>
+                  <div className="setting">
+                    <div className="setting-head">
+                      <strong>Plan the repair</strong>
+                      <div className="setting-ctl">
+                        <button className="btn" disabled={busy || !connected}
+                          onClick={() => run("Pairing repair plan", () => api.pairingRepairPlan().then((p) => { setPairPlan(p); return p; }))}>Plan</button>
+                        <button className="btn" disabled={busy || !connected} style={{ marginLeft: 6 }}
+                          onClick={() => run("Pairing verify", () => api.pairingRepairVerify())}>Verify link</button>
+                        <button className="btn danger" disabled title="Wired, enabled after testing on a spare pair" style={{ marginLeft: 6 }}>Run (disabled)</button>
+                      </div>
+                    </div>
+                    <div className="setting-desc">
+                      {!pairPlan && <>Reads both halves and lists every step with its exact command. Nothing is sent.</>}
+                      {pairPlan?.refused && <>Refused: {pairPlan.refused}</>}
+                      {pairPlan?.steps && (
+                        <ol style={{ margin: "6px 0 0 18px", padding: 0 }}>
+                          {pairPlan.steps.map((s, i) => (
+                            <li key={i} style={{ marginBottom: 2 }}>
+                              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{s.name}</span>
+                              {s.side ? ` (${s.side})` : ""} — {s.detail}
+                              {s.command && <span className="devlog-detail" style={{ display: "block", opacity: 0.5, fontFamily: "var(--font-mono)", fontSize: 11 }}>{s.command}</span>}
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                      {pairPlan?.record && (
+                        <span className="devlog-detail" style={{ display: "block", opacity: 0.6, fontFamily: "var(--font-mono)", fontSize: 11, marginTop: 6 }}>
+                          would store: left {pairPlan.record.left.bleAddress} (paired to {pairPlan.record.left.pairAddress || "nothing"}), right {pairPlan.record.right.bleAddress} (paired to {pairPlan.record.right.pairAddress || "nothing"}) · arm {pairPlan.armToken}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   {out && <pre className="settings-out">{out}</pre>}
                 </div>
               )}
