@@ -1,6 +1,7 @@
 > **Superseded by [`docs/backlog.md`](../../docs/backlog.md) (2026-09-08).**
 > Kept for history only. Several items below shipped: the REMAP flash codec,
-> module gesture-binding editing, and richer macros.
+> module gesture-binding editing, and richer macros. The items still open were
+> imported into Jira on 2026-09-16 (project SCRUM); their keys are marked below.
 
 # OpenFlow backlog
 
@@ -20,7 +21,7 @@ keyboard + firmware dump.
   before trusting them (`naya-remap-notes.md` checklist).
 
 ## Features (buildable now, device-independent)
-- **Smart Integrations** — auto profile switching by detecting the active
+- **Smart Integrations** [SCRUM-30] — auto profile switching by detecting the active
   application (Naya advertised this "coming soon"; Dygma-style). Needs an OS
   foreground-app watcher in the Electron main + a per-app→profile mapping. Good
   candidate once profiles are solid (they now are).
@@ -28,16 +29,16 @@ keyboard + firmware dump.
   make the gesture→action rows editable (settings already are).
 - **Richer macros** — mouse/loop step types, "open a program" (really an OS
   shortcut macro, since the keyboard only sends keystrokes), true drag-reorder.
-- **Module-slot assignment persistence** — currently localStorage; move to the DB
+- **Module-slot assignment persistence** [SCRUM-34] — currently localStorage; move to the DB
   `module_config_bindings` table when device sync lands.
-- **Shortcut icons** — replace the combo glyphs with a real icon set mapped to
+- **Shortcut icons** [SCRUM-32] — replace the combo glyphs with a real icon set mapped to
   upstream Material Symbols (clean-room), matching NayaFlow's look.
-- **Tune dial** — clockwise/counter-clockwise as separate actions + making the
+- **Tune dial** [SCRUM-33] — clockwise/counter-clockwise as separate actions + making the
   dial's Volume Control rebindable (Naya firmware-gated it).
-- **Profile/layer import v2** — include module configs + LED maps in the export
+- **Profile/layer import v2** [SCRUM-31] — include module configs + LED maps in the export
   (v1 covers layers, keys, bindings, and referenced macros).
 - **Board cosmetics** — angled/beveled keycaps to match NayaFlow more exactly.
 
 ## Naming / provenance
-- Clean-reskin follow-ups in `docs/asset-provenance.md` (branding, action icons,
+- [SCRUM-32] Clean-reskin follow-ups in `docs/asset-provenance.md` (branding, action icons,
   module display art) before any public release.
