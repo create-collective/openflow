@@ -532,17 +532,20 @@
 }
 
 /* Physical-geometry board (NayaFlow exact shapes) */
+/* The board: the module palette row above, then one canvas with every key, thumb, LED bar and
+   the module pocket at NayaFlow's measured coordinates (lib/boardgeom.js). Nothing in here
+   flows; the vendor's layout is reproduced by position, not re-derived by flexbox. */
 .keymap-board2 {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: 0;
   padding: 8px 0;
 }
 
-.kb-half {
-  display: flex;
-  align-items: flex-start;
+.kb-canvas {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .kc-legend {
@@ -595,50 +598,29 @@
   font-weight: 700;
 }
 
+/* The module palette row sits above the board, centred; its footprint is reserved in Colour
+   mode so both pages put the board at the same height. */
 .kb-center {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   align-items: center;
-  align-self: stretch;
-  min-width: 300px;
-  padding: 0 4px 8px;
+  margin-bottom: 6px;
 }
 
 .kb-palette-row {
   display: flex;
   gap: 14px;
-  margin-top: -40px; /* lift the draggable modules above the top plane of the halves */
 }
 
 .kb-palette-spacer {
   height: 46px; /* same footprint as the palette row (Color mode has no palette) */
 }
 
-.kb-slots {
-  display: flex;
-  gap: 0;
-  align-items: center;
-  margin-top: 78px; /* drop into the pocket, level with the G/B row (scaled with board) */
-}
-/* Push each active slot into its own half's inner-curve pocket (transform =
-   no reflow, so the center zone doesn't widen and shove the halves apart). */
-.kb-slots > .kb-module:first-child { transform: translateX(-82px); }
-.kb-slots > .kb-module:last-child  { transform: translateX(82px); }
-
-.kb-thumbs {
-  display: flex;
-  gap: 0;
-  padding-bottom: 6px;
-}
-/* Slide each thumb group toward its half — but leave NayaFlow's diagonal gap
-   between the 1u space and the B / 2u-space above it (don't cram it under B). */
-.kb-thumbs > .kb-thumb-group:first-child { transform: translateX(-64px); }
-.kb-thumbs > .kb-thumb-group:last-child  { transform: translateX(64px); }
-
-.kb-thumb-group {
-  display: flex;
-  gap: 4px;
+/* The two bays are positioned inline by KeymapBoard (bayPlacement) inside the pocket the
+   vendor's layout leaves between the 2u inner keys and above the thumb row. */
+.kb-slots > div > .kb-module {
+  width: 100%;
+  height: 100%;
 }
 
 .kb-key {

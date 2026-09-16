@@ -49,13 +49,18 @@ other Naya-original imagery until then.
 
 ## Keycap shapes (`frontend/src/lib/keyshapes.js`)
 
-The board's keycap silhouettes (and the per-column stagger geometry) are the exact
-values from NayaFlow's renderer — inline SVG `<path>` shapes indexed by position,
-plus the Tailwind column margins that produce the physical stagger. They depict the
-physical Naya Create keyboard's key outlines (a functional fact also derivable from
-the FCC teardown photos), but the specific path data is Naya-drawn. **Treat as
-hardware-shape depiction to confirm/redraw before public release** — same category
-as the module display art. The stagger geometry (column margins) is functional
+The board's keycap silhouettes are the exact values from NayaFlow's renderer — inline
+SVG `<path>` shapes indexed by position. They depict the physical Naya Create keyboard's
+key outlines (a functional fact also derivable from the FCC teardown photos), but the
+specific path data is Naya-drawn. **Treat as hardware-shape depiction to confirm/redraw
+before public release** — same category as the module display art.
+
+The PLACEMENT of every key, thumb, module slot and side LED bar (`frontend/src/lib/
+keygeometry.json`, a checked copy of `docs/reference/create-key-geometry.json`) was
+measured from NayaFlow's own rendered board (tools/export_key_geometry.js), not
+transcribed: since 2026-09-16 the board draws from those coordinates at one scale
+(`lib/boardgeom.js`), and `tools/board-parity.js` proves it in the browser (max deviation
+0.07 px; the earlier flexbox mirror drifted up to 60 px). Coordinates are functional
 layout fact and clean to keep.
 
 ## Open items

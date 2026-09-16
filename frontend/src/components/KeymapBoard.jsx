@@ -6,10 +6,7 @@ import { deviceColor } from "../lib/color";
 import LayersIcon from "./LayersIcon";
 import WindowsIcon from "./WindowsIcon";
 import { SHAPES, POS_SHAPE } from "../lib/keyshapes";
-import {
-  LEFT_COLS, RIGHT_COLS, KEY_WRAPPERS, LEFT_THUMBS, RIGHT_THUMBS,
-  LEFT_LEDS, RIGHT_LEDS, KEY_UNIT, REM,
-} from "../lib/boardgeom";
+import { boardLayout } from "../lib/boardgeom";
 
 // Track's left and right modules are physically different parts, not one module mirrored,
 // so each gets its own artwork. Touch and Tune are symmetric and use a single image.
@@ -42,9 +39,6 @@ function paletteType(key) {
   return key ? String(key).split(":")[0] : key;
 }
 
-const NORMAL_W = 44 * KEY_UNIT; // a plain keycap's width; columns are fixed to this
-                                // so wide/hex keys overflow toward center, not push neighbors
-
 // Pick a legible legend color for a keycap painted with an LED color: dark text
 // on bright keys, light text on dark ones (mirrors NayaFlow's LED view).
 function contrastText(hex) {
@@ -55,12 +49,12 @@ function contrastText(hex) {
   return lum > 0.6 ? "#0a0a0a" : "#f5f5f5";
 }
 
-// One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked,
-// with the resolved legend centered per-shape.
-function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, names }) {
+// One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked, with the
+// resolved legend centered per-shape, placed at the vendor's measured spot (`geom`, from
+// boardLayout: x/y/w/h in our pixels; the silhouette's viewBox is the same w/h before scaling).
+function KeyCap({ pos, geom, data, mode, selected, onSelectKey, layerMap, ledOutline, names }) {
   const shape = SHAPES[POS_SHAPE[pos]] || SHAPES.Ve;
-  const [, , vbw, vbh] = shape.viewBox.split(" ").map(Number);
-  const w = vbw * KEY_UNIT, h = vbh * KEY_UNIT;
+  const w = geom.w, h = geom.h;
   const legend = keyLegend(data?.binding, layerMap);
   // A key can carry four behaviours (tap / hold / double-tap / tap+hold) in two records.
   // The legend only shows the tap, so mark the cap when there is more than one.
@@ -86,16 +80,14 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, 
     : led ? led.hex
       : "var(--border-strong)";
   const strokeWidth = led && !selected ? 3.5 : 2;
-  const wrap = KEY_WRAPPERS[pos] || {};
   return (
     <button
       className="kc"
       title={`pos ${pos}`}
       onClick={() => onSelectKey(pos)}
       style={{
-        width: w, height: h, position: "relative", padding: 0, border: "none",
-        background: "none", cursor: "pointer",
-        marginTop: (wrap.pt || 0) * REM,
+        width: w, height: h, position: "absolute", left: geom.x, top: geom.y,
+        padding: 0, border: "none", background: "none", cursor: "pointer",
         filter: selected ? "drop-shadow(0 0 3px var(--accent))" : undefined,
       }}
     >
@@ -141,40 +133,29 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, 
   );
 }
 
-function Column({ col, align, ...kp }) {
-  // Fixed column width so wide (2u space) and hex keys overflow toward the center
-  // instead of pushing neighbours. Left half aligns keys to the outer (left) edge;
-  // right half to the outer (right) edge — mirroring NayaFlow.
+// One side (underglow) LED bar at the vendor's measured spot: NayaFlow's Colour view draws them
+// as 16 x 28.8 rounded rectangles down each outer edge.
+function LedBar({ led, keysByPosition, selectedPosition, onSelectKey }) {
+  const color = keysByPosition[led.pos]?.colorHex;
   return (
-    <div style={{
-      display: "flex", flexDirection: "column", gap: 0.1 * REM,
-      alignItems: align === "end" ? "flex-end" : "flex-start",
-      width: NORMAL_W, flexShrink: 0,
-      marginTop: (col.mt || 0) * REM, marginRight: (col.mr || 0) * REM, marginLeft: (col.ml || 0) * REM,
-    }}>
-      {col.keys.map((pos) => (
-        <KeyCap key={pos} pos={pos} data={kp.keysByPosition[pos]} mode={kp.mode} ledOutline={kp.ledOutline}
-          selected={kp.selectedPosition === pos} onSelectKey={kp.onSelectKey} layerMap={kp.layerMap} names={kp.names} />
-      ))}
-    </div>
+    <button className={"kb-led" + (selectedPosition === led.pos ? " selected" : "")}
+      title={`LED ${led.pos} (${led.side} edge)`} onClick={() => onSelectKey(led.pos)}
+      style={{ position: "absolute", left: led.x, top: led.y, width: led.w, height: led.h,
+               background: color || "var(--neutral20)" }} />
   );
 }
 
-function LedCol({ positions, keysByPosition, selectedPosition, onSelectKey }) {
-  // Side (underglow) LEDs — narrow indicators like NayaFlow's LED view; the
-  // 7-tall column is spaced to span the full height of the end key column.
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0.28 * REM, marginTop: 1.92 * REM, padding: "0 7px" }}>
-      {positions.map((pos) => {
-        const color = keysByPosition[pos]?.colorHex;
-        return (
-          <button key={pos} className={"kb-led" + (selectedPosition === pos ? " selected" : "")}
-            title={`LED ${pos}`} onClick={() => onSelectKey(pos)}
-            style={{ width: 1.2 * REM, height: 1.7 * REM, background: color || "var(--neutral20)" }} />
-        );
-      })}
-    </div>
-  );
+// OpenFlow's module pocket: the two round bays, larger than NayaFlow's 48 px slot icons and
+// carrying the docked module's picture, laid into the same box the vendor keeps free between
+// the 2u inner keys and above the thumb row (boardLayout().pocket). Bottom-aligned in it so
+// they sit level with the vendor's slots and clear the thumbs.
+const BAY_SIZE = 150;            // .kb-module width/height in editor.css
+const BAY_GAP = 6;
+function bayPlacement(pocket) {
+  const top = Math.max(0, pocket.y + pocket.h - BAY_SIZE - 4);
+  const size = Math.min(BAY_SIZE, Math.floor((pocket.w - BAY_GAP) / 2));
+  const left = pocket.x + (pocket.w - (2 * size + BAY_GAP)) / 2;
+  return { size, top, left: { left, top }, right: { left: left + size + BAY_GAP, top } };
 }
 
 function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosition, pickedModule, onAssignModule, onSelectModule, onSelectKey, moduleLed, onModuleLed }) {
@@ -233,16 +214,13 @@ export default function KeymapBoard(props) {
     allowModuleDrag = true, names = {},
   } = props;
   const [openBay, setOpenBay] = useState(null);
-  const kp = { keysByPosition, mode, selectedPosition, onSelectKey, layerMap, ledOutline, names };
+  const L = boardLayout(mode);
+  const bay = bayPlacement(L.pocket);
+  const slotStyle = (side) => ({ position: "absolute", left: bay[side].left, top: bay[side].top,
+                                 width: bay.size, height: bay.size });
 
   return (
     <div className="keymap-board2">
-      {mode === "color" && <LedCol positions={LEFT_LEDS} keysByPosition={keysByPosition} selectedPosition={selectedPosition} onSelectKey={onSelectKey} />}
-
-      <div className="kb-half">
-        {LEFT_COLS.map((col, i) => <Column key={i} col={col} align="start" {...kp} />)}
-      </div>
-
       <div className="kb-center">
         {showModulePalette ? (
           <div className="kb-palette-row">
@@ -287,25 +265,33 @@ export default function KeymapBoard(props) {
             ))}
           </div>
         ) : (
-          // No palette in Color mode — reserve its footprint so the slots still
-          // land in the pocket (not shoved to the top by space-between).
+          // No palette in Color mode -- reserve its footprint so the board sits at the same
+          // height on both pages.
           <div className="kb-palette-row kb-palette-spacer" aria-hidden="true" />
         )}
+      </div>
+
+      {/* The board itself: every key, thumb, LED bar and the module pocket at the vendor's
+          measured coordinates, one scale (lib/boardgeom.js). */}
+      <div className="kb-canvas" style={{ position: "relative", width: L.width, height: L.height }}>
+        {L.keys.map((k) => (
+          <KeyCap key={k.pos} pos={k.pos} geom={k} data={keysByPosition[k.pos]} mode={mode}
+            selected={selectedPosition === k.pos} onSelectKey={onSelectKey} layerMap={layerMap}
+            ledOutline={ledOutline} names={names} />
+        ))}
+        {L.leds.map((led) => (
+          <LedBar key={led.pos} led={led} keysByPosition={keysByPosition}
+            selectedPosition={selectedPosition} onSelectKey={onSelectKey} />
+        ))}
         <div className="kb-slots">
-          <ModuleSlot id="left" pos={88} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} moduleLed={moduleLed} onModuleLed={onModuleLed} />
-          <ModuleSlot id="right" pos={89} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} moduleLed={moduleLed} onModuleLed={onModuleLed} />
-        </div>
-        <div className="kb-thumbs">
-          <div className="kb-thumb-group">{LEFT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} ledOutline={ledOutline} names={names} />)}</div>
-          <div className="kb-thumb-group">{RIGHT_THUMBS.map((pos) => <KeyCap key={pos} pos={pos} data={keysByPosition[pos]} mode={mode} selected={selectedPosition === pos} onSelectKey={onSelectKey} layerMap={layerMap} ledOutline={ledOutline} names={names} />)}</div>
+          <div style={slotStyle("left")}>
+            <ModuleSlot id="left" pos={88} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} moduleLed={moduleLed} onModuleLed={onModuleLed} />
+          </div>
+          <div style={slotStyle("right")}>
+            <ModuleSlot id="right" pos={89} {...props} onSelectKey={onSelectKey} keysByPosition={keysByPosition} selectedPosition={selectedPosition} moduleLed={moduleLed} onModuleLed={onModuleLed} />
+          </div>
         </div>
       </div>
-
-      <div className="kb-half">
-        {RIGHT_COLS.map((col, i) => <Column key={i} col={col} align="end" {...kp} />)}
-      </div>
-
-      {mode === "color" && <LedCol positions={RIGHT_LEDS} keysByPosition={keysByPosition} selectedPosition={selectedPosition} onSelectKey={onSelectKey} />}
     </div>
   );
 }

@@ -7,9 +7,9 @@
   "license": "Apache-2.0",
   "scripts": {
     "dev": "vite",
-    "build": "node tools/check-undefined.mjs && vite build",
+    "build": "node tools/check-undefined.mjs && node tools/check-geometry.mjs && vite build",
     "preview": "vite preview",
-    "check": "node tools/check-undefined.mjs"
+    "check": "node tools/check-undefined.mjs && node tools/check-geometry.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
