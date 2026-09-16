@@ -75,6 +75,23 @@ def test_the_wrong_generation_is_refused(images):
         fw.plan(images / "kb_fwl_64.bin", CATALOG, state=state_ok())
 
 
+def test_the_pid_and_the_running_image_must_agree_on_side_and_generation(images):
+    """Two independent sources: the USB product id (NayaCore's table) and the catalogued hash of
+    the running image. A half whose descriptor says generation B while it runs a generation-A
+    image is a half nobody understands, and nothing is written to it."""
+    agree = state_ok()
+    agree.update({"pid": 0x006F, "pidSide": "left", "pidGeneration": "A"})
+    assert fw.plan(images / "kb_fwl.bin", CATALOG, state=agree).upload_image_id == 2
+    gen_b_pid = state_ok()
+    gen_b_pid.update({"pid": 0x106F, "pidSide": "left", "pidGeneration": "B"})
+    with pytest.raises(fw.UploadRefused, match="Two sources disagree"):
+        fw.plan(images / "kb_fwl.bin", CATALOG, state=gen_b_pid)
+    right_pid = state_ok()
+    right_pid.update({"pid": 0x00D3, "pidSide": "right", "pidGeneration": "A"})
+    with pytest.raises(fw.UploadRefused, match="Two sources disagree"):
+        fw.plan(images / "kb_fwl.bin", CATALOG, state=right_pid)
+
+
 def test_a_withheld_image_is_refused(images):
     with pytest.raises(fw.UploadRefused, match="withheld"):
         fw.plan(images / "win-NayaCore.exe-img0-sz304448.bin", CATALOG, state=state_ok())
@@ -496,6 +513,10 @@ def test_a_bundle_goes_through_the_left_half_only(bundle):
     with pytest.raises(fw.UploadRefused, match="LEFT"):
         fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(side="right"),
                               slot_info=MODULE_MAP)
+    lying = state_ok()                       # image says left, descriptor says right
+    lying.update({"pid": 0x00D3, "pidSide": "right", "pidGeneration": "A"})
+    with pytest.raises(fw.UploadRefused, match="Two sources disagree"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=lying, slot_info=MODULE_MAP)
 
 
 def test_a_bundle_and_a_keyboard_image_refuse_each_others_path(bundle, images):

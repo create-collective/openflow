@@ -315,7 +315,8 @@ async def status(verbose: bool = False) -> dict:
     # the page looks the same as if it were unplugged.
     stuck = recovery_mod.find_recovery_ports()
     if stuck:
-        out["recovery"] = [{"port": d.port, "description": d.description} for d in stuck]
+        out["recovery"] = [{"port": d.port, "description": d.description, "pid": d.pid,
+                            "side": d.side, "generation": d.generation} for d in stuck]
     # Only meaningful with the BLE block, which a plain read does not fetch.
     if verbose:
         out["pairing"] = pairing_report(halves)

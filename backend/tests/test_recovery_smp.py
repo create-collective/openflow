@@ -142,6 +142,36 @@ def test_a_known_image_is_named():
     assert got["identified"] and got["side"] == "left" and got["generation"] == "A", got
 
 
+# --- the product id table (NayaCore's setCreateFlashGenerationFromPid, both mac builds) ---- #
+
+def test_pid_info_decodes_side_mode_and_generation_the_way_nayacore_does():
+    assert rec.pid_info(0x0064) == {"pid": 0x0064, "side": "left", "mode": "app", "generation": "A"}
+    assert rec.pid_info(0x00C8) == {"pid": 0x00C8, "side": "right", "mode": "app", "generation": "A"}
+    assert rec.pid_info(0x006F) == {"pid": 0x006F, "side": "left", "mode": "mcuboot", "generation": "A"}
+    assert rec.pid_info(0x00D3)["side"] == "right" and rec.pid_info(0x00D3)["mode"] == "mcuboot"
+    assert rec.pid_info(0x007A)["mode"] == "dfu" and rec.pid_info(0x00DE)["mode"] == "dfu"
+    # bit 0x1000 is the flash generation; the family is unchanged
+    assert rec.pid_info(0x1064) == {"pid": 0x1064, "side": "left", "mode": "app", "generation": "B"}
+    assert rec.pid_info(0x10D3) == {"pid": 0x10D3, "side": "right", "mode": "mcuboot", "generation": "B"}
+    # outside the table: unknown, not guessed (the dongle 0x012C, a random pid, nothing)
+    assert rec.pid_info(0x012C) is None and rec.pid_info(0x0065) is None and rec.pid_info(None) is None
+
+
+def test_recovery_scan_sees_either_half_and_either_generation(monkeypatch):
+    """Before the table only 0x006F (left, gen A) was looked for; a right half in its bootloader
+    was invisible, which is the one moment it most needs to be seen."""
+    class P:
+        def __init__(self, device, vid, pid):
+            self.device, self.vid, self.pid, self.description, self.serial_number = device, vid, pid, "", None
+    ports = [P("COM4", 0x37D1, 0x006F), P("COM7", 0x37D1, 0x00D3), P("COM8", 0x37D1, 0x10D3),
+             P("COM6", 0x37D1, 0x0064), P("COM3", 0x35EF, 0x0012), P("COM11", 0x37D1, 0x012C)]
+    monkeypatch.setattr(rec, "comports", lambda: ports)
+    got = rec.find_recovery_ports()
+    assert [(d.port, d.side, d.generation) for d in got] == [
+        ("COM4", "left", "A"), ("COM7", "right", "A"), ("COM8", "right", "B")]
+    assert rec.RECOVERY_PID in rec.RECOVERY_PIDS and len(rec.RECOVERY_PIDS) == 4
+
+
 def test_slot_info_is_an_image_group_read_with_id_6_and_is_normalised(monkeypatch):
     """`image slot info` (MCUboot IMGMGR_NMGR_ID_SLOT_INFO = 6) is the read that says how uploads
     are addressed; its answer is flattened to one row per slot with the device's upload id."""

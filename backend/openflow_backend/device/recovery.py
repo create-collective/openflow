@@ -30,9 +30,37 @@ from dataclasses import dataclass, field
 from serial.tools.list_ports import comports
 
 NAYA_VID = 0x37D1
-# Confirmed live 2026-09-01: entering MCUboot re-enumerates as this PID with TWO CDC ports, a
-# data port and a log port. Which is which is not labelled, so both are tried.
-RECOVERY_PID = 0x006F
+# THE PRODUCT ID LAYOUT, from NayaCore 6.11.0's Naya_Device::setCreateFlashGenerationFromPid
+# (both macOS builds disassembled 2026-09-16): it masks the pid with 0xEFFF and accepts two
+# families of three, then reads bit 0x1000 as the flash generation.
+#     pid & 0xEFFF   left: 0x064 app, 0x06F MCUboot, 0x07A DFU
+#                    right: 0x0C8 app, 0x0D3 MCUboot, 0x0DE DFU
+#     pid & 0x1000   clear = generation A, set = generation B
+# Confirmed on the owner's board: 0x0064 left app, 0x00C8 right app, 0x006F left in MCUboot with
+# TWO CDC ports (a data port and a log port, not labelled, so both are tried). The right half in
+# MCUboot (0x00D3), the DFU members and every generation-B value are NayaCore's table, not yet
+# seen on hardware. Before this table only 0x006F was looked for, so a right half sitting in its
+# bootloader was invisible.
+PID_GEN_B_BIT = 0x1000
+PID_FAMILY = {
+    0x064: ("left", "app"), 0x06F: ("left", "mcuboot"), 0x07A: ("left", "dfu"),
+    0x0C8: ("right", "app"), 0x0D3: ("right", "mcuboot"), 0x0DE: ("right", "dfu"),
+}
+RECOVERY_PIDS = frozenset(base | gen for base, (_s, mode) in PID_FAMILY.items()
+                          if mode == "mcuboot" for gen in (0, PID_GEN_B_BIT))
+RECOVERY_PID = 0x006F          # the left, generation-A value; kept for callers that name it
+
+
+def pid_info(pid: int | None) -> dict | None:
+    """What a Naya product id says: side, mode (app | mcuboot | dfu) and flash generation. None
+    for a pid outside NayaCore's own table -- reported as unknown, never guessed."""
+    if pid is None:
+        return None
+    fam = PID_FAMILY.get(pid & ~PID_GEN_B_BIT)
+    if fam is None:
+        return None
+    return {"pid": pid, "side": fam[0], "mode": fam[1],
+            "generation": "B" if pid & PID_GEN_B_BIT else "A"}
 
 # SMP (Simple Management Protocol) over the console transport.
 SMP_OP_READ = 0
@@ -54,15 +82,22 @@ class RecoveryDevice:
     port: str
     description: str = ""
     serial_number: str | None = None
+    pid: int | None = None
+    side: str | None = None           # from the pid (NayaCore's table), not from anything read
+    generation: str | None = None     # likewise: the flash generation the pid encodes
 
 
 def find_recovery_ports() -> list[RecoveryDevice]:
-    """Halves currently sitting in MCUboot recovery. Read-only; opens nothing."""
+    """Halves currently sitting in MCUboot recovery, either side, either generation. Read-only;
+    opens nothing."""
     out = []
     for p in comports():
-        if p.vid == NAYA_VID and p.pid == RECOVERY_PID:
+        if p.vid == NAYA_VID and p.pid in RECOVERY_PIDS:
+            info = pid_info(p.pid) or {}
             out.append(RecoveryDevice(port=p.device, description=p.description or "",
-                                      serial_number=getattr(p, "serial_number", None)))
+                                      serial_number=getattr(p, "serial_number", None),
+                                      pid=p.pid, side=info.get("side"),
+                                      generation=info.get("generation")))
     return out
 
 
@@ -333,7 +368,10 @@ def read_running_image(catalog: list | None = None) -> dict:
             errors.append(f"{dev.port}: {type(e).__name__}: {e}")
             continue
         images = state.get("images") or []
-        out = {"state": "ok", "port": dev.port, "images": []}
+        # The pid's own claim about this half, beside what the running image will say: two
+        # independent sources for side and generation, and the flasher refuses if they differ.
+        out = {"state": "ok", "port": dev.port, "pid": dev.pid, "pidSide": dev.side,
+               "pidGeneration": dev.generation, "images": []}
         for img in images:
             h = img.get("hash")
             entry = {

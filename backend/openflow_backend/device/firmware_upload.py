@@ -291,6 +291,21 @@ def _match_catalog(path: Path, raw: bytes, catalog: list) -> dict:
     return by_name[0]
 
 
+def _pid_agrees_with_image(state: dict, active: dict) -> None:
+    """The USB product id encodes the half's side and flash generation (NayaCore's own table,
+    recovery.pid_info) and so does the running image's catalogue entry. They come from different
+    places -- the hardware's descriptor and the bootloader's hash -- and a write proceeds only
+    when both say the same thing. A state without a pid reading (older callers, fixtures) is not
+    a disagreement."""
+    for key, mine in (("pidSide", "side"), ("pidGeneration", "generation")):
+        theirs = state.get(key)
+        if theirs and active.get(mine) and theirs != active[mine]:
+            raise UploadRefused(
+                f"the USB product id {state.get('pid'):#06x} says this half is {key[3:].lower()} "
+                f"{theirs}, but the image it runs is catalogued as {active[mine]}. Two sources "
+                "disagree about what this half is, so nothing is written to it.")
+
+
 def _is_downgrade(active: dict, target: dict) -> str | None:
     """Why writing `target` over `active` would be a downgrade, or None if it is not one.
 
@@ -352,6 +367,7 @@ def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
             "flash generation it is. Writing on that basis is exactly the mistake the catalogue "
             f"exists to prevent. Its hash is {active.get('hash')}.")
 
+    _pid_agrees_with_image(state, active)
     if active.get("side") != target.get("side"):
         raise UploadRefused(
             f"this is the {active.get('side')} half and {path.name} is the "
@@ -646,6 +662,7 @@ def plan_module_bundle(image_path: str | Path, catalog: list, *, chunk: int = DE
         raise UploadRefused(
             "the image this half is running is not one we hold, so it is not known to be a "
             f"Create in a known state. Its hash is {active.get('hash')}.")
+    _pid_agrees_with_image(state, active)
     if active.get("side") != "left":
         raise UploadRefused(
             f"this is the {active.get('side')} half. The module firmware store is the LEFT "
