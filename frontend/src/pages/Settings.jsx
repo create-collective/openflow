@@ -67,7 +67,9 @@ export default function Settings() {
   useEffect(() => {
     if (tab === "backup") api.backups().then(setBackups).catch(() => {});
     if (tab === "logging") api.deviceLog().then((r) => { setDevlog(r.entries || []); setLogmeta(r); }).catch(() => {});
-    if (tab === "troubleshooting") api.recoveryOps().then((r) => setRecovery(r.ops || [])).catch(() => {});
+    // Troubleshooting gates its buttons on `connected`, which only the Software tab used to
+    // fetch, so with a keyboard plugged in every device button here stayed disabled.
+    if (tab === "troubleshooting") { api.recoveryOps().then((r) => setRecovery(r.ops || [])).catch(() => {}); api.status().then((r) => setStatus(r.halves || [])).catch(() => {}); }
     if (tab === "software") { api.status().then((r) => setStatus(r.halves || [])).catch(() => {}); api.firmwareCatalog().then(setFirmware).catch(() => {}); }
   }, [tab]);
 
@@ -239,9 +241,8 @@ export default function Settings() {
                     NayaFlow's pairing operation as one reviewed sequence: both halves' addresses are
                     stored <strong>before</strong> anything is cleared, each half is pointed at the
                     other, the old links and bonds are dropped, both halves restart, and the link is
-                    verified. Planning only reads. Running is wired but <strong>disabled</strong>
-                    until it is watched on a spare pair, and it forgets every Bluetooth host on both
-                    halves.
+                    verified. Planning only reads. Running is wired but <strong>disabled</strong> until
+                    it is watched on a spare pair, and it forgets every Bluetooth host on both halves.
                   </p>
                   <div className="setting">
                     <div className="setting-head">
