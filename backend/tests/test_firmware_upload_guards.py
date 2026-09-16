@@ -403,21 +403,32 @@ def test_upload_frames_carry_the_resolved_image_id(images, monkeypatch):
 
 
 # --- the module bundle: FlashMemory.bin into the modules slot ------------------------------- #
-# Not an MCUboot image: no mark-pending, no hash to read back, and its slot is taken from the
-# device's map only (the one slot of exactly the bundle's size), never assumed.
+# Not an MCUboot image: no mark-pending and no hash to read back. Its upload id is NayaCore's
+# constant 4 (uploadImageToModulesSlot -> uploadImageToSlot(_, 4), both mac builds), used only
+# after the device's own slot map has shown it numbers the secondary slot 2, the way NayaCore's
+# Create constant assumes. BOARD_MAP is what the owner's board answered on 2026-09-16.
 
-BUNDLE_BYTES = b"\x07" * 4096
+BUNDLE_BYTES = bytes(range(256)) * 4096          # 1048576 B, the partition's size
 MODULE_CATALOG = CATALOG + [
     {"file": "FlashMemory.bin", "target": "module", "type": "littlefs", "component": "modules",
      "blobSha256": _sha(BUNDLE_BYTES), "moduleFirmware": "2.3.3", "versionLabel": "2.3.3",
      "bundle": "NayaFlow 1.25.1", "releaseOrder": 24, "flashable": True, "withheldBecause": [],
      "contents": {"Touch_UserApp.sfb": {"sha256": "aa" * 32, "size": 1}}},
 ]
-MODULE_MAP = {"supported": True, "rc": 0, "slots": [
+BOARD_MAP = {"supported": True, "rc": 0, "slots": [
     {"image": 0, "slot": 0, "size": 663552, "uploadImageId": 1},
     {"image": 0, "slot": 1, "size": 663552, "uploadImageId": 2},
-    {"image": 1, "slot": 0, "size": 4096, "uploadImageId": 3},
 ]}
+MODULE_MAP = BOARD_MAP
+BIG_CHUNK = fw.MAX_CHUNK                          # 256 chunks of the 1 MiB bundle
+BUNDLE_CHUNKS = len(BUNDLE_BYTES) // BIG_CHUNK
+
+
+def test_a_chunk_that_cannot_be_framed_is_refused_up_front():
+    with pytest.raises(ValueError, match="16-bit length"):
+        fw.build_chunk_request(2, 0, b"\x00" * (fw.MAX_CHUNK + 1), total=1, sha=b"\x00" * 32)
+    with pytest.raises(ValueError, match="1 to"):
+        fw.build_chunk_request(2, 8, b"")
 
 
 @pytest.fixture()
@@ -435,25 +446,50 @@ def test_a_bundle_needs_the_devices_slot_map(bundle):
                               slot_info={"supported": False, "rc": 8, "slots": []})
 
 
-def test_the_modules_slot_is_the_one_slot_of_exactly_the_bundles_size(bundle):
-    p = fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=MODULE_MAP)
-    assert p.upload_image_id == 3 and p.slot["image"] == 1 and p.expected_version == "2.3.3"
-    assert p.arm_token == RUNNING_HASH and "upload image id 3" in p.describe()
-    two = {"supported": True, "slots": MODULE_MAP["slots"]
-           + [{"image": 1, "slot": 1, "size": 4096, "uploadImageId": 4}]}
-    with pytest.raises(fw.UploadRefused, match="2 slot"):
+def test_the_modules_slot_is_nayacores_4_once_the_device_confirms_the_numbering(bundle):
+    p = fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=BOARD_MAP)
+    assert p.upload_image_id == fw.MODULES_UPLOAD_IMAGE_ID == 4
+    assert p.slot["source"].startswith("NayaCore constant") and p.expected_version == "2.3.3"
+    assert p.arm_token == RUNNING_HASH and "upload image id 4" in p.describe()
+
+
+def test_a_bootloader_that_numbers_differently_gets_no_vendor_constant(bundle):
+    """If the device's map gave the secondary slot any id but 2, NayaCore's 4 means nothing on
+    it. Refuse rather than write into whatever 4 addresses there."""
+    odd = {"supported": True, "slots": [{"image": 0, "slot": 0, "size": 663552, "uploadImageId": 0},
+                                        {"image": 0, "slot": 1, "size": 663552, "uploadImageId": 1}]}
+    with pytest.raises(fw.UploadRefused, match="numbering is not understood"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=odd)
+    missing = {"supported": True, "slots": [{"image": 0, "slot": 0, "size": 663552}]}
+    with pytest.raises(fw.UploadRefused, match="numbering is not understood"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=missing)
+
+
+def test_a_map_that_lists_a_bundle_sized_slot_wins_over_the_constant(bundle):
+    listed = {"supported": True, "slots": BOARD_MAP["slots"]
+              + [{"image": 1, "slot": 1, "size": len(BUNDLE_BYTES), "uploadImageId": 7}]}
+    p = fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=listed)
+    assert p.upload_image_id == 7 and p.slot["source"] == "device slot info"
+    two = {"supported": True, "slots": listed["slots"]
+           + [{"image": 2, "slot": 0, "size": len(BUNDLE_BYTES), "uploadImageId": 9}]}
+    with pytest.raises(fw.UploadRefused, match="2 slots"):
         fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=two)
-    no_id = {"supported": True, "slots": [{"image": 1, "slot": 0, "size": 4096}]}
-    with pytest.raises(fw.UploadRefused, match="no upload id"):
-        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=no_id)
 
 
 def test_the_keyboards_own_slots_are_never_taken_for_the_modules_slot(bundle):
-    """A bundle the size of a keyboard slot must not resolve to the primary or secondary."""
-    same = {"supported": True, "slots": [{"image": 0, "slot": 1, "size": 4096, "uploadImageId": 2},
-                                         {"image": 0, "slot": 0, "size": 4096, "uploadImageId": 1}]}
-    with pytest.raises(fw.UploadRefused, match="0 slot"):
-        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=same)
+    """A keyboard slot that happens to be bundle-sized does not become the modules slot."""
+    same = {"supported": True, "slots": [{"image": 0, "slot": 0, "size": len(BUNDLE_BYTES), "uploadImageId": 1},
+                                         {"image": 0, "slot": 1, "size": len(BUNDLE_BYTES), "uploadImageId": 2}]}
+    p = fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=same)
+    assert p.upload_image_id == 4
+
+
+def test_a_bundle_of_the_wrong_size_is_refused(tmp_path):
+    small = tmp_path / "FlashMemory.bin"
+    small.write_bytes(b"\x07" * 4096)
+    cat = MODULE_CATALOG + [dict(MODULE_CATALOG[-1], blobSha256=_sha(b"\x07" * 4096))]
+    with pytest.raises(fw.UploadRefused, match="1048576 bytes"):
+        fw.plan_module_bundle(small, cat, state=state_ok(), slot_info=BOARD_MAP)
 
 
 def test_a_bundle_goes_through_the_left_half_only(bundle):
@@ -494,10 +530,11 @@ def test_flash_module_bundle_is_chunks_then_reset_and_nothing_else(bundle, monke
     log = []
     monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
     r = fw.flash_module_bundle(bundle, MODULE_CATALOG, arm=RUNNING_HASH, state=state_ok(),
-                               slot_info=MODULE_MAP, chunk=1024)
-    assert _kinds(log) == [(1, 1, 2)] * 4 + [(0, 5, 2)]
-    assert all(b["image"] == 3 for _h, b in log[:4])
-    assert r["reset"] is True and r["uploadImageId"] == 3
+                               slot_info=MODULE_MAP, chunk=BIG_CHUNK)
+    assert _kinds(log) == [(1, 1, 2)] * BUNDLE_CHUNKS + [(0, 5, 2)]
+    assert all(b["image"] == 4 for _h, b in log[:BUNDLE_CHUNKS])
+    assert log[0][1]["len"] == len(BUNDLE_BYTES) and log[0][1]["sha"] == hashlib.sha256(BUNDLE_BYTES).digest()
+    assert r["reset"] is True and r["uploadImageId"] == 4
     assert r["verifyNext"]["read"] == "MODULE_FILE_FW_VERSION" and r["verifyNext"]["expect"] == "2.3.3"
 
 
@@ -516,10 +553,10 @@ def test_flash_module_bundle_stops_without_reset_if_the_bootloader_rejects_a_chu
         h, b = _decode_header(frame), _decode_request(frame)
         log.append((h, b))
         if h == {"op": 2, "group": 1, "id": 1}:
-            return {"rc": 3} if b["off"] >= 2048 else {"rc": 0, "off": b["off"] + len(b["data"])}
+            return {"rc": 3} if b["off"] >= 524288 else {"rc": 0, "off": b["off"] + len(b["data"])}
         return {"rc": 0}
     monkeypatch.setattr(fw.rec, "_talk", talk)
-    with pytest.raises(fw.UploadRefused, match="rejected the chunk at offset 2048"):
+    with pytest.raises(fw.UploadRefused, match="rejected the chunk at offset 524288"):
         fw.flash_module_bundle(bundle, MODULE_CATALOG, arm=RUNNING_HASH, state=state_ok(),
-                               slot_info=MODULE_MAP, chunk=1024)
+                               slot_info=MODULE_MAP, chunk=BIG_CHUNK)
     assert (0, 5, 2) not in _kinds(log), "no reset after a refused chunk"

@@ -66,6 +66,11 @@ SMP_ID_OS_RESET = 5
 # smaller chunk costs throughput on an operation that runs once, while a too-large one is
 # rejected by a bootloader whose buffer we are guessing at.
 DEFAULT_CHUNK = 128
+# Hard cap on what one frame may carry. The SMP header's length field is 16 bits and the
+# bootloader's receive buffer (MCUBOOT_SERIAL_MAX_RECEIVE_SIZE, 512 by default) is the real limit
+# below that; a chunk the bootloader will not take is refused with an rc and the upload stops
+# before anything is marked. This cap only turns an impossible frame into a clear error.
+MAX_CHUNK = 4096
 
 # HOW THE BOOTLOADER NUMBERS UPLOAD TARGETS (MCUboot boot/boot_serial/src/boot_serial.c and
 # boot/zephyr/flash_map_extended.c, read 2026-09-15). The `image` field of an `image upload` is
@@ -86,7 +91,22 @@ DEFAULT_CHUNK = 128
 # from that read only (the one slot that is exactly the bundle's size), never assumed.
 # bs_upload does no header check and refuses an image larger than the slot BEFORE erasing it;
 # every other first-chunk failure returns EINVAL (3), indistinguishable from "no such slot".
+#
+# SETTLED ON THE OWNER'S BOARD, 2026-09-16, from two independent sources that agree:
+#   * the bootloader's `image slot info` answer: image 0 slot 0 = 663552 bytes, upload id 1;
+#     slot 1 = 663552 bytes, upload id 2 -- the direct scheme, confirmed by the device;
+#   * NayaCore 6.11.0 itself (mac x86_64 and arm64 builds disassembled, tools/../scratch):
+#     uploadImageToCreateSlot(path) is uploadImageToSlot(path, 2) and
+#     uploadImageToModulesSlot(path) is uploadImageToSlot(path, 4).
+# So the keyboard image goes to 2 (= the secondary slot, which is what the map says) and the
+# module bundle to 4 (= slot3_partition, the 1 MiB modules partition). The map cannot list the
+# modules slot -- it is not an MCUboot image slot -- so for it the vendor's constant is used,
+# and only once the device's own map has shown it numbers slot 1 as 2, i.e. that it and NayaCore
+# count the same way.
 DIRECT_UPLOAD_ID_OFFSET = 1
+CREATE_UPLOAD_IMAGE_ID = 2         # NayaCore: uploadImageToCreateSlot -> uploadImageToSlot(_, 2)
+MODULES_UPLOAD_IMAGE_ID = 4        # NayaCore: uploadImageToModulesSlot -> uploadImageToSlot(_, 4)
+MODULE_BUNDLE_SIZE = 1048576       # every FlashMemory.bin since 1.11.0; the partition's size
 SMP_ID_IMAGE_SLOT_INFO = rec.SMP_ID_IMAGE_SLOT_INFO
 
 
@@ -186,32 +206,57 @@ def _slot_size(slot_info: dict | None, image: int, slot: int) -> int | None:
     return None
 
 
-def modules_slot(slot_info: dict | None, bundle_size: int) -> tuple[int, dict]:
-    """Which upload id addresses the modules partition: the ONE slot in the device's map whose
-    size is exactly the bundle's, outside image 0's primary and secondary. There is no
-    assumption to fall back on here -- the partition is a filesystem, not an MCUboot image, and
-    the direct-scheme number for it (3 or 4) is a different number under the default scheme for
-    the same flash area -- so without the device's map, or without its upload id for that slot,
-    the answer is a refusal."""
+def _numbering_is_understood(slot_info: dict | None) -> None:
+    """Refuse unless the device's own map says it numbers upload targets the way NayaCore's
+    constants assume: image 0's secondary slot has upload id CREATE_UPLOAD_IMAGE_ID (2). Without
+    that answer the vendor constants are numbers under an unverified scheme."""
     if not slot_info or not slot_info.get("supported"):
         raise UploadRefused(
-            "the bootloader did not report its slot map (`image slot info`), so the modules slot "
-            "cannot be told apart from the keyboard's own slots. Nothing is written into a "
-            "partition that has not been identified.")
-    cands = [s for s in slot_info.get("slots") or []
-             if s.get("size") == bundle_size and not ((s.get("image") or 0) == 0 and s.get("slot") in (0, 1))]
-    if len(cands) != 1:
+            "the bootloader did not report its slot map (`image slot info`), so it is not known "
+            "whether it numbers upload targets the way NayaCore's constants assume. Nothing is "
+            "written into a partition addressed by a number that has not been checked.")
+    got = _slot_upload_id(slot_info, 0, 1)
+    if got != CREATE_UPLOAD_IMAGE_ID:
         raise UploadRefused(
-            f"{len(cands)} slot(s) in the bootloader's map are exactly {bundle_size} bytes outside "
-            f"the keyboard's own two; the modules slot has to be the only one. Map: "
-            f"{slot_info.get('slots')}")
-    s = cands[0]
-    if s.get("uploadImageId") is None:
+            f"the bootloader's map gives image 0 slot 1 the upload id {got}, but NayaCore writes "
+            f"the Create image with {CREATE_UPLOAD_IMAGE_ID}. The numbering is not understood, so "
+            "no constant taken from NayaCore can be trusted on this bootloader. Refusing.")
+
+
+def _slot_upload_id(slot_info: dict | None, image: int, slot: int):
+    for s in (slot_info or {}).get("slots") or []:
+        if (s.get("image") or 0) == image and s.get("slot") == slot:
+            return s.get("uploadImageId")
+    return None
+
+
+def modules_slot(slot_info: dict | None, bundle_size: int) -> tuple[int, dict]:
+    """Which upload id addresses the modules partition, and the slot-map row it rests on.
+
+    The partition is a filesystem, not an MCUboot image slot, so the bootloader's map never
+    lists it (confirmed on the owner's board: the map has image 0's two slots and nothing else).
+    The number therefore comes from NayaCore -- uploadImageToModulesSlot is uploadImageToSlot(_, 4)
+    -- and it is used only after the map has shown that this bootloader and NayaCore count the
+    same way (_numbering_is_understood). Should a map ever list a slot of exactly the bundle's
+    size with an upload id, the device's own row wins over the constant."""
+    _numbering_is_understood(slot_info)
+    listed = [s for s in slot_info.get("slots") or []
+              if s.get("size") == bundle_size and not ((s.get("image") or 0) == 0 and s.get("slot") in (0, 1))
+              and s.get("uploadImageId") is not None]
+    if len(listed) > 1:
         raise UploadRefused(
-            f"the bootloader's map has a {bundle_size}-byte slot (image {s.get('image') or 0} slot "
-            f"{s.get('slot')}) but no upload id for it, so the number that addresses it is not "
-            "known. Not guessing.")
-    return int(s["uploadImageId"]), s
+            f"{len(listed)} slots in the bootloader's map are exactly {bundle_size} bytes outside "
+            f"the keyboard's own two; refusing to choose. Map: {slot_info.get('slots')}")
+    if listed:
+        return int(listed[0]["uploadImageId"]), {**listed[0], "source": "device slot info"}
+    if bundle_size != MODULE_BUNDLE_SIZE:
+        raise UploadRefused(
+            f"a module bundle is {MODULE_BUNDLE_SIZE} bytes (the partition's size); this file is "
+            f"{bundle_size}. Not written.")
+    return MODULES_UPLOAD_IMAGE_ID, {"image": None, "slot": "modules", "size": MODULE_BUNDLE_SIZE,
+                                     "uploadImageId": MODULES_UPLOAD_IMAGE_ID,
+                                     "source": "NayaCore constant (uploadImageToModulesSlot -> 4), "
+                                               "numbering confirmed by the device's map"}
 
 
 def _match_catalog(path: Path, raw: bytes, catalog: list) -> dict:
@@ -354,6 +399,9 @@ def build_chunk_request(image_id: int, offset: int, data: bytes, *, total: int |
     first chunk carries the total length and the image hash; later chunks carry only their
     offset, which is how the bootloader tracks progress and how a resumed upload finds its place.
     """
+    if not 0 < len(data) <= MAX_CHUNK:
+        raise ValueError(f"a chunk is 1 to {MAX_CHUNK} bytes, not {len(data)}: one SMP frame "
+                         "carries a 16-bit length and the bootloader's buffer is far smaller")
     body: dict = {"image": image_id, "off": offset, "data": data}
     if offset == 0:
         if total is None or sha is None:
@@ -552,9 +600,8 @@ class ModuleBundlePlan:
 
     def describe(self) -> str:
         r, t = self.running, self.target
-        return (f"{self.image_path.name} -> modules slot (upload image id {self.upload_image_id}, "
-                f"image {self.slot.get('image') or 0} slot {self.slot.get('slot')}, "
-                f"{self.slot.get('size')} bytes) on {self.port}\n"
+        return (f"{self.image_path.name} -> modules slot (upload image id {self.upload_image_id}: "
+                f"{self.slot.get('source')}) on {self.port}\n"
                 f"  left half runs {r.get('file')} (fw {r.get('versionLabel') or r.get('createFirmware')})\n"
                 f"  writing module firmware {t.get('versionLabel')} ({t.get('bundle')}), "
                 f"{len(t.get('contents') or {})} userapps\n"
