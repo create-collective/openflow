@@ -84,6 +84,15 @@ def missing_base_bays(base_bays: dict) -> list[str]:
             if (base_bays or {}).get(loc) in (None, "", "transparent")]
 
 
+# How many module config slots the planner will address: 0 (the blank template) to 7. That is
+# what keymap_read.read_module_configs reads back (range(8)), so a higher index could be written
+# and never seen again; and the most any board has shown is 5 in use. NayaCore carries a
+# ModuleConfig::maxSlots whose value has not been recovered yet (Jira: known issues); until it
+# is, allocating past the reader's range is refused rather than guessed. On 2026-09-16 a plan
+# allocated slot 8 for a profile arming three configs the board did not carry.
+MAX_MODULE_SLOTS = 8
+
+
 def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
          captured_from=None):
     """Work out the module layout to flash.
@@ -126,6 +135,13 @@ def plan(bays_by_layer, config_types, device_list, device_slots, base_order=0,
         n = 1
         while n in taken:
             n += 1
+        if n >= MAX_MODULE_SLOTS:
+            need = len(referenced - set(slot_for))
+            raise ValueError(
+                f"no free module slot for {need} more module profile(s): the board's module "
+                f"store is read as slots 1-{MAX_MODULE_SLOTS - 1} and they are taken. Remove "
+                "unused slots from the keyboard (the flash preview offers it) or arm fewer "
+                "distinct module profiles on this keyboard profile.")
         slot_for[cid] = n
         taken.add(n)
         allocated.append(cid)

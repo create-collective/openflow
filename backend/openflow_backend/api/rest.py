@@ -1659,7 +1659,7 @@ async def flash_write(body: dict = Body(default={})) -> dict:
     side = body.get("side", "left")
     full = True if mode == "recovery" else bool(body.get("full", False))
 
-    def _run() -> dict:
+    def _run_unlocked() -> dict:
         before, current, mod_read = None, None, None
         if mode == "sync":
             before = svc.read_keymap(side)                   # mandatory: the preservation baseline
@@ -1735,6 +1735,17 @@ async def flash_write(body: dict = Body(default={})) -> dict:
                     for i, entries in before.get("led", {}).items()},
         }
         return result
+
+    def _run() -> dict:
+        # The WHOLE flash -- the preservation read, every write frame and the verify read-back
+        # -- holds the service lock, so the live-status tick (service.tick, every ~6 s per half,
+        # under this same lock) waits behind it instead of interleaving its four commands with
+        # the flash's frames on the same port. Without this, a chunked LED or layer write lost
+        # its continuation frame's ack to a tick and the flash aborted with "bad or missing
+        # ack" ("led 0", frame 1, ack None on 2026-09-16); the reads inside already took the
+        # lock, the write between them never did. RLock, so the nested reads still work.
+        with svc._lock:
+            return _run_unlocked()
 
     try:
         return await run_in_threadpool(_run)
