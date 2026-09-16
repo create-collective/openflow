@@ -3,7 +3,7 @@ import FlashButton from "../components/FlashButton.jsx";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import useDoneFlag from "../lib/useDoneFlag";
-import { readDockedModules } from "../lib/dockedModules";
+import { readDockedModules, lastDockedModules } from "../lib/dockedModules";
 import { setModuleRead, subscribeDeviceState, getDeviceState,
          deviceHasBeenRead } from "../lib/deviceState";
 import { setShortcutTable } from "../lib/shortcutNames";
@@ -51,31 +51,19 @@ export default function Bindings() {
   const [justRead, markRead] = useDoneFlag();
   const [saved, setSaved] = useState(null);
   const [pickedModule, setPickedModule] = useState(null);
-  const [moduleAssign, setModuleAssign] = useState(() => {
-    // Only module types are valid here. A stray value -- a native image drag once wrote an
-    // image URL into a bay -- persists in storage and renders as a broken image forever, so
-    // it is discarded on read rather than trusted.
-    const TYPES = ["track", "touch", "tune", "float"];
-    const clean = (v) => (TYPES.includes(v) ? v : null);
-    try {
-      const saved = JSON.parse(localStorage.getItem("openflow.moduleAssign")) || {};
-      return { left: clean(saved.left), right: clean(saved.right) };
-    } catch {
-      return { left: null, right: null };
-    }
-  });
+  // Which module picture each bay shows. Not stored in the browser any more: it comes from
+  // the keyboard's last status, which the backend persists (see lib/dockedModules.js), so it
+  // is the same in every browser and survives a cleared cache. Until the first read it is
+  // empty, and a module can be placed by hand for the session (the palette drag).
+  const [moduleAssign, setModuleAssign] = useState({ left: null, right: null });
   const navigate = useNavigate();
 
-  function persistAssign(patch) {
-    setModuleAssign((prev) => {
-      const next = { ...prev, ...patch };
-      try { localStorage.setItem("openflow.moduleAssign", JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
+  function setAssign(patch) {
+    setModuleAssign((prev) => ({ ...prev, ...patch }));
   }
 
   function assignModule(slot, type) {
-    persistAssign({ [slot]: type });
+    setAssign({ [slot]: type });
     setPickedModule(null);
   }
 
@@ -107,9 +95,16 @@ export default function Bindings() {
   // not turn a good read into an error.
   async function syncDockedModules() {
     try {
-      persistAssign(await readDockedModules(api));
+      setAssign(await readDockedModules(api));
     } catch { /* leave the existing assignment alone */ }
   }
+
+  // Paint the bays from the last persisted status on mount, without touching the port.
+  useEffect(() => {
+    let alive = true;
+    lastDockedModules(api).then((b) => { if (alive) setAssign(b); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const load = useCallback(async () => {
     try {
