@@ -98,27 +98,37 @@ def test_the_dvt_era_images_are_catalogued_but_withheld(images):
     assert all(not e["flashable"] and e["withheldBecause"] for e in dvt)
 
 
-def test_no_module_image_is_offerable_until_the_module_path_exists(images):
-    for e in images:
-        if e["target"] != "module":
-            continue
-        if e.get("type") == "sfb":
-            continue                    # the 2.3.3 userapps, hand-authored, flagged by shipping status
-        assert not e["flashable"], e["file"]
-        assert any("module flash path" in w for w in e["withheldBecause"]), e["file"]
+def test_no_module_image_is_offerable_until_the_module_path_is_tested(images):
+    mods = [e for e in images if e["target"] == "module"]
+    assert mods and all(not e["flashable"] for e in mods)
+    assert all(any("module flash path" in w for w in e["withheldBecause"]) for e in mods)
     bundles = [e for e in images if e["file"] == "FlashMemory.bin"]
     assert len(bundles) == 6 and len({e["blobSha256"] for e in bundles}) == 6
-    assert {e["moduleFirmware"] for e in bundles if e["moduleFirmware"]} == {"2.1.2", "2.2.0", "2.3.2", "2.3.3"}
+    # every bundle since 1.14.3 names its own version in a VERSION file; 1.11.x has none
+    assert {e["moduleFirmware"] for e in bundles if e["moduleFirmware"]} == {"2.1.1", "2.1.2", "2.2.0", "2.3.2", "2.3.3"}
+    apps = {f"{n}_UserApp.sfb" for n in ("Touch", "Track", "Tune", "Float", "Query")}
+    for b in bundles:
+        assert b["type"] == "littlefs" and set(b["contents"]) == apps, b["bundle"]
+        if b["moduleFirmware"]:
+            assert b["versionSource"] == "VERSION file inside FlashMemory.bin"
+        else:
+            assert b["versionLabel"].startswith("NayaFlow 1.11.0")
 
 
-def test_the_2_3_3_userapps_hang_off_the_1_25_bundle(images):
-    container = next(e for e in images if e["file"] == "FlashMemory.bin" and e["moduleFirmware"] == "2.3.3")
-    apps = [e for e in images if e.get("container") == "FlashMemory.bin"]
-    assert {e["component"] for e in apps} == {"touch", "track", "tune", "float", "query"}
-    for e in apps:
-        assert e["containerBlobSha256"] == container["blobSha256"]
-        assert e["moduleFirmware"] == "2.3.3" and e["bundles"] == container["bundles"]
-    assert {e["component"] for e in apps if e["flashable"]} == {"touch", "track", "tune"}
+def test_every_bundle_lists_its_userapps_by_the_hash_the_create_reports(images):
+    apps = [e for e in images if e.get("type") == "sfb"]
+    assert len(apps) == 30                              # 6 bundles x 5 apps
+    per_bundle: dict[str, set] = {}
+    for a in apps:
+        assert HEX64.match(a["sha256"]) and a["container"] == "FlashMemory.bin", a
+        bundle = next(b for b in images if b.get("blobSha256") == a["containerBlobSha256"])
+        assert bundle["contents"][a["file"]]["sha256"] == a["sha256"]
+        assert a["moduleFirmware"] == bundle["moduleFirmware"] and a["bundles"] == bundle["bundles"]
+        assert a["hashSidecar"] == (bundle["firstSeen"] not in ("v1.11.0", "v1.14.3", "v1.14.5")), a
+        per_bundle.setdefault(a["containerBlobSha256"], set()).add(a["component"])
+    assert all(v == {"touch", "track", "tune", "float", "query"} for v in per_bundle.values())
+    assert {a["component"] for a in apps if "not a shipping module" in a["withheldBecause"]} == {"float", "query"}
+    assert len({a["sha256"] for a in apps}) == 30, "every app changed in every bundle"
 
 
 def test_the_uncertain_1_17_3_carves_are_gone(images):

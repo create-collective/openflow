@@ -41,6 +41,12 @@ SMP_GROUP_OS = 0
 SMP_GROUP_IMAGE = 1
 SMP_ID_ECHO = 0
 SMP_ID_IMAGE_STATE = 0
+# `image slot info` (MCUboot boot_serial_priv.h IMGMGR_NMGR_ID_SLOT_INFO): per image and slot, the
+# slot's size and, when the bootloader takes direct slot ids for uploads, the `upload_image_id` to
+# use. A read; compiled in only with MCUBOOT_SERIAL_IMG_GRP_SLOT_INFO, so ENOTSUP is a normal
+# answer and is reported as such rather than raised.
+SMP_ID_IMAGE_SLOT_INFO = 6
+SMP_ERR_ENOTSUP = 8
 
 
 @dataclass
@@ -286,6 +292,29 @@ def image_state(port: str) -> dict:
     return _talk(port, encode_request(SMP_OP_READ, SMP_GROUP_IMAGE, SMP_ID_IMAGE_STATE))
 
 
+def slot_info(port: str) -> dict:
+    """`image slot info` read, normalised: {"supported": bool, "slots": [{"image", "slot",
+    "size", "uploadImageId"}], "raw": <reply>}.
+
+    This is the read that settles how an upload must be addressed. MCUboot's serial recovery
+    numbers upload targets either by image (default: the PRIMARY slot of image N is written) or,
+    with MCUBOOT_SERIAL_DIRECT_IMAGE_UPLOAD, by a direct slot id (2 = the secondary slot of image
+    0, 3 = slot2_partition ...). The device answering here with `upload_image_id` per slot removes
+    the guess; a slot whose size is exactly the module bundle's 1 MiB is the modules slot. Never
+    run on the owner's board before the keyboard is plugged in for step 3 -- it is read-only, but
+    recovery mode is a reboot away."""
+    reply = _talk(port, encode_request(SMP_OP_READ, SMP_GROUP_IMAGE, SMP_ID_IMAGE_SLOT_INFO))
+    rc = reply.get("rc", 0)
+    if rc:
+        return {"supported": rc != SMP_ERR_ENOTSUP, "rc": rc, "slots": [], "raw": reply}
+    slots = []
+    for img in reply.get("images") or []:
+        for s in img.get("slots") or []:
+            slots.append({"image": img.get("image", 0), "slot": s.get("slot"),
+                          "size": s.get("size"), "uploadImageId": s.get("upload_image_id")})
+    return {"supported": True, "rc": 0, "slots": slots, "raw": reply}
+
+
 def read_running_image(catalog: list | None = None) -> dict:
     """Find a half in recovery, ask what it runs, and name it against the catalogue.
 
@@ -316,6 +345,12 @@ def read_running_image(catalog: list | None = None) -> dict:
             }
             entry.update(identify(entry["hash"], catalog))
             out["images"].append(entry)
+        # Best effort, and only after the state read succeeded on this port: the slot map is what
+        # the flasher addresses uploads by, and "not supported" is a valid, recorded answer.
+        try:
+            out["slotInfo"] = slot_info(dev.port)
+        except Exception as e:                      # noqa: BLE001
+            out["slotInfo"] = {"supported": None, "error": f"{type(e).__name__}: {e}", "slots": []}
         return out
     return {"state": "error",
             "detail": "A recovery device is present but neither port answered SMP. Recovery "

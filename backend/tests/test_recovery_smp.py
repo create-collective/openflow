@@ -142,6 +142,33 @@ def test_a_known_image_is_named():
     assert got["identified"] and got["side"] == "left" and got["generation"] == "A", got
 
 
+def test_slot_info_is_an_image_group_read_with_id_6_and_is_normalised(monkeypatch):
+    """`image slot info` (MCUboot IMGMGR_NMGR_ID_SLOT_INFO = 6) is the read that says how uploads
+    are addressed; its answer is flattened to one row per slot with the device's upload id."""
+    import base64
+    import struct
+    sent = []
+
+    def talk(port, frame, timeout=2.0):
+        sent.append(frame)
+        return {"images": [
+            {"image": 0, "slots": [{"slot": 0, "size": 663552, "upload_image_id": 1},
+                                   {"slot": 1, "size": 663552, "upload_image_id": 2}],
+             "max_image_size": 663040},
+            {"image": 1, "slots": [{"slot": 0, "size": 1048576, "upload_image_id": 3}]}]}
+    monkeypatch.setattr(rec, "_talk", talk)
+    got = rec.slot_info("COM9")
+    body = base64.b64decode(sent[0][2:-1])[2:-2]
+    assert (body[0] & 7, struct.unpack(">H", body[4:6])[0], body[7]) == (0, 1, 6)
+    assert got["supported"] and [s["uploadImageId"] for s in got["slots"]] == [1, 2, 3]
+    assert got["slots"][2] == {"image": 1, "slot": 0, "size": 1048576, "uploadImageId": 3}
+
+
+def test_slot_info_not_supported_is_an_answer_not_an_error(monkeypatch):
+    monkeypatch.setattr(rec, "_talk", lambda *a, **k: {"rc": 8})
+    assert rec.slot_info("COM9") == {"supported": False, "rc": 8, "slots": [], "raw": {"rc": 8}}
+
+
 def test_a_known_image_says_which_release_shipped_it():
     """So Information can say 'NayaFlow 1.25.1 shipped this', and the flasher can order two
     images whose version numbers no release ever declared."""

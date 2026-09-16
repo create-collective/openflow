@@ -233,13 +233,14 @@ def _kinds(log):
     return [(h["group"], h["id"], h["op"]) for h, _ in log]
 
 
-def test_flash_is_upload_then_slot_check_then_mark_then_reset_in_that_order(images, monkeypatch):
+def test_flash_is_slot_map_then_upload_then_slot_check_then_mark_then_reset(images, monkeypatch):
     log = []
     monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
     r = fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(), chunk=1024)
-    assert _kinds(log)[:4] == [(1, 1, 2)] * 4                       # 4096 B / 1024 = 4 chunks
-    assert _kinds(log)[4:] == [(1, 0, 0), (1, 0, 2), (0, 5, 2)]     # read, mark, reset
-    assert log[5][1] == {"hash": bytes.fromhex(RUNNING_HASH), "confirm": False}
+    assert _kinds(log)[0] == (1, 6, 0)                              # slot map read first
+    assert _kinds(log)[1:5] == [(1, 1, 2)] * 4                      # 4096 B / 1024 = 4 chunks
+    assert _kinds(log)[5:] == [(1, 0, 0), (1, 0, 2), (0, 5, 2)]     # read, mark, reset
+    assert log[6][1] == {"hash": bytes.fromhex(RUNNING_HASH), "confirm": False}
     assert r["marked"] == "test" and r["hash"] == RUNNING_HASH and r["reset"] is True
 
 
@@ -248,7 +249,7 @@ def test_flash_confirm_true_marks_permanent(images, monkeypatch):
     monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
     r = fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(),
                  chunk=1024, confirm=True)
-    assert log[5][1]["confirm"] is True and r["marked"] == "confirm"
+    assert log[6][1]["confirm"] is True and r["marked"] == "confirm"
 
 
 def test_flash_never_marks_a_slot_whose_hash_is_not_the_target(images, monkeypatch):
@@ -270,7 +271,7 @@ def test_flash_never_marks_an_image_with_no_catalogued_plaintext_hash(images, mo
     with pytest.raises(fw.UploadRefused, match="no catalogued plaintext hash"):
         fw.flash(images / "kb_fwl_old.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(),
                  chunk=1024, allow_older=True)
-    assert set(_kinds(log)) == {(1, 1, 2)}, "only upload chunks may have been sent"
+    assert set(_kinds(log)) == {(1, 6, 0), (1, 1, 2)}, "only the slot map read and upload chunks may have been sent"
 
 
 def test_flash_refuses_without_the_arm_token_before_sending_anything(images, monkeypatch):
@@ -355,3 +356,170 @@ def test_unknown_order_both_ways_is_not_treated_as_a_downgrade(tmp_path):
     st = _running(createFirmware=None)
     st["images"][0].pop("releaseOrder", None)
     assert fw.plan(tmp_path / "kb_fwl.bin", HASHED_CATALOG, state=st).target["releaseOrder"] == 9
+
+
+# --- how an upload is addressed: the device's slot map first, the assumption second ---------- #
+# MCUboot's serial recovery does not number upload targets the way application-side mcumgr does
+# (see the note at the top of firmware_upload.py). The device's `image slot info` answer is the
+# authority; without one the plan uses the direct-upload scheme and SAYS it is an assumption.
+
+SLOT_MAP = {"supported": True, "rc": 0, "slots": [
+    {"image": 0, "slot": 0, "size": 663552, "uploadImageId": 1},
+    {"image": 0, "slot": 1, "size": 663552, "uploadImageId": 2},
+    {"image": 1, "slot": 0, "size": 1048576, "uploadImageId": 3},
+]}
+
+
+def test_without_a_slot_map_the_secondary_slot_is_the_assumed_direct_id_and_says_so(images):
+    p = fw.plan(images / "kb_fwl.bin", CATALOG, state=state_ok())
+    assert p.upload_image_id == 2 and p.upload_id_source.startswith("assumed")
+    assert "assumed" in p.describe()
+
+
+def test_the_devices_own_upload_id_wins_over_the_assumption(images):
+    custom = {"supported": True, "slots": [{"image": 0, "slot": 1, "size": 663552, "uploadImageId": 9}]}
+    p = fw.plan(images / "kb_fwl.bin", CATALOG, state=state_ok(), slot_info=custom)
+    assert (p.upload_image_id, p.upload_id_source) == (9, "device slot info")
+    st = state_ok()
+    st["slotInfo"] = custom                     # as read_running_image() carries it
+    assert fw.plan(images / "kb_fwl.bin", CATALOG, state=st).upload_image_id == 9
+
+
+def test_an_image_larger_than_its_slot_is_refused_before_anything_is_sent(images):
+    small = {"supported": True, "slots": [{"image": 0, "slot": 1, "size": 1024, "uploadImageId": 2}]}
+    with pytest.raises(fw.UploadRefused, match="slot 1 is 1024"):
+        fw.plan(images / "kb_fwl.bin", CATALOG, state=state_ok(), slot_info=small)
+
+
+def test_upload_frames_carry_the_resolved_image_id(images, monkeypatch):
+    log = []
+    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    nine = {"supported": True, "slots": [{"image": 0, "slot": 1, "size": 663552, "uploadImageId": 9}]}
+    fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(), chunk=1024,
+             slot_info=nine)
+    chunks = [b for h, b in log if h == {"op": 2, "group": 1, "id": 1}]
+    assert len(chunks) == 4 and all(b["image"] == 9 for b in chunks)
+    assert (1, 6, 0) not in _kinds(log), "a map passed in is not re-read"
+
+
+# --- the module bundle: FlashMemory.bin into the modules slot ------------------------------- #
+# Not an MCUboot image: no mark-pending, no hash to read back, and its slot is taken from the
+# device's map only (the one slot of exactly the bundle's size), never assumed.
+
+BUNDLE_BYTES = b"\x07" * 4096
+MODULE_CATALOG = CATALOG + [
+    {"file": "FlashMemory.bin", "target": "module", "type": "littlefs", "component": "modules",
+     "blobSha256": _sha(BUNDLE_BYTES), "moduleFirmware": "2.3.3", "versionLabel": "2.3.3",
+     "bundle": "NayaFlow 1.25.1", "releaseOrder": 24, "flashable": True, "withheldBecause": [],
+     "contents": {"Touch_UserApp.sfb": {"sha256": "aa" * 32, "size": 1}}},
+]
+MODULE_MAP = {"supported": True, "rc": 0, "slots": [
+    {"image": 0, "slot": 0, "size": 663552, "uploadImageId": 1},
+    {"image": 0, "slot": 1, "size": 663552, "uploadImageId": 2},
+    {"image": 1, "slot": 0, "size": 4096, "uploadImageId": 3},
+]}
+
+
+@pytest.fixture()
+def bundle(tmp_path):
+    p = tmp_path / "FlashMemory.bin"
+    p.write_bytes(BUNDLE_BYTES)
+    return p
+
+
+def test_a_bundle_needs_the_devices_slot_map(bundle):
+    with pytest.raises(fw.UploadRefused, match="slot map"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok())
+    with pytest.raises(fw.UploadRefused, match="slot map"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(),
+                              slot_info={"supported": False, "rc": 8, "slots": []})
+
+
+def test_the_modules_slot_is_the_one_slot_of_exactly_the_bundles_size(bundle):
+    p = fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=MODULE_MAP)
+    assert p.upload_image_id == 3 and p.slot["image"] == 1 and p.expected_version == "2.3.3"
+    assert p.arm_token == RUNNING_HASH and "upload image id 3" in p.describe()
+    two = {"supported": True, "slots": MODULE_MAP["slots"]
+           + [{"image": 1, "slot": 1, "size": 4096, "uploadImageId": 4}]}
+    with pytest.raises(fw.UploadRefused, match="2 slot"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=two)
+    no_id = {"supported": True, "slots": [{"image": 1, "slot": 0, "size": 4096}]}
+    with pytest.raises(fw.UploadRefused, match="no upload id"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=no_id)
+
+
+def test_the_keyboards_own_slots_are_never_taken_for_the_modules_slot(bundle):
+    """A bundle the size of a keyboard slot must not resolve to the primary or secondary."""
+    same = {"supported": True, "slots": [{"image": 0, "slot": 1, "size": 4096, "uploadImageId": 2},
+                                         {"image": 0, "slot": 0, "size": 4096, "uploadImageId": 1}]}
+    with pytest.raises(fw.UploadRefused, match="0 slot"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=same)
+
+
+def test_a_bundle_goes_through_the_left_half_only(bundle):
+    with pytest.raises(fw.UploadRefused, match="LEFT"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(side="right"),
+                              slot_info=MODULE_MAP)
+
+
+def test_a_bundle_and_a_keyboard_image_refuse_each_others_path(bundle, images):
+    with pytest.raises(fw.UploadRefused, match="module firmware, not a keyboard image"):
+        fw.plan(bundle, MODULE_CATALOG, state=state_ok())
+    with pytest.raises(fw.UploadRefused, match="not a module bundle"):
+        fw.plan_module_bundle(images / "kb_fwl.bin", MODULE_CATALOG, state=state_ok(),
+                              slot_info=MODULE_MAP)
+
+
+def test_a_bundle_downgrade_needs_allow_older_when_the_installed_version_is_known(bundle):
+    with pytest.raises(fw.UploadRefused, match="older"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=MODULE_MAP,
+                              installed_version="2.4.0")
+    p = fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=MODULE_MAP,
+                              installed_version="2.4.0", allow_older=True)
+    assert p.expected_version == "2.3.3"
+    same = fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=MODULE_MAP,
+                                 installed_version="2.3.3")
+    assert same.expected_version == "2.3.3"
+
+
+def test_a_withheld_bundle_is_refused(bundle):
+    held = [dict(e, flashable=False, withheldBecause=["module flash path not tested"])
+            if e["file"] == "FlashMemory.bin" else e for e in MODULE_CATALOG]
+    with pytest.raises(fw.UploadRefused, match="withheld"):
+        fw.plan_module_bundle(bundle, held, state=state_ok(), slot_info=MODULE_MAP)
+
+
+def test_flash_module_bundle_is_chunks_then_reset_and_nothing_else(bundle, monkeypatch):
+    """No mark-pending and no slot re-read: the bundle is a filesystem, not an MCUboot image."""
+    log = []
+    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    r = fw.flash_module_bundle(bundle, MODULE_CATALOG, arm=RUNNING_HASH, state=state_ok(),
+                               slot_info=MODULE_MAP, chunk=1024)
+    assert _kinds(log) == [(1, 1, 2)] * 4 + [(0, 5, 2)]
+    assert all(b["image"] == 3 for _h, b in log[:4])
+    assert r["reset"] is True and r["uploadImageId"] == 3
+    assert r["verifyNext"]["read"] == "MODULE_FILE_FW_VERSION" and r["verifyNext"]["expect"] == "2.3.3"
+
+
+def test_flash_module_bundle_refuses_without_the_arm_token(bundle, monkeypatch):
+    def boom(*a, **k):
+        raise AssertionError("a frame was sent despite the arm check failing")
+    monkeypatch.setattr(fw.rec, "_talk", boom)
+    with pytest.raises(fw.UploadRefused, match="not armed"):
+        fw.flash_module_bundle(bundle, MODULE_CATALOG, arm="", state=state_ok(), slot_info=MODULE_MAP)
+
+
+def test_flash_module_bundle_stops_without_reset_if_the_bootloader_rejects_a_chunk(bundle, monkeypatch):
+    log = []
+
+    def talk(port, frame, timeout=2.0):
+        h, b = _decode_header(frame), _decode_request(frame)
+        log.append((h, b))
+        if h == {"op": 2, "group": 1, "id": 1}:
+            return {"rc": 3} if b["off"] >= 2048 else {"rc": 0, "off": b["off"] + len(b["data"])}
+        return {"rc": 0}
+    monkeypatch.setattr(fw.rec, "_talk", talk)
+    with pytest.raises(fw.UploadRefused, match="rejected the chunk at offset 2048"):
+        fw.flash_module_bundle(bundle, MODULE_CATALOG, arm=RUNNING_HASH, state=state_ok(),
+                               slot_info=MODULE_MAP, chunk=1024)
+    assert (0, 5, 2) not in _kinds(log), "no reset after a refused chunk"

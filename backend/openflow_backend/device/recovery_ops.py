@@ -80,6 +80,22 @@ def _partition_byte(opts: dict) -> bytes:
     return bytes([int(opts.get("partition", 0)) & 0xFF])
 
 
+def _module_type_byte(opts: dict) -> bytes:
+    # MODULE_FWUP: NayaCore validates "parameter size should be 1" and substitutes AUTO_DETECT for
+    # an "invalid module_type", so the byte is a module type. Its numbering is nayactl's
+    # MODULE_TYPES (1 Touch, 2 Track, 3 Tune), which is INFERRED for this command: the size and
+    # the meaning are pinned by the strings, the exact enum values are not. The docked module's
+    # type is what NayaCore sends when no force type is set ("reading from current module type"),
+    # so the caller passes the type it read off the dock, never a guess.
+    m = opts.get("module")
+    mapping = {"touch": 1, "track": 2, "tune": 3}
+    v = m if isinstance(m, int) else mapping.get(str(m).lower())
+    if v not in (1, 2, 3):
+        raise ValueError("module must be 'touch', 'track' or 'tune' (1, 2 or 3): the type docked "
+                         "on this half, as read from its address")
+    return bytes([v])
+
+
 REGISTRY: tuple[RecoveryOp, ...] = (
     # --- resets: the mild recovery steps ------------------------------------------------------- #
     RecoveryOp("reset_normal", "Restart Keyboard", "Reboot the keyboard normally.",
@@ -106,6 +122,22 @@ REGISTRY: tuple[RecoveryOp, ...] = (
                "reset", C.CAT_SYSTEM, C.SYS_SET_HOST_OS, CONFIRMED,
                "Set the keyboard's host OS? This changes how the keyboard behaves.",
                args=("os",), build_payload=_host_os_byte),
+
+    # --- module firmware: the app-mode half of the module flash (work-queue step 2) ------------ #
+    # NayaCore's UpdateModule sequence is: upload FlashMemory.bin into the modules slot while the
+    # LEFT half sits in MCUboot (flash_module_bundle in the gated upload module), reboot, then send
+    # MODULE_FWUP with the docked module's type so the Create programs that module from its own
+    # store, then compare GET_MODULE_FW_VERSION against the bundle's VERSION. This op is that
+    # third step. It writes the MODULE, not the keyboard; it still ships disabled because the byte
+    # value is inferred and because it has never been watched succeed.
+    RecoveryOp("module_fwup", "Program Docked Module Firmware",
+               "Tell the keyboard to program the docked module from the module firmware it holds "
+               "(after a module bundle has been uploaded to it).",
+               "recovery", C.CAT_MODULE, C.MOD_FWUP, INFERRED,
+               "Program the docked module's firmware from the bundle stored on the keyboard? Keep "
+               "the module docked until it reports its new version.",
+               args=("module",), build_payload=_module_type_byte,
+               needs="donor unit with a module docked, after the bundle upload is verified"),
 
     # --- module battery rescue ------------------------------------------------------------------ #
     RecoveryOp("module_battery_recovery", "Recover Module Battery",

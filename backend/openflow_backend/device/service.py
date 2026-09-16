@@ -595,6 +595,22 @@ class DeviceService:
                     "sent": {"cat": cat, "sub": sub, "payload": payload.hex()}}
         return self._with_transport(side, go)
 
+    def module_file_fw_version(self, side: str = "left") -> dict:
+        """The module firmware version stored ON THE KEYBOARD (MODULE_FILE_FW_VERSION, 0xDE/0x100A):
+        the VERSION file of the FlashMemory.bin bundle in its modules slot, as opposed to
+        GET_MODULE_FW_VERSION, which is what a docked module itself runs. A read. NayaCore compares
+        the two after an upload ("Module firmware version image does not match stored module
+        firmware version"); this is the half of that check that needs no module docked, and it is
+        how a bundle upload is verified after the reboot, since a LittleFS partition has no MCUboot
+        hash to read back. Never seen on hardware: `raw` stays beside the decode."""
+        def go(t, dest, dev):
+            p = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_FILE_FW_VERSION))
+            if p is None:
+                raise TransportError("the half did not answer MODULE_FILE_FW_VERSION")
+            return {"side": dev.side, "raw": p.hex(), "version": format_fw_version(p),
+                    "validated": False}
+        return self._with_transport(side, go)
+
     def led_setting(self, side: str, setting: str, value: int) -> dict:
         """Send one persistent LED setting live. UNVERIFIED on hardware -- this is the testing
         surface. max_brightness (0x1013) is a persistent ceiling: 0 darks the array and survives a

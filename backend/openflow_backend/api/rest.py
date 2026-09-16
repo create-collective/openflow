@@ -117,7 +117,10 @@ def _firmware_catalog() -> list[dict]:
                     "flashable": img.get("flashable", False),
                     "withheldBecause": img.get("withheldBecause") or [],
                     "note": img.get("note"),
-                    "sha256": (img.get("plaintextSha256") or img.get("blobSha256") or "")[:16],
+                    # keyboard: the MCUboot plaintext hash; bundle: its blob; userapp: the
+                    # bundle's own _HASH sidecar for it
+                    "sha256": (img.get("plaintextSha256") or img.get("blobSha256")
+                               or img.get("sha256") or "")[:16],
                 })
             return out
     return []
@@ -206,6 +209,54 @@ async def flash_firmware(body: dict = Body(...)) -> dict:
             slot=int(body.get("slot", 1)), allow_older=bool(body.get("allow_older", False)),
             confirm=bool(body.get("confirm", False)))
     except (fw.UploadRefused, TransportError, ValueError, KeyError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/flash-module-firmware")
+async def flash_module_firmware(body: dict = Body(...)) -> dict:
+    """Upload a catalogued module bundle (FlashMemory.bin) into the left half's modules slot and
+    reboot it. Same two gates as the keyboard flash: refused here while FIRMWARE_FLASH_ENABLED is
+    False, and the upload path itself needs `arm` = the hash the half reports for its running
+    image. A third stands in front of both: the bundle's catalogue entry is withheld until the
+    modules slot is confirmed on a donor unit (build_firmware_catalog.MODULE_PATH_WITHHELD)."""
+    if not FIRMWARE_FLASH_ENABLED:
+        raise HTTPException(status_code=400, detail=(
+            "Firmware flashing is wired but disabled until it is verified on a donor unit. "
+            "Nothing was sent."))
+    import os
+    from pathlib import Path as _P
+    from ..device import firmware_upload as fw
+    name = str(body["image"])
+    path = _P(name)
+    if not path.is_absolute():
+        d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
+        path = _P(d) / name if d else path
+    try:
+        return await run_in_threadpool(
+            fw.flash_module_bundle, path, _firmware_catalog_raw(), arm=body.get("arm", ""),
+            installed_version=body.get("installed_version"),
+            allow_older=bool(body.get("allow_older", False)))
+    except (fw.UploadRefused, TransportError, ValueError, KeyError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/recovery-read")
+async def recovery_read() -> dict:
+    """What a half sitting in MCUboot recovery is running, matched against the catalogue, plus the
+    bootloader's slot map (`image slot info`) when it answers one. Reads only; opens the recovery
+    port for two SMP reads and closes it. This is the read that pins how uploads are addressed
+    (work-queue step 3): expect `slotInfo.slots[*].uploadImageId` and a 1048576-byte slot."""
+    return await run_in_threadpool(recovery_mod.read_running_image, _firmware_catalog_raw())
+
+
+@router.get("/api/module-firmware-file")
+async def module_firmware_file(side: str = "left") -> dict:
+    """The module firmware version the keyboard HOLDS in its modules slot (MODULE_FILE_FW_VERSION),
+    as distinct from what a docked module runs. A read; the post-upload check for a bundle."""
+    svc = get_service()
+    try:
+        return await run_in_threadpool(svc.module_file_fw_version, side)
+    except (CommandError, TransportError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 

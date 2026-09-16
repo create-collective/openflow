@@ -1,6 +1,6 @@
 {
- "_note": "Metadata only; the images are vendor material and are NOT in this repository (they live in the private nayaHistory clone under firmware-history/<tag>/, see historyPath). Built by tools/build_firmware_catalog.py from every NayaFlow release 0.0.1 to 1.25.1; do not hand-edit. One entry per DISTINCT image (deduplicated by plaintextSha256, by blobSha256 for the LittleFS module bundle); `bundles` lists every release that shipped it, `bundle` the newest. Filenames repeat across releases (every one has a kb_fwl.bin), so match a file by blobSha256, never by name. Keyboard: plaintextSha256 is what `mcumgr image list` reports for the running image; `generation` is the QSPI flash generation NayaCore picks by USB PID and a half matches exactly one image. `createFirmware` / `moduleFirmware` come from the release changelogs (\"NayaCreate (vA -> vB)\") or the 1.25.x app JS; where no release declared a number, versionConfidence is \"unknown\" and versionLabel names the release(s) instead. `releaseOrder` is the chronological index of the first release that shipped the image, for the downgrade guard when versions are unknown.",
- "generated": "2026-09-15T23:13:32",
+ "_note": "Metadata only; the images are vendor material and are NOT in this repository (they live in the private nayaHistory clone under firmware-history/<tag>/, see historyPath). Built by tools/build_firmware_catalog.py from every NayaFlow release 0.0.1 to 1.25.1; do not hand-edit. One entry per DISTINCT image (deduplicated by plaintextSha256, by blobSha256 for the LittleFS module bundle); `bundles` lists every release that shipped it, `bundle` the newest. Filenames repeat across releases (every one has a kb_fwl.bin), so match a file by blobSha256, never by name. Keyboard: plaintextSha256 is what `mcumgr image list` reports for the running image; `generation` is the QSPI flash generation NayaCore picks by USB PID and a half matches exactly one image. `createFirmware` / `moduleFirmware` come from the release changelogs (\"NayaCreate (vA -> vB)\") or the 1.25.x app JS; where no release declared a number, versionConfidence is \"unknown\" and versionLabel names the release(s) instead. `releaseOrder` is the chronological index of the first release that shipped the image, for the downgrade guard when versions are unknown. Module: FlashMemory.bin is a LittleFS bundle; its `moduleFirmware` is the VERSION file inside it (what MODULE_FILE_FW_VERSION reports) and `contents` lists its userapps with the SHA-256 the Create reports for each (the bundle's _HASH sidecars); the .sfb entries repeat that per app, `containerBlobSha256` naming their bundle.",
+ "generated": "2026-09-15T23:45:21",
  "source": "https://github.com/traviswye/nayaHistory (firmware-history/, changelogs/, MANIFEST.json)",
  "signingKeys": [
   "de8b07187913e6e788306618e4166e38a8c2eda99b68970d17fd00e75fd5b972"
@@ -1296,15 +1296,43 @@
    "releaseOrder": 23,
    "era": "gen-split",
    "historyPath": "v1.25.1/module/FlashMemory.bin",
+   "lfsVersion": "2.0",
+   "contents": {
+    "Float_UserApp.sfb": {
+     "size": 85312,
+     "sha256": "cdca35065c69f8d4215ae389fbd909868c87fab1beca9802d6b801d40428def5",
+     "hashSidecar": true
+    },
+    "Query_UserApp.sfb": {
+     "size": 41088,
+     "sha256": "c51424615367e6a6abc68dba0e6a8abcbc86ca58cd18909628fd602b53eaa1db",
+     "hashSidecar": true
+    },
+    "Touch_UserApp.sfb": {
+     "size": 46176,
+     "sha256": "7fd6c898bb5df399877f291a4b2810d7872c4f1f77211c1de39fecaa8fcef40a",
+     "hashSidecar": true
+    },
+    "Track_UserApp.sfb": {
+     "size": 61056,
+     "sha256": "07c3427119b89ce7534a18fd27d1a3b36a1eeaa0c35413c07ae4125bbf9d61fd",
+     "hashSidecar": true
+    },
+    "Tune_UserApp.sfb": {
+     "size": 97440,
+     "sha256": "5d58e3605d9dbf0f15f271e6f8369d14f084053977b7e67402acf4b36df106fa",
+     "hashSidecar": true
+    }
+   },
    "moduleFirmware": "2.3.3",
    "versionConfidence": "declared",
-   "versionSource": "app JS v1.25.1",
+   "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.3",
    "component": "modules",
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path not built yet (FlashMemory.bin goes to the modules slot, NayaCore's uploadImageToModulesSlot; work-queue step 2)"
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
    ]
   },
   {
@@ -1314,6 +1342,9 @@
    "target": "module",
    "component": "touch",
    "type": "sfb",
+   "sha256": "7fd6c898bb5df399877f291a4b2810d7872c4f1f77211c1de39fecaa8fcef40a",
+   "hashSidecar": true,
+   "size": 46176,
    "bundle": "NayaFlow 1.25.1",
    "source": "NayaFlow 1.25.1",
    "bundles": [
@@ -1327,12 +1358,14 @@
    "era": "gen-split",
    "moduleFirmware": "2.3.3",
    "versionConfidence": "declared",
-   "versionSource": "app JS v1.25.1",
+   "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.3",
    "encrypted": true,
-   "flashable": true,
-   "withheldBecause": [],
-   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS); no plaintext hash extracted yet."
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
   },
   {
    "file": "Track_UserApp.sfb",
@@ -1341,6 +1374,9 @@
    "target": "module",
    "component": "track",
    "type": "sfb",
+   "sha256": "07c3427119b89ce7534a18fd27d1a3b36a1eeaa0c35413c07ae4125bbf9d61fd",
+   "hashSidecar": true,
+   "size": 61056,
    "bundle": "NayaFlow 1.25.1",
    "source": "NayaFlow 1.25.1",
    "bundles": [
@@ -1354,12 +1390,14 @@
    "era": "gen-split",
    "moduleFirmware": "2.3.3",
    "versionConfidence": "declared",
-   "versionSource": "app JS v1.25.1",
+   "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.3",
    "encrypted": true,
-   "flashable": true,
-   "withheldBecause": [],
-   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS); no plaintext hash extracted yet."
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
   },
   {
    "file": "Tune_UserApp.sfb",
@@ -1368,6 +1406,9 @@
    "target": "module",
    "component": "tune",
    "type": "sfb",
+   "sha256": "5d58e3605d9dbf0f15f271e6f8369d14f084053977b7e67402acf4b36df106fa",
+   "hashSidecar": true,
+   "size": 97440,
    "bundle": "NayaFlow 1.25.1",
    "source": "NayaFlow 1.25.1",
    "bundles": [
@@ -1381,12 +1422,14 @@
    "era": "gen-split",
    "moduleFirmware": "2.3.3",
    "versionConfidence": "declared",
-   "versionSource": "app JS v1.25.1",
+   "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.3",
    "encrypted": true,
-   "flashable": true,
-   "withheldBecause": [],
-   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS); no plaintext hash extracted yet."
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
   },
   {
    "file": "Float_UserApp.sfb",
@@ -1395,6 +1438,9 @@
    "target": "module",
    "component": "float",
    "type": "sfb",
+   "sha256": "cdca35065c69f8d4215ae389fbd909868c87fab1beca9802d6b801d40428def5",
+   "hashSidecar": true,
+   "size": 85312,
    "bundle": "NayaFlow 1.25.1",
    "source": "NayaFlow 1.25.1",
    "bundles": [
@@ -1408,14 +1454,15 @@
    "era": "gen-split",
    "moduleFirmware": "2.3.3",
    "versionConfidence": "declared",
-   "versionSource": "app JS v1.25.1",
+   "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.3",
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS); no plaintext hash extracted yet."
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
   },
   {
    "file": "Query_UserApp.sfb",
@@ -1424,6 +1471,9 @@
    "target": "module",
    "component": "query",
    "type": "sfb",
+   "sha256": "c51424615367e6a6abc68dba0e6a8abcbc86ca58cd18909628fd602b53eaa1db",
+   "hashSidecar": true,
+   "size": 41088,
    "bundle": "NayaFlow 1.25.1",
    "source": "NayaFlow 1.25.1",
    "bundles": [
@@ -1437,14 +1487,15 @@
    "era": "gen-split",
    "moduleFirmware": "2.3.3",
    "versionConfidence": "declared",
-   "versionSource": "app JS v1.25.1",
+   "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.3",
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS); no plaintext hash extracted yet."
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
   },
   {
    "file": "FlashMemory.bin",
@@ -1474,16 +1525,221 @@
    "releaseOrder": 18,
    "era": "modules",
    "historyPath": "v1.21.0/module/FlashMemory.bin",
+   "lfsVersion": "2.0",
+   "contents": {
+    "Float_UserApp.sfb": {
+     "size": 85440,
+     "sha256": "241a6c8ac26a0ed3348c7ba4265a42ea73fe4fce33a117b9a080848f1b329f7f",
+     "hashSidecar": true
+    },
+    "Query_UserApp.sfb": {
+     "size": 41216,
+     "sha256": "d202e3bf2b64652724ee15bc7383c9efc8edc205672d9c1f4eadf728ef18de59",
+     "hashSidecar": true
+    },
+    "Touch_UserApp.sfb": {
+     "size": 46304,
+     "sha256": "4378a0afca6224f4516890e305cb5afe272d044d5f32a0bcbbcdb338e2cec3f2",
+     "hashSidecar": true
+    },
+    "Track_UserApp.sfb": {
+     "size": 61184,
+     "sha256": "37af9193611272de6e0d65ab863f9792eba53eee1c118555f1663590be475cea",
+     "hashSidecar": true
+    },
+    "Tune_UserApp.sfb": {
+     "size": 97728,
+     "sha256": "6330c55f1db3bb8893d8124be94708d1fd9e6b6664591187557686fec184e05a",
+     "hashSidecar": true
+    }
+   },
    "moduleFirmware": "2.3.2",
    "versionConfidence": "declared",
-   "versionSource": "changelog v1.17.2",
+   "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.2",
    "component": "modules",
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path not built yet (FlashMemory.bin goes to the modules slot, NayaCore's uploadImageToModulesSlot; work-queue step 2)"
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
    ]
+  },
+  {
+   "file": "Touch_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "84deccbfab93527c872e37b3f219cccf8ab836e362126b27934f5db52ace39fa",
+   "target": "module",
+   "component": "touch",
+   "type": "sfb",
+   "sha256": "4378a0afca6224f4516890e305cb5afe272d044d5f32a0bcbbcdb338e2cec3f2",
+   "hashSidecar": true,
+   "size": 46304,
+   "bundle": "NayaFlow 1.21.0",
+   "source": "NayaFlow 1.21.0",
+   "bundles": [
+    "v1.17.2",
+    "v1.17.3",
+    "v1.19.1",
+    "v1.20.0",
+    "v1.21.0"
+   ],
+   "firstSeen": "v1.17.2",
+   "lastSeen": "v1.21.0",
+   "firstSeenAt": "2026-02-18",
+   "releaseOrder": 18,
+   "era": "modules",
+   "moduleFirmware": "2.3.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.3.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+  },
+  {
+   "file": "Track_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "84deccbfab93527c872e37b3f219cccf8ab836e362126b27934f5db52ace39fa",
+   "target": "module",
+   "component": "track",
+   "type": "sfb",
+   "sha256": "37af9193611272de6e0d65ab863f9792eba53eee1c118555f1663590be475cea",
+   "hashSidecar": true,
+   "size": 61184,
+   "bundle": "NayaFlow 1.21.0",
+   "source": "NayaFlow 1.21.0",
+   "bundles": [
+    "v1.17.2",
+    "v1.17.3",
+    "v1.19.1",
+    "v1.20.0",
+    "v1.21.0"
+   ],
+   "firstSeen": "v1.17.2",
+   "lastSeen": "v1.21.0",
+   "firstSeenAt": "2026-02-18",
+   "releaseOrder": 18,
+   "era": "modules",
+   "moduleFirmware": "2.3.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.3.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+  },
+  {
+   "file": "Tune_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "84deccbfab93527c872e37b3f219cccf8ab836e362126b27934f5db52ace39fa",
+   "target": "module",
+   "component": "tune",
+   "type": "sfb",
+   "sha256": "6330c55f1db3bb8893d8124be94708d1fd9e6b6664591187557686fec184e05a",
+   "hashSidecar": true,
+   "size": 97728,
+   "bundle": "NayaFlow 1.21.0",
+   "source": "NayaFlow 1.21.0",
+   "bundles": [
+    "v1.17.2",
+    "v1.17.3",
+    "v1.19.1",
+    "v1.20.0",
+    "v1.21.0"
+   ],
+   "firstSeen": "v1.17.2",
+   "lastSeen": "v1.21.0",
+   "firstSeenAt": "2026-02-18",
+   "releaseOrder": 18,
+   "era": "modules",
+   "moduleFirmware": "2.3.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.3.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+  },
+  {
+   "file": "Float_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "84deccbfab93527c872e37b3f219cccf8ab836e362126b27934f5db52ace39fa",
+   "target": "module",
+   "component": "float",
+   "type": "sfb",
+   "sha256": "241a6c8ac26a0ed3348c7ba4265a42ea73fe4fce33a117b9a080848f1b329f7f",
+   "hashSidecar": true,
+   "size": 85440,
+   "bundle": "NayaFlow 1.21.0",
+   "source": "NayaFlow 1.21.0",
+   "bundles": [
+    "v1.17.2",
+    "v1.17.3",
+    "v1.19.1",
+    "v1.20.0",
+    "v1.21.0"
+   ],
+   "firstSeen": "v1.17.2",
+   "lastSeen": "v1.21.0",
+   "firstSeenAt": "2026-02-18",
+   "releaseOrder": 18,
+   "era": "modules",
+   "moduleFirmware": "2.3.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.3.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+  },
+  {
+   "file": "Query_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "84deccbfab93527c872e37b3f219cccf8ab836e362126b27934f5db52ace39fa",
+   "target": "module",
+   "component": "query",
+   "type": "sfb",
+   "sha256": "d202e3bf2b64652724ee15bc7383c9efc8edc205672d9c1f4eadf728ef18de59",
+   "hashSidecar": true,
+   "size": 41216,
+   "bundle": "NayaFlow 1.21.0",
+   "source": "NayaFlow 1.21.0",
+   "bundles": [
+    "v1.17.2",
+    "v1.17.3",
+    "v1.19.1",
+    "v1.20.0",
+    "v1.21.0"
+   ],
+   "firstSeen": "v1.17.2",
+   "lastSeen": "v1.21.0",
+   "firstSeenAt": "2026-02-18",
+   "releaseOrder": 18,
+   "era": "modules",
+   "moduleFirmware": "2.3.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.3.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
   },
   {
    "file": "FlashMemory.bin",
@@ -1510,16 +1766,206 @@
    "releaseOrder": 16,
    "era": "modules",
    "historyPath": "v1.15.1/module/FlashMemory.bin",
+   "lfsVersion": "2.1",
+   "contents": {
+    "Float_UserApp.sfb": {
+     "size": 89616,
+     "sha256": "b59da5ba185be7aabe706ed3694cf5f78b9ceb7bc88a3a5835e079c7b5529ff2",
+     "hashSidecar": true
+    },
+    "Query_UserApp.sfb": {
+     "size": 45504,
+     "sha256": "651d1226017d1db9e600a07742157fe968e0f07a8aeca1b5fef349c570c93312",
+     "hashSidecar": true
+    },
+    "Touch_UserApp.sfb": {
+     "size": 50576,
+     "sha256": "7cc8f33db04832ae4f6a22fc082915e50afafb30db7416130debe687533c51ca",
+     "hashSidecar": true
+    },
+    "Track_UserApp.sfb": {
+     "size": 65152,
+     "sha256": "f9da852d10a1db2694ed2f250ae2a380330871a48c94582b313a71a20f5aa9d1",
+     "hashSidecar": true
+    },
+    "Tune_UserApp.sfb": {
+     "size": 103424,
+     "sha256": "67bb9b17b213c78ae0911a004151fc9bb7946e336073d0e76cfac7b69f65e805",
+     "hashSidecar": true
+    }
+   },
    "moduleFirmware": "2.2.0",
    "versionConfidence": "declared",
-   "versionSource": "changelog v1.15.0",
+   "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.2.0",
    "component": "modules",
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path not built yet (FlashMemory.bin goes to the modules slot, NayaCore's uploadImageToModulesSlot; work-queue step 2)"
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
    ]
+  },
+  {
+   "file": "Touch_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "51d9d08e656b1a2ffb48b9848f7934233831710e1eb3a20af73cd890a84235bf",
+   "target": "module",
+   "component": "touch",
+   "type": "sfb",
+   "sha256": "7cc8f33db04832ae4f6a22fc082915e50afafb30db7416130debe687533c51ca",
+   "hashSidecar": true,
+   "size": 50576,
+   "bundle": "NayaFlow 1.15.1",
+   "source": "NayaFlow 1.15.1",
+   "bundles": [
+    "v1.15.0",
+    "v1.15.1"
+   ],
+   "firstSeen": "v1.15.0",
+   "lastSeen": "v1.15.1",
+   "firstSeenAt": "2025-11-07",
+   "releaseOrder": 16,
+   "era": "modules",
+   "moduleFirmware": "2.2.0",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.2.0",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+  },
+  {
+   "file": "Track_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "51d9d08e656b1a2ffb48b9848f7934233831710e1eb3a20af73cd890a84235bf",
+   "target": "module",
+   "component": "track",
+   "type": "sfb",
+   "sha256": "f9da852d10a1db2694ed2f250ae2a380330871a48c94582b313a71a20f5aa9d1",
+   "hashSidecar": true,
+   "size": 65152,
+   "bundle": "NayaFlow 1.15.1",
+   "source": "NayaFlow 1.15.1",
+   "bundles": [
+    "v1.15.0",
+    "v1.15.1"
+   ],
+   "firstSeen": "v1.15.0",
+   "lastSeen": "v1.15.1",
+   "firstSeenAt": "2025-11-07",
+   "releaseOrder": 16,
+   "era": "modules",
+   "moduleFirmware": "2.2.0",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.2.0",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+  },
+  {
+   "file": "Tune_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "51d9d08e656b1a2ffb48b9848f7934233831710e1eb3a20af73cd890a84235bf",
+   "target": "module",
+   "component": "tune",
+   "type": "sfb",
+   "sha256": "67bb9b17b213c78ae0911a004151fc9bb7946e336073d0e76cfac7b69f65e805",
+   "hashSidecar": true,
+   "size": 103424,
+   "bundle": "NayaFlow 1.15.1",
+   "source": "NayaFlow 1.15.1",
+   "bundles": [
+    "v1.15.0",
+    "v1.15.1"
+   ],
+   "firstSeen": "v1.15.0",
+   "lastSeen": "v1.15.1",
+   "firstSeenAt": "2025-11-07",
+   "releaseOrder": 16,
+   "era": "modules",
+   "moduleFirmware": "2.2.0",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.2.0",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+  },
+  {
+   "file": "Float_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "51d9d08e656b1a2ffb48b9848f7934233831710e1eb3a20af73cd890a84235bf",
+   "target": "module",
+   "component": "float",
+   "type": "sfb",
+   "sha256": "b59da5ba185be7aabe706ed3694cf5f78b9ceb7bc88a3a5835e079c7b5529ff2",
+   "hashSidecar": true,
+   "size": 89616,
+   "bundle": "NayaFlow 1.15.1",
+   "source": "NayaFlow 1.15.1",
+   "bundles": [
+    "v1.15.0",
+    "v1.15.1"
+   ],
+   "firstSeen": "v1.15.0",
+   "lastSeen": "v1.15.1",
+   "firstSeenAt": "2025-11-07",
+   "releaseOrder": 16,
+   "era": "modules",
+   "moduleFirmware": "2.2.0",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.2.0",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+  },
+  {
+   "file": "Query_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "51d9d08e656b1a2ffb48b9848f7934233831710e1eb3a20af73cd890a84235bf",
+   "target": "module",
+   "component": "query",
+   "type": "sfb",
+   "sha256": "651d1226017d1db9e600a07742157fe968e0f07a8aeca1b5fef349c570c93312",
+   "hashSidecar": true,
+   "size": 45504,
+   "bundle": "NayaFlow 1.15.1",
+   "source": "NayaFlow 1.15.1",
+   "bundles": [
+    "v1.15.0",
+    "v1.15.1"
+   ],
+   "firstSeen": "v1.15.0",
+   "lastSeen": "v1.15.1",
+   "firstSeenAt": "2025-11-07",
+   "releaseOrder": 16,
+   "era": "modules",
+   "moduleFirmware": "2.2.0",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.2.0",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
   },
   {
    "file": "FlashMemory.bin",
@@ -1551,16 +1997,201 @@
    "releaseOrder": 15,
    "era": "modules",
    "historyPath": "v1.14.5/module/FlashMemory.bin",
+   "lfsVersion": "2.1",
+   "contents": {
+    "Float_UserApp.sfb": {
+     "size": 157184,
+     "sha256": "fd273e0e6dd0fbd08527dddea890844206bf850d54665a7a98094c7435ceb4dc",
+     "hashSidecar": false
+    },
+    "Query_UserApp.sfb": {
+     "size": 44896,
+     "sha256": "ab459226f5d22c57e55ee69f8ff29131d46720dc292dce8c7ac0a7b5fb446051",
+     "hashSidecar": false
+    },
+    "Touch_UserApp.sfb": {
+     "size": 48448,
+     "sha256": "bb420888c41cd142e5e90d2362a4dfabad3c89a432fddf99ce16624318b52625",
+     "hashSidecar": false
+    },
+    "Track_UserApp.sfb": {
+     "size": 62400,
+     "sha256": "5c86b5e95f8bd8e2eae84b66fd6a2f21e6dd00d4f8319a0bce6f8cde702915a7",
+     "hashSidecar": false
+    },
+    "Tune_UserApp.sfb": {
+     "size": 98496,
+     "sha256": "c70c9b150f92cd42ac9bd4a47efaeece36061b110ca50e1e5cc991454d331ae2",
+     "hashSidecar": false
+    }
+   },
    "moduleFirmware": "2.1.2",
    "versionConfidence": "declared",
-   "versionSource": "changelog v1.14.5",
+   "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.1.2",
    "component": "modules",
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path not built yet (FlashMemory.bin goes to the modules slot, NayaCore's uploadImageToModulesSlot; work-queue step 2)"
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
    ]
+  },
+  {
+   "file": "Touch_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "d893f6fda573e971de4066b90bfd9c913bd37ef0f4df1b6b654c821452e8bdc2",
+   "target": "module",
+   "component": "touch",
+   "type": "sfb",
+   "sha256": "bb420888c41cd142e5e90d2362a4dfabad3c89a432fddf99ce16624318b52625",
+   "hashSidecar": false,
+   "size": 48448,
+   "bundle": "NayaFlow 1.14.5",
+   "source": "NayaFlow 1.14.5",
+   "bundles": [
+    "v1.14.5"
+   ],
+   "firstSeen": "v1.14.5",
+   "lastSeen": "v1.14.5",
+   "firstSeenAt": "2025-10-03",
+   "releaseOrder": 15,
+   "era": "modules",
+   "moduleFirmware": "2.1.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Track_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "d893f6fda573e971de4066b90bfd9c913bd37ef0f4df1b6b654c821452e8bdc2",
+   "target": "module",
+   "component": "track",
+   "type": "sfb",
+   "sha256": "5c86b5e95f8bd8e2eae84b66fd6a2f21e6dd00d4f8319a0bce6f8cde702915a7",
+   "hashSidecar": false,
+   "size": 62400,
+   "bundle": "NayaFlow 1.14.5",
+   "source": "NayaFlow 1.14.5",
+   "bundles": [
+    "v1.14.5"
+   ],
+   "firstSeen": "v1.14.5",
+   "lastSeen": "v1.14.5",
+   "firstSeenAt": "2025-10-03",
+   "releaseOrder": 15,
+   "era": "modules",
+   "moduleFirmware": "2.1.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Tune_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "d893f6fda573e971de4066b90bfd9c913bd37ef0f4df1b6b654c821452e8bdc2",
+   "target": "module",
+   "component": "tune",
+   "type": "sfb",
+   "sha256": "c70c9b150f92cd42ac9bd4a47efaeece36061b110ca50e1e5cc991454d331ae2",
+   "hashSidecar": false,
+   "size": 98496,
+   "bundle": "NayaFlow 1.14.5",
+   "source": "NayaFlow 1.14.5",
+   "bundles": [
+    "v1.14.5"
+   ],
+   "firstSeen": "v1.14.5",
+   "lastSeen": "v1.14.5",
+   "firstSeenAt": "2025-10-03",
+   "releaseOrder": 15,
+   "era": "modules",
+   "moduleFirmware": "2.1.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Float_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "d893f6fda573e971de4066b90bfd9c913bd37ef0f4df1b6b654c821452e8bdc2",
+   "target": "module",
+   "component": "float",
+   "type": "sfb",
+   "sha256": "fd273e0e6dd0fbd08527dddea890844206bf850d54665a7a98094c7435ceb4dc",
+   "hashSidecar": false,
+   "size": 157184,
+   "bundle": "NayaFlow 1.14.5",
+   "source": "NayaFlow 1.14.5",
+   "bundles": [
+    "v1.14.5"
+   ],
+   "firstSeen": "v1.14.5",
+   "lastSeen": "v1.14.5",
+   "firstSeenAt": "2025-10-03",
+   "releaseOrder": 15,
+   "era": "modules",
+   "moduleFirmware": "2.1.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Query_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "d893f6fda573e971de4066b90bfd9c913bd37ef0f4df1b6b654c821452e8bdc2",
+   "target": "module",
+   "component": "query",
+   "type": "sfb",
+   "sha256": "ab459226f5d22c57e55ee69f8ff29131d46720dc292dce8c7ac0a7b5fb446051",
+   "hashSidecar": false,
+   "size": 44896,
+   "bundle": "NayaFlow 1.14.5",
+   "source": "NayaFlow 1.14.5",
+   "bundles": [
+    "v1.14.5"
+   ],
+   "firstSeen": "v1.14.5",
+   "lastSeen": "v1.14.5",
+   "firstSeenAt": "2025-10-03",
+   "releaseOrder": 15,
+   "era": "modules",
+   "moduleFirmware": "2.1.2",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.2",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
   },
   {
    "file": "FlashMemory.bin",
@@ -1586,16 +2217,201 @@
    "releaseOrder": 14,
    "era": "modules",
    "historyPath": "v1.14.3/module/FlashMemory.bin",
-   "moduleFirmware": null,
-   "versionConfidence": "unknown",
-   "versionSource": null,
-   "versionLabel": "NayaFlow 1.14.3",
+   "lfsVersion": "2.1",
+   "contents": {
+    "Float_UserApp.sfb": {
+     "size": 157184,
+     "sha256": "0ad35a6b82e5cdef4c9dbfc2935e14d830687bc7c893a7b6adbf6fc7d341991e",
+     "hashSidecar": false
+    },
+    "Query_UserApp.sfb": {
+     "size": 44896,
+     "sha256": "ad6039158dc2b409e3fc7d9c04245175b608adb3042672b6737df357570249c8",
+     "hashSidecar": false
+    },
+    "Touch_UserApp.sfb": {
+     "size": 48448,
+     "sha256": "cf6e7b26893fddd84b7fc3e20249c00344adaa73016c73dd2212e5292236acf9",
+     "hashSidecar": false
+    },
+    "Track_UserApp.sfb": {
+     "size": 62416,
+     "sha256": "78ac610f30be4df0b10559238f4d321cacf5da250f1853e2f95fd12d9963c3eb",
+     "hashSidecar": false
+    },
+    "Tune_UserApp.sfb": {
+     "size": 98496,
+     "sha256": "41ad364236befaec92c0dba33f2d329a5ba13cc60612c5f6d1872112e46b93bb",
+     "hashSidecar": false
+    }
+   },
+   "moduleFirmware": "2.1.1",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.1",
    "component": "modules",
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path not built yet (FlashMemory.bin goes to the modules slot, NayaCore's uploadImageToModulesSlot; work-queue step 2)"
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
    ]
+  },
+  {
+   "file": "Touch_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "5d4b036f516dfdc2af559e5eba5d55f7264be96f95e1ed78cf524c593bff8549",
+   "target": "module",
+   "component": "touch",
+   "type": "sfb",
+   "sha256": "cf6e7b26893fddd84b7fc3e20249c00344adaa73016c73dd2212e5292236acf9",
+   "hashSidecar": false,
+   "size": 48448,
+   "bundle": "NayaFlow 1.14.3",
+   "source": "NayaFlow 1.14.3",
+   "bundles": [
+    "v1.14.3"
+   ],
+   "firstSeen": "v1.14.3",
+   "lastSeen": "v1.14.3",
+   "firstSeenAt": "2025-10-02",
+   "releaseOrder": 14,
+   "era": "modules",
+   "moduleFirmware": "2.1.1",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.1",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Track_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "5d4b036f516dfdc2af559e5eba5d55f7264be96f95e1ed78cf524c593bff8549",
+   "target": "module",
+   "component": "track",
+   "type": "sfb",
+   "sha256": "78ac610f30be4df0b10559238f4d321cacf5da250f1853e2f95fd12d9963c3eb",
+   "hashSidecar": false,
+   "size": 62416,
+   "bundle": "NayaFlow 1.14.3",
+   "source": "NayaFlow 1.14.3",
+   "bundles": [
+    "v1.14.3"
+   ],
+   "firstSeen": "v1.14.3",
+   "lastSeen": "v1.14.3",
+   "firstSeenAt": "2025-10-02",
+   "releaseOrder": 14,
+   "era": "modules",
+   "moduleFirmware": "2.1.1",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.1",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Tune_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "5d4b036f516dfdc2af559e5eba5d55f7264be96f95e1ed78cf524c593bff8549",
+   "target": "module",
+   "component": "tune",
+   "type": "sfb",
+   "sha256": "41ad364236befaec92c0dba33f2d329a5ba13cc60612c5f6d1872112e46b93bb",
+   "hashSidecar": false,
+   "size": 98496,
+   "bundle": "NayaFlow 1.14.3",
+   "source": "NayaFlow 1.14.3",
+   "bundles": [
+    "v1.14.3"
+   ],
+   "firstSeen": "v1.14.3",
+   "lastSeen": "v1.14.3",
+   "firstSeenAt": "2025-10-02",
+   "releaseOrder": 14,
+   "era": "modules",
+   "moduleFirmware": "2.1.1",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.1",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Float_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "5d4b036f516dfdc2af559e5eba5d55f7264be96f95e1ed78cf524c593bff8549",
+   "target": "module",
+   "component": "float",
+   "type": "sfb",
+   "sha256": "0ad35a6b82e5cdef4c9dbfc2935e14d830687bc7c893a7b6adbf6fc7d341991e",
+   "hashSidecar": false,
+   "size": 157184,
+   "bundle": "NayaFlow 1.14.3",
+   "source": "NayaFlow 1.14.3",
+   "bundles": [
+    "v1.14.3"
+   ],
+   "firstSeen": "v1.14.3",
+   "lastSeen": "v1.14.3",
+   "firstSeenAt": "2025-10-02",
+   "releaseOrder": 14,
+   "era": "modules",
+   "moduleFirmware": "2.1.1",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.1",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Query_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "5d4b036f516dfdc2af559e5eba5d55f7264be96f95e1ed78cf524c593bff8549",
+   "target": "module",
+   "component": "query",
+   "type": "sfb",
+   "sha256": "ad6039158dc2b409e3fc7d9c04245175b608adb3042672b6737df357570249c8",
+   "hashSidecar": false,
+   "size": 44896,
+   "bundle": "NayaFlow 1.14.3",
+   "source": "NayaFlow 1.14.3",
+   "bundles": [
+    "v1.14.3"
+   ],
+   "firstSeen": "v1.14.3",
+   "lastSeen": "v1.14.3",
+   "firstSeenAt": "2025-10-02",
+   "releaseOrder": 14,
+   "era": "modules",
+   "moduleFirmware": "2.1.1",
+   "versionConfidence": "declared",
+   "versionSource": "VERSION file inside FlashMemory.bin",
+   "versionLabel": "2.1.1",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
   },
   {
    "file": "FlashMemory.bin",
@@ -1625,6 +2441,34 @@
    "releaseOrder": 9,
    "era": "modules",
    "historyPath": "v1.11.11/module/FlashMemory.bin",
+   "lfsVersion": "2.1",
+   "contents": {
+    "Float_UserApp.sfb": {
+     "size": 156592,
+     "sha256": "6ecf4c5a484c9c2252bdb1213597ae70b4922cc3cd9219301e9225d364c87f28",
+     "hashSidecar": false
+    },
+    "Query_UserApp.sfb": {
+     "size": 44560,
+     "sha256": "d4737e3e52f67ad8ae7d50141debb392e26878b204a3c8a163ca536c2818a438",
+     "hashSidecar": false
+    },
+    "Touch_UserApp.sfb": {
+     "size": 47872,
+     "sha256": "8e9de7d65279f6d191f19bfb7d8b4181e56490f79e14abc68a8d510289fda2e9",
+     "hashSidecar": false
+    },
+    "Track_UserApp.sfb": {
+     "size": 63792,
+     "sha256": "dcd902de7083e9ae83323d5d2aa75d3772c6e2c06d0832f0d964fdf6e095c38d",
+     "hashSidecar": false
+    },
+    "Tune_UserApp.sfb": {
+     "size": 97840,
+     "sha256": "574b7eaa9c77cdf5b774152a96101417c25b26b5236e5635bfff535a5edd7da6",
+     "hashSidecar": false
+    }
+   },
    "moduleFirmware": null,
    "versionConfidence": "unknown",
    "versionSource": null,
@@ -1633,8 +2477,185 @@
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path not built yet (FlashMemory.bin goes to the modules slot, NayaCore's uploadImageToModulesSlot; work-queue step 2)"
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
    ]
+  },
+  {
+   "file": "Touch_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "fc354e74a32237d71d7619cd7b506ae9010db37c6779d3a4e5c4c3154e18ec45",
+   "target": "module",
+   "component": "touch",
+   "type": "sfb",
+   "sha256": "8e9de7d65279f6d191f19bfb7d8b4181e56490f79e14abc68a8d510289fda2e9",
+   "hashSidecar": false,
+   "size": 47872,
+   "bundle": "NayaFlow 1.11.11",
+   "source": "NayaFlow 1.11.11",
+   "bundles": [
+    "v1.11.0",
+    "v1.11.8",
+    "v1.11.9",
+    "v1.11.10",
+    "v1.11.11"
+   ],
+   "firstSeen": "v1.11.0",
+   "lastSeen": "v1.11.11",
+   "firstSeenAt": "2025-09-07",
+   "releaseOrder": 9,
+   "era": "modules",
+   "moduleFirmware": null,
+   "versionConfidence": "unknown",
+   "versionSource": null,
+   "versionLabel": "NayaFlow 1.11.0 to 1.11.11",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Track_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "fc354e74a32237d71d7619cd7b506ae9010db37c6779d3a4e5c4c3154e18ec45",
+   "target": "module",
+   "component": "track",
+   "type": "sfb",
+   "sha256": "dcd902de7083e9ae83323d5d2aa75d3772c6e2c06d0832f0d964fdf6e095c38d",
+   "hashSidecar": false,
+   "size": 63792,
+   "bundle": "NayaFlow 1.11.11",
+   "source": "NayaFlow 1.11.11",
+   "bundles": [
+    "v1.11.0",
+    "v1.11.8",
+    "v1.11.9",
+    "v1.11.10",
+    "v1.11.11"
+   ],
+   "firstSeen": "v1.11.0",
+   "lastSeen": "v1.11.11",
+   "firstSeenAt": "2025-09-07",
+   "releaseOrder": 9,
+   "era": "modules",
+   "moduleFirmware": null,
+   "versionConfidence": "unknown",
+   "versionSource": null,
+   "versionLabel": "NayaFlow 1.11.0 to 1.11.11",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Tune_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "fc354e74a32237d71d7619cd7b506ae9010db37c6779d3a4e5c4c3154e18ec45",
+   "target": "module",
+   "component": "tune",
+   "type": "sfb",
+   "sha256": "574b7eaa9c77cdf5b774152a96101417c25b26b5236e5635bfff535a5edd7da6",
+   "hashSidecar": false,
+   "size": 97840,
+   "bundle": "NayaFlow 1.11.11",
+   "source": "NayaFlow 1.11.11",
+   "bundles": [
+    "v1.11.0",
+    "v1.11.8",
+    "v1.11.9",
+    "v1.11.10",
+    "v1.11.11"
+   ],
+   "firstSeen": "v1.11.0",
+   "lastSeen": "v1.11.11",
+   "firstSeenAt": "2025-09-07",
+   "releaseOrder": 9,
+   "era": "modules",
+   "moduleFirmware": null,
+   "versionConfidence": "unknown",
+   "versionSource": null,
+   "versionLabel": "NayaFlow 1.11.0 to 1.11.11",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)"
+   ],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Float_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "fc354e74a32237d71d7619cd7b506ae9010db37c6779d3a4e5c4c3154e18ec45",
+   "target": "module",
+   "component": "float",
+   "type": "sfb",
+   "sha256": "6ecf4c5a484c9c2252bdb1213597ae70b4922cc3cd9219301e9225d364c87f28",
+   "hashSidecar": false,
+   "size": 156592,
+   "bundle": "NayaFlow 1.11.11",
+   "source": "NayaFlow 1.11.11",
+   "bundles": [
+    "v1.11.0",
+    "v1.11.8",
+    "v1.11.9",
+    "v1.11.10",
+    "v1.11.11"
+   ],
+   "firstSeen": "v1.11.0",
+   "lastSeen": "v1.11.11",
+   "firstSeenAt": "2025-09-07",
+   "releaseOrder": 9,
+   "era": "modules",
+   "moduleFirmware": null,
+   "versionConfidence": "unknown",
+   "versionSource": null,
+   "versionLabel": "NayaFlow 1.11.0 to 1.11.11",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+  },
+  {
+   "file": "Query_UserApp.sfb",
+   "container": "FlashMemory.bin",
+   "containerBlobSha256": "fc354e74a32237d71d7619cd7b506ae9010db37c6779d3a4e5c4c3154e18ec45",
+   "target": "module",
+   "component": "query",
+   "type": "sfb",
+   "sha256": "d4737e3e52f67ad8ae7d50141debb392e26878b204a3c8a163ca536c2818a438",
+   "hashSidecar": false,
+   "size": 44560,
+   "bundle": "NayaFlow 1.11.11",
+   "source": "NayaFlow 1.11.11",
+   "bundles": [
+    "v1.11.0",
+    "v1.11.8",
+    "v1.11.9",
+    "v1.11.10",
+    "v1.11.11"
+   ],
+   "firstSeen": "v1.11.0",
+   "lastSeen": "v1.11.11",
+   "firstSeenAt": "2025-09-07",
+   "releaseOrder": 9,
+   "era": "modules",
+   "moduleFirmware": null,
+   "versionConfidence": "unknown",
+   "versionSource": null,
+   "versionLabel": "NayaFlow 1.11.0 to 1.11.11",
+   "encrypted": true,
+   "flashable": false,
+   "withheldBecause": [
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
+    "not a shipping module"
+   ],
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
   },
   {
    "file": "d_fw.bin",
@@ -1674,7 +2695,7 @@
    "note": "Standalone dial firmware, the Tune's predecessor, shipped 0.1.0 to 1.6.10 before FlashMemory.bin folded the modules into one bundle. An MCUboot image for the module MCU, not for a keyboard half.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path not built yet (FlashMemory.bin goes to the modules slot, NayaCore's uploadImageToModulesSlot; work-queue step 2)",
+    "module flash path not tested: wired (firmware_upload.flash_module_bundle) and gated until a donor test confirms the modules slot id (work-queue step 2)",
     "no dial hardware to test on, and the module bundle superseded it"
    ],
    "headerSize": 512,
