@@ -130,7 +130,8 @@ def test_no_frame_at_all_raises():
 
 CATALOG = [
     {"file": "kb_fwl.bin", "plaintextSha256": "479e89ba", "side": "left",
-     "generation": "A", "createFirmware": "3.41.0", "source": "NayaFlow 1.25.1", "flashable": True},
+     "generation": "A", "createFirmware": "3.41.0", "source": "NayaFlow 1.25.1", "flashable": True,
+     "bundle": "NayaFlow 1.25.1", "versionLabel": "3.41.0", "releaseOrder": 24},
     {"file": "old.bin", "plaintextSha256": "deadbeef", "side": "left",
      "generation": None, "createFirmware": None, "source": "NayaFlow 1.17.3", "flashable": False},
 ]
@@ -139,6 +140,15 @@ CATALOG = [
 def test_a_known_image_is_named():
     got = rec.identify("479e89ba", CATALOG)
     assert got["identified"] and got["side"] == "left" and got["generation"] == "A", got
+
+
+def test_a_known_image_says_which_release_shipped_it():
+    """So Information can say 'NayaFlow 1.25.1 shipped this', and the flasher can order two
+    images whose version numbers no release ever declared."""
+    got = rec.identify("479e89ba", CATALOG)
+    assert (got["bundle"], got["versionLabel"], got["releaseOrder"]) == ("NayaFlow 1.25.1", "3.41.0", 24)
+    old = rec.identify("deadbeef", CATALOG)
+    assert old["identified"] and old["bundle"] is None and old["releaseOrder"] is None
 
 
 def test_an_unknown_image_is_not_guessed():

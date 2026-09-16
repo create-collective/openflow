@@ -126,9 +126,9 @@ class UploadPlan:
         t, r = self.target, self.running
         return (f"{self.image_path.name} -> slot {self.slot} on {self.port}\n"
                 f"  running : {r.get('file')} ({r.get('side')}/gen {r.get('generation')}, "
-                f"fw {r.get('createFirmware')})\n"
+                f"fw {r.get('versionLabel') or r.get('createFirmware')})\n"
                 f"  writing : {t.get('file')} ({t.get('side')}/gen {t.get('generation')}, "
-                f"fw {t.get('createFirmware')})\n"
+                f"fw {t.get('versionLabel') or t.get('createFirmware')}, {t.get('bundle')})\n"
                 f"  {self.total_bytes} bytes in {self.chunks} chunks\n"
                 f"  arm token: {self.arm_token}")
 
@@ -138,6 +138,59 @@ def _version_tuple(v):
         return tuple(int(x) for x in str(v).split("."))
     except (TypeError, ValueError):
         return ()
+
+
+def _match_catalog(path: Path, raw: bytes, catalog: list) -> dict:
+    """The catalogue entry these BYTES are. Every NayaFlow release since 0.1.0 names its left
+    image kb_fwl.bin, so the catalogue built from all 25 releases holds a dozen entries with that
+    name and the name alone cannot say which one a file is. The hash of the file decides; the name
+    is a fallback only for a catalogue that carries no blob hashes at all (hand-written ones, and
+    the test fixtures), and then only when it is unambiguous."""
+    blob = hashlib.sha256(raw).hexdigest()
+    by_hash = [e for e in catalog or [] if e.get("blobSha256") == blob]
+    if len(by_hash) == 1:
+        return by_hash[0]
+    if by_hash:
+        raise UploadRefused(
+            f"{len(by_hash)} catalogue entries share this file's hash; the catalogue is "
+            "inconsistent and nothing is chosen from it.")
+    by_name = [e for e in catalog or [] if e.get("file") == path.name]
+    if not by_name:
+        raise UploadRefused(
+            f"{path.name} is not in the firmware catalogue. Only catalogued images may be "
+            "written, because the catalogue is what says which side and flash generation an "
+            "image is for.")
+    if any(e.get("blobSha256") for e in by_name):
+        raise UploadRefused(
+            f"{path.name} is a catalogued name, but this file's bytes match none of the "
+            f"{len(by_name)} catalogued image(s) of that name (sha256 {blob[:16]}...). A known "
+            "name with unknown contents is exactly what must not be written.")
+    if len(by_name) > 1:
+        raise UploadRefused(
+            f"{path.name} is ambiguous: {len(by_name)} catalogue entries carry that name and none "
+            "has a blob hash to tell them apart.")
+    return by_name[0]
+
+
+def _is_downgrade(active: dict, target: dict) -> str | None:
+    """Why writing `target` over `active` would be a downgrade, or None if it is not one.
+
+    Version numbers when both are declared; otherwise the chronological order of the releases
+    that first shipped each image, which is all the catalogue knows for most images before
+    1.14.5 (no release declared their number). Unknown both ways is not a downgrade: it is
+    simply not checkable, and the other interlocks still apply."""
+    have, want = _version_tuple(active.get("createFirmware")), _version_tuple(target.get("createFirmware"))
+    if have and want:
+        if want < have:
+            return (f"{target.get('createFirmware')} is older than the "
+                    f"{active.get('createFirmware')} this half runs")
+        return None
+    ho, to = active.get("releaseOrder"), target.get("releaseOrder")
+    if isinstance(ho, int) and isinstance(to, int) and to < ho:
+        return (f"{target.get('versionLabel') or target.get('file')} first shipped before the "
+                f"{active.get('versionLabel') or 'image'} this half runs, and release order is the "
+                "only guide because no release declared its version number")
+    return None
 
 
 def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
@@ -152,12 +205,8 @@ def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
     if not path.is_file():
         raise UploadRefused(f"no such image: {path}")
 
-    target = next((e for e in catalog or [] if e.get("file") == path.name), None)
-    if target is None:
-        raise UploadRefused(
-            f"{path.name} is not in the firmware catalogue. Only catalogued images may be "
-            "written, because the catalogue is what says which side and flash generation an "
-            "image is for.")
+    raw = path.read_bytes()
+    target = _match_catalog(path, raw, catalog)
     if not target.get("flashable"):
         why = "; ".join(target.get("withheldBecause") or ["it is not marked flashable"])
         raise UploadRefused(f"{path.name} is catalogued but withheld: {why}")
@@ -187,15 +236,13 @@ def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
             f"generation {target.get('generation')}. The generations are not interchangeable — "
             "NayaCore refuses this too.")
 
-    have, want = _version_tuple(active.get("createFirmware")), _version_tuple(target.get("createFirmware"))
-    if have and want and want < have and not allow_older:
+    why_older = _is_downgrade(active, target)
+    if why_older and not allow_older:
         raise UploadRefused(
-            f"{target.get('createFirmware')} is older than the {active.get('createFirmware')} "
-            "this half runs. Downgrading is a legitimate repair — it is how two halves that no "
+            f"{why_older}. Downgrading is a legitimate repair — it is how two halves that no "
             "longer talk to each other are brought back to a common version — so pass "
             "allow_older=True to say you meant it.")
 
-    raw = path.read_bytes()
     return UploadPlan(
         image_path=path, slot=slot, total_bytes=len(raw),
         chunks=max(1, -(-len(raw) // chunk)),

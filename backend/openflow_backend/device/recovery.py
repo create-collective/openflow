@@ -332,7 +332,13 @@ def identify(image_hash: str | None, catalog: list | None) -> dict:
         if e.get("plaintextSha256") == image_hash:
             return {"identified": True, "file": e.get("file"), "side": e.get("side"),
                     "generation": e.get("generation"), "createFirmware": e.get("createFirmware"),
-                    "source": e.get("source"), "flashable": e.get("flashable")}
+                    "source": e.get("source"), "flashable": e.get("flashable"),
+                    # Which NayaFlow release(s) shipped it, and a label that is the firmware
+                    # version when a release declared one and the release span otherwise. The
+                    # release order is what the downgrade guard compares when the version
+                    # number is unknown (most images before 1.14.5 have none).
+                    "bundle": e.get("bundle"), "versionLabel": e.get("versionLabel"),
+                    "releaseOrder": e.get("releaseOrder")}
     return {"identified": False,
             "why": "this image is not one we hold. That is not a fault — it just means we "
                    "cannot say which side or flash generation it is, so nothing may be written "

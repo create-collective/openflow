@@ -279,3 +279,79 @@ def test_flash_refuses_without_the_arm_token_before_sending_anything(images, mon
     monkeypatch.setattr(fw.rec, "_talk", boom)
     with pytest.raises(fw.UploadRefused, match="not armed"):
         fw.flash(images / "kb_fwl.bin", CATALOG, arm="", state=state_ok())
+
+
+# --- a file is matched to its catalogue entry by its bytes, not its name ---------------------- #
+# Every NayaFlow release since 0.1.0 names its left image kb_fwl.bin, so the catalogue built from
+# all 25 releases (tools/build_firmware_catalog.py) holds a dozen entries with that name. Only the
+# hash of the file can say which one a given kb_fwl.bin is, and a catalogued name with unknown
+# bytes must be refused, not matched to the first entry that happens to carry the name.
+
+def _sha(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+NEW_BYTES, OLD_BYTES = b"\x02" * 2048, b"\x01" * 2048
+HASHED_CATALOG = [
+    {"file": "kb_fwl.bin", "side": "left", "generation": "A", "createFirmware": "3.41.0",
+     "plaintextSha256": RUNNING_HASH, "blobSha256": _sha(NEW_BYTES), "releaseOrder": 24,
+     "versionLabel": "3.41.0", "bundle": "NayaFlow 1.25.1", "flashable": True, "withheldBecause": []},
+    {"file": "kb_fwl.bin", "side": "left", "generation": "A", "createFirmware": None,
+     "plaintextSha256": "83100f7b" * 8, "blobSha256": _sha(OLD_BYTES), "releaseOrder": 9,
+     "versionLabel": "NayaFlow 1.11.0, 1.11.9", "bundle": "NayaFlow 1.11.9", "flashable": True,
+     "withheldBecause": []},
+]
+
+
+def _running(**extra):
+    st = state_ok()
+    st["images"][0].update(extra)
+    return st
+
+
+def test_a_file_is_matched_by_its_hash_when_catalogue_names_collide(tmp_path):
+    (tmp_path / "kb_fwl.bin").write_bytes(OLD_BYTES)
+    p = fw.plan(tmp_path / "kb_fwl.bin", HASHED_CATALOG, state=_running(releaseOrder=24),
+                allow_older=True)
+    assert p.target["releaseOrder"] == 9 and p.target["versionLabel"] == "NayaFlow 1.11.0, 1.11.9"
+    assert "NayaFlow 1.11.9" in p.describe()
+
+
+def test_a_catalogued_name_with_unknown_bytes_is_refused(tmp_path):
+    (tmp_path / "kb_fwl.bin").write_bytes(b"\x03" * 2048)
+    with pytest.raises(fw.UploadRefused, match="match none"):
+        fw.plan(tmp_path / "kb_fwl.bin", HASHED_CATALOG, state=state_ok())
+
+
+def test_duplicate_names_without_hashes_are_ambiguous_not_first_wins(tmp_path):
+    (tmp_path / "kb_fwl.bin").write_bytes(OLD_BYTES)
+    nameless = [{k: v for k, v in e.items() if k != "blobSha256"} for e in HASHED_CATALOG]
+    with pytest.raises(fw.UploadRefused, match="ambiguous"):
+        fw.plan(tmp_path / "kb_fwl.bin", nameless, state=state_ok())
+
+
+def test_release_order_guards_a_downgrade_when_no_version_number_was_declared(tmp_path):
+    """Most images before 1.14.5 have no version number anywhere (no changelog heading, nothing
+    in the app JS). The order of the releases that shipped them is the only guide, and it must
+    still make the downgrade deliberate."""
+    (tmp_path / "kb_fwl.bin").write_bytes(OLD_BYTES)
+    with pytest.raises(fw.UploadRefused, match="release order is the only guide"):
+        fw.plan(tmp_path / "kb_fwl.bin", HASHED_CATALOG, state=_running(releaseOrder=24))
+    p = fw.plan(tmp_path / "kb_fwl.bin", HASHED_CATALOG, state=_running(releaseOrder=24),
+                allow_older=True)
+    assert p.target["releaseOrder"] == 9
+
+
+def test_reflashing_the_running_image_is_not_a_downgrade_by_release_order(tmp_path):
+    (tmp_path / "kb_fwl.bin").write_bytes(NEW_BYTES)
+    p = fw.plan(tmp_path / "kb_fwl.bin", HASHED_CATALOG, state=_running(releaseOrder=24))
+    assert p.target["releaseOrder"] == 24
+
+
+def test_unknown_order_both_ways_is_not_treated_as_a_downgrade(tmp_path):
+    """A running image the catalogue knows but cannot order (no version, no release order) does
+    not block a write on its own; the side, generation and hash interlocks still stand."""
+    (tmp_path / "kb_fwl.bin").write_bytes(OLD_BYTES)
+    st = _running(createFirmware=None)
+    st["images"][0].pop("releaseOrder", None)
+    assert fw.plan(tmp_path / "kb_fwl.bin", HASHED_CATALOG, state=st).target["releaseOrder"] == 9

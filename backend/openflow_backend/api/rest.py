@@ -95,19 +95,45 @@ def _firmware_catalog() -> list[dict]:
                 return []
             out = []
             for img in data.get("images", []):
+                version = img.get("createFirmware") or img.get("moduleFirmware")
                 out.append({
                     "file": img.get("file"),
                     "target": img.get("target"),                    # keyboard | module
-                    "component": img.get("component"),              # left/right or touch/track/tune
+                    "component": img.get("component"),              # left/right, modules, touch/track/tune, dial
+                    "container": img.get("container"),              # the .sfb userapps sit inside FlashMemory.bin
                     "generation": img.get("generation"),           # A/B flash generation (keyboard)
-                    "version": img.get("createFirmware") or img.get("moduleFirmware"),
+                    "version": version,
                     "versionConfidence": img.get("versionConfidence"),
+                    # The version number when a release declared one, else the NayaFlow release
+                    # span that shipped the image ("NayaFlow 1.3.8 to 1.6.10"). The UI groups by it.
+                    "versionLabel": img.get("versionLabel") or version,
                     "bundle": img.get("bundle") or img.get("source"),
+                    "bundles": img.get("bundles") or ([img["bundle"]] if img.get("bundle") else []),
+                    "firstSeen": img.get("firstSeen"),
+                    "lastSeen": img.get("lastSeen"),
+                    "releaseOrder": img.get("releaseOrder"),       # chronological; newest first in the UI
+                    "era": img.get("era"),
+                    "historyPath": img.get("historyPath"),         # where it sits in nayaHistory/firmware-history
                     "flashable": img.get("flashable", False),
+                    "withheldBecause": img.get("withheldBecause") or [],
                     "note": img.get("note"),
                     "sha256": (img.get("plaintextSha256") or img.get("blobSha256") or "")[:16],
                 })
             return out
+    return []
+
+
+def _firmware_releases() -> list[dict]:
+    """The NayaFlow release list the catalogue was built from: tag, date, order, and the Create /
+    module firmware version each release declared (None where it declared nothing)."""
+    from pathlib import Path as _P
+    for parent in _P(__file__).resolve().parents:
+        cand = parent / "docs" / "reference" / "firmware-catalog.json"
+        if cand.is_file():
+            try:
+                return json.loads(cand.read_text(encoding="utf-8")).get("releases", [])
+            except (ValueError, OSError):
+                return []
     return []
 
 
@@ -206,8 +232,10 @@ async def run_recovery_op(body: dict = Body(...)) -> dict:
 
 @router.get("/api/firmware-catalog")
 async def firmware_catalog() -> dict:
-    """Firmware versions bundled/known to OpenFlow, for the Software page's firmware list."""
-    return {"reference": REFERENCE_FIRMWARE, "images": _firmware_catalog()}
+    """Firmware versions bundled/known to OpenFlow, for the Software page's firmware list: one
+    entry per distinct image across every NayaFlow release, plus the release list itself."""
+    return {"reference": REFERENCE_FIRMWARE, "images": _firmware_catalog(),
+            "releases": _firmware_releases()}
 
 
 @router.get("/api/ui/state")

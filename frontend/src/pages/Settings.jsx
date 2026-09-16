@@ -322,26 +322,49 @@ export default function Settings() {
                   {(() => {
                     const imgs = firmware?.images || [];
                     if (!imgs.length) return <div className="empty">No firmware images catalogued.</div>;
-                    // group: keyboard by version, then modules by version, uncertain last
-                    const key = (im) => `${im.target === "module" ? "Module" : "Keyboard"} firmware ${im.version || "(unknown version)"}`;
+                    // One group per distinct firmware: its version number when a NayaFlow release
+                    // declared one, else the release span that shipped it (the catalogue's
+                    // versionLabel). Keyboard first, newest release first.
+                    const label = (im) => im.versionLabel || im.version || "(unknown version)";
+                    const key = (im) => `${im.target}|${label(im)}`;
                     const groups = {};
                     for (const im of imgs) (groups[key(im)] ||= []).push(im);
-                    const order = Object.keys(groups).sort((a, b) => (a.includes("unknown") ? 1 : 0) - (b.includes("unknown") ? 1 : 0) || a.localeCompare(b));
-                    return order.map((g) => (
-                      <div key={g} style={{ marginBottom: 14 }}>
-                        <div className="info-sub">{g} <span style={{ opacity: 0.5, fontWeight: 400 }}>· {groups[g][0].bundle}</span></div>
-                        {groups[g].map((im) => (
-                          <div className="skp-row" key={im.file} style={{ cursor: "default" }} title={im.note || ""}>
-                            <span className="skp-beh">{im.component || "?"}{im.generation ? ` · gen ${im.generation}` : ""}</span>
-                            <span className="skp-act" style={{ flex: 1 }}>{im.file}{im.versionConfidence === "unknown" ? " (version unconfirmed)" : ""}</span>
-                            <span className="v" style={{ fontFamily: "var(--font-mono)", opacity: 0.6 }}>{im.sha256 ? im.sha256 + "…" : "encrypted"}</span>
-                            <button className="btn" disabled title={im.flashable ? "Wired, enabled after testing on a donor unit" : "Not a flashable image"} style={{ marginLeft: 8 }}>
-                              {im.flashable ? "Flash (disabled)" : "—"}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ));
+                    const order = Object.keys(groups).sort((a, b) => {
+                      const A = groups[a][0], B = groups[b][0];
+                      return (A.target === "module") - (B.target === "module")
+                        || (B.releaseOrder ?? -1) - (A.releaseOrder ?? -1)
+                        || a.localeCompare(b);
+                    });
+                    const ver = (tag) => String(tag || "").replace(/^v/, "");
+                    const shippedIn = (im) => {
+                      const b = im.bundles || [];
+                      if (!b.length) return im.bundle;
+                      if (b.length === 1) return `NayaFlow ${ver(b[0])}`;
+                      return `NayaFlow ${ver(b[0])} to ${ver(b[b.length - 1])}, ${b.length} releases`;
+                    };
+                    return order.map((g) => {
+                      const ims = groups[g];
+                      const first = ims[0];
+                      const declared = first.versionConfidence === "declared";
+                      const kind = first.target === "module" ? "Module" : "Keyboard";
+                      const title = declared ? `${kind} firmware ${label(first)}` : `${kind} firmware shipped in ${label(first)}`;
+                      const sub = declared ? shippedIn(first) : "no release declared a version number";
+                      return (
+                        <div key={g} style={{ marginBottom: 14 }}>
+                          <div className="info-sub">{title} <span style={{ opacity: 0.5, fontWeight: 400 }}>· {sub}</span></div>
+                          {ims.map((im) => (
+                            <div className="skp-row" key={`${im.file}-${im.sha256}`} style={{ cursor: "default" }} title={im.note || ""}>
+                              <span className="skp-beh">{im.component || "?"}{im.generation ? ` · gen ${im.generation}` : ""}</span>
+                              <span className="skp-act" style={{ flex: 1 }}>{im.file}{im.container ? ` in ${im.container}` : ""}</span>
+                              <span className="v" style={{ fontFamily: "var(--font-mono)", opacity: 0.6 }}>{im.sha256 ? im.sha256 + "…" : "encrypted"}</span>
+                              <button className="btn" disabled title={im.flashable ? "Wired, enabled after testing on a donor unit" : (im.withheldBecause || []).join("; ") || "Not a flashable image"} style={{ marginLeft: 8 }}>
+                                {im.flashable ? "Flash (disabled)" : "—"}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    });
                   })()}
 
                   <div className="settings-links" style={{ marginTop: 16 }}>
