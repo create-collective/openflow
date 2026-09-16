@@ -245,12 +245,14 @@ def encode_setting(value) -> tuple:
     return (R.KEY_PRESS, bytes([max(0, min(255, n))]))
 
 
-def overlay(template, module_type, bindings, axes=None, settings=None):
+def overlay(template, module_type, bindings, axes=None, settings=None, convention=None):
     """A complete config: the template's fields with the profile's gestures written over it.
 
     `bindings` is {gesture: action_code} for single-field gestures.
     `axes` is {gesture: {"minus": code|None, "plus": code|None, "invert": bool}} for the axis
     gestures, which occupy TWO fields each.
+    `convention` is the scroll direction convention (module_fields.convention_sign): under
+    "windows" a named vertical scroll direction is written with the opposite sign.
 
     Every other field passes through untouched, which is the whole point of templating.
     """
@@ -280,11 +282,11 @@ def overlay(template, module_type, bindings, axes=None, settings=None):
             # See module_fields.FIRMWARE_DEFAULTS / FIRMWARE_LOCKED.
             out[idx] = (R.NONE_BEH, b"")
             continue
-        rec = _encode_gesture(idx, code)
+        rec = _encode_gesture(idx, code, convention)
         if rec is not None:
             out[idx] = rec
     for gesture, spec in (axes or {}).items():
-        for idx, rec in encode_axis(module_type, gesture, spec).items():
+        for idx, rec in encode_axis(module_type, gesture, spec, convention).items():
             out[idx] = rec
     # Settings were never written at all: set_module_setting stored them in the app and the
     # overlay copied the device's own values straight back, so every slider on the Modules page
@@ -303,7 +305,7 @@ def overlay(template, module_type, bindings, axes=None, settings=None):
     return out
 
 
-def encode_axis(module_type, gesture, spec):
+def encode_axis(module_type, gesture, spec, convention=None):
     """{field: (type, value)} for one axis gesture's two halves.
 
     A half holding a pointer/scroll action stays a two-word record whose SELECTOR SIGN is the
@@ -339,7 +341,7 @@ def encode_axis(module_type, gesture, spec):
         idx = half[sign]
         code = spec.get(key)
         if code:
-            rec = _encode_gesture(idx, code)     # a key bound to this half
+            rec = _encode_gesture(idx, code, convention)     # a key bound to this half
             if rec is not None:
                 out[idx] = rec
                 continue
@@ -349,11 +351,13 @@ def encode_axis(module_type, gesture, spec):
         selector = module_fields.half_selector(half, sign)
         if invert:
             selector = -selector
+        # The user's OS decides which way a named vertical scroll goes (SCRUM-62).
+        selector = module_fields.convention_sign(category, selector, convention)
         out[idx] = (R.TWO_WORD, R.encode_two_word(category, selector))
     return out
 
 
-def _encode_gesture(idx, code):
+def _encode_gesture(idx, code, convention=None):
     """(type, value) for one gesture field, or None if we cannot encode it safely.
 
     A gesture field is NOT type-locked -- the same index holds a mouse-button mask or a keypress
@@ -368,7 +372,9 @@ def _encode_gesture(idx, code):
         # record the stock pair writes for that half, with the direction's own category, so a
         # horizontal swipe can be made to scroll vertically. Until 2026-09-11 a split half could
         # only take a key, and the directions themselves were not offered anywhere.
-        return (R.TWO_WORD, R.encode_two_word(*motion))
+        category, selector = motion
+        return (R.TWO_WORD, R.encode_two_word(
+            category, module_fields.convention_sign(category, selector, convention)))
     if not R.encodable(code):
         # LED brightness and friends. The board already carries an empty keypress on those
         # gestures, and the template passes it through untouched -- writing something of our

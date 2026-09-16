@@ -390,13 +390,37 @@ def decode_settings(module_type: str, fields: dict) -> dict:
     return out
 
 
-def motion_name(module_type: str, field: int, category: int, selector: int):
+# Scroll direction convention (SCRUM-62). NayaFlow's direction names are finger directions
+# under macOS natural scrolling: the record it calls "Scroll up" is (category 4, selector -1),
+# and on a Windows host that record is wheel-DOWN (measured 2026-09-16: bound to a swipe, it
+# scrolled the page down). So for the same named direction the VERTICAL scroll selector carries
+# the opposite sign on Windows. Pointer motion is not inverted by natural scrolling, and the
+# horizontal scroll sign has not been measured either way, so only category 4 flips until a
+# test says more. The app-level setting (db/settings.py "scroll_convention") picks the
+# convention; the default keeps NayaFlow's bytes so nothing changes until the user chooses.
+CONVENTION_MAC = "mac"
+CONVENTION_WINDOWS = "windows"
+FLIPPED_ON_WINDOWS = {4}
+
+
+def convention_sign(category: int, selector: int, convention: str | None) -> int:
+    """The selector under a convention: the DEVICE sign for a named direction when encoding,
+    the named sign for a device record when decoding. The same flip serves both ways."""
+    if convention == CONVENTION_WINDOWS and category in FLIPPED_ON_WINDOWS:
+        return -selector
+    return selector
+
+
+def motion_name(module_type: str, field: int, category: int, selector: int,
+                convention: str | None = None):
     """The action_code a two-word MOTION record in an axis field stands for, or None.
 
     An axis half's default record is (category, +/-1) and the pair's two names live in the
     gesture's `default` string as "mouse - <minus> - <plus>". Decoding through that keeps one
     source of truth: the names the encoder writes are the names the reader gives back.
+    `convention` names the record the way the user's OS scrolls (convention_sign).
     """
+    selector = convention_sign(category, selector, convention)
     for h in axis_halves(module_type).values():
         if field not in (h["-"], h["+"]) or category != h["category"]:
             continue

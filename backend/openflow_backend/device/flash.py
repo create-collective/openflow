@@ -745,9 +745,12 @@ def _layer_list_ops(desired: DesiredState, current: DesiredState | None) -> list
                # uuid -- it lives in the same 20 bytes.
                if have.get(i) != u or have_anim.get(i, 0) != desired.layer_animations.get(i, 0)]
     if changed:
-        what = ", ".join(f"{i}{'' if i in have else ' (new)'}" for i, _u, _a in changed)
+        # Without a board read to diff against (the preview), nothing is known to be new: say
+        # so rather than labelling every layer "(new)", which read as if the board were empty.
+        unknown = current is None
+        what = ", ".join(f"{i}{'' if (unknown or i in have) else ' (new)'}" for i, _u, _a in changed)
         ops.append(WriteOp(R.WRITE_LAYER_LIST, R.encode_layer_list_entries(changed),
-                           f"layer list: {what}"))
+                           f"layer list: {what}" + (" (full write; the flash diffs first)" if unknown else "")))
 
     # On the board and no longer in the profile.
     removed = [i for i in sorted(have) if i not in desired.layer_uuids]
@@ -1049,7 +1052,11 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
     """
     from . import module_fields, module_layout as ml
 
+    from ..db import settings as settings_db    # lazy: db imports the device layer at load
+
     pid = desired.profile_id
+    # Which way a named vertical scroll direction is written (SCRUM-62); one read per plan.
+    convention = settings_db.scroll_convention(conn)
     order_of = {r["id"]: r["order_id"] for r in
                 conn.execute("SELECT id, order_id FROM layers WHERE profile_id = ?", (pid,))}
     bays_by_layer: dict[int, dict[str, str]] = {o: {} for o in order_of.values()}
@@ -1138,7 +1145,7 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
             continue                      # slot contents unreadable: leave it alone
         slot = layout["slot_for"][cid]
         cfg = ml.overlay(layout["templates"][cid], types[cid], bindings.get(cid, {}),
-                         axes.get(cid, {}), settings.get(cid, {}))
+                         axes.get(cid, {}), settings.get(cid, {}), convention=convention)
         # Anything templated from its OWN slot and coming out identical needs no data write --
         # sending the same bytes back would be churn on every flash. A difference means the app
         # and the board genuinely disagree, and the flash is what resolves that.

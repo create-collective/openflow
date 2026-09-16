@@ -21,6 +21,10 @@ EXPERIMENTAL = "experimental"  # plausibly device-backed, unproven -> this is th
 APP_ONLY = "app"               # intentionally local; not a gap
 HOST_SIDE = "host"             # a host-side model (Create Companion), never flashed -- not a probe
 
+SCROLL_CONVENTION_ID = "scroll_convention"
+SCROLL_CONVENTION_MAC_LABEL = "macOS (NayaFlow's names)"
+SCROLL_CONVENTION_WINDOWS_LABEL = "Windows"
+
 # Grouped schema. kind: slider | toggle | select.
 #
 # Device-scoped fields persist under `device_key` -- NayaFlow's own correlation UUID -- not under
@@ -60,6 +64,17 @@ SETTINGS_SCHEMA = [
              "min": 0, "max": 6000, "default": 300, "unit": "s", "provenance": VERIFIED,
              "min_nonzero": 30,
              "device_key": "f198f968-2c42-4df6-8fdd-97de148cad1a"},
+            # Never sent to the keyboard as a field: it tells the encoder and the decoder which
+            # sign a named VERTICAL scroll direction carries (module_fields.convention_sign).
+            # NayaFlow's names follow macOS natural scrolling; on Windows its "Scroll up" scrolls
+            # down (measured 2026-09-16, SCRUM-62). The default keeps NayaFlow's bytes.
+            {"id": "scroll_convention", "label": "Scroll Direction Convention", "kind": "select",
+             "desc": "Which way a named scroll direction goes on your computer. NayaFlow's names "
+                     "follow macOS natural scrolling, where its \"Scroll up\" scrolls down on "
+                     "Windows. Pick Windows and vertical scroll directions are written, and read "
+                     "back, the way Windows scrolls. Flash after changing it.",
+             "options": [SCROLL_CONVENTION_MAC_LABEL, SCROLL_CONVENTION_WINDOWS_LABEL],
+             "default": SCROLL_CONVENTION_MAC_LABEL, "provenance": APP_ONLY},
             # These LED settings reach the device as a LIVE command (0xED/0x1012-14), not on flash
             # -- NayaFlow never sent them in either 2026-09-01 capture (write-protocol-spec rule 12);
             # NayaCore sends them live and PR #6 recovered the opcodes. api/rest set_setting sends
@@ -222,6 +237,27 @@ def migrate_legacy_setting_keys(conn) -> int:
             moved += 1
         conn.execute("DELETE FROM settings WHERE correlation_id=?", (f["id"],))
     return moved
+
+
+def scroll_convention(conn=None) -> str:
+    """"mac" (NayaFlow's direction names, the default) or "windows": which sign a named vertical
+    scroll direction carries on the wire. See device/module_fields.convention_sign. Reads
+    through `conn` when given so a caller's transaction (and a test's in-memory database) is
+    the source; any database without a settings table answers the default."""
+    field = next(f for g in SETTINGS_SCHEMA for f in g["fields"] if f["id"] == SCROLL_CONVENTION_ID)
+    own = conn is None
+    if own:
+        conn = connect()
+    try:
+        row = conn.execute("SELECT value FROM settings WHERE correlation_id=?",
+                           (storage_key(field),)).fetchone()
+    except Exception:
+        return "mac"
+    finally:
+        if own:
+            conn.close()
+    raw = (row[0] if row else None) or ""
+    return "windows" if str(raw).strip().lower().startswith("windows") else "mac"
 
 
 def get_settings() -> dict:

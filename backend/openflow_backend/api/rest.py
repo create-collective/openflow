@@ -1259,6 +1259,9 @@ def _build_entries(read: dict) -> list:
         stored_settings: dict = {}
         for r in conn.execute("SELECT module_config_id, correlation_id, value FROM module_settings"):
             stored_settings.setdefault(r["module_config_id"], {})[r["correlation_id"]] = r["value"]
+        # The scroll direction convention names the board's vertical scroll records the way the
+        # user's OS scrolls, so a NayaFlow-written board read on Windows shows what it does there.
+        convention = settings_db.scroll_convention(conn)
         bindings = {}
         for r in conn.execute("SELECT module_config_id, behavior, action_code, direction, invert "
                               "FROM module_bindings"):
@@ -1308,7 +1311,7 @@ def _build_entries(read: dict) -> list:
         for cid, c in configs.items():
             if c["type"] != mtype:
                 continue
-            g, d = _compare(mtype, fields, bindings.get(cid, {}))
+            g, d = _compare(mtype, fields, bindings.get(cid, {}), convention)
             tie = 0 if cid == uuid else 1 if c.get("captured_from") == uuid else 2
             ranked.append((d, tie, c["name"], cid, g))
         ranked.sort(key=lambda t: t[:3])
@@ -1324,7 +1327,7 @@ def _build_entries(read: dict) -> list:
         else:
             # Nothing of this type in the app at all: compare against nothing, capture from nothing.
             ref_id, ref_name = None, f"{mtype.title()} module"
-            gestures, differs = _compare(mtype, fields, {})
+            gestures, differs = _compare(mtype, fields, {}, convention)
         # The slot's speeds and tick feedback against the reference profile's. Not part of the
         # match (gestures decide that); shown as drift, and imported whole by a capture.
         settings = _settings_rows(mtype, fields, stored_settings.get(ref_id, {}) if ref_id else {})
@@ -1392,7 +1395,7 @@ def _settings_rows(module_type: str, fields: dict, stored: dict) -> list:
     return rows
 
 
-def _compare(module_type: str, fields: dict, app_bindings: dict):
+def _compare(module_type: str, fields: dict, app_bindings: dict, convention: str | None = None):
     """Device fields vs one app profile's bindings -> (per-gesture rows, count that differ).
 
     Covers BOTH kinds of gesture field:
@@ -1416,7 +1419,7 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
     pair_of = module_fields.pair_halves(module_type)
     for gesture, idx in sorted(module_fields.writable_fields(module_type).items()):
         typ, val = fields.get(idx, (None, b""))
-        device = _decode_field(module_type, idx, typ, val)
+        device = _decode_field(module_type, idx, typ, val, convention)
         app = app_bindings.get(gesture)
         if not app and gesture in pair_of:
             combined, sign = pair_of[gesture]
@@ -1463,7 +1466,7 @@ def _compare(module_type: str, fields: dict, app_bindings: dict):
         for sign, dflt in zip(("-", "+"), base):
             idx = half[sign]
             typ, val = fields.get(idx, (None, b""))
-            device = _decode_field(module_type, idx, typ, val)
+            device = _decode_field(module_type, idx, typ, val, convention)
             app = app_bindings.get((gesture, sign))
             if app is None:
                 # A profile whose axis is UNBOUND says so with an empty row, and answering
@@ -1517,7 +1520,7 @@ def _same_action(device, app) -> bool:
     return parts(device) == parts(app)
 
 
-def _decode_field(module_type: str, idx: int, typ, val: bytes):
+def _decode_field(module_type: str, idx: int, typ, val: bytes, convention: str | None = None):
     """One device field -> the app's action_code vocabulary, or None if unbound.
 
     Dispatches on the record TYPE, not on the field's nominal kind. A gesture field is not
@@ -1534,7 +1537,7 @@ def _decode_field(module_type: str, idx: int, typ, val: bytes):
             category, selector = remap.decode_two_word(val)
             if category == remap.MOUSE_CATEGORY:
                 return remap.MOUSE_MASK_REV.get(selector) or f"RAW_{val.hex()}"
-            return (module_fields.motion_name(module_type, idx, category, selector)
+            return (module_fields.motion_name(module_type, idx, category, selector, convention)
                     or f"RAW_{val.hex()}")
     except Exception:
         return f"RAW_{val.hex()}"
