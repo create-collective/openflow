@@ -216,10 +216,13 @@ def test_mark_pending_is_an_image_state_write_carrying_hash_and_confirm_flag():
     sha = hashlib.sha256(b"x").digest()
     f = fw.build_set_pending_request(sha)
     assert _decode_header(f) == {"op": 2, "group": 1, "id": 0}
-    assert _decode_request(f) == {"hash": sha, "confirm": False}          # MCUboot TEST mode
+    assert _decode_request(f) == {"hash": sha, "confirm": False}          # MCUboot TEST swap
     assert _decode_request(fw.build_set_pending_request(sha, confirm=True)) == {"hash": sha, "confirm": True}
-    assert _decode_request(fw.build_set_pending_request(None, confirm=True)) == {"confirm": True}
-    with pytest.raises(ValueError, match="needs its hash"):
+    # No hash-less form: in serial recovery {"confirm": true} alone is not "confirm the running
+    # image", it schedules a permanent swap of the secondary (bs_set -> boot_set_pending_multi).
+    with pytest.raises(ValueError, match="needs the hash"):
+        fw.build_set_pending_request(None, confirm=True)
+    with pytest.raises(ValueError, match="needs the hash"):
         fw.build_set_pending_request(None)
     with pytest.raises(ValueError, match="32 bytes"):
         fw.build_set_pending_request(b"short")
@@ -258,7 +261,7 @@ def test_flash_is_slot_map_then_upload_then_slot_check_then_mark_then_reset(imag
     assert _kinds(log)[1:5] == [(1, 1, 2)] * 4                      # 4096 B / 1024 = 4 chunks
     assert _kinds(log)[5:] == [(1, 0, 0), (1, 0, 2), (0, 5, 2)]     # read, mark, reset
     assert log[6][1] == {"hash": bytes.fromhex(RUNNING_HASH), "confirm": False}
-    assert r["marked"] == "test" and r["hash"] == RUNNING_HASH and r["reset"] is True
+    assert r["swap"] == "test" and r["hash"] == RUNNING_HASH and r["reset"] is True
 
 
 def test_flash_confirm_true_marks_permanent(images, monkeypatch):
@@ -266,7 +269,7 @@ def test_flash_confirm_true_marks_permanent(images, monkeypatch):
     monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
     r = fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(),
                  chunk=1024, confirm=True)
-    assert log[6][1]["confirm"] is True and r["marked"] == "confirm"
+    assert log[6][1]["confirm"] is True and r["swap"] == "permanent"
 
 
 def test_flash_never_marks_a_slot_whose_hash_is_not_the_target(images, monkeypatch):
@@ -274,7 +277,7 @@ def test_flash_never_marks_a_slot_whose_hash_is_not_the_target(images, monkeypat
     no mark, no reset, primary untouched."""
     log = []
     monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader("ab" * 32, log))
-    with pytest.raises(fw.UploadRefused, match="NOT marked bootable"):
+    with pytest.raises(fw.UploadRefused, match="Nothing is scheduled"):
         fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(), chunk=1024)
     assert _kinds(log)[-1] == (1, 0, 0), "must stop right after the slot read"
     assert (1, 0, 2) not in _kinds(log) and (0, 5, 2) not in _kinds(log)
@@ -373,6 +376,116 @@ def test_unknown_order_both_ways_is_not_treated_as_a_downgrade(tmp_path):
     st = _running(createFirmware=None)
     st["images"][0].pop("releaseOrder", None)
     assert fw.plan(tmp_path / "kb_fwl.bin", HASHED_CATALOG, state=st).target["releaseOrder"] == 9
+
+
+# --- the resource is a whole slot with its swap trailer already written --------------------- #
+# Every keyboard image Naya ships ends with image_ok = 0x01 and BOOT_MAGIC: uploaded whole, that
+# schedules a PERMANENT swap the moment the last chunk lands (review of 2026-09-16). The default
+# flash uploads only the MCUboot image and writes the trailer itself after the slot check;
+# vendor_trailer=True does what NayaCore does.
+
+import struct
+
+
+def _mcuboot_resource(img=b"\x5a" * 1000, slot_size=4096, trailer="permanent"):
+    """A synthetic slot-sized resource: 32-byte header, payload, one TLV area with a SHA-256,
+    0xFF padding, and (optionally) the vendor's trailer. Returns (bytes, mcuboot image length)."""
+    hdr = struct.pack("<IIHHII", fw.IMAGE_MAGIC, 0, 32, 0, len(img), 4) + b"\0" * 12
+    tlv = struct.pack("<HH", fw.TLV_INFO_MAGIC, 40) + struct.pack("<HH", 0x10, 32) + hashlib.sha256(img).digest()
+    image = hdr + img + tlv
+    body = bytearray(image + b"\xff" * (slot_size - len(image)))
+    if trailer:
+        body[-24] = 0x01 if trailer == "permanent" else 0xFF
+        body[-16:] = fw.BOOT_MAGIC
+    return bytes(body), len(image)
+
+
+def test_a_resource_is_parsed_into_its_image_and_its_trailer():
+    res, n = _mcuboot_resource()
+    assert n == 32 + 1000 + 40 and fw.mcuboot_image_length(res) == n
+    assert fw.image_trailer(res) == {"magic": "good", "imageOk": True, "swap": "permanent"}
+    assert fw.image_trailer(_mcuboot_resource(trailer="test")[0])["swap"] == "test"
+    assert fw.image_trailer(_mcuboot_resource(trailer=None)[0]) == {"magic": "unset", "imageOk": False, "swap": None}
+    assert fw.mcuboot_image_length(b"\x00" * 4096) is None      # no header: nothing to trim
+
+
+def _resource_catalog(res):
+    return [{"file": "kb_fwl.bin", "side": "left", "generation": "A", "createFirmware": "3.41.0",
+             "plaintextSha256": RUNNING_HASH, "blobSha256": _sha(res), "flashable": True,
+             "withheldBecause": []}]
+
+
+def test_default_flash_uploads_only_the_image_and_schedules_after_the_check(tmp_path, monkeypatch):
+    res, n = _mcuboot_resource()
+    (tmp_path / "kb_fwl.bin").write_bytes(res)
+    log = []
+    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    r = fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok())
+    chunks = [b for h, b in log if h == {"op": 2, "group": 1, "id": 1}]
+    assert chunks[0]["len"] == n and sum(len(c["data"]) for c in chunks) == n < len(res)
+    assert len(chunks) == -(-n // fw.DEFAULT_CHUNK) and fw.DEFAULT_CHUNK == 512
+    assert _kinds(log)[-3:] == [(1, 0, 0), (1, 0, 2), (0, 5, 2)], "check, then schedule, then reset"
+    assert r["swap"] == "test" and r["trailer"]["swap"] == "permanent" and r["armedByUpload"] is False
+    assert r["written"] == n and r["ofFile"] == len(res)
+
+
+def test_vendor_trailer_uploads_the_whole_resource_and_writes_no_image_state(tmp_path, monkeypatch):
+    res, n = _mcuboot_resource()
+    (tmp_path / "kb_fwl.bin").write_bytes(res)
+    log = []
+    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    p = fw.plan(tmp_path / "kb_fwl.bin", _resource_catalog(res), state=state_ok(), vendor_trailer=True)
+    assert p.arms_on_upload and p.total_bytes == len(res) and "as NayaCore does" in p.describe()
+    r = fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok(),
+                 vendor_trailer=True, confirm=False)
+    chunks = [b for h, b in log if h == {"op": 2, "group": 1, "id": 1}]
+    assert chunks[0]["len"] == len(res) and sum(len(c["data"]) for c in chunks) == len(res)
+    assert (1, 0, 2) not in _kinds(log), "no image state write: the trailer already scheduled it"
+    assert _kinds(log)[-2:] == [(1, 0, 0), (0, 5, 2)]
+    assert r["swap"].startswith("permanent (by the resource") and r["armedByUpload"] is True
+
+
+def test_a_mismatch_after_a_vendor_trailer_upload_says_what_is_armed(tmp_path, monkeypatch):
+    res, _n = _mcuboot_resource()
+    (tmp_path / "kb_fwl.bin").write_bytes(res)
+    log = []
+    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader("ab" * 32, log))
+    with pytest.raises(fw.UploadRefused, match="swap IS scheduled"):
+        fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok(),
+                 vendor_trailer=True)
+    assert (0, 5, 2) not in _kinds(log)
+
+
+def test_a_bootloader_that_reports_not_pending_after_the_write_stops_before_reset(tmp_path, monkeypatch):
+    res, _n = _mcuboot_resource()
+    (tmp_path / "kb_fwl.bin").write_bytes(res)
+    log = []
+
+    def talk(port, frame, timeout=2.0):
+        h, b = _decode_header(frame), _decode_request(frame)
+        log.append((h, b))
+        if h == {"op": 2, "group": 1, "id": 1}:
+            return {"rc": 0, "off": b["off"] + len(b["data"])}
+        if h == {"op": 0, "group": 1, "id": 0}:
+            return {"images": [{"slot": 0, "hash": bytes.fromhex(RUNNING_HASH)},
+                               {"slot": 1, "hash": bytes.fromhex(RUNNING_HASH)}]}
+        if h == {"op": 2, "group": 1, "id": 0}:
+            return {"images": [{"slot": 1, "hash": bytes.fromhex(RUNNING_HASH), "pending": False,
+                                "confirmed": False, "active": False}]}
+        return {"rc": 0}
+    monkeypatch.setattr(fw.rec, "_talk", talk)
+    with pytest.raises(fw.UploadRefused, match="not pending"):
+        fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok())
+    assert (0, 5, 2) not in _kinds(log)
+
+
+def test_the_primary_slot_is_never_an_upload_target(images):
+    """Reviewer's finding: nothing refused slot=0, whose upload id addresses the image the half
+    boots from."""
+    with pytest.raises(fw.UploadRefused, match="PRIMARY"):
+        fw.plan(images / "kb_fwl.bin", CATALOG, state=state_ok(), slot=0)
+    with pytest.raises(fw.UploadRefused, match="not a place"):
+        fw.plan(images / "kb_fwl.bin", CATALOG, state=state_ok(), slot=2)
 
 
 # --- how an upload is addressed: the device's slot map first, the assumption second ---------- #

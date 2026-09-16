@@ -201,7 +201,7 @@ def test_a_store_failure_sends_nothing(monkeypatch):
 
     def bad_store(record):
         raise OSError("disk full")
-    with pytest.raises(OSError):
+    with pytest.raises(pr.PairingRefused, match="could not be stored"):
         pr.execute(svc, p, arm=p.arm_token, force=True, store=bad_store, sleep=lambda s: None)
     assert svc.calls == []
 

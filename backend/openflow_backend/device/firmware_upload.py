@@ -25,6 +25,27 @@ design plus what this device's own bootloader log shows (`Primary image: magic=g
 `Scratch: magic=unset`) -- it is NOT something we have watched fail and recover here. The first
 real upload belongs on a donor unit.
 
+THE RESOURCE CARRIES ITS OWN TRAILER (review of 2026-09-16). Every keyboard image Naya ships is
+the whole 663552-byte slot: header + image + TLVs, 0xFF, then an MCUboot swap trailer already
+written -- `image_ok = 0x01` at 24 bytes from the end and BOOT_MAGIC in the last 16. By MCUboot's
+swap table (secondary magic good + image_ok set) that schedules a PERMANENT swap the moment the
+last chunk lands, before anything has been checked, and it makes a later "mark pending" a no-op
+(boot_set_pending_multi returns 0 when the magic is already good). NayaCore uploads the whole
+resource and simply resets. Uploading it that way therefore means: no test mode, and the swap
+armed before the hash check. So by default this file uploads ONLY the MCUboot image (the part
+before the padding; `mcuboot_image_length`), leaves the trailer area erased, verifies the slot,
+and then writes the trailer itself through `image state` with the hash -- test or permanent, our
+decision, after the check. `vendor_trailer=True` does what NayaCore does instead (whole resource,
+no mark, reset) for a donor test that wants the vendor's exact bytes.
+
+WHAT "TEST MODE" MEANS HERE. With confirm=False the swap is a TEST swap: the new image boots once
+and, unless it confirms itself from inside the application, MCUboot swaps back on the following
+reset. There is NO way to confirm it afterwards from recovery: `image state` write without a hash
+is not "confirm the running image" in MCUboot's serial recovery (that is the application-side
+mcumgr meaning); it calls boot_set_pending_multi(0, confirm) on the SECONDARY slot, i.e. it
+schedules a swap. Whether the Create's application self-confirms is not known. A permanent
+flash is confirm=True, which is what NayaCore's trailer amounts to.
+
 THE INTERLOCKS, and why each exists.
 
   * The device must be in recovery and must ANSWER `image state`. A half that will not say what
@@ -62,15 +83,55 @@ SMP_ID_IMAGE_UPLOAD = 1
 # `os reset` makes MCUboot swap to it on the boot that follows.
 SMP_ID_IMAGE_STATE = rec.SMP_ID_IMAGE_STATE      # 0: read lists slots, write sets pending
 SMP_ID_OS_RESET = 5
-# Conservative. The transport fragments anything larger across continuation frames, and a
-# smaller chunk costs throughput on an operation that runs once, while a too-large one is
-# rejected by a bootloader whose buffer we are guessing at.
-DEFAULT_CHUNK = 128
+# NayaCore's own chunk: uploadImageToSlot sends min(remaining, 0x200) bytes per frame (x86_64
+# 0x100115e95: cmp eax, 0x200 / cmovge), so 512 is the one size this bootloader is known to take.
+DEFAULT_CHUNK = 512
 # Hard cap on what one frame may carry. The SMP header's length field is 16 bits and the
-# bootloader's receive buffer (MCUBOOT_SERIAL_MAX_RECEIVE_SIZE, 512 by default) is the real limit
-# below that; a chunk the bootloader will not take is refused with an rc and the upload stops
-# before anything is marked. This cap only turns an impossible frame into a clear error.
+# bootloader's receive buffer (MCUBOOT_SERIAL_MAX_RECEIVE_SIZE) is the real limit below that; a
+# chunk the bootloader will not take is refused with an rc and the upload stops before anything
+# is marked. This cap only turns an impossible frame into a clear error.
 MAX_CHUNK = 4096
+
+# The MCUboot swap trailer, read from the END of a slot-sized resource (BOOT_MAX_ALIGN 8: the
+# 16-byte magic last, then one 8-byte field each for image_ok, copy_done, swap_info).
+BOOT_MAGIC = bytes.fromhex("77c295f360d2ef7f3552500f2cb67980")
+TRAILER_LEN = 24                       # image_ok field + magic; what `image state` write would set
+IMAGE_MAGIC = 0x96F3B83D
+TLV_INFO_MAGIC, TLV_PROT_MAGIC = 0x6907, 0x6908
+
+
+def image_trailer(raw: bytes) -> dict:
+    """What the last 24 bytes of a resource say. `swap` is MCUboot's reading of them for a
+    secondary slot: "permanent" (magic good, image_ok set), "test" (magic good, image_ok unset),
+    or None (no magic: nothing scheduled by the bytes themselves)."""
+    if len(raw) < 48:
+        return {"magic": "none", "imageOk": False, "swap": None}
+    magic = raw[-16:]
+    image_ok = raw[-24]
+    good = magic == BOOT_MAGIC
+    unset = magic == b"\xff" * 16
+    return {"magic": "good" if good else "unset" if unset else "other",
+            "imageOk": image_ok == 0x01,
+            "swap": ("permanent" if image_ok == 0x01 else "test") if good else None}
+
+
+def mcuboot_image_length(raw: bytes) -> int | None:
+    """Header + image + every TLV area: the bytes an MCUboot image actually is, without the
+    padding and trailer a slot-sized resource carries after it. None when there is no header."""
+    if len(raw) < 32:
+        return None
+    magic, _load, hdr_size, _pad, img_size, _flags = struct.unpack_from("<IIHHII", raw, 0)
+    if magic != IMAGE_MAGIC:
+        return None
+    off = hdr_size + img_size
+    areas = 0
+    while off + 4 <= len(raw) and areas < 2:
+        tmagic, total = struct.unpack_from("<HH", raw, off)
+        if tmagic not in (TLV_INFO_MAGIC, TLV_PROT_MAGIC):
+            break
+        off += total
+        areas += 1
+    return off if areas else None
 
 # HOW THE BOOTLOADER NUMBERS UPLOAD TARGETS (MCUboot boot/boot_serial/src/boot_serial.c and
 # boot/zephyr/flash_map_extended.c, read 2026-09-15). The `image` field of an `image upload` is
@@ -165,16 +226,28 @@ class UploadPlan:
     arm_token: str = ""
     upload_image_id: int = 0          # the `image` value on the wire -- see the note at the top
     upload_id_source: str = ""        # "device slot info" or the assumption, spelled out
+    file_bytes: int = 0               # the whole resource on disk
+    trailer: dict = field(default_factory=dict)      # image_trailer() of the resource
+    vendor_trailer: bool = False      # True: upload the whole resource, trailer included, no mark
+
+    @property
+    def arms_on_upload(self) -> bool:
+        """True when the bytes being uploaded include a trailer that schedules a swap by
+        themselves (the vendor's way); the flash then sends no `image state` write."""
+        return self.vendor_trailer and self.trailer.get("swap") is not None
 
     def describe(self) -> str:
         t, r = self.target, self.running
+        how = (f"whole resource incl. its trailer ({self.trailer.get('swap')} swap armed by the "
+               f"upload, as NayaCore does)" if self.arms_on_upload else
+               "MCUboot image only; the trailer is written by `image state` after the slot check")
         return (f"{self.image_path.name} -> slot {self.slot} on {self.port} "
                 f"(upload image id {self.upload_image_id}: {self.upload_id_source})\n"
                 f"  running : {r.get('file')} ({r.get('side')}/gen {r.get('generation')}, "
                 f"fw {r.get('versionLabel') or r.get('createFirmware')})\n"
                 f"  writing : {t.get('file')} ({t.get('side')}/gen {t.get('generation')}, "
                 f"fw {t.get('versionLabel') or t.get('createFirmware')}, {t.get('bundle')})\n"
-                f"  {self.total_bytes} bytes in {self.chunks} chunks\n"
+                f"  {self.total_bytes} of {self.file_bytes} bytes in {self.chunks} chunks: {how}\n"
                 f"  arm token: {self.arm_token}")
 
 
@@ -329,13 +402,17 @@ def _is_downgrade(active: dict, target: dict) -> str | None:
 
 def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
          chunk: int = DEFAULT_CHUNK, allow_older: bool = False,
-         state: dict | None = None, slot_info: dict | None = None) -> UploadPlan:
+         state: dict | None = None, slot_info: dict | None = None,
+         vendor_trailer: bool = False) -> UploadPlan:
     """Run every interlock and return what an upload would do. Writes nothing.
 
     `state` is a recovery.read_running_image() result; it is read from the device when omitted.
     `slot_info` is a recovery.slot_info() result; when omitted the one carried by `state` is used,
     and when there is none the upload id is the documented assumption, labelled as such.
-    Raises UploadRefused with a reason a user can act on.
+    `vendor_trailer=False` (default) uploads only the MCUboot image and marks the slot after
+    checking it; True uploads the whole resource as NayaCore does, trailer included, which arms
+    the swap on upload (see the note at the top). Raises UploadRefused with a reason a user can
+    act on.
     """
     path = Path(image_path)
     if not path.is_file():
@@ -385,6 +462,12 @@ def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
             "longer talk to each other are brought back to a common version — so pass "
             "allow_older=True to say you meant it.")
 
+    if slot != 1:
+        raise UploadRefused(
+            f"slot {slot} is not a place this sequence writes. Slot 0 is the PRIMARY, the image "
+            "the half boots from: writing it directly is exactly the failure MCUboot's swap "
+            "exists to prevent. The sequence uploads to the secondary (1) and lets the "
+            "bootloader swap.")
     if slot_info is None:
         slot_info = state.get("slotInfo")
     image_id, id_source = upload_image_id(slot, slot_info)
@@ -394,15 +477,25 @@ def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
             f"{path.name} is {len(raw)} bytes and slot {slot} is {size}; the bootloader would "
             "refuse it too.")
 
+    trailer = image_trailer(raw)
+    image_len = mcuboot_image_length(raw)
+    if vendor_trailer or image_len is None:
+        upload_len = len(raw)          # the whole resource (or a file with no header to trim)
+    else:
+        upload_len = image_len
+    if not 0 < chunk <= MAX_CHUNK:
+        raise UploadRefused(f"chunk must be 1 to {MAX_CHUNK} bytes, not {chunk}")
+
     return UploadPlan(
-        image_path=path, slot=slot, total_bytes=len(raw),
-        chunks=max(1, -(-len(raw) // chunk)),
-        image_sha256=hashlib.sha256(raw).hexdigest(),
+        image_path=path, slot=slot, total_bytes=upload_len,
+        chunks=max(1, -(-upload_len // chunk)),
+        image_sha256=hashlib.sha256(raw[:upload_len]).hexdigest(),
         running=active, target=target, port=state.get("port", ""),
         # The arming token is the DEVICE's own reported hash. A caller cannot arm this in
         # advance, or reuse an arming decision made about a different half.
         arm_token=active.get("hash") or "",
         upload_image_id=image_id, upload_id_source=id_source,
+        file_bytes=len(raw), trailer=trailer, vendor_trailer=vendor_trailer,
     )
 
 
@@ -456,9 +549,11 @@ def _send_chunks(port: str, image_id: int, raw: bytes, *, chunk: int, progress=N
 
 def upload(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
            chunk: int = DEFAULT_CHUNK, allow_older: bool = False, progress=None,
-           state: dict | None = None, slot_info: dict | None = None) -> dict:
+           state: dict | None = None, slot_info: dict | None = None,
+           vendor_trailer: bool = False) -> dict:
     """Write an image to a half in recovery. Called only by flash(); on its own it leaves an
-    image in the secondary slot that never boots.
+    image in the secondary slot that never boots (unless `vendor_trailer`, whose bytes arm the
+    swap by themselves -- see the note at the top).
 
     `arm` must equal the hash the device reports for its running image -- see plan().arm_token.
     That is deliberately not a boolean: an arming flag can be left switched on, and a token tied
@@ -467,41 +562,45 @@ def upload(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
     Never run against hardware. The read path it sits on is proven; this request shape is not.
     """
     p = plan(image_path, catalog, slot=slot, chunk=chunk, allow_older=allow_older,
-             state=state, slot_info=slot_info)
+             state=state, slot_info=slot_info, vendor_trailer=vendor_trailer)
     if arm != p.arm_token:
         raise UploadRefused(
             "not armed. Pass arm= the hash this half reports for its running image "
             f"({p.arm_token or 'unavailable'}); it is printed by the plan.")
 
-    raw = Path(image_path).read_bytes()
+    raw = Path(image_path).read_bytes()[:p.total_bytes]
     sent = _send_chunks(p.port, p.upload_image_id, raw, chunk=chunk, progress=progress)
-    return {"ok": True, "written": sent, "slot": slot, "uploadImageId": p.upload_image_id,
-            "uploadIdSource": p.upload_id_source, "image": Path(image_path).name, "port": p.port}
+    return {"ok": True, "written": sent, "ofFile": p.file_bytes, "slot": slot,
+            "uploadImageId": p.upload_image_id, "uploadIdSource": p.upload_id_source,
+            "image": Path(image_path).name, "port": p.port,
+            "armedByUpload": p.arms_on_upload}
 
 
 # --- activating the uploaded image: the two steps upload() stops short of ------------------- #
 
-def build_set_pending_request(image_hash: bytes | None, *, confirm: bool = False,
-                              seq: int = 0) -> bytes:
-    """`image state` WRITE: mark the image with this hash for the next boot. Pure; sends nothing.
+def build_set_pending_request(image_hash: bytes, *, confirm: bool = False, seq: int = 0) -> bytes:
+    """`image state` WRITE: schedule the swap for the image with this hash. Pure; sends nothing.
 
-    `confirm=False` is MCUboot's TEST mode: the bootloader swaps the image in for ONE boot and
-    swaps back if that image never confirms itself -- the safety net a first flash on a donor
-    unit wants. `confirm=True` makes the swap permanent at once. With `confirm=True` and no hash
-    the request confirms whatever is currently running (mcumgr's `image confirm`), which is the
-    follow-up a test-booted image needs before its next reset.
+    MCUboot's serial recovery (bs_set) finds the slot whose image has this hash and calls
+    boot_set_pending_multi(image, confirm) on the SECONDARY slot: `confirm=False` writes the
+    trailer magic only (a TEST swap: boots once, reverts on the following reset unless the
+    application confirms itself), `confirm=True` also sets image_ok (a PERMANENT swap). If the
+    trailer magic is already good the call changes nothing and returns 0.
+
+    There is deliberately no hash-less form. In application-side mcumgr `{"confirm": true}` means
+    "confirm the running image"; in MCUboot's serial recovery the same bytes mean
+    boot_set_pending_multi(0, true), i.e. schedule a permanent swap of whatever sits in the
+    secondary slot. Nothing here may send that by accident.
 
     The hash is the one the DEVICE reports for the slot (`image state` read): the SHA-256 of the
     decrypted image, i.e. the catalogue's plaintextSha256 -- not the hash of the encrypted file.
     """
     if image_hash is None:
-        if not confirm:
-            raise ValueError("marking an image pending needs its hash; only confirm may omit it")
-        body: dict = {"confirm": True}
-    else:
-        if len(image_hash) != 32:
-            raise ValueError("an image hash is 32 bytes")
-        body = {"hash": bytes(image_hash), "confirm": bool(confirm)}
+        raise ValueError("an image state write needs the hash of the image to schedule; the "
+                         "hash-less form is not 'confirm the running image' in serial recovery")
+    if len(image_hash) != 32:
+        raise ValueError("an image hash is 32 bytes")
+    body = {"hash": bytes(image_hash), "confirm": bool(confirm)}
     return rec.encode_request(SMP_OP_WRITE, rec.SMP_GROUP_IMAGE, SMP_ID_IMAGE_STATE,
                               payload=_cbor_encode(body), seq=seq)
 
@@ -528,19 +627,38 @@ def _live_slot_info(state: dict) -> dict | None:
         return None
 
 
+def _slot_flags(images: list | None, slot: int) -> dict | None:
+    """The `pending` / `permanent` / `confirmed` flags the bootloader reports for a slot, when it
+    reports them at all (MCUBOOT_SERIAL_IMG_GRP_IMAGE_STATE); None when the reply carries none,
+    which is a valid build and not a failure."""
+    row = next((i for i in images or [] if i.get("slot") == slot), None)
+    if row is None or not any(k in row for k in ("pending", "permanent", "confirmed", "active")):
+        return None
+    return {k: bool(row.get(k)) for k in ("pending", "permanent", "confirmed", "active")}
+
+
 def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
           chunk: int = DEFAULT_CHUNK, allow_older: bool = False, confirm: bool = False,
-          progress=None, state: dict | None = None, slot_info: dict | None = None) -> dict:
-    """The whole NayaCore sequence: upload -> re-read the slot -> mark pending -> reset.
+          progress=None, state: dict | None = None, slot_info: dict | None = None,
+          vendor_trailer: bool = False) -> dict:
+    """The whole sequence: upload -> re-read the slot -> schedule the swap -> reset.
 
     Every upload() interlock applies (it runs first, on one device read shared with the plan).
-    Then one more: the slot is re-read and its hash must be the catalogued plaintext hash of the
-    image we meant to write. If it is not, nothing further is sent, nothing is marked bootable
-    and the primary image is untouched -- the failure mode stays "nothing changed".
+    Then the slot is re-read and its hash must be the catalogued plaintext hash of the image we
+    meant to write.
 
-    Default `confirm=False` boots the new image in MCUboot test mode; it reverts on the following
-    reset unless confirmed (build_set_pending_request(None, confirm=True) once it is up). That
-    confirm is deliberately a separate, later decision.
+    Default (vendor_trailer=False): only the MCUboot image was uploaded, so at this point nothing
+    is scheduled yet; a mismatch means nothing further is sent and the primary is untouched. On
+    a match the trailer is written by `image state` with the hash: `confirm=False` = TEST swap
+    (boots once, reverts on the next reset unless the application confirms itself; there is no
+    later confirm from recovery), `confirm=True` = PERMANENT, which is what NayaCore's resources
+    amount to.
+
+    vendor_trailer=True: the whole resource went up, trailer included, and that trailer scheduled
+    a permanent swap the moment the upload completed (as it does for NayaCore). No `image state`
+    write is sent; `confirm` is ignored. A hash mismatch here can only mean a corrupt transfer;
+    MCUboot validates the signature before it swaps and refuses a corrupt image, and the message
+    says what is armed.
 
     GATED: reached only through the FIRMWARE_FLASH_ENABLED endpoint. Never run on hardware.
     """
@@ -549,37 +667,59 @@ def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
     if slot_info is None:
         slot_info = _live_slot_info(state)
     result = upload(image_path, catalog, arm=arm, slot=slot, chunk=chunk,
-                    allow_older=allow_older, progress=progress, state=state, slot_info=slot_info)
+                    allow_older=allow_older, progress=progress, state=state, slot_info=slot_info,
+                    vendor_trailer=vendor_trailer)
     p = plan(image_path, catalog, slot=slot, chunk=chunk, allow_older=allow_older, state=state,
-             slot_info=slot_info)
+             slot_info=slot_info, vendor_trailer=vendor_trailer)
+    armed = p.arms_on_upload
 
     want = _hex(p.target.get("plaintextSha256"))
     if len(want) != 64:
         raise UploadRefused(
             f"{p.image_path.name} has no catalogued plaintext hash, so the slot it landed in "
-            "cannot be checked before it is marked bootable. Not marking anything; the primary "
-            "image is untouched.")
+            "cannot be checked. " + ("The resource's own trailer has already scheduled a "
+            f"{p.trailer.get('swap')} swap; MCUboot will validate the image before swapping."
+            if armed else "Nothing is scheduled; the primary image is untouched."))
     after = rec.image_state(p.port)
     landed = next((i for i in after.get("images") or [] if i.get("slot") == slot), None)
     got = _hex(landed.get("hash")) if landed else ""
     if got != want:
         raise UploadRefused(
             f"after upload, slot {slot} reports {got or 'no image'} but {p.image_path.name} "
-            f"should read {want}. It is NOT marked bootable; the primary image is untouched.")
+            f"should read {want}. " + ("The bytes uploaded include the resource's trailer, so a "
+            f"{p.trailer.get('swap')} swap IS scheduled for whatever landed; MCUboot validates "
+            "the signature before swapping and refuses a corrupt image. Upload the image again "
+            "to replace it." if armed else
+            "Nothing is scheduled; the primary image is untouched."))
 
-    reply = rec._talk(p.port, build_set_pending_request(bytes.fromhex(want), confirm=confirm,
-                                                        seq=1), timeout=5.0)
-    if reply.get("rc", 0):
-        raise UploadRefused(
-            f"the bootloader refused to mark slot {slot} pending (rc={reply['rc']}). Nothing "
-            "was reset; the primary image is untouched.")
+    if armed:
+        flags = _slot_flags(after.get("images"), slot)
+        if flags is not None and not flags["pending"]:
+            raise UploadRefused(
+                f"the resource's trailer should have scheduled a swap but the bootloader reports "
+                f"slot {slot} not pending ({flags}). Not resetting.")
+        marked = f"{p.trailer.get('swap')} (by the resource's own trailer)"
+    else:
+        reply = rec._talk(p.port, build_set_pending_request(bytes.fromhex(want), confirm=confirm,
+                                                            seq=1), timeout=5.0)
+        if reply.get("rc", 0):
+            raise UploadRefused(
+                f"the bootloader refused to schedule slot {slot} (rc={reply['rc']}). Nothing "
+                "was reset; the primary image is untouched and nothing is scheduled.")
+        # bs_set answers with the updated image list; when it carries state flags, hold it to them.
+        flags = _slot_flags(reply.get("images"), slot)
+        if flags is not None and not flags["pending"]:
+            raise UploadRefused(
+                f"the bootloader took the image state write but reports slot {slot} not pending "
+                f"({flags}). Not resetting.")
+        marked = "permanent" if confirm else "test"
     # The device reboots while answering this, so a short or missing reply is the expected
     # outcome of a reset that worked, not an error to surface.
     try:
         rec._talk(p.port, build_reset_request(seq=2), timeout=2.0)
     except Exception:      # noqa: BLE001 -- see above
         pass
-    result.update({"marked": "confirm" if confirm else "test", "hash": want, "reset": True})
+    result.update({"swap": marked, "hash": want, "reset": True, "trailer": p.trailer})
     return result
 
 
@@ -710,6 +850,8 @@ def flash_module_bundle(image_path: str | Path, catalog: list, *, arm: str,
             "not armed. Pass arm= the hash this half reports for its running image "
             f"({p.arm_token or 'unavailable'}); it is printed by the plan.")
     raw = p.image_path.read_bytes()
+    if not 0 < chunk <= MAX_CHUNK:
+        raise UploadRefused(f"chunk must be 1 to {MAX_CHUNK} bytes, not {chunk}")
     sent = _send_chunks(p.port, p.upload_image_id, raw, chunk=chunk, progress=progress,
                         untouched="the keyboard firmware is untouched, the modules partition is "
                                   "partly written")

@@ -33,18 +33,26 @@ NAYA_VID = 0x37D1
 # THE PRODUCT ID LAYOUT, from NayaCore 6.11.0's Naya_Device::setCreateFlashGenerationFromPid
 # (both macOS builds disassembled 2026-09-16): it masks the pid with 0xEFFF and accepts two
 # families of three, then reads bit 0x1000 as the flash generation.
-#     pid & 0xEFFF   left: 0x064 app, 0x06F MCUboot, 0x07A DFU
-#                    right: 0x0C8 app, 0x0D3 MCUboot, 0x0DE DFU
+#     pid & 0xEFFF   left: 0x064 app, 0x06F MCUboot, 0x07A a third mode
+#                    right: 0x0C8 app, 0x0D3 MCUboot, 0x0DE a third mode
 #     pid & 0x1000   clear = generation A, set = generation B
 # Confirmed on the owner's board: 0x0064 left app, 0x00C8 right app, 0x006F left in MCUboot with
 # TWO CDC ports (a data port and a log port, not labelled, so both are tried). The right half in
-# MCUboot (0x00D3), the DFU members and every generation-B value are NayaCore's table, not yet
+# MCUboot (0x00D3), the third members and every generation-B value are NayaCore's table, not yet
 # seen on hardware. Before this table only 0x006F was looked for, so a right half sitting in its
 # bootloader was invisible.
+#
+# LEAVING RECOVERY. A half that entered MCUboot on RESET/MCU_BOOT does NOT come back on its own:
+# on 2026-09-16 the left half sat in the bootloader for well over a minute after the probe
+# finished, until an SMP `os reset` (os_reset below) was sent. The 2026-09-01 note that it
+# "self-recovers after a few seconds of silence" was wrong. Plan for the reset, or a power cycle.
 PID_GEN_B_BIT = 0x1000
+# The third member of each family (+22) is accepted by NayaCore but nothing names what it is.
+# RESET/DFU exists and would be the natural guess, but the nRF's own DFU bootloader enumerates
+# under Nordic's vendor id, not Naya's, so the guess stays a guess: "third", not "dfu".
 PID_FAMILY = {
-    0x064: ("left", "app"), 0x06F: ("left", "mcuboot"), 0x07A: ("left", "dfu"),
-    0x0C8: ("right", "app"), 0x0D3: ("right", "mcuboot"), 0x0DE: ("right", "dfu"),
+    0x064: ("left", "app"), 0x06F: ("left", "mcuboot"), 0x07A: ("left", "third"),
+    0x0C8: ("right", "app"), 0x0D3: ("right", "mcuboot"), 0x0DE: ("right", "third"),
 }
 RECOVERY_PIDS = frozenset(base | gen for base, (_s, mode) in PID_FAMILY.items()
                           if mode == "mcuboot" for gen in (0, PID_GEN_B_BIT))
@@ -246,10 +254,9 @@ def decode_response(raw: bytes) -> dict:
 
 
 def _talk(port: str, frame: bytes, timeout: float = 2.0) -> dict:
-    """One request, one response. Opens and closes the port each time on purpose.
-
-    Recovery self-recovers after a few seconds of SMP silence and boots the application, so a
-    long-lived handle would be a handle to something that has already gone.
+    """One request, one response. Opens and closes the port each time on purpose: the port
+    disappears when the half resets (which several of these requests cause), and a fresh handle
+    per request is what tells that apart from a dead port.
     """
     import serial
     import time as _time
@@ -327,6 +334,20 @@ def image_state(port: str) -> dict:
     return _talk(port, encode_request(SMP_OP_READ, SMP_GROUP_IMAGE, SMP_ID_IMAGE_STATE))
 
 
+SMP_ID_OS_RESET = 5
+
+
+def os_reset(port: str) -> dict:
+    """`os reset`: leave the bootloader and boot the application (the primary image; nothing is
+    scheduled by this). The port drops as the half reboots, so a transport error here is the
+    reset working, and is returned as {"reset": True, "reply": None} rather than raised."""
+    try:
+        reply = _talk(port, encode_request(2, SMP_GROUP_OS, SMP_ID_OS_RESET), timeout=2.0)
+        return {"reset": True, "reply": reply}
+    except Exception as e:                          # noqa: BLE001 -- see docstring
+        return {"reset": True, "reply": None, "note": f"{type(e).__name__}: {e}"}
+
+
 def slot_info(port: str) -> dict:
     """`image slot info` read, normalised: {"supported": bool, "slots": [{"image", "slot",
     "size", "uploadImageId"}], "raw": <reply>}.
@@ -391,9 +412,9 @@ def read_running_image(catalog: list | None = None) -> dict:
             out["slotInfo"] = {"supported": None, "error": f"{type(e).__name__}: {e}", "slots": []}
         return out
     return {"state": "error",
-            "detail": "A recovery device is present but neither port answered SMP. Recovery "
-                      "boots the application again after a few seconds of silence, so it may "
-                      "simply have timed out — put the half back into recovery and retry.",
+            "detail": "A recovery device is present but neither port answered SMP. Windows can "
+                      "refuse the port for a moment after the bootloader enumerates; retry, and "
+                      "if it still does not answer, power-cycle the half.",
             "errors": errors}
 
 

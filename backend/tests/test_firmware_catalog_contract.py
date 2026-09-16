@@ -138,6 +138,16 @@ def test_the_uncertain_1_17_3_carves_are_gone(images):
     assert all(e["sideConfidence"] == "confirmed" for e in images if e["target"] == "keyboard")
 
 
+def test_every_mcuboot_resource_is_a_whole_slot_with_a_permanent_swap_trailer(images):
+    """image_ok = 0x01 and BOOT_MAGIC at the end of every resource: uploaded whole, it schedules a
+    permanent swap by itself. The flasher must know, and does (firmware_upload.image_trailer)."""
+    res = [e for e in images if e.get("type") == "mcuboot"]
+    assert len(res) == 27                             # 26 keyboard images + the dial
+    for e in res:
+        assert e["trailer"] == {"magic": "good", "imageOk": True, "swapOnUpload": "permanent"}, e["file"]
+        assert e["mcubootImageLen"] < e["resourceSize"], e["file"]
+
+
 def test_one_signing_key_across_every_release(cat, images):
     assert len(cat["signingKeys"]) == 1
     keyed = [e for e in images if e.get("type") == "mcuboot"]

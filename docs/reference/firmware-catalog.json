@@ -1,6 +1,6 @@
 {
  "_note": "Metadata only; the images are vendor material and are NOT in this repository (they live in the private nayaHistory clone under firmware-history/<tag>/, see historyPath). Built by tools/build_firmware_catalog.py from every NayaFlow release 0.0.1 to 1.25.1; do not hand-edit. One entry per DISTINCT image (deduplicated by plaintextSha256, by blobSha256 for the LittleFS module bundle); `bundles` lists every release that shipped it, `bundle` the newest. Filenames repeat across releases (every one has a kb_fwl.bin), so match a file by blobSha256, never by name. Keyboard: plaintextSha256 is what `mcumgr image list` reports for the running image; `generation` is the QSPI flash generation NayaCore picks by USB PID and a half matches exactly one image. `createFirmware` / `moduleFirmware` come from the release changelogs (\"NayaCreate (vA -> vB)\") or the 1.25.x app JS; where no release declared a number, versionConfidence is \"unknown\" and versionLabel names the release(s) instead. `releaseOrder` is the chronological index of the first release that shipped the image, for the downgrade guard when versions are unknown. Module: FlashMemory.bin is a LittleFS bundle; its `moduleFirmware` is the VERSION file inside it (what MODULE_FILE_FW_VERSION reports) and `contents` lists its userapps with the SHA-256 the Create reports for each (the bundle's _HASH sidecars); the .sfb entries repeat that per app, `containerBlobSha256` naming their bundle.",
- "generated": "2026-09-16T00:19:10",
+ "generated": "2026-09-16T00:52:41",
  "source": "https://github.com/traviswye/nayaHistory (firmware-history/, changelogs/, MANIFEST.json)",
  "signingKeys": [
   "de8b07187913e6e788306618e4166e38a8c2eda99b68970d17fd00e75fd5b972"
@@ -276,7 +276,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl_64.bin",
@@ -315,7 +320,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -354,7 +364,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr_64.bin",
@@ -393,7 +408,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -433,7 +453,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -473,7 +498,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -512,7 +542,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -551,7 +586,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -590,7 +630,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -629,7 +674,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -673,7 +723,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -717,7 +772,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -755,7 +815,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -793,7 +858,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -831,7 +901,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -869,7 +944,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -908,7 +988,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -947,7 +1032,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -986,7 +1076,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -1025,7 +1120,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -1067,7 +1167,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -1109,7 +1214,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwl.bin",
@@ -1148,7 +1258,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "kb_fwr.bin",
@@ -1187,7 +1302,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "fwl.bin",
@@ -1228,7 +1348,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "fwr.bin",
@@ -1269,7 +1394,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   },
   {
    "file": "FlashMemory.bin",
@@ -2701,7 +2831,12 @@
    "headerSize": 512,
    "flags": 4,
    "headerVersion": "1.2.3+4",
-   "hasContentKey": true
+   "hasContentKey": true,
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   }
   }
  ]
 }

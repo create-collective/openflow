@@ -193,21 +193,24 @@ async def flash_firmware(body: dict = Body(...)) -> dict:
     import os
     from pathlib import Path as _P
     from ..device import firmware_upload as fw
-    name = str(body["image"])
-    path = _P(name)
-    if not path.is_absolute():
-        # The images are vendor material and live outside the repo; OPENFLOW_FIRMWARE_DIR says
-        # where. A bare catalogue filename with no dir set fails plan()'s "no such image" check.
-        d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
-        path = _P(d) / name if d else path
     try:
-        # flash() = upload -> re-read slot -> mark pending -> reset (NayaCore's stock-MCUboot
-        # sequence). Default confirm=False boots the image in MCUboot TEST mode so it reverts on
-        # the next reset unless confirmed -- deliberately a separate, later decision.
+        name = str(body["image"])
+        path = _P(name)
+        if not path.is_absolute():
+            # The images are vendor material and live outside the repo; OPENFLOW_FIRMWARE_DIR
+            # says where. A bare catalogue filename with no dir set fails plan()'s "no such
+            # image" check.
+            d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
+            path = _P(d) / name if d else path
+        # flash() = upload -> re-read slot -> schedule the swap -> reset. Default confirm=False
+        # is a TEST swap (boots once, reverts unless the app confirms itself); confirm=True is
+        # permanent. vendor_trailer=True uploads the whole resource as NayaCore does, which arms
+        # a permanent swap by itself. See firmware_upload.py's note.
         return await run_in_threadpool(
             fw.flash, path, _firmware_catalog_raw(), arm=body.get("arm", ""),
             slot=int(body.get("slot", 1)), allow_older=bool(body.get("allow_older", False)),
-            confirm=bool(body.get("confirm", False)))
+            confirm=bool(body.get("confirm", False)),
+            vendor_trailer=bool(body.get("vendor_trailer", False)))
     except (fw.UploadRefused, TransportError, ValueError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -226,12 +229,12 @@ async def flash_module_firmware(body: dict = Body(...)) -> dict:
     import os
     from pathlib import Path as _P
     from ..device import firmware_upload as fw
-    name = str(body["image"])
-    path = _P(name)
-    if not path.is_absolute():
-        d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
-        path = _P(d) / name if d else path
     try:
+        name = str(body["image"])
+        path = _P(name)
+        if not path.is_absolute():
+            d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
+            path = _P(d) / name if d else path
         return await run_in_threadpool(
             fw.flash_module_bundle, path, _firmware_catalog_raw(), arm=body.get("arm", ""),
             installed_version=body.get("installed_version"),

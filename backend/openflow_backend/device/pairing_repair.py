@@ -18,14 +18,20 @@ list in the binary in order (extracted/NayaFlow-1.25.1/strings/core-strings.txt:
     Pairing: Waiting for peer %1 before normal_reset for device: %2.
     normal_reset                -> RESET/NORMAL (0xEE/0x10CE)
 
-and its state machine names the phases (5192-5217): CheckBLEFWVersion, WaitForPairAddress,
-StorePairedHalfAddressBeforeClear, ClearConnections, VerifyConnectionsCleared,
-ExchangeBLEAddresses, WaitForPairingPeerBeforeNormalReset, VerifyBLEAddresses, Respawn,
-RecheckBLEStatus, WaitForBLEStatus, VerifyBLEFWVersion; with the user-facing text "Storing paired
-half address before clearing connections." / "Exchanging BLE addresses between devices." /
-"Verifying BLE addresses were exchanged successfully.". Its refusals are reused verbatim:
-"Pairing failed: missing device(s) (left=%1, right=%2)" and "Devices have different firmware
-versions".
+with the Pairing operation's own phases ExchangeBLEAddresses -> WaitForPairingPeerBeforeNormalReset
+-> VerifyBLEAddresses ("Exchanging BLE addresses between devices." / "Waiting for pairing peer
+before device reset." / "Verifying BLE addresses were exchanged successfully."). Its refusals are
+reused verbatim: "Pairing failed: missing device(s) (left=%1, right=%2)" and "Devices have
+different firmware versions".
+
+The "store before clear" rule is borrowed from a SIBLING operation, NayaCore's ClearBLEDevices
+(Naya_DeviceManager_ClearBLEDevices.cpp; phases CheckBLEFWVersion, WaitForPairAddress,
+StorePairedHalfAddressBeforeClear, ClearConnections, VerifyConnectionsCleared, Respawn,
+RecheckBLEStatus, WaitForBLEStatus, VerifyBLEFWVersion; "Storing paired half address before
+clearing connections."), which it runs after a firmware update crosses the BLE version and then
+re-pairs "to known pair address". That is where the step names CheckBLEFWVersion /
+StorePairedHalfAddressBeforeClear / Respawn / RecheckBLEStatus in the plan below come from; the
+WRITES and their order are the Pairing operation's.
 
 THE ORDER IS THE SAFETY PROPERTY. The partner address is set on each half FIRST and stored
 durably here BEFORE any clearing; the clears come after. Clear first and the only copy of what
@@ -250,7 +256,12 @@ def execute(service, p: PairingPlan, *, arm: str, force: bool, store=None, sleep
         raise PairingRefused(f"the sequence needs these recovery ops enabled first: {disabled}. "
                              "Running with some of them disabled would stop between the address "
                              "exchange and the clear. Nothing was sent.")
-    stored = (store or store_record)(p.record)        # STORE FIRST; a failure here raises
+    try:
+        stored = (store or store_record)(p.record)    # STORE FIRST
+    except Exception as e:                            # noqa: BLE001 -- any failure means no send
+        raise PairingRefused(f"the address record could not be stored ({type(e).__name__}: {e}), "
+                             "so nothing was sent: without it there is no copy of what to "
+                             "restore.") from e
     sent = []
     for s in p.steps:
         if s.kind == "write":

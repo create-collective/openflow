@@ -149,7 +149,8 @@ def test_pid_info_decodes_side_mode_and_generation_the_way_nayacore_does():
     assert rec.pid_info(0x00C8) == {"pid": 0x00C8, "side": "right", "mode": "app", "generation": "A"}
     assert rec.pid_info(0x006F) == {"pid": 0x006F, "side": "left", "mode": "mcuboot", "generation": "A"}
     assert rec.pid_info(0x00D3)["side"] == "right" and rec.pid_info(0x00D3)["mode"] == "mcuboot"
-    assert rec.pid_info(0x007A)["mode"] == "dfu" and rec.pid_info(0x00DE)["mode"] == "dfu"
+    # the +22 members are accepted by NayaCore; what mode they are is not named anywhere
+    assert rec.pid_info(0x007A)["mode"] == "third" and rec.pid_info(0x00DE)["mode"] == "third"
     # bit 0x1000 is the flash generation; the family is unchanged
     assert rec.pid_info(0x1064) == {"pid": 0x1064, "side": "left", "mode": "app", "generation": "B"}
     assert rec.pid_info(0x10D3) == {"pid": 0x10D3, "side": "right", "mode": "mcuboot", "generation": "B"}
