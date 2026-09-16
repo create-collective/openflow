@@ -26,9 +26,9 @@
    },
    "0x05": {
     "kind": "setting",
-    "label": "tick_spacing?",
+    "label": "ticks_per_rotation",
     "value": 5,
-    "note": "NOT ticks_per_rotation as previously mapped: that defaults to 72 and bottoms out at 5, and a stored 5 would be an odd floor. Setting it to 100 made the dial's detents SOFTER and further apart, so it reads as tick spacing rather than a count."
+    "note": "DEGREES PER DETENT: the dial gives 360 / byte detents per turn, so the stock 5 is NayaFlow's default of 72 and the slider minimum of 5 detents is the byte 72. Measured live 2026-09-16 (SCRUM-50): 36 -> about 10 detents, 10 -> about 33, 90 -> exactly 4. Strength did not change (that is 0x06). module_fields.setting_to_wire converts; the app stores detents per turn."
    },
    "0x06": {
     "kind": "setting",

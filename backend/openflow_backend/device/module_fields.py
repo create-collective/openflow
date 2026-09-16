@@ -271,21 +271,64 @@ def axis_halves(module_type: str) -> dict:
 # Deliberately absent:
 #   0x04  an unmapped flag sitting at 0. No idea what it does; a candidate for the 2-finger
 #         repeat behaviour, and worth a probe rather than a guess.
-#   0x05  identity uncertain. It was mapped as ticks_per_rotation, but that defaults to 72 and
-#         bottoms out at 5 while the device stores 5 -- an odd floor. Setting it to 100 made the
-#         detents SOFTER and further apart, so it reads as tick spacing, not a count. Writing a
-#         "ticks per rotation" of 72 into a spacing field would be a guess with a feel penalty.
+#
+# 0x05 IS ticks_per_rotation, in a different UNIT: the wire byte is DEGREES PER DETENT and the
+# dial gives 360 / byte detents per turn. Measured on the owner's Tune 2026-09-16 (SCRUM-50):
+# byte 36 -> about 10 detents, 10 -> about 33, 90 -> exactly 4, and the stock 5 is NayaFlow's
+# default of 72. That is why the app's slider "defaults to 72 and bottoms out at 5" while the
+# device stores 5: the same pair of numbers, swapped. Strength did not change at any value
+# (that is 0x06). NayaFlow's tooltip "may be rounded" is the integer division.
 SETTING_FIELDS = {
     "TOUCH": {"pointer_speed": 0x00, "scroll_speed": 0x01, "pointer_accel": 0x02,
               "pointer_accel_on": 0x03},
     "TRACK": {"pointer_speed": 0x00, "scroll_speed": 0x01, "pointer_accel": 0x02,
               "pointer_accel_on": 0x03},
     "TUNE": {"pointer_speed": 0x00, "scroll_speed": 0x01, "pointer_accel": 0x02,
-             "pointer_accel_on": 0x03, "tick_strength": 0x06, "toggle_ticks": 0x07},
+             "pointer_accel_on": 0x03, "ticks_per_rotation": 0x05, "tick_strength": 0x06,
+             "toggle_ticks": 0x07},
 }
 
-# Settings the app shows but cannot yet write, so the UI can say so instead of implying it did.
-UNWRITABLE_SETTINGS = {"TUNE": {"ticks_per_rotation"}}
+# Settings whose app value and wire byte differ in UNIT: {setting id: degrees in a full turn}.
+# The app stores detents per turn (NayaFlow's slider, 5-170); the module stores degrees per
+# detent, so 72 detents is the byte 5 and the slider's minimum of 5 detents is the byte 72.
+DEGREES_PER_TURN = {"ticks_per_rotation": 360}
+
+
+def setting_to_wire(setting_id: str, value):
+    """The number the one-byte field holds for an app value: the value itself for every
+    setting except the degree-per-detent ones, where detents per turn becomes
+    round(360 / detents). Raises TypeError/ValueError for a value that is not a number or not
+    a positive count, so the overlay leaves the board's byte alone."""
+    turn = DEGREES_PER_TURN.get(setting_id)
+    if turn is None:
+        return value
+    if isinstance(value, bool):
+        raise TypeError("a detent count is not a toggle")
+    n = int(float(value.strip())) if isinstance(value, str) else int(value)
+    if n <= 0:
+        raise ValueError("detents per turn must be positive")
+    return max(1, min(255, round(turn / n)))
+
+
+def setting_from_wire(setting_id: str, byte: int):
+    """The app value for a wire byte; None when the byte cannot mean anything (0 degrees)."""
+    turn = DEGREES_PER_TURN.get(setting_id)
+    if turn is None:
+        return byte
+    return round(turn / byte) if byte > 0 else None
+
+
+def setting_roundtrip(setting_id: str, value):
+    """What the device holds after `value` is written and read back, in app units: the value
+    itself for most settings; for a degree-per-detent one the nearest count the dial can do
+    (100 detents is not representable, 90 = 360 / 4 is). The drift report compares against
+    this so an unrepresentable slider value is not flagged as drift forever."""
+    if setting_id not in DEGREES_PER_TURN:
+        return value
+    try:
+        return setting_from_wire(setting_id, setting_to_wire(setting_id, value))
+    except (TypeError, ValueError):
+        return value
 
 
 def setting_fields(module_type: str) -> dict:
@@ -309,8 +352,9 @@ def decode_settings(module_type: str, fields: dict) -> dict:
     The inverse of module_layout.encode_setting. Read off the reference board 2026-09-11: every
     module carries pointer speed 10 / accel 50 / accel on at 0x00-0x03, a Touch stores scroll
     speed 50 where a Track or Tune stores 10, and the Tune adds tick strength 75 and ticks on at
-    0x06 / 0x07. Only a one-byte 0x01 record counts; anything else in a setting index (a Track's
-    axis two-words at 0x05-0x07, an empty field) is not a setting value and is left out.
+    0x06 / 0x07, plus 5 degrees per detent at 0x05 which reads back as 72 detents per turn.
+    Only a one-byte 0x01 record counts; anything else in a setting index (a Track's axis
+    two-words at 0x05-0x07, an empty field) is not a setting value and is left out.
     """
     out = {}
     for sid, idx in setting_fields(module_type).items():
@@ -320,7 +364,12 @@ def decode_settings(module_type: str, fields: dict) -> dict:
         typ, val = rec
         if typ != _ONE_BYTE or len(val) != 1:
             continue
-        out[sid] = bool(val[0]) if sid in TOGGLE_SETTINGS else int(val[0])
+        if sid in TOGGLE_SETTINGS:
+            out[sid] = bool(val[0])
+        else:
+            v = setting_from_wire(sid, int(val[0]))
+            if v is not None:
+                out[sid] = v
     return out
 
 

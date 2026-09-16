@@ -278,7 +278,9 @@ def overlay(template, module_type, bindings, axes=None, settings=None):
         if idx is None:
             continue                    # not one we can place; see SETTING_FIELDS
         try:
-            out[idx] = encode_setting(value)
+            # ticks_per_rotation is the one setting whose wire unit differs from the app's
+            # (degrees per detent, 360 / n); setting_to_wire is the identity for the rest.
+            out[idx] = encode_setting(module_fields.setting_to_wire(sid, value))
         except (TypeError, ValueError):
             continue                    # a value we cannot make a byte of: leave the board's
     return out

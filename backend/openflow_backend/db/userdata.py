@@ -508,8 +508,9 @@ SETTINGS_SCHEMA = {
     "TRACK": _COMMON_POINTER,
     "TUNE": _COMMON_POINTER + [
         {"id": "ticks_per_rotation", "label": "Ticks Per Rotation",
-         "desc": "Number of tactile feedback ticks per full rotation", "kind": "slider",
-         "min": 5, "max": 170, "default": 72},
+         "desc": "Number of tactile feedback ticks per full rotation (rounded to what the dial "
+                 "can do: the module stores whole degrees per tick, 360 / ticks)",
+         "kind": "slider", "min": 5, "max": 170, "default": 72},
         {"id": "tick_strength", "label": "Set Tick Strength",
          "desc": "Adjust the tactile feedback strength of crown ticks", "kind": "slider",
          "min": 0, "max": 100, "default": 75},

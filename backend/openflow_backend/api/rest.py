@@ -1351,6 +1351,9 @@ def _settings_rows(module_type: str, fields: dict, stored: dict) -> list:
                 app = int(float(raw))
             except (TypeError, ValueError):
                 app = f["default"]
+            # Compare in what the dial can actually hold: ticks_per_rotation is stored as
+            # degrees per detent, so a profile at 100 lands on the board as 90 and is not drift.
+            app = module_fields.setting_roundtrip(f["id"], app)
         dev = device[f["id"]]
         rows.append({"id": f["id"], "label": f["label"], "device": dev, "app": app,
                      "differs": dev != app})

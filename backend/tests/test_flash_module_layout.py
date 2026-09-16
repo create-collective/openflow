@@ -448,21 +448,28 @@ def test_module_settings_reach_the_device():
     print("  settings land in their fields as single bytes")
 
 
-def test_a_setting_we_cannot_place_is_left_on_the_board():
-    """Only settings whose device field is actually established get written. ticks_per_rotation
-    is the one that is not: it was mapped to 0x05, but that defaults to 72 and bottoms out at 5
-    while the device stores 5, and setting it to 100 made the detents softer and further apart
-    -- so 0x05 reads as tick SPACING, not a count. Writing 72 there would be a guess the user
-    feels in the dial."""
+def test_ticks_per_rotation_is_written_as_degrees_per_detent():
+    """0x05 holds DEGREES PER DETENT, not a count: the dial gives 360 / byte detents per turn.
+    Measured on the owner's Tune 2026-09-16 (SCRUM-50): byte 36 -> about 10 detents, 10 -> about
+    33, 90 -> exactly 4, and the stock 5 is NayaFlow's default of 72. Until then this setting was
+    refused as unplaceable because the app's 72 and the device's 5 looked like a contradiction;
+    they are the same number in two units."""
     from openflow_backend.device import module_layout as ml, remap as R, module_fields as MF
 
     template = {0x05: (R.KEY_PRESS, bytes([5]))}
-    out = ml.overlay(dict(template), "TUNE", {}, {}, {"ticks_per_rotation": 72})
-    assert out[0x05] == template[0x05], "0x05 must be left exactly as the board has it"
-    assert not MF.setting_is_writable("TUNE", "ticks_per_rotation")
-    assert MF.setting_is_writable("TUNE", "scroll_speed")
-    assert "ticks_per_rotation" not in MF.setting_fields("TUNE")
-    print("  an unplaceable setting changes nothing on the device")
+    for ticks, degrees in ((72, 5), (10, 36), (36, 10), (4, 90), (170, 2), ("72", 5), (5, 72)):
+        out = ml.overlay(dict(template), "TUNE", {}, {}, {"ticks_per_rotation": ticks})
+        assert out[0x05] == (R.KEY_PRESS, bytes([degrees])), (ticks, out[0x05])
+    for bad in ("", "fast", None, 0, -3, True):
+        out = ml.overlay(dict(template), "TUNE", {}, {}, {"ticks_per_rotation": bad})
+        assert out[0x05] == template[0x05], f"{bad!r} must leave the board's value"
+    assert MF.setting_is_writable("TUNE", "ticks_per_rotation")
+    assert not MF.setting_is_writable("TOUCH", "ticks_per_rotation"), "Tune only"
+    assert MF.setting_from_wire("ticks_per_rotation", 5) == 72
+    assert MF.setting_from_wire("ticks_per_rotation", 0) is None, "0 degrees means nothing"
+    assert MF.setting_roundtrip("ticks_per_rotation", 100) == 90, "100 is not representable; 90 is"
+    assert MF.setting_roundtrip("scroll_speed", 100) == 100, "identity for a plain byte"
+    print("  ticks per rotation -> degrees per detent, 360 / n, rounded")
 
 
 def test_a_garbage_setting_value_cannot_corrupt_a_field():

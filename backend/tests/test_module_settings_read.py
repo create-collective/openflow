@@ -29,7 +29,7 @@ ONE = 0x01
 # slot 4, the docked Touch (fields 0x00-0x04); 0x05-0x07 are its locked one-finger axes, empty
 TOUCH = {0: (ONE, b"\x0a"), 1: (ONE, b"\x32"), 2: (ONE, b"\x32"), 3: (ONE, b"\x01"), 4: (ONE, b"\x00"),
          5: (0x07, b""), 6: (0x07, b""), 7: (0x07, b"")}
-# slot 1, the docked Tune: tick spacing 5 at 0x05 (identity uncertain, not a setting we write),
+# slot 1, the docked Tune: 5 degrees per detent at 0x05 (= 72 detents per turn, SCRUM-50),
 # tick strength 75 at 0x06, ticks on at 0x07
 TUNE = {0: (ONE, b"\x0a"), 1: (ONE, b"\x0a"), 2: (ONE, b"\x32"), 3: (ONE, b"\x01"), 4: (ONE, b"\x00"),
         5: (ONE, b"\x05"), 6: (ONE, b"\x4b"), 7: (ONE, b"\x01")}
@@ -44,7 +44,10 @@ def test_the_boards_own_slots_decode_to_the_apps_setting_values():
                                                   "pointer_accel": 50, "pointer_accel_on": True}
     assert MF.decode_settings("TUNE", TUNE) == {"pointer_speed": 10, "scroll_speed": 10,
                                                 "pointer_accel": 50, "pointer_accel_on": True,
+                                                "ticks_per_rotation": 72,
                                                 "tick_strength": 75, "toggle_ticks": True}
+    assert "ticks_per_rotation" not in MF.decode_settings("TUNE", {**TUNE, 5: (ONE, b"\x00")}), \
+        "0 degrees per detent means nothing and is not reported"
     assert MF.decode_settings("TRACK", TRACK) == {"pointer_speed": 10, "scroll_speed": 10,
                                                   "pointer_accel": 50, "pointer_accel_on": True}
 
@@ -61,7 +64,7 @@ def test_decode_is_the_inverse_of_the_flash_encoder():
     for mtype, fields in (("TOUCH", TOUCH), ("TUNE", TUNE), ("TRACK", TRACK)):
         idx = MF.setting_fields(mtype)
         for sid, value in MF.decode_settings(mtype, fields).items():
-            assert ML.encode_setting(value) == fields[idx[sid]], (mtype, sid)
+            assert ML.encode_setting(MF.setting_to_wire(sid, value)) == fields[idx[sid]], (mtype, sid)
 
 
 def test_drift_is_reported_against_the_profile_or_its_default():
@@ -76,6 +79,16 @@ def test_drift_is_reported_against_the_profile_or_its_default():
                                                                           "toggle_ticks": "false"})}
     assert rows["scroll_speed"]["differs"] is False
     assert rows["toggle_ticks"]["differs"] is True and rows["toggle_ticks"]["app"] is False
+    # ticks_per_rotation compares in what the dial can actually do: 100 detents is not
+    # representable (360 / 4 = 90 is the nearest), so a profile at 100 against a board holding
+    # 4 degrees per detent is not drift; a profile at 36 against the stock 5 (72) is.
+    board_90 = {**TUNE, 5: (ONE, b"\x04")}
+    rows = {r["id"]: r for r in rest._settings_rows("TUNE", board_90,
+                                                    stored={"ticks_per_rotation": "100"})}
+    assert rows["ticks_per_rotation"]["device"] == 90 and rows["ticks_per_rotation"]["app"] == 90
+    assert rows["ticks_per_rotation"]["differs"] is False
+    rows = {r["id"]: r for r in rest._settings_rows("TUNE", TUNE, stored={"ticks_per_rotation": "36"})}
+    assert rows["ticks_per_rotation"]["device"] == 72 and rows["ticks_per_rotation"]["differs"] is True
 
 
 def _read_with_settings(extra_fields):
