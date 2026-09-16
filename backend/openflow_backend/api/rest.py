@@ -455,13 +455,15 @@ async def get_settings() -> dict:
 
 
 # LED settings that reach the device as a LIVE command (not on flash), verified on hardware
-# 2026-09-13. Changing the setting saves it AND, if a keyboard is connected, sends it live -- which
-# is what makes these actually take effect from the UI. led_action_override is deliberately absent:
-# it is wired (svc.led_setting "layer_override") but its effect is not eye-confirmed, so it stays
-# save-only and experimental until a behavioural test.
+# 2026-09-13 (brightness, scan mode) and 2026-09-16 (layer override, SCRUM-24). Changing the
+# setting saves it AND, if a keyboard is connected, sends it live -- which is what makes these
+# actually take effect from the UI. The override's wire value is the option index: 0 = until
+# keyboard restart, 1 = until next layer change; the stored value may be the label or the
+# NayaFlow wire name (until_layer_change), so both spellings map.
 _LED_LIVE_SETTINGS = {
     "led_max_brightness": ("max_brightness", lambda v: int(v)),
     "led_scan_mode": ("scan_mode", lambda v: 1 if v in (True, 1, "true", "True") else 0),
+    "led_action_override": ("layer_override", lambda v: 1 if "layer" in str(v).lower() else 0),
 }
 
 
@@ -961,7 +963,8 @@ async def led(body: dict = Body(...)) -> dict:
 @router.post("/rpc/led-setting")
 async def led_setting(body: dict = Body(...)) -> dict:
     """Send a persistent LED setting live (scan_mode / max_brightness / layer_override). The
-    testing surface for these -- UNVERIFIED on hardware. max_brightness=0 is refused (dark-board)."""
+    testing surface these were verified through (2026-09-13, 2026-09-16); /rpc/set-setting is the
+    everyday path. max_brightness=0 is refused (dark-board)."""
     svc = get_service()
     try:
         return await run_in_threadpool(

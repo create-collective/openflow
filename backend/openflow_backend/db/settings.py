@@ -65,18 +65,17 @@ SETTINGS_SCHEMA = [
             # NayaCore sends them live and PR #6 recovered the opcodes. api/rest set_setting sends
             # them live when a keyboard is connected.
             #
-            # led_action_override: WIRED (svc.led_setting "layer_override", 0x1014) and it REACHES
-            # the device -- 0x1014 acks and a behavioural change was seen on 2026-09-14 -- but the
-            # behavioural test could not cleanly verify it, because the per-layer animation feature
-            # (layer 0 solid / 1 breathe / 2 swirl) overlays the override and confounds every
-            # observation of "did the override clear on a layer change". So the enum->int mapping is
-            # still a guess (assumed 0 = until restart, 1 = until layer change) and it stays
-            # experimental and NOT auto-applied until a capture of NayaCore sending 0x1014, or a
-            # test on a profile with all per-layer animations set to solid, settles the semantics.
+            # led_action_override: VERIFIED on hardware by the owner (SCRUM-24, 2026-09-16), sent
+            # live as 0x1014. "until keyboard restart": an LED action pressed on a key survives
+            # layer changes and clears on a restart. "until next layer change": breathe pressed on
+            # layer 0 was gone after switching to layer 1 and back. So the option order IS the wire
+            # order (0 = until restart, 1 = until layer change); api/rest sends it live on change.
+            # (The 2026-09-14 attempt could not tell, because breathe on layer 1 and swirl on layer
+            # 2 repainted over the override on every switch; the owner's test used solid layers.)
             {"id": "led_action_override", "label": "LED Action Override", "kind": "select",
              "desc": "How long an LED action overrides the colourmap.",
              "options": ["until keyboard restart", "until next layer change"],
-             "default": "until keyboard restart", "provenance": EXPERIMENTAL,
+             "default": "until keyboard restart", "provenance": VERIFIED,
              "device_key": "385426f7-e454-4174-babe-4ca4a670cbe2",
              "device_values": {"until keyboard restart": "until_keyboard_restart",
                                "until next layer change": "until_layer_change"}},

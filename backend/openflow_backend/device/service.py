@@ -612,8 +612,9 @@ class DeviceService:
         return self._with_transport(side, go)
 
     def led_setting(self, side: str, setting: str, value: int) -> dict:
-        """Send one persistent LED setting live. UNVERIFIED on hardware -- this is the testing
-        surface. max_brightness (0x1013) is a persistent ceiling: 0 darks the array and survives a
+        """Send one persistent LED setting live. All three verified on hardware (brightness and
+        scan mode 2026-09-13, layer override 2026-09-16). max_brightness (0x1013) is a persistent
+        ceiling: 0 darks the array and survives a
         reboot, so the caller (and the test) must restore a non-zero value; it is refused as 0 here
         as a guard, since nothing legitimately wants a permanent-dark write from this path."""
         sub = self._LED_SETTINGS.get(setting)

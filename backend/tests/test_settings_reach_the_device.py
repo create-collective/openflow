@@ -177,6 +177,19 @@ def test_every_field_declares_its_provenance():
     assert not missing, f"fields with no provenance: {missing}"
 
 
+def test_led_action_override_is_verified_and_sent_live():
+    """Settled by the owner's test 2026-09-16 (SCRUM-24): "until keyboard restart" survives layer
+    changes, "until next layer change" clears on the next switch. The option order is the wire
+    order, and changing the setting sends 0x1014 live like brightness and scan mode do."""
+    from openflow_backend.api import rest
+    f = next(f for g in st.SETTINGS_SCHEMA for f in g["fields"] if f["id"] == "led_action_override")
+    assert f["provenance"] == st.VERIFIED
+    setting, to_int = rest._LED_LIVE_SETTINGS["led_action_override"]
+    assert setting == "layer_override"
+    assert to_int("until keyboard restart") == 0 and to_int("until_keyboard_restart") == 0
+    assert to_int("until next layer change") == 1 and to_int("until_layer_change") == 1
+
+
 def test_nothing_claims_verified_without_a_device_key():
     """'verified' means the flash path can actually find it. No key, no claim."""
     bad = [f["id"] for g in st.SETTINGS_SCHEMA for f in g["fields"]
