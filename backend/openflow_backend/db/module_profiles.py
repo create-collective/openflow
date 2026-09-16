@@ -328,6 +328,17 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
                     "INSERT INTO module_settings (value, type, correlation_id, module_config_id, "
                     "updated_at, created_at) VALUES (?,?,?,?,?,?)",
                     (val, "device", srow["id"], cid, now, now))
+            # The capture's gesture names were decoded under the TEMPLATE's scroll direction
+            # convention (each candidate is compared under its own), so the capture carries
+            # that convention too, or its names would mean the other way round (SCRUM-62).
+            conv = conn.execute(
+                "SELECT value FROM module_settings WHERE module_config_id=? AND correlation_id=?",
+                (tmpl, module_fields.SCROLL_CONVENTION_ID)).fetchone()
+            if conv is not None and conv[0]:
+                conn.execute(
+                    "INSERT INTO module_settings (value, type, correlation_id, module_config_id, "
+                    "updated_at, created_at) VALUES (?,?,?,?,?,?)",
+                    (conv[0], "app", module_fields.SCROLL_CONVENTION_ID, cid, now, now))
             flat = [(g, d, c, t) for (g, d), (c, t) in rows.items()] + extra
             for gesture, direction, code, atype in sorted(flat):
                 conn.execute(

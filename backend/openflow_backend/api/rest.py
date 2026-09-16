@@ -1259,9 +1259,6 @@ def _build_entries(read: dict) -> list:
         stored_settings: dict = {}
         for r in conn.execute("SELECT module_config_id, correlation_id, value FROM module_settings"):
             stored_settings.setdefault(r["module_config_id"], {})[r["correlation_id"]] = r["value"]
-        # The scroll direction convention names the board's vertical scroll records the way the
-        # user's OS scrolls, so a NayaFlow-written board read on Windows shows what it does there.
-        convention = settings_db.scroll_convention(conn)
         bindings = {}
         for r in conn.execute("SELECT module_config_id, behavior, action_code, direction, invert "
                               "FROM module_bindings"):
@@ -1311,7 +1308,10 @@ def _build_entries(read: dict) -> list:
         for cid, c in configs.items():
             if c["type"] != mtype:
                 continue
-            g, d = _compare(mtype, fields, bindings.get(cid, {}), convention)
+            # Compared under the candidate's OWN scroll direction convention: a Windows profile
+            # names the board's vertical scroll records the way Windows scrolls (SCRUM-62).
+            g, d = _compare(mtype, fields, bindings.get(cid, {}),
+                            module_fields.convention_of(stored_settings.get(cid)))
             tie = 0 if cid == uuid else 1 if c.get("captured_from") == uuid else 2
             ranked.append((d, tie, c["name"], cid, g))
         ranked.sort(key=lambda t: t[:3])
@@ -1327,7 +1327,7 @@ def _build_entries(read: dict) -> list:
         else:
             # Nothing of this type in the app at all: compare against nothing, capture from nothing.
             ref_id, ref_name = None, f"{mtype.title()} module"
-            gestures, differs = _compare(mtype, fields, {}, convention)
+            gestures, differs = _compare(mtype, fields, {})
         # The slot's speeds and tick feedback against the reference profile's. Not part of the
         # match (gestures decide that); shown as drift, and imported whole by a capture.
         settings = _settings_rows(mtype, fields, stored_settings.get(ref_id, {}) if ref_id else {})

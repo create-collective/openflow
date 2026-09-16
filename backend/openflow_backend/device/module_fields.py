@@ -396,11 +396,22 @@ def decode_settings(module_type: str, fields: dict) -> dict:
 # scrolled the page down). So for the same named direction the VERTICAL scroll selector carries
 # the opposite sign on Windows. Pointer motion is not inverted by natural scrolling, and the
 # horizontal scroll sign has not been measured either way, so only category 4 flips until a
-# test says more. The app-level setting (db/settings.py "scroll_convention") picks the
-# convention; the default keeps NayaFlow's bytes so nothing changes until the user chooses.
+# test says more. The convention belongs to each MODULE PROFILE (a module_settings row under
+# SCROLL_CONVENTION_ID, chosen on the profile's settings tab), so a user with a Mac and a PC keeps
+# one profile per computer; the default keeps NayaFlow's bytes until the user chooses.
 CONVENTION_MAC = "mac"
 CONVENTION_WINDOWS = "windows"
 FLIPPED_ON_WINDOWS = {4}
+SCROLL_CONVENTION_ID = "scroll_convention"
+SCROLL_CONVENTION_MAC_LABEL = "macOS (NayaFlow's names)"
+SCROLL_CONVENTION_WINDOWS_LABEL = "Windows"
+
+
+def convention_of(settings: dict | None) -> str:
+    """A module profile's convention from its settings rows ({id: value}): "windows" when the
+    stored value says so, else "mac". Never a device field; the flash overlay ignores it."""
+    raw = (settings or {}).get(SCROLL_CONVENTION_ID)
+    return CONVENTION_WINDOWS if raw and str(raw).strip().lower().startswith("windows") else CONVENTION_MAC
 
 
 def convention_sign(category: int, selector: int, convention: str | None) -> int:

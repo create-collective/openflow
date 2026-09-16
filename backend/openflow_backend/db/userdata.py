@@ -502,6 +502,18 @@ _COMMON_POINTER = [
      "kind": "slider", "min": 1, "max": 100, "default": 50},
     {"id": "pointer_accel_on", "label": "Pointer Acceleration ON/OFF",
      "desc": "Enable or disable pointer acceleration", "kind": "toggle", "default": True},
+    # Kept with the profile, never sent as a field: which computer this profile is for. It tells
+    # the encoder and the reader which sign a named VERTICAL scroll direction carries
+    # (device/module_fields.convention_sign). NayaFlow's names follow macOS natural scrolling; on
+    # Windows its "Scroll up" scrolls down (measured 2026-09-16, SCRUM-62). One profile per
+    # computer is the intended use: a Mac Touch profile and a PC Touch profile side by side.
+    {"id": "scroll_convention", "label": "Scroll Direction Convention",
+     "desc": "The computer this profile is for. NayaFlow's direction names follow macOS natural "
+             "scrolling, where its \"Scroll up\" scrolls down on Windows. Pick Windows and this "
+             "profile's vertical scroll directions are written, and read back, the way Windows "
+             "scrolls. Kept with the profile; flash after changing it.",
+     "kind": "select", "options": ["macOS (NayaFlow's names)", "Windows"],
+     "default": "macOS (NayaFlow's names)"},
 ]
 SETTINGS_SCHEMA = {
     "TOUCH": _COMMON_POINTER,
@@ -766,6 +778,8 @@ def get_modules() -> dict:
                 cur = stored.get(f["id"], f["default"])
                 if f["kind"] == "toggle":
                     cur = (str(cur).lower() == "true") if not isinstance(cur, bool) else cur
+                elif f["kind"] == "select":
+                    cur = cur if cur in f.get("options", []) else f["default"]
                 else:
                     try:
                         cur = int(cur)

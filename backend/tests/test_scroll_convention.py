@@ -4,13 +4,15 @@ NayaFlow's direction names are finger directions under macOS natural scrolling: 
 is (category 4, selector -1), and on a Windows host that record scrolls the page DOWN (measured
 on the owner's Touch 2026-09-16, SCRUM-23). So under the Windows convention the encoder writes a
 named vertical scroll with the opposite sign and the reader names the board's records the same
-way; the default keeps NayaFlow's bytes. Only category 4 flips. No hardware.
+way; the default keeps NayaFlow's bytes. Only category 4 flips. The convention is a property of
+each MODULE PROFILE (a module_settings row), so one keyboard can carry a Mac profile and a PC
+profile side by side. No hardware.
 """
 from __future__ import annotations
 
-import sqlite3
 import sys
 from pathlib import Path
+from unittest import mock
 
 _HERE = Path(__file__).resolve().parent
 _BACKEND = _HERE.parent
@@ -19,8 +21,9 @@ sys.path.insert(0, str(_BACKEND))
 sys.path.insert(0, str(_BACKEND / "openflow_backend" / "_vendor"))
 
 from openflow_backend.api import rest                                        # noqa: E402
-from openflow_backend.db import settings as st                               # noqa: E402
+from openflow_backend.db import module_profiles as mp, userdata as ud       # noqa: E402
 from openflow_backend.device import module_fields as MF, module_layout as ML, remap as R  # noqa: E402
+import test_module_capture as mc                                             # noqa: E402
 
 VERT = "vertical:tune:1_finger"       # 0x0a (-), 0x0b (+), category 4
 HORZ = "horizontal:tune:1_finger"     # 0x0c (-), 0x0d (+), category 6
@@ -98,15 +101,34 @@ def test_the_drift_compare_uses_the_same_convention():
     print("  compare: mac matches the stock board; windows sees it inverted; invert reconciles")
 
 
-def test_the_setting_reads_through_the_callers_connection_and_defaults_safely():
-    conn = sqlite3.connect(":memory:")
-    assert st.scroll_convention(conn) == "mac", "no settings table at all: the default"
-    conn.execute("CREATE TABLE settings (value TEXT, correlation_id TEXT, type TEXT)")
-    assert st.scroll_convention(conn) == "mac"
-    conn.execute("INSERT INTO settings VALUES (?, ?, 'select')",
-                 (st.SCROLL_CONVENTION_WINDOWS_LABEL, st.SCROLL_CONVENTION_ID))
-    assert st.scroll_convention(conn) == "windows"
-    f = next(f for g in st.SETTINGS_SCHEMA for f in g["fields"] if f["id"] == st.SCROLL_CONVENTION_ID)
-    assert f["provenance"] == st.APP_ONLY and f["default"] == st.SCROLL_CONVENTION_MAC_LABEL
-    assert st.storage_key(f) == st.SCROLL_CONVENTION_ID, "app-only: stored under its own id"
-    print("  setting: default mac, stored label maps to windows, app-only provenance")
+def test_a_profile_carries_its_own_convention_and_defaults_to_mac():
+    assert MF.convention_of(None) == "mac" and MF.convention_of({}) == "mac"
+    assert MF.convention_of({"scroll_speed": "50"}) == "mac"
+    assert MF.convention_of({MF.SCROLL_CONVENTION_ID: MF.SCROLL_CONVENTION_WINDOWS_LABEL}) == "windows"
+    assert MF.convention_of({MF.SCROLL_CONVENTION_ID: "windows"}) == "windows"
+    assert MF.convention_of({MF.SCROLL_CONVENTION_ID: MF.SCROLL_CONVENTION_MAC_LABEL}) == "mac"
+    # Offered on every module type's settings tab, never as a device field.
+    for mtype in ("TOUCH", "TRACK", "TUNE"):
+        f = next(f for f in ud.SETTINGS_SCHEMA[mtype] if f["id"] == MF.SCROLL_CONVENTION_ID)
+        assert f["kind"] == "select" and f["options"] == [MF.SCROLL_CONVENTION_MAC_LABEL,
+                                                          MF.SCROLL_CONVENTION_WINDOWS_LABEL]
+        assert not MF.setting_is_writable(mtype, MF.SCROLL_CONVENTION_ID), "not a device field"
+    print("  convention_of: default mac, the stored label maps to windows; on every type's tab")
+
+
+def test_a_capture_inherits_its_templates_convention():
+    """The capture's names were decoded under the template's convention, so it must carry it."""
+    drifted = dict(mc._DEVICE, **{"tap:track:button_1": "M2"})
+    conn = mc._db(drifted)
+    conn.execute("INSERT INTO module_settings (module_config_id, correlation_id, value, type, "
+                 "updated_at, created_at) VALUES (?,?,?,?,'','')",
+                 (mc.UUID, MF.SCROLL_CONVENTION_ID, MF.SCROLL_CONVENTION_WINDOWS_LABEL, "app"))
+    conn.commit()
+    with mock.patch.object(rest, "db_connect", lambda: mc.KeepOpen(conn)), \
+         mock.patch.object(mp, "connect", lambda: mc.KeepOpen(conn)):
+        out = rest._module_diff(mc._read(), None)
+    cap = out["captured"][0]["id"]
+    row = conn.execute("SELECT value FROM module_settings WHERE module_config_id=? AND correlation_id=?",
+                       (cap, MF.SCROLL_CONVENTION_ID)).fetchone()
+    assert row is not None and row[0] == MF.SCROLL_CONVENTION_WINDOWS_LABEL
+    print("  a capture of a Windows profile is a Windows profile")

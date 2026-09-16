@@ -1052,11 +1052,7 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
     """
     from . import module_fields, module_layout as ml
 
-    from ..db import settings as settings_db    # lazy: db imports the device layer at load
-
     pid = desired.profile_id
-    # Which way a named vertical scroll direction is written (SCRUM-62); one read per plan.
-    convention = settings_db.scroll_convention(conn)
     order_of = {r["id"]: r["order_id"] for r in
                 conn.execute("SELECT id, order_id FROM layers WHERE profile_id = ?", (pid,))}
     bays_by_layer: dict[int, dict[str, str]] = {o: {} for o in order_of.values()}
@@ -1144,8 +1140,10 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
         if cid not in layout["templates"]:
             continue                      # slot contents unreadable: leave it alone
         slot = layout["slot_for"][cid]
+        # Each profile carries its own scroll direction convention (SCRUM-62).
         cfg = ml.overlay(layout["templates"][cid], types[cid], bindings.get(cid, {}),
-                         axes.get(cid, {}), settings.get(cid, {}), convention=convention)
+                         axes.get(cid, {}), settings.get(cid, {}),
+                         convention=module_fields.convention_of(settings.get(cid)))
         # Anything templated from its OWN slot and coming out identical needs no data write --
         # sending the same bytes back would be churn on every flash. A difference means the app
         # and the board genuinely disagree, and the flash is what resolves that.
