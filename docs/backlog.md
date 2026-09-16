@@ -21,7 +21,8 @@ keyboard + firmware dump.
   before trusting them (`naya-remap-notes.md` checklist).
 
 ## Features (buildable now, device-independent)
-- **Smart Integrations** [SCRUM-30] — auto profile switching by detecting the active
+- **Smart Integrations** [SCRUM-30, in the Create Companion sprint since 2026-09-16: reuse its
+  foreground-app engine] — auto profile switching by detecting the active
   application (Naya advertised this "coming soon"; Dygma-style). Needs an OS
   foreground-app watcher in the Electron main + a per-app→profile mapping. Good
   candidate once profiles are solid (they now are).
@@ -29,13 +30,15 @@ keyboard + firmware dump.
   make the gesture→action rows editable (settings already are).
 - **Richer macros** — mouse/loop step types, "open a program" (really an OS
   shortcut macro, since the keyboard only sends keystrokes), true drag-reorder.
-- **Module-slot assignment persistence** [SCRUM-34] — currently localStorage; move to the DB
+- ~~**Module-slot assignment persistence**~~ [SCRUM-34, DONE 2026-09-16, f2645de: the bays paint
+  from the keyboard's persisted last status, no browser copy] — was localStorage; move to the DB
   `module_config_bindings` table when device sync lands.
-- **Shortcut icons** [SCRUM-32] — replace the combo glyphs with a real icon set mapped to
+- **Shortcut icons** [SCRUM-32, Sprint 2 with the style revamp] — replace the combo glyphs with a real icon set mapped to
   upstream Material Symbols (clean-room), matching NayaFlow's look.
-- **Tune dial** [SCRUM-33] — clockwise/counter-clockwise as separate actions + making the
+- ~~**Tune dial**~~ [SCRUM-33, DONE: b64a40d 2026-09-03, ac7b420] — clockwise/counter-clockwise as separate actions + making the
   dial's Volume Control rebindable (Naya firmware-gated it).
-- **Profile/layer import v2** [SCRUM-31] — include module configs + LED maps in the export
+- ~~**Profile/layer import v2**~~ [SCRUM-31, DONE: 0bf2634 on 2026-08-31 already exported module
+  configs and colours] — include module configs + LED maps in the export
   (v1 covers layers, keys, bindings, and referenced macros).
 - **Board cosmetics** — angled/beveled keycaps to match NayaFlow more exactly.
 
