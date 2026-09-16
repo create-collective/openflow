@@ -120,7 +120,13 @@ export default function FlashButton({ variant = "sidebar" }) {
       setState(res.status === "verified" ? "done" : "error");
       if (res.status === "verified") markFlashed();
       if (res.status !== "verified") {
-        setError(res.reason || `flash finished as "${res.status}" — check the device`);
+        // Say WHICH write failed: the op label, its frame and the ack flag are the only facts
+        // that let anyone reason about a mid-flash abort afterwards (2026-09-16 the message
+        // alone left it unknowable whether slot 1 or slot 6 had been refused).
+        const where = res.op != null
+          ? ` (at "${res.op}", frame ${res.frame ?? "?"}, ack ${res.ack_flags == null ? "none" : "0x" + Number(res.ack_flags).toString(16)})`
+          : "";
+        setError((res.reason || `flash finished as "${res.status}" — check the device`) + where);
       }
     } catch (e) {
       setError(e.message || String(e));
