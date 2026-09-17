@@ -81,8 +81,8 @@ export default function VirtualKeyboard({ disabled, onPick,
         key={ci}
         className={"vk-key" + (alt && alt.on ? " shifted" : "")}
         style={{ width: w(k.u) }}
-        disabled={disabled}
-        title={shift && k.shift ? k.shift[0] : k.code}
+        disabled={disabled || !!k.off}
+        title={k.off ? k.off : shift && k.shift ? k.shift[0] : k.code}
         onClick={() => click(k)}
       >
         {alt && <span className="vk-sub">{alt.g}</span>}
@@ -93,11 +93,18 @@ export default function VirtualKeyboard({ disabled, onPick,
 
   // The function row spans the three blocks below it: Esc keeps its unit, the 24 F keys share
   // what is left. Through resolveVirtualKey like every other key, so "modifier + F13" works.
+  // macOS has no F21-F24, so with the Mac relabel on those four are shown but not bindable.
   const renderFunctionRow = () => {
     const fu = ((BLOCK_UNITS - 1 - F_GAP_UNITS) * unit + BLOCK_GAPS_PX) / 24 / unit;
+    const fkey = (k) => {
+      const m = /^F([0-9]+)$/.exec(k.code || "");
+      if (!m) return k;
+      const off = mac && Number(m[1]) > 20 ? `${k.code}: macOS has no F21-F24` : null;
+      return { ...k, u: fu, off };
+    };
     return (
       <div className="vk-row vk-frow">
-        {FUNCTION_ROW.map((k, i) => renderCell(/^F[0-9]+$/.test(k.code || "") ? { ...k, u: fu } : k, i))}
+        {FUNCTION_ROW.map((k, i) => renderCell(fkey(k), i))}
       </div>
     );
   };

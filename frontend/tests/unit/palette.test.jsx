@@ -37,6 +37,20 @@ describe("ActionPalette", () => {
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ actionCode: "F24" }));
   });
 
+  it("with the Mac relabel on, F21-F24 are not bindable; F20 still is", () => {
+    const onPick = vi.fn();
+    render(<ActionPalette catalog={catalog} onPick={onPick} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Mac" }));
+    for (const f of ["F21", "F22", "F23", "F24"]) {
+      expect(screen.getByRole("button", { name: f })).toBeDisabled();
+    }
+    expect(screen.getByRole("button", { name: "F20" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "F24" }));
+    expect(onPick).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Mac" }));
+    expect(screen.getByRole("button", { name: "F24" })).toBeEnabled();
+  });
+
   it("without a target, a category tab says to select a key first", () => {
     render(<ActionPalette catalog={catalog} disabled onPick={() => {}} />);
     fireEvent.click(screen.getByRole("tab", { name: "Basic" }));
