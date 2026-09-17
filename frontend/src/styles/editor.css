@@ -13,23 +13,54 @@
   align-items: start;
 }
 
-/* Layer list (top-left): a card titled Layers, each layer a bordered row with its grip and
-   number, the active one in the accent, then Add layer and Import as full-width buttons. */
+/* The left column: the Layers card, and on Bindings the Module profiles card under it. */
 .layer-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
+}
+
+/* Layer list: a card titled Layers, each layer a bordered row with its grip and number, the
+   active one in the accent, then Add layer and Import as full-width buttons. */
+.layer-list,
+.modprof {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-card);
 }
 
-.layer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* Module profiles (components/ModuleProfileList): one row per bay, the profile the layer
+   arms, its marks. */
+.modprof-sub {
+  margin-top: -6px;
+  color: var(--text-dim);
+  font-size: 12px;
 }
+.modprof-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.modprof-row:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+.modprof-row.live { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+.modprof-img { flex: none; width: 26px; height: 26px; object-fit: contain; }
+.modprof-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.modprof-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--text-dim); font-size: 11px; }
+.modprof-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+.modprof-name.unset { color: var(--text-dim); font-weight: 400; font-style: italic; }
 
 .layer-title {
   margin-bottom: 2px;

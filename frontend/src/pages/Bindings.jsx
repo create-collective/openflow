@@ -10,6 +10,7 @@ import { clearSaved, useOnDeviceRead } from "../lib/deviceActions";
 import useProfileEditor from "../lib/useProfileEditor";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
+import ModuleProfileList from "../components/ModuleProfileList";
 import SelectedKeyPanel from "../components/SelectedKeyPanel";
 import ActionPalette from "../components/ActionPalette";
 import Button from "../components/ui/Button";
@@ -232,6 +233,7 @@ export default function Bindings() {
             {...ed.layerHandlers}
             {...ed.layerFileHandlers}
           />
+          <ModuleProfileList bays={bayUI} docked={moduleAssign} />
         </div>
         <div className="board-wrap">
           <div className="board-header">
