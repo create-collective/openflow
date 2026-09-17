@@ -9,8 +9,9 @@ import Card from "../components/ui/Card";
 import { KVList, KVRow } from "../components/ui/KV";
 import Notice from "../components/ui/Notice";
 
-// The front door: the Create, one button into Bindings; beside it the backend, the keyboard
-// on USB, and what is new in this version with an opt-in release check.
+// The front door: the header, then the Create with one button into Bindings; beside it the
+// backend, the keyboard on USB, what is new in this version with an opt-in release check,
+// and the Create Companion, the host-side engine that pairs with this app.
 export default function Hub() {
   const [sys, setSys] = useState(null);
   const [err, setErr] = useState(null);
@@ -28,15 +29,17 @@ export default function Hub() {
 
   return (
     <div className="hub">
+      <header className="hub-head">
+        <h1 className="hub-title">OpenFlow</h1>
+        <p className="hub-sub">Open-Source Software for Naya Create: No cloud or external dependencies</p>
+      </header>
+
+      <div className="hub-body">
       <section className="hub-splash">
-        <div className="hub-splash-text">
-          <h1 className="hub-title">OpenFlow</h1>
-          <p className="hub-sub">Open-source companion for the Naya Create — no cloud, no external dependencies.</p>
-          <Button variant="primary" className="hub-cta" onClick={() => navigate("/layer-management")}>
-            Configure
-          </Button>
-        </div>
         <img className="hub-splash-img" src="/brand/create-splash.png" alt="The Naya Create with a Touch and a Tune docked" />
+        <Button variant="primary" className="hub-cta" onClick={() => navigate("/layer-management")}>
+          Configure
+        </Button>
       </section>
 
       <aside className="hub-side">
@@ -91,7 +94,18 @@ export default function Hub() {
             )}
           </div>
         </Card>
+
+        <Card title="Create Companion">
+          <p className="hub-text">
+            The host-side engine that turns the Create&apos;s F13 to F24 keys and module gestures into
+            actions on this computer. Installed separately.
+          </p>
+          <a className="hub-link" href={`https://github.com/${REPOS.companion}/releases/latest`} target="_blank" rel="noreferrer">
+            Latest release ↗
+          </a>
+        </Card>
       </aside>
+      </div>
     </div>
   );
 }

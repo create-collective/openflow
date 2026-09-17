@@ -261,27 +261,35 @@
 
 /* --- Hub: the Create with one button in, the boxes beside it ------------------------------ */
 .hub {
+  max-width: var(--page-max);
+  margin: 0 auto;
+}
+.hub-head { margin-bottom: 18px; }
+.hub-title { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.4px; }
+.hub-sub { margin: 4px 0 0; color: var(--text-muted); font-size: 15px; }
+.hub-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
   gap: 20px;
   align-items: start;
-  max-width: var(--page-max);
-  margin: 0 auto;
 }
+/* The Create, at a size that leaves the boxes beside it in view, with the one button in. */
 .hub-splash {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 28px 32px 8px;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 32px 28px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-card);
   overflow: hidden;
 }
-.hub-title { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.4px; }
-.hub-sub { margin: 4px 0 14px; max-width: 46ch; color: var(--text-muted); font-size: 15px; }
-.hub-cta { align-self: flex-start; padding: 11px 22px; font-size: 15px; }
-.hub-splash-img { display: block; width: 100%; height: auto; margin-top: -8px; }
+.hub-cta { padding: 11px 26px; font-size: 15px; }
+.hub-splash-img { display: block; width: min(100%, 680px); height: auto; }
+.hub-text { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.hub-link { color: var(--accent-text); font-weight: 600; font-size: 13px; text-decoration: none; }
+.hub-link:hover { text-decoration: underline; }
 .hub-side { display: flex; flex-direction: column; gap: 16px; }
 .hub-side .card { margin: 0; }
 .hub-empty { color: var(--text-muted); padding: 6px 0; }
@@ -293,7 +301,7 @@
 .hub-update-note.err { color: var(--err); }
 a.hub-update-note { color: var(--accent-text); font-weight: 600; text-decoration: none; }
 @media (max-width: 1100px) {
-  .hub { grid-template-columns: minmax(0, 1fr); }
+  .hub-body { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Status dot */
