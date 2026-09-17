@@ -55,7 +55,8 @@
   cursor: pointer;
 }
 .modprof-row:hover { border-color: var(--border-strong); background: var(--bg-hover); }
-.modprof-row.live { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+/* Outlined: the layer names a profile the board does not have; the next flash writes it. */
+.modprof-row.pending { border-color: var(--accent); box-shadow: var(--ring-accent); }
 .modprof-img { flex: none; width: 26px; height: 26px; object-fit: contain; }
 .modprof-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .modprof-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--text-dim); font-size: 11px; }
@@ -773,17 +774,22 @@
   gap: 20px;
   align-items: start;
 }
+/* As wide as the board (the bottom section is kept out of the width calculation), so the
+   band and the palette are exactly the board's width and centred under it. */
 .editor-main {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: fit-content;
   min-width: 0;
 }
 .editor-bottom.bindings-bottom {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 16px;
+  width: 100%;
+  contain: inline-size;
   border-top: none;
   padding-top: 0;
 }

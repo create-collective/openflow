@@ -6,8 +6,9 @@ import Badge from "./ui/Badge";
 // profile each bay would get was the "live" tag inside the bay pickers on the board. This
 // lists them for the layer being edited: the slot, the profile's name, and whether the board
 // is running it (live), whether the layer inherits it from the base layer (base), and whether
-// that module is physically docked. It follows the four bay icons on the board as they change.
-// Clicking a row opens that profile on the Modules page.
+// that module is physically docked. A row outlined in the accent names a profile the board
+// does NOT have yet: the next flash writes it. It follows the four bay icons on the board as
+// they change. Clicking a row opens that profile on the Modules page.
 const SLOTS = [
   { type: "track", side: "left", label: "Track · left" },
   { type: "track", side: "right", label: "Track · right" },
@@ -21,7 +22,7 @@ const MODULE_IMG = {
   tune: "/modules/tune.png",
 };
 
-export default function ModuleProfileList({ bays, docked = {} }) {
+export default function ModuleProfileList({ bays, docked = {}, boardKnown = false }) {
   if (!bays) return null;
   return (
     <div className="modprof" aria-label="Module profiles">
@@ -34,12 +35,14 @@ export default function ModuleProfileList({ bays, docked = {} }) {
         const isDocked = s.side ? docked[s.side] === s.type : docked.left === s.type || docked.right === s.type;
         const name = sel === "disabled" ? "Disabled" : entry ? entry.name : sel ? "Unknown profile" : "Not set";
         const unset = !entry;
+        // Only once the board has been read can "not on it" mean anything.
+        const pending = boardKnown && !!entry && !entry.onBoard;
         return (
           <button
             key={s.label}
             type="button"
-            className={"modprof-row" + (entry?.onBoard ? " live" : "")}
-            title={`${s.label}: ${name}. Open on the Modules page.`}
+            className={"modprof-row" + (entry?.onBoard ? " live" : "") + (pending ? " pending" : "")}
+            title={`${s.label}: ${name}.${pending ? " Not on the board yet: the next flash writes it." : ""} Open on the Modules page.`}
             onClick={() => bays.onManage(s.type, s.side)}
           >
             <img className="modprof-img" src={MODULE_IMG[s.type]} alt="" />

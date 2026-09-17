@@ -211,7 +211,7 @@ export default function ActionPalette({
       {/* One head row: the title, what a pick writes to, the categories as icon + label pills,
           and the search right after them. The body under it is the tab, or the results. */}
       <div className="palette-head">
-        <span className="palette-title">Action palette</span>
+        <span className="palette-title">Actions</span>
         {assigning && <span className="palette-assign">Assigning: <b>{assigning}</b></span>}
         <Tabs
           variant="pills"

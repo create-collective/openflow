@@ -20,12 +20,13 @@ const bays = {
 
 describe("ModuleProfileList", () => {
   it("lists each bay's profile with its marks", () => {
-    render(<ModuleProfileList bays={bays} docked={{ left: "track", right: "touch" }} />);
+    render(<ModuleProfileList bays={bays} docked={{ left: "track", right: "touch" }} boardKnown />);
     expect(screen.getByText("For Layer 1 Num Pad")).toBeInTheDocument();
     const left = screen.getByRole("button", { name: /Track · left/ });
     expect(within(left).getByText("Naya Track Left")).toBeInTheDocument();
     expect(within(left).getByText("live")).toBeInTheDocument();
     expect(within(left).getByText("docked")).toBeInTheDocument();
+    expect(left).not.toHaveClass("pending");
     const right = screen.getByRole("button", { name: /Track · right/ });
     expect(within(right).getByText("Disabled")).toBeInTheDocument();
     expect(within(right).queryByText("docked")).not.toBeInTheDocument();
@@ -33,10 +34,16 @@ describe("ModuleProfileList", () => {
     expect(within(touch).getByText("Naya Touch Windows")).toBeInTheDocument();
     expect(within(touch).getByText("base")).toBeInTheDocument();
     expect(within(touch).getByText("docked")).toBeInTheDocument();
+    expect(touch).toHaveClass("pending"); // selected, but the board is not running it
     const tune = screen.getByRole("button", { name: /Tune/ });
     expect(within(tune).getByText("Not set")).toBeInTheDocument();
     fireEvent.click(tune);
     expect(bays.onManage).toHaveBeenCalledWith("tune", null);
+  });
+
+  it("marks nothing as pending until the board has been read", () => {
+    render(<ModuleProfileList bays={bays} docked={{}} />);
+    expect(screen.getByRole("button", { name: /Touch/ })).not.toHaveClass("pending");
   });
 
   it("renders nothing before the bay data exists", () => {
