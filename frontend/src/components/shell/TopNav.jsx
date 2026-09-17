@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 
-// The top navigation: the logo (to the Hub), the pages, a More menu, the theme switch.
+// The top navigation: the logo (to the Hub), the pages, a More menu, the Settings gear, the
+// theme switch.
 //
 // Ordered by how often a page is reached for, not by how it was built: the three that shape
 // what the keyboard DOES (bindings, LEDs, modules) come first and together, then macros, then
@@ -16,10 +17,10 @@ export const NAV = [
   { to: "/information", label: "Devices" },
 ];
 
-// Under More: the pages that are about the app rather than the keyboard.
+// Under More: the pages that are about the app rather than the keyboard. Settings is not
+// one of them: it has its own gear beside the menu (owner's call, 2026-09-17).
 export const MORE = [
   { to: "/", label: "Hub", end: true },
-  { to: "/settings", label: "Settings" },
   { to: "/bug-report", label: "Bug Report" },
 ];
 
@@ -82,6 +83,10 @@ export default function TopNav() {
           </div>
         )}
       </div>
+      <NavLink to="/settings" className={({ isActive }) => "shell-gear" + (isActive ? " active" : "")}
+        title="Settings" aria-label="Settings">
+        ⚙
+      </NavLink>
       <ThemeToggle />
     </nav>
   );

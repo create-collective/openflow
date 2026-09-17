@@ -94,8 +94,24 @@
   padding: 8px 10px;
 }
 
-.shell-theme {
+/* The Settings gear and the theme switch, at the nav's right end. The gear is a link that
+   looks like the icon buttons beside it, with the nav's active state. */
+.shell-gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 17px;
+  line-height: 1;
+}
+.shell-gear:hover { background: var(--bg-hover); color: var(--text); }
+.shell-gear.active { background: var(--bg-active); color: var(--text); }
+
+.shell-theme {
   font-size: 15px;
 }
 

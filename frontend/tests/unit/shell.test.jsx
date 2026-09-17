@@ -37,7 +37,7 @@ beforeEach(() => {
 });
 
 describe("TopNav", () => {
-  it("links the five pages and keeps the app pages under More", () => {
+  it("links the five pages and Settings, and keeps Hub and Bug Report under More", () => {
     render(<MemoryRouter initialEntries={["/settings"]}><TopNav /></MemoryRouter>);
     const nav = screen.getByRole("navigation", { name: "Main" });
     for (const [label, href] of [
@@ -47,16 +47,19 @@ describe("TopNav", () => {
       expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
     }
     expect(screen.getByRole("link", { name: /OpenFlow/ })).toHaveAttribute("href", "/");
+    const gear = screen.getByRole("link", { name: "Settings" });
+    expect(gear).toHaveAttribute("href", "/settings");
+    expect(gear).toHaveClass("active"); // we are on /settings
     expect(nav).toBeInTheDocument();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
 
     const more = screen.getByRole("button", { name: /More/ });
-    expect(more).toHaveClass("active"); // Settings lives under More
+    expect(more).not.toHaveClass("active"); // Settings is the gear, not More
     fireEvent.click(more);
     const menu = screen.getByRole("menu", { name: "More" });
     expect(menu).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Hub" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("menuitem", { name: "Settings" })).toHaveClass("active");
+    expect(screen.queryByRole("menuitem", { name: "Settings" })).not.toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Bug Report" })).toHaveAttribute("href", "/bug-report");
 
     fireEvent.keyDown(document, { key: "Escape" });
