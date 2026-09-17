@@ -2097,6 +2097,9 @@
 .mod-target-label { color: var(--text-dim); font-size: 12px; white-space: nowrap; }
 .mod-target-name { font-size: 13px; text-transform: capitalize; }
 .mod-target-clear { margin-left: auto; }
+/* The clear x: after the value on the strip, at the end of the selected row. */
+.mod-target-x { margin-left: 2px; }
+.gesture-clear { flex: none; margin-left: 4px; }
 /* The action text that replaced each row's dropdown. */
 .skp-act.unset { color: var(--text-dim); font-weight: 400; font-style: italic; }
 

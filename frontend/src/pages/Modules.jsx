@@ -37,6 +37,7 @@ export default function Modules() {
           b={{ ...b, pairedSplit: isSplit }}
           selected={ed.selectedBindingId === b.id}
           onSelect={isSplit ? undefined : ed.setSelectedBindingId}
+          onClear={ed.clearSelected}
           extra={(pair || axis) && (
             // The row itself selects for the palette, so a toggle has to stop the click
             // reaching it; otherwise ticking one just selects the row.
@@ -62,7 +63,8 @@ export default function Modules() {
           )} />
         {axis && isSplit && (
           <AxisHalfRows axis={axis} selectedBindingId={ed.selectedBindingId}
-            onSelect={ed.setSelectedBindingId} deviceByGesture={ed.deviceByGesture} labelFor={ed.labelFor} />
+            onSelect={ed.setSelectedBindingId} onClear={ed.clearSelected}
+            deviceByGesture={ed.deviceByGesture} labelFor={ed.labelFor} />
         )}
       </Fragment>
     );
@@ -174,7 +176,7 @@ export default function Modules() {
             with nothing to edit) it is hidden rather than unmounted. */}
         <div className="editor-bottom modules-bottom" hidden={!config || ed.tab !== "bindings"}>
           <BindingTarget selectedBinding={ed.selectedBinding} name={ed.selectedTargetName}
-            labelFor={ed.labelFor} onDone={() => ed.setSelectedBindingId(null)} />
+            labelFor={ed.labelFor} onDone={() => ed.setSelectedBindingId(null)} onClear={ed.clearSelected} />
           <ActionPalette
             catalog={ed.catalog}
             context="module"

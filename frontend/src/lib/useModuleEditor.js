@@ -269,7 +269,11 @@ export default function useModuleEditor() {
       // Both halves of every axis pair we have measured accept a keypress (the C7 probe wrote
       // one into the dial's field and it fired), so the palette is filtered as keypress.
       const axis = (config?.axes || []).find((a) => a.behavior === half.behavior);
-      return axis ? { axisHalf: half, fieldKind: "keypress" } : null;
+      // With what it holds, so the strip can show it and offer to clear it. An empty half is
+      // motion, not unassigned.
+      return axis ? { axisHalf: half, fieldKind: "keypress",
+                      actionCode: (half.side === "-" ? axis.minus : axis.plus) || "",
+                      unsetText: "motion" } : null;
     }
     return (config?.bindings || []).find((b) => b.id === selectedBindingId) || null;
   }, [config, selectedBindingId]);
@@ -334,6 +338,10 @@ export default function useModuleEditor() {
       await load();
     } catch (e) { setErr(e.message); } finally { setBusy(null); }
   }
+
+  // The strip and the selected row offer a clear: the gesture back to unbound (an axis half
+  // back to motion), the same write as picking "none" from the palette.
+  const clearSelected = () => pickFromPalette({ actionType: "none", actionCode: "" });
 
   // Which profile is LIVE is decided by the read's content match, not by sharing the device's
   // uuid: an edited-but-unflashed profile keeps the uuid while the board runs something else.
@@ -414,6 +422,6 @@ export default function useModuleEditor() {
     addProfile, removeProfile, exportProfile, importProfile,
     toggleSplit, toggleAxisSplit, setAxisInvert, setSetting,
     // palette
-    paletteTabIds, paletteFilter, pickFromPalette,
+    paletteTabIds, paletteFilter, pickFromPalette, clearSelected,
   };
 }

@@ -1,4 +1,5 @@
 import Badge from "../ui/Badge";
+import IconButton from "../ui/IconButton";
 import { shortcutInfo, shortcutTooltip } from "../../lib/shortcutNames";
 import { cleanCode, displayAction, gestureName, GESTURE_LABEL, statusBadge } from "../../lib/moduleLabels";
 
@@ -21,8 +22,9 @@ export function DeviceBadge({ dev }) {
 }
 
 // One gesture row: gesture label, status badge, what the keyboard has, the arrow, the action.
-// Clicking selects it as the palette's target; `extra` is the row's own controls (invert, split).
-export default function GestureRow({ b, dev, extra, selected, onSelect, labelFor = cleanCode }) {
+// Clicking selects it as the palette's target; `extra` is the row's own controls (invert, split);
+// `onClear` puts an x on the selected row when it holds something.
+export default function GestureRow({ b, dev, extra, selected, onSelect, onClear, labelFor = cleanCode }) {
   // A Track hold has no device field at all: the capture showed NayaFlow writing the hold value
   // over the tap and the tap never reaching the board. Offering it as editable would be
   // offering to lose the tap, so it renders disabled. A split parent is different: it is
@@ -63,6 +65,12 @@ export default function GestureRow({ b, dev, extra, selected, onSelect, labelFor
       <span className="skp-arrow" title={shortcutTooltip(b.actionCode)}>→</span>
       <span className={"skp-act" + (shown.muted ? " unset" : "")} title={title}>{shown.text}</span>
       {extra}
+      {/* Only on the selected row, and only when there is something of ours to clear (a
+          firmware row holds nothing). The click must not reach the row, or it re-selects. */}
+      {selected && onClear && !locked && !!b.actionCode && (
+        <IconButton size="sm" tone="danger" className="gesture-clear" title="Clear this binding"
+          onClick={(e) => { e.stopPropagation(); onClear(); }}>✕</IconButton>
+      )}
     </div>
   );
 }

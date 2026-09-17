@@ -1,11 +1,12 @@
 import Badge from "../ui/Badge";
+import IconButton from "../ui/IconButton";
 import { axisHalfId, axisHalfNames, displayAction, statusBadge } from "../../lib/moduleLabels";
 import { DeviceBadge } from "./GestureRow";
 
 // The two directions of a split axis, one row each. A half is not a binding row, so it has no
 // binding id: it is addressed by behavior and direction, with a synthetic selection id so the
 // palette can target it like any other row.
-export default function AxisHalfRows({ axis, selectedBindingId, onSelect, deviceByGesture, labelFor }) {
+export default function AxisHalfRows({ axis, selectedBindingId, onSelect, onClear, deviceByGesture, labelFor }) {
   const [minusName, plusName] = axisHalfNames(axis.behavior);
   // With invert on, name the direction the half NOW drives rather than a stale label.
   const motionOf = (side) => {
@@ -32,6 +33,11 @@ export default function AxisHalfRows({ axis, selectedBindingId, onSelect, device
           {code ? displayAction(code, labelFor).text
             : (motionOf(side) ? `motion — ${motionOf(side)}` : "motion")}
         </span>
+        {/* The selected half, when it holds a key: the x puts the direction back to motion. */}
+        {selectedBindingId === selId && onClear && !!code && (
+          <IconButton size="sm" tone="danger" className="gesture-clear" title="Back to motion"
+            onClick={(e) => { e.stopPropagation(); onClear(); }}>✕</IconButton>
+        )}
       </div>
     );
   });
