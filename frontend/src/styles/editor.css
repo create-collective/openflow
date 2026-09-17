@@ -760,11 +760,9 @@
   padding-top: 16px;
 }
 
-/* Bindings page: the selected-key band, then the action palette, both inside the board's
-   column: the section is indented by the layer list and its gap (240px = 220px + 20px), and
-   the band and the palette are capped at the virtual keyboard's widest (22 units of 64px plus
-   its gaps) and left-aligned like the board, so the band, the palette head and both keyboards
-   start on one line at every width. */
+/* Bindings page: the selected-key band, then the action palette, both exactly the board's
+   width (see .editor-main), so they sit centred under the Create and the virtual keyboard
+   centres inside them. */
 /* Bindings: two containers side by side. The left column holds the Layers and Module profiles
    cards; the main column stacks the board, the band and the palette on its own, so a tall
    left column never pushes the palette down and no rule divides the board from the band. */
@@ -797,7 +795,6 @@
 .bindings-bottom > .palette {
   box-sizing: border-box;
   width: 100%;
-  max-width: 1454px;
 }
 
 /* --- The selected-key band (components/SelectedKeyPanel) ---------------------------------- */
