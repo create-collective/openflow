@@ -75,15 +75,19 @@
   gap: 4px;
 }
 
+/* A bordered chip, so it reads as the control it is (owner, 2026-09-17; storyboard views 06
+   and 07 draw the profile boxed with a keyboard glyph). */
 .profile-name {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: none;
+  gap: 9px;
+  padding: 7px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
   color: var(--text);
   font: inherit;
   font-weight: 700;

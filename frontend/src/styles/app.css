@@ -370,12 +370,29 @@ a.hub-update-note { color: var(--accent-text); font-weight: 600; text-decoration
 }
 
 /* --- Flash preview: the plan inside the dialog (the dialog itself is ui Modal) ------------ */
-.flash-diff { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; }
-.flash-diff li { color: var(--text); }
-.flash-diff b { color: var(--accent); }
-.flash-diff-tot { color: var(--text-muted) !important; font-size: 12px; padding-top: 6px; }
+/* The flash preview, storyboard view 09: what will be written as one row per kind inside a
+   card, the totals under it, the write plan behind a disclosure. */
+.flash-diff {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.flash-diff li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  color: var(--text);
+  border-top: 1px solid var(--border);
+}
+.flash-diff li:first-child { border-top: none; }
+.flash-diff b { color: var(--text); font-weight: 700; }
+.flash-glyph { flex: none; color: var(--text-dim); }
+.flash-diff-tot { color: var(--text-muted); font-size: 12px; margin: 8px 0 12px; }
 .flash-ops { margin-bottom: 12px; }
-.flash-ops summary { cursor: pointer; color: var(--text-muted); font-size: 13px; }
 .flash-ops table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
 .flash-ops td { padding: 3px 6px; border-top: 1px solid var(--border); color: var(--text); }
 .flash-ops .mono { font-family: var(--font-mono); color: var(--text-muted); }
@@ -383,6 +400,10 @@ a.hub-update-note { color: var(--accent-text); font-weight: 600; text-decoration
 .saved-note.ok { color: var(--ok); }
 .saved-note.err { color: var(--err); }
 .saved-note.err .ui-iconbtn { margin-left: 6px; vertical-align: -1px; }
+
+/* The unused-slot offer: amber, and the checkbox is the whole point, so no icon beside it. */
+.flash-orphans { margin-top: 12px; }
+.flash-orphans-detail { margin-top: 4px; font-size: 12px; color: var(--text-muted); }
 
 .flash-spinner {
   display: inline-block;

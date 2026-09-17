@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import IconButton from "./ui/IconButton";
 
+// The keyboard the profile is for (Tabler Icons "device-desktop"-style keycaps, MIT, Pawel
+// Kuna). The storyboard puts a glyph here rather than the accent square we had.
+function KeyboardGlyph() {
+  return (
+    <svg className="profile-kbd" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
+    </svg>
+  );
+}
+
 // The profile dropdown: switch profiles, plus a 3-dot menu (Rename / Duplicate / Export /
 // Load from file / Delete). Sits above the layer list today; the shell's persistent profile
 // bar will host the same control, which is why this is ProfileMenu and not ProfileBar.
@@ -57,8 +69,9 @@ export default function ProfileMenu({
           onBlur={commitRename}
         />
       ) : (
-        <button className="profile-name" onClick={() => { setSwitchOpen((v) => !v); setMenuOpen(false); }}>
-          <span className="layer-profile-dot" />
+        <button className="profile-name" title="Switch keyboard profile"
+          onClick={() => { setSwitchOpen((v) => !v); setMenuOpen(false); }}>
+          <KeyboardGlyph />
           <span className="profile-name-text">{active?.name || "Profile"}</span>
           <span className="profile-caret">▾</span>
         </button>

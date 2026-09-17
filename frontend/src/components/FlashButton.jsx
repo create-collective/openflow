@@ -24,6 +24,24 @@ function activeProfileId() {
   return getActiveProfileId() || undefined;
 }
 
+// One glyph per kind of thing a flash writes (Tabler Icons, MIT, Pawel Kuna: stack, palette,
+// list, cpu, clock).
+const FLASH_GLYPH = {
+  layers: <><path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5M3 17l9 5 9-5" /></>,
+  palette: <><circle cx="12" cy="12" r="9" /><circle cx="8.5" cy="10" r="1" /><circle cx="12" cy="7.5" r="1" /><circle cx="15.5" cy="10" r="1" /><path d="M12 21a2.5 2.5 0 0 1 0-5a2 2 0 0 0 0-4" /></>,
+  list: <path d="M4 6h16M4 12h16M4 18h10" />,
+  chip: <><rect x="7" y="7" width="10" height="10" rx="1.5" /><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></>,
+};
+function FlashGlyph({ name }) {
+  return (
+    <svg className="flash-glyph" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      {FLASH_GLYPH[name]}
+    </svg>
+  );
+}
+
 function summarize(ops) {
   const g = { layers: 0, colors: 0, modules: 0, timeouts: 0, layerList: 0, wipes: 0 };
   for (const op of ops || []) {
@@ -41,7 +59,7 @@ function summarize(ops) {
   return g;
 }
 
-export default function FlashButton() {
+export default function FlashButton({ disabled = false, disabledTitle }) {
   const [state, setState] = useState("idle"); // idle | loading | preview | writing | done | error
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -179,11 +197,13 @@ export default function FlashButton() {
     <>
       <Button
         variant="primary"
-        done={flashed}
+        done={flashed && !disabled}
         onClick={openPreview}
-        disabled={state === "loading" || state === "writing"}
+        disabled={disabled || state === "loading" || state === "writing"}
         title={
-          flashed
+          disabled
+            ? disabledTitle
+            : flashed
             ? "Flashed and verified"
             : "Preview the changes, then confirm to write them to the keyboard"
         }
@@ -205,48 +225,48 @@ export default function FlashButton() {
       <Modal
         open={state !== "idle" && state !== "loading"}
         title={state === "writing" ? "Flashing…" : state === "done" ? "Flashed ✓" : "Flash to keyboard"}
+        subtitle={state === "preview" ? "Preview only — nothing is written until you confirm." : undefined}
         onClose={close}
         dismissable={state !== "writing"}
         footer={footer}
       >
         {state === "error" && (
-          <p className="ui-modal-error">
-            {wrote ? "Flash failed" : "Preview failed"}: {error}
-          </p>
+          <Notice tone="err" title={wrote ? "Flash failed" : "Preview failed"}>{error}</Notice>
         )}
 
         {(state === "preview" || state === "writing") && s && (
           <>
-            {state === "preview" && (
-              <p className="ui-modal-sub">
-                Preview (dry run) — nothing is written until you confirm.
-              </p>
-            )}
+            {/* What the flash will write, one row per kind, as storyboard view 09 draws it. */}
             <ul className="flash-diff">
-              <li><b>{g.layers}</b> layer{g.layers === 1 ? "" : "s"}</li>
-              <li><b>{g.colors}</b> color map{g.colors === 1 ? "" : "s"}</li>
+              <li><FlashGlyph name="layers" /><span><b>{g.layers}</b> layer{g.layers === 1 ? "" : "s"}</span></li>
+              <li><FlashGlyph name="palette" /><span><b>{g.colors}</b> colour map{g.colors === 1 ? "" : "s"}</span></li>
               {g.layerList > 0 && (
                 <li title="Tells the keyboard which layer is which. Written only when the board disagrees.">
-                  layer list
+                  <FlashGlyph name="list" /><span>Layer list</span>
                 </li>
               )}
-              {g.wipes > 0 && <li><b>{g.wipes}</b> deleted-layer wipe{g.wipes === 1 ? "" : "s"}</li>}
-              {g.modules > 0 && <li><b>{g.modules}</b> module config{g.modules === 1 ? "" : "s"}</li>}
+              {g.wipes > 0 && (
+                <li><FlashGlyph name="list" /><span><b>{g.wipes}</b> deleted-layer wipe{g.wipes === 1 ? "" : "s"}</span></li>
+              )}
+              {g.modules > 0 && (
+                <li><FlashGlyph name="chip" /><span><b>{g.modules}</b> module config{g.modules === 1 ? "" : "s"}</span></li>
+              )}
               {/* A full module store is garbage-collected as far as needed: a slot holding a
                   profile this keyboard profile does not reference is written over. Said out
                   loud, because the profile it held is gone from the board afterwards. */}
               {preview?.modules?.reclaimed?.length > 0 && (
                 <li title="No free module slot was left, so a slot holding a module profile this keyboard profile does not use is written over.">
-                  reusing {preview.modules.reclaimed.map((r) => `slot ${r.slot} (was ${r.was})`).join(", ")}
+                  <FlashGlyph name="chip" />
+                  <span>Reusing {preview.modules.reclaimed.map((r) => `slot ${r.slot} (was ${r.was})`).join(", ")}</span>
                 </li>
               )}
-              {g.timeouts > 0 && <li>timeouts</li>}
-              <li className="flash-diff-tot">
-                {s.total_frames} frames · {s.total_bytes} bytes → {s.dest}
-              </li>
+              {g.timeouts > 0 && <li><FlashGlyph name="clock" /><span>Timeouts</span></li>}
             </ul>
-            <details className="flash-ops">
-              <summary>Write plan ({s.ops.length} ops)</summary>
+            <div className="flash-diff-tot">
+              {s.total_frames} frames · {s.total_bytes} bytes → {s.dest}
+            </div>
+            <details className="ui-disclosure flash-ops">
+              <summary className="ui-disclosure-summary">Write plan ({s.ops.length} ops)</summary>
               <table>
                 <tbody>
                   {s.ops.map((op, i) => (
@@ -290,12 +310,12 @@ export default function FlashButton() {
             as "unknown" -- and removing one drops a list entry and blanks a slot, so it is
             asked for per flash rather than done quietly as part of "write everything". */}
         {state === "preview" && preview?.orphans?.length > 0 && (
-          <Notice>
-            <Toggle variant="check" style={{ marginBottom: 4 }} checked={collectOrphans} onChange={setCollectOrphans}
+          <Notice tone="warn" icon={null} className="flash-orphans">
+            <Toggle variant="check" checked={collectOrphans} onChange={setCollectOrphans}
               label={<>Also remove {preview.orphans.length} unused module slot{preview.orphans.length === 1 ? "" : "s"}</>} />
-            <div style={{ fontSize: 11, opacity: 0.8 }}>
-              {preview.orphans.map((o) => `slot ${o.slot}${o.name ? ` (${o.name})` : ""}`).join(", ")}
-              {" — on the keyboard, not used by this profile. Removing is permanent."}
+            <div className="flash-orphans-detail">
+              {preview.orphans.map((o) => `Slot ${o.slot}${o.name ? ` (${o.name})` : ""}`).join(", ")}
+              {" is on the keyboard but not used by this profile. Removal is permanent."}
             </div>
           </Notice>
         )}

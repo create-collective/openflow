@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import { backupNow, clearDeviceError, readKeyboard, useDeviceActions } from "../../lib/deviceActions";
 import { hydrateDeviceState, invalidateDeviceState } from "../../lib/deviceState";
@@ -14,8 +15,15 @@ import IconButton from "../ui/IconButton";
 // read / back-up notes, and the three whole-keyboard actions. On every page, so reading the
 // keyboard and flashing it no longer depend on which page happens to be open. The profile
 // menu drives the shared active profile (lib/activeProfile), which every page follows.
+// Flashing writes the whole profile, so it is offered from the pages that edit what gets
+// written -- Bindings, LED Map and Modules -- and disabled elsewhere with a note saying where
+// to go. Macros is deliberately not one of them: macros never reach the keyboard.
+const FLASH_ROUTES = ["/layer-management", "/colormapping", "/module-configuration"];
+
 export default function ProfileBar() {
   const ed = useProfileEditor();
+  const { pathname } = useLocation();
+  const canFlash = FLASH_ROUTES.includes(pathname);
   const { data, connected } = useDeviceStream();
   const dev = useDeviceActions();
 
@@ -88,7 +96,10 @@ export default function ProfileBar() {
         >
           {dev.busy === "save" ? "Backing up…" : "⭳  Back up"}
         </Button>
-        <FlashButton />
+        <FlashButton
+          disabled={!canFlash}
+          disabledTitle="Open Bindings, LED Map or Modules to flash this profile"
+        />
       </div>
     </div>
   );
