@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
-import FlashButton from "../components/FlashButton.jsx";
 import { api } from "../lib/api";
 import { readDockedModules, lastDockedModules } from "../lib/dockedModules";
 import { subscribeDeviceState, getDeviceState, deviceHasBeenRead } from "../lib/deviceState";
 import { setShortcutTable } from "../lib/shortcutNames";
 import { POS_LABEL } from "../lib/layout";
-import useDeviceActions from "../lib/deviceActions";
+import { clearSaved, useOnDeviceRead } from "../lib/deviceActions";
 import useProfileEditor from "../lib/useProfileEditor";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
-import ProfileMenu from "../components/ProfileMenu";
 import SelectedKeyPanel from "../components/SelectedKeyPanel";
 import ActionPalette from "../components/ActionPalette";
 import Button from "../components/ui/Button";
@@ -19,12 +17,12 @@ import Notice from "../components/ui/Notice";
 
 // The keymap editor: layers and the board on top, the selected key's behaviours and the action
 // palette below. Profiles, layers and their handlers come from useProfileEditor (shared with
-// LED Map); read and back up from useDeviceActions (shared with the profile bar). What stays
-// here is the board's own business: the selected key and slot, the LED-outline preference, the
-// module bays and their picker, and the action catalog the palette draws from.
+// LED Map); the profile menu, Read, Back up and Flash are in the shell's profile bar. What
+// stays here is the board's own business: the selected key and slot, the LED-outline
+// preference, the module bays and their picker, and the action catalog the palette draws from.
 export default function Bindings() {
   const [selectedPos, setSelectedPos] = useState(null);
-  const ed = useProfileEditor({ onSwitch: () => setSelectedPos(null) });
+  const ed = useProfileEditor();
   const { profile, layer, keysByPosition, layerMap } = ed;
   const [catalog, setCatalog] = useState(null);
   const [moduleProfiles, setModuleProfiles] = useState([]);
@@ -86,14 +84,15 @@ export default function Bindings() {
     return () => { alive = false; };
   }, []);
 
-  const dev = useDeviceActions({
-    onRead: async (r) => {
-      await ed.reload();
-      ed.switchProfile(r.profileId);
-      await syncDockedModules();
-      await loadExtras();
-    },
+  // A read (from the profile bar) has already reloaded the profiles and switched to the one it
+  // produced; what is left is this page's own follow-up.
+  useOnDeviceRead(async () => {
+    setSelectedPos(null);
+    await syncDockedModules();
+    await loadExtras();
   });
+  // The selection belongs to a profile: switching (from the bar, or by a read) drops it.
+  useEffect(() => { setSelectedPos(null); }, [profile?.id]);
 
   // Which module profile is running in one bay of the layer being edited.
   //
@@ -188,7 +187,7 @@ export default function Bindings() {
         layerId: layer.id, positionId: selectedPos,
         actionCode: pick.actionCode, actionType: pick.actionType, behavior: activeSlot,
       });
-      dev.clearSaved();
+      clearSaved();
       await ed.reload();
     } catch (e) { ed.setErr(e.message); }
   }
@@ -197,12 +196,12 @@ export default function Bindings() {
     if (selectedPos == null || !layer) return;
     try {
       await api.clearKeyBinding({ layerId: layer.id, positionId: selectedPos, behavior: slot });
-      dev.clearSaved();
+      clearSaved();
       await ed.reload();
     } catch (e) { ed.setErr(e.message); }
   }
 
-  const err = dev.err || ed.error;
+  const err = ed.error;
 
   if (!profile) {
     return (
@@ -217,7 +216,6 @@ export default function Bindings() {
     <div className="editor">
       <div className="editor-top">
         <div className="layer-col">
-          <ProfileMenu profiles={ed.profiles} activeProfileId={profile.id} {...ed.profileHandlers} />
           <LayerList
             profiles={ed.profiles.filter((p) => p.id !== profile.id)}
             layers={profile.layers}
@@ -250,40 +248,6 @@ export default function Bindings() {
               >
                 ◌ LED colours
               </Button>
-            </div>
-            <div className="board-actions-stack">
-              {/* Above the buttons rather than beside them: as a sibling in the flex row a
-                  note pushed every button left the moment a read finished. */}
-              <div className="board-notes">
-                {dev.readNote && (
-                  <span className={"saved-note" + (dev.readNote.warnings ? "" : " ok")}>
-                    Read {dev.readNote.at.toLocaleTimeString()} — {dev.readNote.text}
-                    {dev.readNote.warnings > 0 &&
-                      ` · ${dev.readNote.warnings} key(s) need review (BT/LED/other)`}
-                  </span>
-                )}
-                {dev.saved && (
-                  <span className="saved-note">Backed up {dev.saved.toLocaleTimeString()}</span>
-                )}
-              </div>
-              <div className="board-actions">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  done={dev.justRead}
-                  onClick={dev.readKeyboard}
-                  disabled={!!dev.busy}
-                  title="Read the map currently on the connected keyboard into a new profile"
-                >
-                  {dev.busy === "read" ? "Reading…" : dev.justRead ? "✓ Read" : "⌨  Read from keyboard"}
-                </Button>
-                <Button size="sm" onClick={dev.backupNow} disabled={!!dev.busy}
-                  title="Snapshot this profile to a backup file. Edits are saved as you make them —
-  this is for keeping a restore point.">
-                  {dev.busy === "save" ? "Backing up…" : "⭳  Back up"}
-                </Button>
-                <FlashButton />
-              </div>
             </div>
           </div>
           <KeymapBoard

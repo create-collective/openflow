@@ -1,10 +1,10 @@
 import { NavLink } from "react-router-dom";
 import StatusBox from "./ui/StatusBox";
 
-// The status chip NayaFlow keeps in its top-left corner, rebuilt: one StatusBox per half (the
-// dot, L or R, connected, battery; the docked module beneath). It reads the poll loop's snapshot
-// off the devices stream, so it updates every six seconds without anyone pressing Refresh.
-// Hover for the detail; click for the Information page.
+// The status chip NayaFlow keeps in its top-left corner, rebuilt in the profile bar: one
+// StatusBox per half (the dot, L or R, connected, battery; the docked module beneath). It
+// reads the poll loop's snapshot off the devices stream, so it updates every six seconds
+// without anyone pressing Refresh. Hover for the detail; click for the Devices page.
 function describe(h) {
   return [
     `${h.description || h.side}: ${h.connected ? "connected" : "disconnected"}`,

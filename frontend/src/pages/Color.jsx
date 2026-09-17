@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import FlashButton from "../components/FlashButton.jsx";
 import { api } from "../lib/api";
 import { hsvToHex, isValidHex, deviceColor } from "../lib/color";
 import useProfileEditor from "../lib/useProfileEditor";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
-import ProfileMenu from "../components/ProfileMenu";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Notice from "../components/ui/Notice";
@@ -31,8 +29,9 @@ const TOOLS = [
 ];
 
 // The LED map: the same layers and board as Bindings, painted instead of bound. Profiles,
-// layers and their handlers come from useProfileEditor (shared with Bindings); what stays here
-// is the painting: the brush, the tool, the swatches and the colour creator.
+// layers and their handlers come from useProfileEditor (shared with Bindings); the profile
+// menu and Flash are in the shell's profile bar. What stays here is the painting: the brush,
+// the tool, the swatches and the colour creator.
 export default function Color() {
   const ed = useProfileEditor();
   const { profile, layer, keysByPosition, layerMap } = ed;
@@ -147,7 +146,6 @@ export default function Color() {
     <div className="editor">
       <div className="editor-top">
         <div className="layer-col">
-          <ProfileMenu profiles={ed.profiles} activeProfileId={profile.id} {...ed.profileHandlers} />
           <LayerList
             profiles={ed.profiles.filter((p) => p.id !== profile.id)}
             layers={profile.layers}
@@ -167,7 +165,6 @@ export default function Color() {
                 shown as the keyboard will light it
               </span>
             </div>
-            <div className="board-actions"><FlashButton /></div>
           </div>
           <KeymapBoard keysByPosition={boardKeys} mode="color" onSelectKey={onKey} layerMap={layerMap}
             names={names} moduleLed={layer?.moduleLed} onModuleLed={paintModule} />

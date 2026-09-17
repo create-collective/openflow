@@ -8,10 +8,10 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { useSearchParams } from "react-router-dom";
 import { api } from "./api";
 import { confirmDialog } from "./dialogs";
-import { subscribeDeviceState, getDeviceState, setModuleRead } from "./deviceState";
+import { subscribeDeviceState, getDeviceState } from "./deviceState";
+import { useOnDeviceRead } from "./deviceActions";
 import { downloadJSON, pickJSONFile, safeName } from "./files";
 import { setShortcutTableFromActions } from "./shortcutNames";
-import useDoneFlag from "./useDoneFlag";
 import { axisHalfNames, byGesture, gestureName, makeLabelFor, okForKind, parseAxisHalfId } from "./moduleLabels";
 
 export default function useModuleEditor() {
@@ -25,11 +25,8 @@ export default function useModuleEditor() {
   // outside the component so it survives navigating to another page and back: a read costs a
   // COM-port round trip and is a whole-app fact, not this page's state.
   const device = useSyncExternalStore(subscribeDeviceState, getDeviceState).modules;
-  const [reading, setReading] = useState(false);
-  const [readNote, setReadNote] = useState(null);
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(null);
-  const [justRead, markRead] = useDoneFlag();
   const [busy, setBusy] = useState(null);   // an axis edit in flight
   const [catalog, setCatalog] = useState(null);
   const [selectedBindingId, setSelectedBindingId] = useState(null);
@@ -203,7 +200,6 @@ export default function useModuleEditor() {
       const r = await api.importModuleProfile(doc);
       await load();
       setSelectedId(r.id);
-      setReadNote(null);
       setImported({ at: new Date(), name: r.name, type: r.type, bindings: r.bindings,
                     skipped: (r.skipped || []).length });
     } catch (e) {
@@ -213,35 +209,13 @@ export default function useModuleEditor() {
     }
   }
 
-  // Read the module configs off the keyboard and diff them against the app. Read-only: the
-  // app has always shown only its own stored bindings, so until this runs there is no way to
-  // tell an edit that was flashed from one that was never written.
-  async function readDevice() {
-    setReading(true);
-    setErr(null);
-    setReadNote(null);
-    try {
-      const r = await api.readModules();
-      const byUuid = {};
-      for (const m of r.modules || []) byUuid[m.uuid] = m;
-      setModuleRead(byUuid);
-      // A read that captures a profile has CHANGED the profile list, and one that finds the
-      // board unchanged has not; both used to look identical, which is to say like nothing
-      // had happened at all.
-      const captured = (r.captured || []).length;
-      if (captured) await load();
-      markRead();
-      setReadNote({
-        at: new Date(),
-        slots: (r.modules || []).filter((m) => !m.unknown).length,
-        captured,
-      });
-    } catch (e) {
-      setErr(`Could not read the keyboard: ${e.message}`);
-    } finally {
-      setReading(false);
-    }
-  }
+  // A read (from the profile bar) publishes what the board carries into the shared device
+  // state on its own; this page only has to notice when the read CAPTURED a profile the
+  // board was running, because that has changed the list.
+  useOnDeviceRead((r) => {
+    if ((r.captured || []).length) return load();
+    return undefined;
+  });
 
   const grouped = useMemo(() => {
     const g = {};
@@ -432,12 +406,12 @@ export default function useModuleEditor() {
     untargeted, targets, targetBindings, onDevice, deviceByGesture, isLive, entryFor,
     pairFor, pairForHalf, isPairHalf, axisFor, openAxes,
     // status
-    err, setErr, reading, readNote, importing, imported, justRead, busy,
+    err, setErr, importing, imported, busy,
     // rail editing
     adding, setAdding, renaming, renameVal, setRenameVal, startRename, commitRename,
     cancelRename: () => setRenaming(null),
     // actions
-    addProfile, removeProfile, exportProfile, importProfile, readDevice,
+    addProfile, removeProfile, exportProfile, importProfile,
     toggleSplit, toggleAxisSplit, setAxisInvert, setSetting,
     // palette
     paletteTabIds, paletteFilter, pickFromPalette,

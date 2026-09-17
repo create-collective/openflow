@@ -1,7 +1,6 @@
 // One keyboard half's live state on a line: the dot, L or R, connected or off, the battery;
 // with the docked module and its battery on a second line. Fed from the devices stream, so it
-// updates every six seconds. The sidebar chip renders two of these today; the persistent
-// profile bar will render the same two.
+// updates every six seconds. The profile bar's device chip renders two of these.
 function batt(pct) {
   return pct == null ? "—" : `${pct}%`;
 }

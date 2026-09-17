@@ -1,13 +1,11 @@
 import { Fragment } from "react";
 import ActionPalette from "../components/ActionPalette";
-import FlashButton from "../components/FlashButton";
 import AxisHalfRows from "../components/modules/AxisHalfRows";
 import BindingTarget from "../components/modules/BindingTarget";
 import GestureRow from "../components/modules/GestureRow";
 import ModuleRail from "../components/modules/ModuleRail";
 import ModuleSettingsTab from "../components/modules/ModuleSettingsTab";
 import ModuleVisual from "../components/modules/ModuleVisual";
-import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Notice from "../components/ui/Notice";
 import Tabs from "../components/ui/Tabs";
@@ -77,45 +75,26 @@ export default function Modules() {
           <h1 className="page-title">Modules</h1>
           <p className="page-sub">Configure Touch, Track, and Tune modules.</p>
         </div>
-        {/* Reading is a whole-device action: one read tells us which of these profiles the
-            keyboard is actually carrying. Per-profile reads invited mismatch confusion. */}
-        <div className="board-actions-stack">
-          {/* Above the buttons, in space that is reserved whether or not there is a note:
-              beside them, the note moved the buttons the moment a read finished. */}
-          <div className="board-notes">
-            {ed.imported ? (
-              <span className={"saved-note" + (ed.imported.skipped ? "" : " ok")}>
-                {ed.imported.verb || "Imported"} {ed.imported.name} — {ed.imported.type.toLowerCase()},{" "}
-                {ed.imported.bindings} binding(s)
-                {ed.imported.skipped > 0 && ` · ${ed.imported.skipped} entry(s) skipped`}
-              </span>
-            ) : ed.readNote ? (
-              <span className={"saved-note" + (ed.readNote.captured ? "" : " ok")}>
-                Read {ed.readNote.at.toLocaleTimeString()} — {ed.readNote.slots} module(s) on the keyboard
-                {ed.readNote.captured > 0 &&
-                  ` · captured ${ed.readNote.captured} profile(s) the board was running`}
-              </span>
-            ) : device ? (
-              /* Hydrated from the backend's record of the last read. It says AS OF, because
-                 that is all it can honestly claim: the board may have been unplugged or
-                 flashed by NayaFlow since. */
-              <span className="saved-note">
-                {Object.keys(device).length} module(s) on the keyboard
-                {deviceStateIsStored() && deviceStateAt()
-                  ? ` · as of ${deviceStateAt().toLocaleTimeString()}`
-                  : ""}
-              </span>
-            ) : null}
-          </div>
-          <div className="board-actions">
-            <Button size="sm" variant="primary" done={ed.justRead} onClick={ed.readDevice} disabled={ed.reading}
-              title="Read the keyboard and mark which profiles are on it">
-              {ed.reading ? "Reading…" : ed.justRead ? "✓ Read" : "⌨  Read from keyboard"}
-            </Button>
-            {/* Module profiles reach the keyboard with the keyboard profile that arms them, so
-                the same flash as on Bindings belongs here: this page edits flashable data. */}
-            <FlashButton />
-          </div>
+        {/* What the last read (from the profile bar) or import did, in space that is there
+            whether or not there is a note, so the head does not jump. */}
+        <div className="board-notes">
+          {ed.imported ? (
+            <span className={"saved-note" + (ed.imported.skipped ? "" : " ok")}>
+              {ed.imported.verb || "Imported"} {ed.imported.name} — {ed.imported.type.toLowerCase()},{" "}
+              {ed.imported.bindings} binding(s)
+              {ed.imported.skipped > 0 && ` · ${ed.imported.skipped} entry(s) skipped`}
+            </span>
+          ) : device ? (
+            /* Hydrated from the backend's record of the last read. It says AS OF, because
+               that is all it can honestly claim: the board may have been unplugged or
+               flashed by NayaFlow since. */
+            <span className="saved-note">
+              {Object.keys(device).length} module(s) on the keyboard
+              {deviceStateIsStored() && deviceStateAt()
+                ? ` · as of ${deviceStateAt().toLocaleTimeString()}`
+                : ""}
+            </span>
+          ) : null}
         </div>
       </div>
       {ed.err && <Card><Notice tone="err">{ed.err}</Notice></Card>}

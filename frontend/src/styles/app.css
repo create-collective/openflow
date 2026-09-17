@@ -2,28 +2,37 @@
 
 .app {
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-rows: auto auto minmax(0, 1fr);
   height: 100%;
 }
 
-/* Sidebar */
-.sidebar {
-  background: var(--bg-nav);
-  border-right: 1px solid var(--border);
+/* --- Top navigation: the logo (to the Hub), the pages, a More menu, the theme switch ------ */
+.shell-nav {
   display: flex;
-  flex-direction: column;
-  padding: 16px 12px;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
+  height: 52px;
+  padding: 0 16px;
+  background: var(--bg-nav);
+  border-bottom: 1px solid var(--border);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px 16px;
+  margin-right: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  color: var(--text);
+  text-decoration: none;
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.2px;
+}
+
+.brand:hover {
+  background: var(--bg-hover);
 }
 
 .brand-dot {
@@ -37,10 +46,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 7px 12px;
+  border: none;
   border-radius: var(--radius-md);
+  background: transparent;
   color: var(--text-muted);
+  font: inherit;
   font-weight: 500;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -54,17 +67,95 @@
   color: var(--text);
 }
 
-.nav-item .badge {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: 1px 7px;
+.shell-nav-spacer {
+  flex: 1;
 }
 
-.nav-spacer {
+.shell-nav-more {
+  position: relative;
+}
+
+.shell-nav-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-dropdown-high);
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-menu);
+}
+
+.shell-nav-menu .nav-item {
+  padding: 8px 10px;
+}
+
+.shell-theme {
+  margin-left: 6px;
+  font-size: 15px;
+}
+
+/* --- The persistent profile bar: the active keyboard profile, one status box per half, the
+   read / back-up notes, and the three whole-keyboard actions, on every page --------------- */
+.shell-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+
+.shell-bar-profile {
+  flex: none;
+  width: 240px;
+}
+
+.shell-bar-empty {
+  padding: 6px 8px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.shell-bar-status {
+  flex: none;
+}
+
+.shell-bar-offline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.shell-bar-notes {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.shell-bar-notes .saved-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shell-bar-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Main */
@@ -139,6 +230,8 @@
 .flash-ops .mono { font-family: var(--font-mono); color: var(--text-muted); }
 /* The note beside the board buttons, for the detail a badge has no room for. */
 .saved-note.ok { color: var(--ok); }
+.saved-note.err { color: var(--err); }
+.saved-note.err .ui-iconbtn { margin-left: 6px; vertical-align: -1px; }
 
 .flash-spinner {
   display: inline-block;
@@ -241,14 +334,12 @@ img:not([draggable="true"]) {
 .crash-stack pre { overflow-x: auto; font-size: 11px; }
 
 
-/* The live device chip under the brand: one row per half, the docked module beneath it.
-   Fed by the devices stream every six seconds; hover for the detail. */
+/* The live device chip in the profile bar: one status box per half, side by side, the docked
+   module beneath each. Fed by the devices stream every six seconds; hover for the detail. */
 .device-chip {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0 4px 10px;
-  padding: 8px 10px;
+  gap: 14px;
+  padding: 5px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--bg-panel);
@@ -256,5 +347,6 @@ img:not([draggable="true"]) {
   text-decoration: none;
   font-size: 12px;
 }
+.device-chip .ui-statusbox { min-width: 118px; }
 .device-chip:hover { border-color: var(--accent); }
 .device-chip-empty { color: var(--text-dim); }

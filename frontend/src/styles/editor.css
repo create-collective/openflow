@@ -26,15 +26,13 @@
   gap: 2px;
 }
 
-/* Profile bar */
+/* Profile menu (components/ProfileMenu): the name that opens the switch list, and the dots.
+   Hosted by the shell's profile bar, which sets its width. */
 .profile-bar {
   position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 4px 10px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 6px;
 }
 
 .profile-name {
@@ -75,9 +73,9 @@
 
 .profile-menu {
   position: absolute;
-  top: 100%;
-  left: 4px;
-  right: 4px;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
   z-index: var(--z-dropdown-high);
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);

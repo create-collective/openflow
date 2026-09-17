@@ -39,6 +39,8 @@ for (const theme of THEMES) {
       }
       await page.goto(`/#${route}`);
       await expect(page.locator("main")).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+      await expect(page.getByRole("button", { name: /Read from keyboard/ })).toBeVisible();
       // The SSE stream keeps a request open, so "networkidle" never comes; settle by time.
       await page.waitForTimeout(1500);
       await page.screenshot({ path: `tests/e2e/shots/${theme}/${name}.png` });
