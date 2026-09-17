@@ -9,6 +9,7 @@ import { POS_LABEL } from "../lib/layout";
 import { actionText } from "../lib/keylabels";
 import { clearSaved, useOnDeviceRead } from "../lib/deviceActions";
 import useProfileEditor from "../lib/useProfileEditor";
+import BoardFit from "../components/BoardFit";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
 import ModuleProfileList from "../components/ModuleProfileList";
@@ -277,6 +278,7 @@ export default function Bindings() {
               </Button>
             </div>
           </div>
+          <BoardFit>
           <KeymapBoard
             keysByPosition={keysByPosition}
             mode="bindings"
@@ -301,6 +303,7 @@ export default function Bindings() {
               navigate(id ? `/module-configuration?config=${id}` : `/module-configuration?type=${type}`);
             }}
           />
+          </BoardFit>
         </div>
 
       {err && <Notice tone="err" style={{ margin: "8px 0" }}>{err}</Notice>}

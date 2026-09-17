@@ -194,9 +194,12 @@
   font-size: 15px;
 }
 
-/* Main */
+/* Main. The scrollbar's gutter is always reserved: the board scales to the width it has, and
+   a gutter that came and went with the page height would change that width and set the
+   board scaling itself in a loop. */
 .main {
   overflow: auto;
+  scrollbar-gutter: stable;
   padding: 28px 36px;
 }
 

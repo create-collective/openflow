@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { hsvToHex, isValidHex, deviceColor } from "../lib/color";
 import useProfileEditor from "../lib/useProfileEditor";
+import BoardFit from "../components/BoardFit";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
 import Button from "../components/ui/Button";
@@ -168,8 +169,10 @@ export default function Color() {
               </span>
             </div>
           </div>
-          <KeymapBoard keysByPosition={boardKeys} mode="color" onSelectKey={onKey} layerMap={layerMap}
-            names={names} moduleLed={layer?.moduleLed} onModuleLed={paintModule} />
+          <BoardFit>
+            <KeymapBoard keysByPosition={boardKeys} mode="color" onSelectKey={onKey} layerMap={layerMap}
+              names={names} moduleLed={layer?.moduleLed} onModuleLed={paintModule} />
+          </BoardFit>
         </div>
 
       {ed.error && <Notice tone="err" style={{ margin: "8px 0" }}>{ed.error}</Notice>}

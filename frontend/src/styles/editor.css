@@ -325,6 +325,8 @@
   max-width: 100%;
   justify-self: start;
 }
+/* components/BoardFit: the board at the scale that fits; the wrapper is exactly its size. */
+.board-fit { width: fit-content; }
 
 .board-header {
   font-size: 18px;
