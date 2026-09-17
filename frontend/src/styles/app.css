@@ -298,7 +298,7 @@
 .hub-splash-img {
   position: absolute;
   right: -4%;
-  bottom: -16%;
+  bottom: -9%;
   width: 78%;
   max-width: 980px;
   height: auto;
@@ -310,11 +310,13 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 34%;
-  background: linear-gradient(to top, var(--bg-card), transparent);
+  height: 22%;
+  /* A soft foot, not a wash: the card colour at three quarters, gone by the top of the band. */
+  background: linear-gradient(to top, color-mix(in srgb, var(--bg-card) 75%, transparent), transparent);
   pointer-events: none;
 }
-.hub-cta { position: relative; z-index: 1; padding: 14px 34px; font-size: 17px; }
+/* Heavier than the button primitive's own rule, which loads after this sheet. */
+.hub-splash .ui-btn.hub-cta { position: relative; z-index: 1; padding: 14px 34px; font-size: 17px; }
 .hub-text { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .hub-link { color: var(--accent-text); font-weight: 600; font-size: 13px; text-decoration: none; }
 .hub-link:hover { text-decoration: underline; }
