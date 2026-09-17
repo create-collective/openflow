@@ -289,10 +289,15 @@
 }
 
 /* Board */
+/* As wide as the board and centred in its column, so the header above it (the layer's name,
+   the LED colours toggle) starts on the top-left key's left edge rather than the column's. */
 .board-wrap {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: center;
 }
 
 .board-header {
