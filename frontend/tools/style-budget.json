@@ -1,0 +1,68 @@
+{
+  "nativeDialogs": 7,
+  "files": {
+    "App.jsx": {
+      "inlineStyles": 1
+    },
+    "components/ActionPalette.jsx": {
+      "inlineStyles": 1
+    },
+    "components/BleSlots.jsx": {
+      "inlineStyles": 4
+    },
+    "components/CursorIcon.jsx": {
+      "inlineStyles": 1,
+      "colorLiterals": 2
+    },
+    "components/FlashButton.jsx": {
+      "inlineStyles": 3
+    },
+    "components/KeymapBoard.jsx": {
+      "inlineStyles": 9,
+      "colorLiterals": 2
+    },
+    "components/MacroRecorder.jsx": {
+      "inlineStyles": 5
+    },
+    "components/SelectedKeyPanel.jsx": {
+      "inlineStyles": 1
+    },
+    "components/VirtualKeyboard.jsx": {
+      "inlineStyles": 5
+    },
+    "lib/color.js": {
+      "colorLiterals": 6
+    },
+    "lib/icons.jsx": {
+      "inlineStyles": 1
+    },
+    "pages/Bindings.jsx": {
+      "inlineStyles": 2
+    },
+    "pages/Color.jsx": {
+      "inlineStyles": 9,
+      "colorLiterals": 14
+    },
+    "pages/DeviceManagement.jsx": {
+      "inlineStyles": 2
+    },
+    "pages/Macros.jsx": {
+      "inlineStyles": 28
+    },
+    "pages/Modules.jsx": {
+      "inlineStyles": 9
+    },
+    "pages/Settings.jsx": {
+      "inlineStyles": 41
+    },
+    "pages/Troubleshooting.jsx": {
+      "inlineStyles": 3
+    },
+    "styles/app.css": {
+      "colorLiterals": 8
+    },
+    "styles/editor.css": {
+      "colorLiterals": 45
+    }
+  }
+}

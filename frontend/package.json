@@ -3,13 +3,16 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "OpenFlow renderer \u2014 faithful rebuild of the NayaFlow UI on an open backend.",
+  "description": "OpenFlow renderer — faithful rebuild of the NayaFlow UI on an open backend.",
   "license": "Apache-2.0",
   "scripts": {
     "dev": "vite",
-    "build": "node tools/check-undefined.mjs && vite build",
+    "build": "npm run check && vite build",
     "preview": "vite preview",
-    "check": "node tools/check-undefined.mjs"
+    "check": "node tools/check-undefined.mjs && node tools/check-styles.mjs",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "verify": "npm run check && npm run test && vite build"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -17,7 +20,14 @@
     "react-router-dom": "^6.26.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.0"
+    "jsdom": "^29.1.1",
+    "vite": "^5.4.0",
+    "vitest": "^3.2.7"
   }
 }
