@@ -125,15 +125,46 @@
   border-radius: var(--radius-md);
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 19px;
   line-height: 1;
 }
+.shell-gear .nav-glyph { width: 20px; height: 20px; color: inherit; }
 .shell-gear:hover { background: var(--bg-hover); color: var(--text); }
 .shell-gear.active { background: var(--bg-active); color: var(--text); }
 
+/* The theme switch: a pill, the sun at one end and the moon at the other, the knob on the
+   side that is on. */
 .shell-theme {
-  font-size: 17px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 58px;
+  height: 28px;
+  margin-left: 10px;
+  padding: 0 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--control-track);
+  color: var(--text-dim);
+  cursor: pointer;
 }
+.shell-theme:hover { border-color: var(--accent); }
+.shell-theme:focus-visible { outline: none; box-shadow: var(--ring-accent); }
+.shell-theme-sun, .shell-theme-moon { position: relative; z-index: 1; flex: none; }
+.shell-theme:not(.on) .shell-theme-sun, .shell-theme.on .shell-theme-moon { color: var(--text); }
+.shell-theme-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--control-knob);
+  box-shadow: var(--shadow-sm);
+  transition: transform 150ms ease-out;
+}
+.shell-theme.on .shell-theme-knob { transform: translateX(30px); }
+@media (prefers-reduced-motion: reduce) { .shell-theme-knob { transition: none; } }
 
 /* --- The persistent profile bar: the active keyboard profile, one status box per half, the
    read / back-up notes, and the three whole-keyboard actions, on every page --------------- */

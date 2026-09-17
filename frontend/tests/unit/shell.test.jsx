@@ -71,11 +71,12 @@ describe("ThemeToggle", () => {
   it("sets an explicit preference for the other theme and remembers it", () => {
     setThemePreference("dark");
     render(<ThemeToggle />);
-    const b = screen.getByRole("button", { name: "Switch to the light theme" });
-    fireEvent.click(b);
+    const sw = screen.getByRole("switch", { name: "Dark theme" });
+    expect(sw).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(sw);
     expect(localStorage.getItem("openflow.theme")).toBe("light");
     expect(document.documentElement.dataset.theme).toBe("light");
-    expect(screen.getByRole("button", { name: "Switch to the dark theme" })).toBeInTheDocument();
+    expect(sw).toHaveAttribute("aria-checked", "false");
     setThemePreference("system");
   });
 });
