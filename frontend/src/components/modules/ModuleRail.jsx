@@ -15,6 +15,10 @@ export default function ModuleRail({
 }) {
   return (
     <div className="module-list">
+      <div className="module-list-head">
+        <h1 className="module-list-title">Modules</h1>
+        <p className="module-list-sub">Configure Touch, Track, and Tune modules.</p>
+      </div>
       <div className="module-add">
         <Button size="sm" onClick={onToggleAdd}
           title="Add another profile for a module. A layer can use a different profile than the base layer, so more than one per module is useful.">
@@ -72,16 +76,18 @@ export default function ModuleRail({
                         : "Not on the keyboard — flash to put it there"
                     }
                   >
-                    ◉ {m.name}
-                    {device && (
-                      <span className={"module-dev-dot" + (isLive(m.id) ? " on" : "")}>
-                        {isLive(m.id) ? "●" : "○"}
-                      </span>
-                    )}
+                    {/* The dot says whether the board runs this profile: green when live,
+                        dim otherwise; the title says which. */}
+                    <span className={"module-item-dot" + (device && isLive(m.id) ? " on" : "")} aria-hidden="true" />
+                    <span className="module-item-name">{m.name}</span>
                   </button>
-                  <IconButton reveal size="sm" title="Export this profile to a JSON file" onClick={() => onExport(m)}>⭳</IconButton>
-                  <IconButton reveal size="sm" title="Rename" onClick={() => onStartRename(m)}>✎</IconButton>
-                  <IconButton reveal size="sm" tone="danger" title="Delete this profile" onClick={() => onRemove(m)}>✕</IconButton>
+                  {/* The tools float over the tail of the row on hover rather than holding
+                      space, so the name gets the whole width of the rail. */}
+                  <span className="module-item-tools">
+                    <IconButton reveal size="sm" title="Export this profile to a JSON file" onClick={() => onExport(m)}>⭳</IconButton>
+                    <IconButton reveal size="sm" title="Rename" onClick={() => onStartRename(m)}>✎</IconButton>
+                    <IconButton reveal size="sm" tone="danger" title="Delete this profile" onClick={() => onRemove(m)}>✕</IconButton>
+                  </span>
                 </div>
               )
             ))}

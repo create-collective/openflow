@@ -69,14 +69,11 @@ export default function Modules() {
   }
 
   return (
-    <div>
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">Modules</h1>
-          <p className="page-sub">Configure Touch, Track, and Tune modules.</p>
-        </div>
-        {/* What the last read (from the profile bar) or import did, in space that is there
-            whether or not there is a note, so the head does not jump. */}
+    <div className="modules-page">
+      {/* The title lives in the rail, as the storyboard sets it; up here only what the last
+          read (from the profile bar) or import did, at the right, in space that is there
+          whether or not there is a note, so nothing jumps. */}
+      <div className="page-head modules-head">
         <div className="board-notes">
           {ed.imported ? (
             <span className={"saved-note" + (ed.imported.skipped ? "" : " ok")}>
@@ -115,9 +112,13 @@ export default function Modules() {
             <div className="empty">No module configurations found.</div>
           ) : (
             <>
-              <h2 className="module-title">◉ {config.name}</h2>
+              <h2 className="module-title">
+                <img className="module-title-img" alt=""
+                  src={`/modules/v2/${config.type === "TRACK" ? (config.variant === "TRACK_RIGHT" ? "track-right" : "track-left") : config.type.toLowerCase()}.png`} />
+                {config.name}
+              </h2>
               <Tabs variant="underline" ariaLabel="Profile sections" value={ed.tab} onChange={ed.setTab}
-                items={[{ id: "bindings", label: "bindings" }, { id: "settings", label: "settings" }]} />
+                items={[{ id: "bindings", label: "Bindings" }, { id: "settings", label: "Settings" }]} />
               {onDevice && (
                 <Notice className="module-note">
                   {ed.isLive(config.id)
@@ -139,7 +140,7 @@ export default function Modules() {
                 <div className="module-bindings">
                   <ModuleVisual type={config.type} activeButton={ed.curTarget}
                     side={config.variant === "TRACK_RIGHT" ? "right" : "left"} />
-
+                  <div className="module-rows">
                   {ed.untargeted.length > 0 && (
                     <>
                       <div className="skp-head"><span>Gesture</span><span className="skp-arrow">→</span><span>Action</span></div>
@@ -154,6 +155,7 @@ export default function Modules() {
                       {ed.targetBindings.map(renderGestureRow)}
                     </>
                   )}
+                  </div>
                 </div>
               )}
 

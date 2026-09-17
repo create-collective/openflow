@@ -1040,25 +1040,55 @@
 /* Modules page. The rail runs the full height (it spans both grid rows), and the palette sits
    in the second column beneath the module content. 288px: wide enough that profile names do
    not wrap, since the rail carries three row actions. */
+/* Modules, as the storyboard sets it: the profile rail as a card down the left, the selected
+   profile as a card (its picture beside its gesture rows) and the palette as a card stacked on
+   the right. The page centres on the same column as the bars. */
+.modules-page { max-width: var(--page-max); margin: 0 auto; }
+.modules-head { justify-content: flex-end; min-height: 15px; margin-bottom: 6px; }
 .module-layout {
   display: grid;
-  grid-template-columns: 288px 1fr;
+  grid-template-columns: 264px minmax(0, 1fr);
   grid-template-rows: auto auto;
-  gap: 24px;
+  gap: 20px;
   align-items: start;
 }
 .module-layout > .module-list {
   grid-row: 1 / span 2;
   position: sticky;
   top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+}
+.module-list-head { margin-bottom: 12px; }
+.module-list-title { margin: 0; font-size: 20px; font-weight: 700; }
+.module-list-sub { margin: 2px 0 0; color: var(--text-muted); font-size: 12px; }
+.module-detail {
+  min-width: 0;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
 }
 .module-layout > .modules-bottom {
   grid-column: 2;
-  margin-top: 4px;
+  margin-top: 0;
 }
-.module-title { margin: 0 0 12px; }
-.module-note { margin-bottom: 10px; }
-.module-bindings { max-width: 620px; }
+.module-title { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 20px; }
+.module-title-img { width: 26px; height: 26px; object-fit: contain; flex: none; }
+.module-note { margin: 12px 0 10px; }
+/* The picture on the left, the target tabs and the gesture rows on the right. */
+.module-bindings {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 14px;
+}
+.module-rows { min-width: 0; }
+.module-rows .skp-row { border: 1px solid var(--border); }
+.module-rows .skp-row.selected { border-color: var(--accent); }
 .module-settings { margin-top: 16px; max-width: 640px; }
 .module-setting-live { margin: -6px 0 10px; }
 .module-setting-take { margin-left: 8px; }
@@ -1076,10 +1106,13 @@
 }
 
 .module-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
+  min-width: 0;
   text-align: left;
-  padding: 9px 12px;
+  padding: 8px 10px;
   border-radius: var(--radius-md);
   border: none;
   background: transparent;
@@ -1089,6 +1122,10 @@
   cursor: pointer;
   margin-bottom: 2px;
 }
+.module-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The dot: green when the board runs this profile, dim when it does not (or is unknown). */
+.module-item-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); }
+.module-item-dot.on { background: var(--ok); }
 
 .module-item:hover {
   background: var(--bg-hover);
@@ -1097,6 +1134,7 @@
 .module-item.active {
   background: var(--bg-selected);
   color: var(--text);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .mac-input {
@@ -1112,10 +1150,10 @@
 .mod-visual {
   display: flex;
   justify-content: center;
-  padding: 12px 0 20px;
+  padding: 8px 0 0;
 }
 .mod-img {
-  width: 170px;
+  width: 220px;
   height: auto;
 }
 /* Module settings */
@@ -1483,12 +1521,27 @@
 /* The row wraps the profile button so rename/delete can sit beside it without
    nesting a button inside a button. */
 .module-item-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 2px;
 }
 .module-item-row > .module-item { flex: 1; margin-bottom: 0; }
 .module-item-row + .module-item-row { margin-top: 2px; }
+/* Export / rename / delete float over the tail of the row on hover instead of holding space,
+   so the name has the whole rail; the name gives way (ellipsis) only while they show. */
+.module-item-tools {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 2px;
+  pointer-events: none;
+}
+.module-item-row:hover .module-item-tools,
+.module-item-tools:focus-within { pointer-events: auto; }
+.module-item-row:hover > .module-item,
+.module-item-row:focus-within > .module-item { padding-right: 88px; }
 
 .module-rename {
   width: 100%;
@@ -1512,14 +1565,6 @@
   gap: 16px;
   flex-wrap: wrap;
 }
-
-.module-dev-dot {
-  float: right;
-  font-size: 9px;
-  line-height: 1.6;
-  color: var(--text-dim);
-}
-.module-dev-dot.on { color: var(--accent-text); }
 
 /* A profile the board is actually carrying reads brighter than one that only
    exists in the app and has never been flashed. */
@@ -2028,15 +2073,27 @@
   background: var(--bg-panel); font-family: var(--font-mono); font-size: 13px;
 }
 
-/* --- Modules: what the palette is aimed at (additive) -------------------------------------- */
+/* --- Modules: the palette card, with the strip that says what it is aimed at ------------- */
+.editor-bottom.modules-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px 18px;
+  border: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+}
 .mod-target {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 14px; margin: 0;
   border: 1px solid var(--border); border-radius: var(--radius-md);
   background: var(--bg-panel); min-height: 42px;
 }
 .mod-target.armed { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg-panel)); }
-.mod-target-label { color: var(--text-dim); font-size: 12px; }
+.mod-target-part { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.mod-target-sep { width: 1px; height: 18px; background: var(--border-strong); }
+.mod-target-label { color: var(--text-dim); font-size: 12px; white-space: nowrap; }
 .mod-target-name { font-size: 13px; text-transform: capitalize; }
 .mod-target-clear { margin-left: auto; }
 /* The action text that replaced each row's dropdown. */
