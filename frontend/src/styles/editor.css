@@ -311,6 +311,8 @@
   width: fit-content;
   max-width: 100%;
   margin: 0 auto;
+  overflow-x: auto;        /* narrower than the board: the rows scroll together */
+  padding-bottom: 6px;
 }
 .vk-frow .vk-base { font-size: calc(var(--vk-unit) * 0.27); }
 
@@ -318,8 +320,6 @@
   display: flex;
   gap: 20px;
   align-items: flex-start;
-  overflow-x: auto;
-  padding-bottom: 6px;
 }
 
 .vk-block {
