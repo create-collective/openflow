@@ -97,25 +97,27 @@ SETTINGS_SCHEMA = [
     {
         "group": "OneKey Timing",
         "scope": "device",
-        # No correlation id exists for these anywhere -- they are OUR model, not one we have seen
-        # NayaFlow or the firmware carry, and nothing in the flash path reads them. They are the
-        # host-side OneKey timing model, Create Companion's territory -- hence provenance HOST_SIDE,
-        # not EXPERIMENTAL, which would wrongly imply a firmware setting waiting to be probed.
-        "desc": "Global timing for multi-behavior keys (Dygma-style model). Applied host-side by "
-                "Create Companion, not flashed to the keyboard -- the firmware has no setting for these.",
+        # No correlation id is known for these and nothing in the flash path reads them yet. The
+        # owner's position (2026-09-17): tap / hold / double-tap / tap+hold all work on the board,
+        # so the timing behind them has to live there somewhere, mapping unknown -- which is what
+        # EXPERIMENTAL means (the probe queue). What IS known on the wire: every hold-tap record
+        # carries its own flavour + tapping term (remap.encode_holdtap_param), and NayaFlow's own
+        # settings expose only those two; a NayaFlow USB write capture is the next probe.
+        "desc": "Global timing for multi-behavior keys (ZMK tap Dance behavior). Not flashed to "
+                "the keyboard -- the firmware mapping for these settings are currently unknown.",
         "fields": [
             {"id": "onekey_tap_timeout_ms", "label": "Tap Timeout (ms)", "kind": "slider",
              "desc": "Window to register a second tap (double-tap detection).",
-             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": HOST_SIDE},
+             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": EXPERIMENTAL},
             {"id": "onekey_holdstart_ms", "label": "Hold Start (ms)", "kind": "slider",
              "desc": "Minimum time from keydown before a hold triggers.",
-             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": HOST_SIDE},
+             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": EXPERIMENTAL},
             {"id": "onekey_waitfor_ms", "label": "Wait For Release (ms)", "kind": "slider",
              "desc": "Delay before a held action repeats (release for a single output).",
-             "min": 0, "max": 1000, "default": 500, "unit": "ms", "provenance": HOST_SIDE},
+             "min": 0, "max": 1000, "default": 500, "unit": "ms", "provenance": EXPERIMENTAL},
             {"id": "onekey_overlap_pct", "label": "Overlap (%)", "kind": "slider",
              "desc": "Overlap tolerated during fast typing before a hold triggers.",
-             "min": 0, "max": 100, "default": 20, "unit": "%", "provenance": HOST_SIDE},
+             "min": 0, "max": 100, "default": 20, "unit": "%", "provenance": EXPERIMENTAL},
         ],
     },
     {
