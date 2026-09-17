@@ -44,15 +44,14 @@ describe("SelectedKeyPanel", () => {
     expect(onClearSlot).toHaveBeenCalledWith("hold");
     expect(screen.queryByRole("button", { name: "Clear Double Tap" })).not.toBeInTheDocument();
 
-    const soon = card("Double Tap + Hold");
-    expect(soon).toBeDisabled();
-    expect(within(soon).getByText("soon")).toBeInTheDocument();
+    // The slot the catalog has not enabled is not shown at all.
+    expect(screen.queryByText("Double Tap + Hold")).not.toBeInTheDocument();
   });
 
   it("with no key selected, says so and offers nothing to pick", () => {
     render(<SelectedKeyPanel label={null} slots={slots} activeSlot="tap" onSelectSlot={() => {}} onClearSlot={() => {}} />);
     expect(screen.getByText("No key selected")).toBeInTheDocument();
     expect(screen.getByText("Select one on the map.")).toBeInTheDocument();
-    for (const s of slots) expect(card(s.label)).toBeDisabled();
+    for (const s of slots.filter((x) => x.enabled)) expect(card(s.label)).toBeDisabled();
   });
 });

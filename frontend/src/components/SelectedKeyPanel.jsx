@@ -82,7 +82,9 @@ export default function SelectedKeyPanel({
       <div className="keyband-slots">
         <div className="keyband-title">Key bindings</div>
         <div className="keyband-cards" role="group" aria-label="Behaviors">
-          {slots.map((slot) => {
+          {/* A slot the catalog has not enabled (Double Tap + Hold) is not shown at all: a
+              card marked "soon" that stays soon is a promise on every screen. */}
+          {slots.filter((slot) => slot.enabled).map((slot) => {
             const b = bindings[slot.id];
             const isActive = activeSlot === slot.id;
             const disabled = !slot.enabled || !label;
