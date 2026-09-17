@@ -10,12 +10,32 @@ import ThemeToggle from "./ThemeToggle";
 // the device page. The routes are NayaFlow's own and are left alone -- renaming a label is
 // free ("Devices" is the Information page), renaming a URL breaks every link anyone has saved.
 export const NAV = [
-  { to: "/layer-management", label: "Bindings" },
-  { to: "/colormapping", label: "LED Map" },
-  { to: "/module-configuration", label: "Modules" },
-  { to: "/macro", label: "Macros" },
-  { to: "/information", label: "Devices" },
+  { to: "/layer-management", label: "Bindings", icon: "grid" },
+  { to: "/colormapping", label: "LED Map", icon: "sun" },
+  { to: "/module-configuration", label: "Modules", icon: "cube" },
+  { to: "/macro", label: "Macros", icon: "play" },
+  { to: "/information", label: "Devices", icon: "chip" },
 ];
+
+// The glyph before each tab, as the storyboard draws them: a grid of keys, a sun, a cube, a
+// play mark, a chip, and three dots for More. Strokes in the text colour, 16 px.
+const GLYPH = {
+  grid: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
+  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" /></>,
+  cube: <><path d="M12 2.5l8.5 4.75v9.5L12 21.5l-8.5-4.75v-9.5z" /><path d="M3.5 7.25L12 12l8.5-4.75M12 12v9.5" /></>,
+  play: <path d="M7 4.5v15l12-7.5z" />,
+  chip: <><rect x="6" y="6" width="12" height="12" rx="2" /><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" /></>,
+  more: <><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" /></>,
+};
+
+function NavGlyph({ id }) {
+  return (
+    <svg className="nav-glyph" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {GLYPH[id]}
+    </svg>
+  );
+}
 
 // Under More: the pages that are about the app rather than the keyboard. Settings is not
 // one of them: it has its own gear beside the menu (owner's call, 2026-09-17).
@@ -59,6 +79,7 @@ export default function TopNav() {
       </NavLink>
       {NAV.map((item) => (
         <NavLink key={item.to} to={item.to} className={linkClass}>
+          <NavGlyph id={item.icon} />
           {item.label}
         </NavLink>
       ))}
@@ -71,6 +92,7 @@ export default function TopNav() {
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
         >
+          <NavGlyph id="more" />
           More ▾
         </button>
         {open && (
