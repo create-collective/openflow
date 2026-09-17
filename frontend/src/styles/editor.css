@@ -289,15 +289,16 @@
 }
 
 /* Board */
-/* As wide as the board and centred in its column, so the header above it (the layer's name,
-   the LED colours toggle) starts on the top-left key's left edge rather than the column's. */
+/* As wide as the board and at the column's left edge, right after the layer list, so the
+   header above it (the layer's name, the LED colours toggle) starts on the top-left key's
+   left edge and there is no blank run between the list and the board. */
 .board-wrap {
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: fit-content;
   max-width: 100%;
-  justify-self: center;
+  justify-self: start;
 }
 
 .board-header {
@@ -730,12 +731,12 @@
 /* Bindings page: the selected-key band, then the action palette, both inside the board's
    column: the section is indented by the layer list and its gap (240px = 220px + 20px), and
    the band and the palette are capped at the virtual keyboard's widest (22 units of 64px plus
-   its gaps) and centred, so the band, the palette head and both keyboards start on one line
-   and share a centre. */
+   its gaps) and left-aligned like the board, so the band, the palette head and both keyboards
+   start on one line at every width. */
 .editor-bottom.bindings-bottom {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   padding-left: 240px;
 }
