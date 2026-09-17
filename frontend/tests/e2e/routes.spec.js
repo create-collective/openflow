@@ -16,6 +16,7 @@ const PAGES = [
   ["information", "/information"],
   ["settings", "/settings"],
   ["device-management", "/device-management"],
+  ["bug-report", "/bug-report"],
 ];
 const THEMES = ["dark", "light"];
 

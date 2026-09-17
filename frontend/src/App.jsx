@@ -14,6 +14,7 @@ import Bindings from "./pages/Bindings.jsx";
 import Color from "./pages/Color.jsx";
 import Modules from "./pages/Modules.jsx";
 import Macros from "./pages/Macros.jsx";
+import BugReport from "./pages/BugReport.jsx";
 
 function RouteBoundary({ children }) {
   const { pathname } = useLocation();
@@ -32,6 +33,12 @@ export default function App() {
   // act on there; it mounts on the first editing page (owner's call, 2026-09-17).
   const { pathname } = useLocation();
   const onHub = pathname === "/";
+  // Where the user was before opening the report form, so the report can say which page the
+  // problem was on. Recorded here because by the time that page unmounts it is too late.
+  useEffect(() => {
+    if (pathname === "/bug-report") return;
+    try { sessionStorage.setItem("openflow.lastPage", pathname); } catch { /* private mode */ }
+  }, [pathname]);
   // Apply the saved interface scaling once at startup, before anything renders at the wrong size.
   // Live changes are applied by the Settings page as the slider moves; this is the on-load pass.
   useEffect(() => {
@@ -58,7 +65,7 @@ export default function App() {
           <Route path="/macro" element={<Macros />} />
           <Route path="/module-configuration" element={<Modules />} />
           <Route path="/information" element={<Troubleshooting />} />
-          <Route path="/bug-report" element={<Placeholder title="Bug Report" phase="Phase 1" note="Diagnostics report export." />} />
+          <Route path="/bug-report" element={<BugReport />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </RouteBoundary>

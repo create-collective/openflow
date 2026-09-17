@@ -28,6 +28,7 @@ from ..db import device_state as dstate
 from ..db import module_profiles as mprof
 from ..db import profiles as prof
 from ..db import settings as settings_db
+from .. import report
 from ..db import userdata as ud
 from ..db.database import connect as db_connect
 from ..device import (actions_catalog, flash as flash_mod, gesture_presets, keymap_read, module_fields,
@@ -957,6 +958,34 @@ async def set_base_layer(body: dict = Body(...)) -> dict:
         return await run_in_threadpool(ud.set_base_layer, body["layerId"])
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/report/context")
+async def report_context(identifiers: bool = False) -> dict:
+    """What an in-app report would carry about this machine, so the page can show it BEFORE
+    anything is sent. `identifiers=false` (the default) strips hardware IDs, BLE addresses and
+    serial numbers: a report goes to a tracker, and those name a particular unit."""
+    from ..device import device_log as dl
+    svc = get_service()
+    last = await run_in_threadpool(dstate.load_status, False)
+    ctx = await run_in_threadpool(report.collect_context, svc, dl.entries(40), last)
+    ctx["sink"] = "jira" if report.jira_config() is not None else None
+    return ctx if identifiers else report.redact(ctx)
+
+
+@router.post("/rpc/report-bug")
+async def report_bug(body: dict = Body(...)) -> dict:
+    """File a user's report. Returns the rendered text either way, so a build with no sink
+    configured can still offer it to be copied or saved."""
+    if not (body.get("happened") or "").strip():
+        raise HTTPException(status_code=400, detail="say what happened before sending a report")
+    from ..device import device_log as dl
+    svc = get_service()
+    last = await run_in_threadpool(dstate.load_status, False)
+    ctx = await run_in_threadpool(report.collect_context, svc, dl.entries(40), last)
+    if not body.get("includeIdentifiers"):
+        ctx = report.redact(ctx)
+    return await run_in_threadpool(report.file_report, svc, body, ctx)
 
 
 @router.get("/api/diagnostics/report")
