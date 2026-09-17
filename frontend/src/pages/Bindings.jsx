@@ -5,6 +5,7 @@ import { readDockedModules, lastDockedModules } from "../lib/dockedModules";
 import { subscribeDeviceState, getDeviceState, deviceHasBeenRead } from "../lib/deviceState";
 import { setShortcutTable } from "../lib/shortcutNames";
 import { POS_LABEL } from "../lib/layout";
+import { actionText } from "../lib/keylabels";
 import { clearSaved, useOnDeviceRead } from "../lib/deviceActions";
 import useProfileEditor from "../lib/useProfileEditor";
 import KeymapBoard from "../components/KeymapBoard";
@@ -179,6 +180,11 @@ export default function Bindings() {
   }, [profile, catalog, ed.activeLayerId, deviceRead, moduleProfiles]);
 
   const selectedKey = selectedPos != null ? keysByPosition[selectedPos] : null;
+  // "A → Hold" for the palette's head: the key by its tap legend (its position when unbound),
+  // the slot by its label.
+  const slotLabel = catalog?.behaviorSlots?.find((s) => s.id === activeSlot)?.label || activeSlot;
+  const keyName = selectedPos == null ? null
+    : selectedKey?.bindings?.tap ? actionText(selectedKey.bindings.tap, layerMap) : POS_LABEL[selectedPos];
 
   async function bind(pick) {
     if (selectedPos == null || !layer) return;
@@ -291,6 +297,7 @@ export default function Bindings() {
           layerMap={layerMap}
         />
         <ActionPalette
+          assigning={keyName ? `${keyName} → ${slotLabel}` : null}
           catalog={catalog}
           layers={profile.layers}
           currentLayerIndex={profile.layers.findIndex((l) => l.id === ed.activeLayerId)}

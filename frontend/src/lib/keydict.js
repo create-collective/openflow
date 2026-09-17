@@ -11,18 +11,24 @@
 // legend changes, toggled by the virtual keyboard's "Mac" checkbox.
 const K = (code, glyph, shift = null, u = 1, mac = null) => ({ code, glyph, shift, u, mac });
 const GAP = (u) => ({ gap: true, u });
-const FMORE = { more: "fkeys", u: 1.75 }; // the "F13+" expander (wide enough for the label)
 // A numpad key placed on a grid: row/col (1-based) with optional row/col spans.
 const KP = (code, glyph, row, col, rspan = 1, cspan = 1) => ({ code, glyph, row, col, rspan, cspan });
 
 // The main alpha block, as physical rows (top to bottom), for the virtual keyboard.
 // Every row totals 15u; the staggered look comes from the wider first key on each
 // row (Tab 1.5u, Caps 1.75u, Shift 2.25u), exactly like a real ANSI board.
+// The function row, above all three blocks: Esc, then F1-F24 in groups of four. F13-F24 used
+// to hide behind an "F13+" expander at the end of the main block; NayaFlow's vocabulary has
+// all twenty-four and the owner wants them on the board (2026-09-17). The virtual keyboard
+// sizes these keys to span the width of the blocks below.
+const F = (n) => K("F" + n, "F" + n);
+export const FUNCTION_ROW = [
+  K("ESC", "Esc"), GAP(0.5),
+  F(1), F(2), F(3), F(4), GAP(0.25), F(5), F(6), F(7), F(8), GAP(0.25), F(9), F(10), F(11), F(12), GAP(0.5),
+  F(13), F(14), F(15), F(16), GAP(0.25), F(17), F(18), F(19), F(20), GAP(0.25), F(21), F(22), F(23), F(24),
+];
+
 export const MAIN_ROWS = [
-  [K("ESC", "Esc"), GAP(0.5),
-   K("F1", "F1"), K("F2", "F2"), K("F3", "F3"), K("F4", "F4"),
-   K("F5", "F5"), K("F6", "F6"), K("F7", "F7"), K("F8", "F8"),
-   K("F9", "F9"), K("F10", "F10"), K("F11", "F11"), K("F12", "F12"), GAP(0.5), FMORE],
   [K("GRAVE", "`", ["TILDE", "~"]), K("NUMBER_1", "1", ["EXCLAMATION", "!"]),
    K("NUMBER_2", "2", ["AT_SIGN", "@"]), K("NUMBER_3", "3", ["HASH", "#"]),
    K("NUMBER_4", "4", ["DOLLAR", "$"]), K("NUMBER_5", "5", ["PERCENT", "%"]),
@@ -99,7 +105,7 @@ const addGlyph = (k) => {
     if (!(k.shift[1] in CODE_FOR_GLYPH)) CODE_FOR_GLYPH[k.shift[1]] = k.shift[0];
   }
 };
-for (const rows of [MAIN_ROWS, NAV_ROWS]) for (const row of rows) for (const k of row) addGlyph(k);
+for (const rows of [[FUNCTION_ROW], MAIN_ROWS, NAV_ROWS]) for (const row of rows) for (const k of row) addGlyph(k);
 for (const k of NUMPAD) addGlyph(k);
 for (const k of MEDIA) GLYPH[k.code] = k.glyph;
 for (const f of FKEYS_EXTRA) GLYPH[f] = f;

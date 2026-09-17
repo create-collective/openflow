@@ -140,19 +140,24 @@
 }
 .ui-tabs-underline .ui-tab.active { color: var(--text); border-bottom-color: var(--accent); }
 
-.ui-tabs-pills { flex-direction: column; gap: 6px; }
+/* Pills: icon + label, in a row (the action palette's categories; the storyboard's strip). */
+.ui-tabs-pills { flex-wrap: wrap; gap: 6px; }
 .ui-tabs-pills .ui-tab {
-  width: 40px;
-  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--bg-panel);
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
 }
+.ui-tabs-pills .ui-tab:hover:not(.active) { color: var(--text); border-color: var(--border-strong); }
 .ui-tabs-pills .ui-tab.active { background: var(--bg-selected); color: var(--text); border-color: transparent; }
-/* An icon tab centres as a box; a character tab keeps the text metrics it was built against. */
-.ui-tabs-pills .ui-tab:has(svg) { display: flex; align-items: center; justify-content: center; }
+.ui-tab-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; font-size: 14px; line-height: 1; }
 
 /* --- Toggle ------------------------------------------------------------------------------ */
 .ui-toggle {

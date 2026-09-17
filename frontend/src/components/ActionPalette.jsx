@@ -48,7 +48,15 @@ export function toggleBlock(actionType, targetIndex, currentIndex) {
   return null;
 }
 
+// The word beside each tab's glyph. The glyph alone (B, +, ✦, ↗) was the whole label until the
+// storyboard's icon + label pills (2026-09-17).
+const TAB_WORD = {
+  keyboard: "Keyboard", mouse: "Mouse", basic: "Basic", apps: "Apps", shortcuts: "Shortcuts",
+  extended: "Extended", layers: "Layers", macros: "Macros", module: "Module",
+};
+
 export default function ActionPalette({
+  assigning = null,       // "A → Hold": what a pick writes to, shown in the head
   catalog,
   layers = [],
   currentLayerIndex = null,   // which layer the key being edited lives on; gates layer toggles
@@ -200,31 +208,36 @@ export default function ActionPalette({
 
   return (
     <div className={"palette" + (className ? " " + className : "")}>
-      <Tabs
-        variant="pills"
-        ariaLabel="Action categories"
-        value={tab?.id}
-        onChange={setTabId}
-        items={tabs.map((t) => ({
-          id: t.id,
-          title: t.title,
-          icon: t.id === "layers" ? <LayersIcon size={16} /> : t.id === "mouse" ? <CursorIcon size={15} /> : undefined,
-          label: t.id === "layers" || t.id === "mouse" ? undefined : t.label,
-        }))}
-      />
-
-      <div className="palette-body">
-        {/* Inside the body, not beside it: .palette is a two-column grid (tabs | body) and a
-            third direct child would push the body into the tab column. Sticky so it stays put
-            while the list scrolls. */}
+      {/* One head row: the title, what a pick writes to, the categories as icon + label pills,
+          and the search right after them. The body under it is the tab, or the results. */}
+      <div className="palette-head">
+        <span className="palette-title">Action palette</span>
+        {assigning && <span className="palette-assign">Assigning: <b>{assigning}</b></span>}
+        <Tabs
+          variant="pills"
+          ariaLabel="Action categories"
+          value={tab?.id}
+          onChange={setTabId}
+          items={tabs.map((t) => ({
+            id: t.id,
+            title: t.title,
+            icon: t.id === "layers" ? <LayersIcon size={16} />
+              : t.id === "mouse" ? <CursorIcon size={15} />
+              : <span className="ui-tab-icon" aria-hidden="true">{t.label}</span>,
+            label: TAB_WORD[t.id] || t.title,
+          }))}
+        />
         <input
           className="palette-search"
           type="search"
           value={query}
-          placeholder="Search every action — e.g. wireless, brightness, paste"
+          placeholder="Search every action — wireless, brightness, paste…"
           onChange={(e) => setQuery(e.target.value)}
           aria-label="Search all actions"
         />
+      </div>
+
+      <div className="palette-body">
         {disabled && !["keyboard", "apps", "mouse"].includes(tab?.id) && (
           <div className="palette-disabled">{disabledHint}</div>
         )}

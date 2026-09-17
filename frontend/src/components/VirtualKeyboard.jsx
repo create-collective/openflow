@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import WindowsIcon from "./WindowsIcon";
-import { MAIN_ROWS, NAV_ROWS, NUMPAD, VK_MODIFIERS, FKEYS_EXTRA, resolveVirtualKey, CODE_FOR_GLYPH } from "../lib/keydict";
+import { FUNCTION_ROW, MAIN_ROWS, NAV_ROWS, NUMPAD, VK_MODIFIERS, resolveVirtualKey, CODE_FOR_GLYPH } from "../lib/keydict";
 import { LAYOUTS, LAYOUT_IDS } from "../lib/layouts";
 
-const UNIT = 42; // px per keyboard unit (a normal 1u key)
-const w = (u) => Math.max(0, u * UNIT - 2); // inner width; 2px goes to the 1px margins
+// Keyboard units in px. 42 is a normal 1u key at the smallest the board is drawn; it grows with
+// the width it is given (see the ResizeObserver below) up to 64. The three blocks are 22u wide
+// plus the fixed gaps between them; the function row is sized to span exactly that.
+const UNIT_MIN = 42;
+const UNIT_MAX = 64;
+const BLOCK_UNITS = 22;      // main 15u + nav 3u + numpad 4u
+const BLOCK_GAPS_PX = 46;    // two 20px gaps between blocks, three 2px numpad grid gaps
+const F_GAP_UNITS = 2;       // the gaps in the function row, in units
 
 // The virtual keyboard tab: a full, realistically-proportioned board that flows from
 // the canonical key dictionary. Select a key on the mapper, toggle any of the 5 held
@@ -15,7 +21,24 @@ const w = (u) => Math.max(0, u * UNIT - 2); // inner width; 2px goes to the 1px 
 export default function VirtualKeyboard({ disabled, onPick,
                                           disabledHint = "Select a key on the map first." }) {
   const [mods, setMods] = useState({});
-  const [fmore, setFmore] = useState(false);
+  const [unit, setUnit] = useState(UNIT_MIN);
+  const root = useRef(null);
+  const w = (u) => Math.max(0, u * unit - 2); // inner width; 2px goes to the 1px margins
+  // The board fills the width it is given: a unit is what fits, between 42 and 64 px. The CSS
+  // reads the same number (--vk-unit) for heights and type; the widths are inline already.
+  useEffect(() => {
+    const el = root.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const fit = () => {
+      const u = Math.floor((el.clientWidth - BLOCK_GAPS_PX) / BLOCK_UNITS);
+      setUnit(Math.min(UNIT_MAX, Math.max(UNIT_MIN, u)));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  useEffect(() => { root.current?.style.setProperty("--vk-unit", unit + "px"); }, [unit]);
   const [mac, setMac] = useState(false);
   const [layout, setLayout] = useState(() => {
     try { return LAYOUTS[localStorage.getItem("openflow.vk.layout")] ? localStorage.getItem("openflow.vk.layout") : "qwerty"; }
@@ -39,10 +62,6 @@ export default function VirtualKeyboard({ disabled, onPick,
   const toggle = (id) => setMods((m) => ({ ...m, [id]: !m[id] }));
   const held = VK_MODIFIERS.filter((m) => mods[m.id]).map((m) => m.code);
   const click = (k) => { if (!disabled && k?.code) onPick(resolveVirtualKey(k.code, mods)); };
-  // Through resolveVirtualKey like every other key. It used to emit the bare F-key whatever
-  // was held, and since F13-F24 live ONLY in this dropdown, "modifier + F13" was the one
-  // combination the keyboard could not produce at all.
-  const pickF = (code) => { setFmore(false); if (!disabled) onPick(resolveVirtualKey(code, mods)); };
   // A key's secondary legend: its shifted symbol, or its Mac label — whichever it
   // has — and whether that legend is currently the active one.
   // LGUI/RGUI show the real Windows logo instead of the dictionary's maths glyph -- except in
@@ -55,24 +74,6 @@ export default function VirtualKeyboard({ disabled, onPick,
   const renderCell = (k, ci) => {
     if (!k) return <span key={ci} className="vk-gap" style={{ width: w(1) }} />;
     if (k.gap) return <span key={ci} className="vk-gap" style={{ width: w(k.u) }} />;
-    if (k.more === "fkeys") {
-      return (
-
-        <span key={ci} className="vk-fmore" style={{ width: w(k.u) }}>
-          <button className="vk-key" disabled={disabled} title="More function keys (F13–F24)"
-            onClick={() => setFmore((v) => !v)}>
-            <span className="vk-base">F13▾</span>
-          </button>
-          {fmore && (
-            <div className="vk-fmenu">
-              {FKEYS_EXTRA.map((f) => (
-                <button key={f} className="vk-fmenu-item" disabled={disabled} onClick={() => pickF(f)}>{f}</button>
-              ))}
-            </div>
-          )}
-        </span>
-      );
-    }
     k = lay(k);
     const alt = altOf(k);
     return (
@@ -87,6 +88,17 @@ export default function VirtualKeyboard({ disabled, onPick,
         {alt && <span className="vk-sub">{alt.g}</span>}
         <span className="vk-base">{glyphOf(k)}</span>
       </button>
+    );
+  };
+
+  // The function row spans the three blocks below it: Esc keeps its unit, the 24 F keys share
+  // what is left. Through resolveVirtualKey like every other key, so "modifier + F13" works.
+  const renderFunctionRow = () => {
+    const fu = ((BLOCK_UNITS - 1 - F_GAP_UNITS) * unit + BLOCK_GAPS_PX) / 24 / unit;
+    return (
+      <div className="vk-row vk-frow">
+        {FUNCTION_ROW.map((k, i) => renderCell(/^F[0-9]+$/.test(k.code || "") ? { ...k, u: fu } : k, i))}
+      </div>
     );
   };
 
@@ -116,8 +128,9 @@ export default function VirtualKeyboard({ disabled, onPick,
   );
 
   return (
-    <div className="vk">
+    <div className="vk" ref={root}>
       {disabled && <div className="palette-disabled">{disabledHint}</div>}
+      {renderFunctionRow()}
       <div className="vk-boards">
         {renderBlock(MAIN_ROWS, "vk-main")}
         {renderBlock(NAV_ROWS, "vk-nav")}
