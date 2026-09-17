@@ -27,6 +27,11 @@ function RouteBoundary({ children }) {
 // Troubleshooting) and in the profile bar. The route redirects so a saved link still lands
 // somewhere useful.
 export default function App() {
+  // The Hub is the front door: the nav stays (it is how you leave), the profile bar does not.
+  // Its halves duplicate the Hub's Keyboard card and Read / Back up / Flash have nothing to
+  // act on there; it mounts on the first editing page (owner's call, 2026-09-17).
+  const { pathname } = useLocation();
+  const onHub = pathname === "/";
   // Apply the saved interface scaling once at startup, before anything renders at the wrong size.
   // Live changes are applied by the Settings page as the slider moves; this is the on-load pass.
   useEffect(() => {
@@ -38,7 +43,7 @@ export default function App() {
   return (
     <div className="app">
       <TopNav />
-      <ProfileBar />
+      {!onHub && <ProfileBar />}
       <main className="main">
         {/* Keyed on the path so navigating away from a crashed page RESETS the boundary --
             otherwise one bad page would keep showing its error after you had moved on. The
