@@ -35,11 +35,11 @@
   background: var(--bg-hover);
 }
 
-.brand-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  background: var(--accent);
+/* The mark, in the brand cyan whatever the theme (the signature sheet keeps it cyan on both
+   grounds); the wordmark beside it is text in the text colour. */
+.brand-mark {
+  flex: none;
+  color: var(--brand);
 }
 
 .nav-item {

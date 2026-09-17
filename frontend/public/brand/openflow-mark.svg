@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- The OpenFlow mark (see src/components/BrandMark.jsx): brand cyan, transparent hole and cuts. -->
+  <mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+    <path d="M9 0H50A50 50 0 1 1 0 50V9A9 9 0 0 1 9 0Z" fill="#fff"/>
+    <circle cx="50" cy="50" r="28.5" fill="#000"/>
+    <g stroke="#000" stroke-width="3.6" fill="none">
+      <path d="M54.5 -2V26"/>
+      <path d="M50 50L104 25"/>
+      <path d="M50 50L94 85"/>
+      <path d="M50 50L26 102"/>
+      <path d="M-2 49.5H26"/>
+    </g>
+  </mask>
+  <rect width="100" height="100" fill="#03b9c9" mask="url(#m)"/>
+</svg>

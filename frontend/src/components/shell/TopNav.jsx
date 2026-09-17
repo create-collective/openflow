@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import BrandMark from "../BrandMark";
 import ThemeToggle from "./ThemeToggle";
 
 // The top navigation: the logo (to the Hub), the pages, a More menu, the Settings gear, the
@@ -74,7 +75,7 @@ export default function TopNav() {
   return (
     <nav className="shell-nav" aria-label="Main">
       <NavLink to="/" end className="brand" title="Hub">
-        <span className="brand-dot" />
+        <BrandMark size={26} className="brand-mark" />
         OpenFlow
       </NavLink>
       {NAV.map((item) => (
