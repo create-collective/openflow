@@ -16,25 +16,67 @@ import { THEME_PREFERENCES, setThemePreference, useThemePreference } from "../li
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
 import { REPOS, checkRelease } from "../lib/updates";
 
-const TABS = [
-  { id: "behavior", label: "Behavior" },
-  { id: "interface", label: "Interface" },
-  { id: "backup", label: "Backup" },
-  { id: "troubleshooting", label: "Troubleshooting" },
-  { id: "logging", label: "Logging" },
-  { id: "software", label: "Software" },
-];
-
-function SettingsGroups({ groups, onChange }) {
+// The rail, as the storyboard draws it: an icon per section (Tabler Icons, MIT, Pawel Kuna:
+// settings, device-desktop, database, tool, file-text, info-circle).
+const GLYPH = {
+  behavior: <><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" /></>,
+  interface: <><rect x="3" y="4" width="18" height="12" rx="1" /><path d="M7 20h10M9 16v4M15 16v4" /></>,
+  backup: <><ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v6a8 3 0 0 0 16 0V6" /><path d="M4 12v6a8 3 0 0 0 16 0v-6" /></>,
+  troubleshooting: <path d="M7 10h3v-3l-3.5-3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8l3.5 3.5" />,
+  logging: <><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z" /><path d="M9 9h1M9 13h6M9 17h6" /></>,
+  software: <><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></>,
+};
+function RailGlyph({ id }) {
   return (
-    <div className="settings-pane">
-      {groups.map((g) => (
-        <div key={g.group} className="settings-group">
-          <h3>{g.group} {g.scope === "device" && <Badge>device</Badge>}</h3>
-          <p className="page-sub settings-group-desc">{g.desc}</p>
-          {g.fields.map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
-        </div>
-      ))}
+    <svg className="settings-glyph" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {GLYPH[id]}
+    </svg>
+  );
+}
+
+// Each section's page head: what it is, its scope as a badge, one line on what it covers.
+const SECTIONS = [
+  { id: "behavior", label: "Behavior", badge: "device", sub: "How keys resolve on the keyboard. Flashed to the device." },
+  { id: "interface", label: "Interface", badge: "app only", sub: "How OpenFlow looks and behaves on this computer." },
+  { id: "backup", label: "Backup", badge: "app only", sub: "Snapshots of your data, and NayaFlow imports." },
+  { id: "troubleshooting", label: "Troubleshooting", badge: "destructive", sub: "Restart and recover your keyboard." },
+  { id: "logging", label: "Logging", sub: "Diagnostics, and everything exchanged with the keyboard." },
+  { id: "software", label: "Software", sub: "Versions, update checks and the firmware library." },
+];
+const TABS = SECTIONS.map((s) => ({ id: s.id, label: s.label, icon: <RailGlyph id={s.id} /> }));
+
+// The storyboard shows Behavior as two cards, key behaviour and power on the left and LED
+// behaviour on the right, with OneKey Timing under the latter. The backend has the LED
+// settings in the Behavior group; they are split off here, by id, for the layout only.
+function splitLed(groups) {
+  const out = [];
+  for (const g of groups) {
+    const led = g.fields.filter((f) => f.id.startsWith("led_"));
+    if (led.length && led.length < g.fields.length) {
+      // The group description is already the section head, so neither card repeats it.
+      out.push({ ...g, group: "Key behavior & power", desc: undefined, fields: g.fields.filter((f) => !f.id.startsWith("led_")) });
+      out.push({ ...g, group: "LED behavior", desc: undefined, fields: led });
+    } else out.push(g);
+  }
+  return out;
+}
+
+// The groups as cards: the first fills the left column, the rest stack in the right, as
+// the storyboard lays them out; one group alone takes the left column.
+function SettingsGroups({ groups, onChange }) {
+  const card = (g) => (
+    <Card key={g.group} className="settings-card" title={g.group}>
+      {g.desc && <p className="settings-card-desc">{g.desc}</p>}
+      {g.fields.map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
+    </Card>
+  );
+  const [first, ...rest] = groups;
+  if (!first) return null;
+  return (
+    <div className="settings-cards">
+      <div className="settings-col">{card(first)}</div>
+      {rest.length > 0 && <div className="settings-col">{rest.map(card)}</div>}
     </div>
   );
 }
@@ -106,7 +148,7 @@ export default function Settings() {
   // Route by SCOPE, not by name. This was `group !== "Interface"` vs `=== "Interface"`, so
   // "OneKey Timing" landed on the Behavior tab by accident and any group added to the backend
   // later would silently land there too.
-  const behaviorGroups = settings?.groups.filter((g) => g.scope === "device") || [];
+  const behaviorGroups = splitLed(settings?.groups.filter((g) => g.scope === "device") || []);
   const interfaceGroups = settings?.groups.filter((g) => g.scope !== "device") || [];
   // The theme lives on this machine (localStorage, applied before first paint by index.html),
   // not in the backend's settings: it is a property of the screen in front of you, like the
@@ -122,29 +164,37 @@ export default function Settings() {
     }],
   }];
 
+  const section = SECTIONS.find((s) => s.id === tab);
+
   return (
-    <div>
-      <h1 className="page-title">Settings</h1>
-      {err && <Card><Notice tone="err">{err}</Notice></Card>}
+    <div className="settings-page">
+      {err && <Notice tone="err" className="settings-err" onDismiss={() => setErr(null)}>{err}</Notice>}
 
       <div className="settings-layout">
-        <Tabs variant="vertical" ariaLabel="Settings sections" items={TABS} value={tab} onChange={setTab} />
+        <div className="settings-rail">
+          <h1 className="settings-rail-title">Settings</h1>
+          <Tabs variant="vertical" ariaLabel="Settings sections" items={TABS} value={tab} onChange={setTab} />
+        </div>
 
         <div className="settings-content">
+          <div className="settings-head">
+            <h2 className="settings-title">
+              {section.label}
+              {section.badge && <Badge className="ui-badge-plain">{section.badge}</Badge>}
+            </h2>
+            <p className="settings-sub">{section.sub}</p>
+          </div>
           {!settings ? <div className="empty">Loading…</div> : (
             <>
               {tab === "behavior" && <SettingsGroups groups={behaviorGroups} onChange={setSetting} />}
               {tab === "interface" && (
-                <>
-                  <SettingsGroups groups={appearanceGroups} onChange={(_id, v) => setThemePreference(v)} />
-                  <SettingsGroups groups={interfaceGroups} onChange={setSetting} />
-                </>
+                <SettingsGroups groups={[...appearanceGroups, ...interfaceGroups]}
+                  onChange={(id, v) => (id === "theme" ? setThemePreference(v) : setSetting(id, v))} />
               )}
 
               {tab === "backup" && (
-                <div className="settings-pane wide">
-                  <h3>Local Backups</h3>
-                  <p className="page-sub">OpenFlow auto-backs up your data every 30 minutes. Restore any snapshot below.</p>
+                <Card className="settings-pane wide" title="Local backups">
+                  <p className="settings-card-desc">OpenFlow auto-backs up your data every 30 minutes. Restore any snapshot below.</p>
                   <div className="btn-row" style={{ marginBottom: 8 }}>
                     <Button variant="primary" disabled={busy} onClick={() => run("Backup now", async () => { const r = await api.createBackup(); setBackups(await api.backups()); return r; })}>Backup now</Button>
                     {backups.dir && (
@@ -181,13 +231,12 @@ export default function Settings() {
                     </div>
                   ))}
                   {out && <pre className="settings-out">{out}</pre>}
-                </div>
+                </Card>
               )}
 
               {tab === "troubleshooting" && (
-                <div className="settings-pane">
-                  <h3>Troubleshooting <Badge>destructive</Badge></h3>
-                  <p className="page-sub" style={{ marginBottom: 12 }}>
+                <Card className="settings-pane" title="Device data">
+                  <p className="settings-card-desc">
                     Actions that erase device data, kept apart from the safe, read-only diagnostics.
                     Those (lighting restore, SPI self-test, diagnostics report, dump settings) live on
                     the <strong>Information &rsaquo; Troubleshooting</strong> tab.
@@ -267,12 +316,11 @@ export default function Settings() {
                       )}
                     </>} />
                   {out && <pre className="settings-out">{out}</pre>}
-                </div>
+                </Card>
               )}
 
               {tab === "logging" && (
-                <div className="settings-pane wider">
-                  <h3>Logging &amp; Diagnostics</h3>
+                <Card className="settings-pane wider" title="Logging & diagnostics">
                   <SettingRow label="Diagnostics Report" desc="Collects system + device info to help debug issues."
                     control={<Button disabled={busy} onClick={() => run("Diagnostics", api.diagnostics)}>Generate</Button>} />
                   <SettingRow bare className="settings-log-head" label="Device I/O log"
@@ -302,12 +350,11 @@ export default function Settings() {
                       </div>
                     )}
                   {out && <pre className="settings-out">{out}</pre>}
-                </div>
+                </Card>
               )}
 
               {tab === "software" && (
-                <div className="settings-pane">
-                  <h3>Software &amp; Firmware</h3>
+                <Card className="settings-pane" title="Software & firmware">
 
                   <KVRow k="OpenFlow" v={sys?.backendVersion} />
                   <KVRow k="OS" v={sys ? `${sys.os} ${sys.arch}` : null} />
@@ -397,7 +444,7 @@ export default function Settings() {
                     <a href={`https://github.com/${REPOS.companion}`} target="_blank" rel="noreferrer">Create Companion ↗</a>
                     <a href={`https://github.com/${REPOS.firmware}`} target="_blank" rel="noreferrer">Firmware ↗</a>
                   </div>
-                </div>
+                </Card>
               )}
             </>
           )}

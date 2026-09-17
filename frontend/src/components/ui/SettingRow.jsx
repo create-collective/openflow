@@ -9,22 +9,26 @@ export default function SettingRow({
 }) {
   // `bare`: the row's markup without the list padding and rule, for a heading-with-controls
   // that introduces something else (the device log) rather than one setting in a list.
+  // Label and badge, the description beneath them, and the control beside both (the
+  // storyboard's row); anything extra (a slider) runs the full width underneath.
   const cls = [bare ? "setting-bare" : "setting", className].filter(Boolean).join(" ");
   return (
     <div {...rest} className={cls}>
-      <div className="setting-head">
-        <strong>{label}</strong>
-        {badge}
-        {(control !== undefined || (changed && onReset)) && (
-          <div className="setting-ctl">
-            {changed && onReset && (
-              <button type="button" className="setting-reset" title={resetTitle} onClick={onReset}>↺ Reset</button>
-            )}
-            {control}
-          </div>
-        )}
+      <div className="setting-main">
+        <div className="setting-head">
+          <strong>{label}</strong>
+          {badge}
+        </div>
+        {desc !== undefined && <div className="setting-desc">{desc}</div>}
       </div>
-      {desc !== undefined && <div className="setting-desc">{desc}</div>}
+      {(control !== undefined || (changed && onReset)) && (
+        <div className="setting-ctl">
+          {changed && onReset && (
+            <button type="button" className="setting-reset" title={resetTitle} onClick={onReset}>↺ Reset</button>
+          )}
+          {control}
+        </div>
+      )}
       {children}
     </div>
   );

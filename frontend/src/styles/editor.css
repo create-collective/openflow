@@ -1160,21 +1160,41 @@
   height: auto;
 }
 /* Module settings */
+/* One setting, as the storyboard draws it: label and badge, the description under them, the
+   control at the right beside both, and a slider (when there is one) across the full width
+   beneath. */
 .setting {
-  padding: 16px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "main ctl" "extra extra";
+  column-gap: 16px;
+  align-items: center;
+  padding: 14px 0;
   border-bottom: 1px solid var(--border);
 }
+.setting:last-child { border-bottom: none; padding-bottom: 4px; }
+.setting-bare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "main ctl" "extra extra";
+  column-gap: 16px;
+  align-items: center;
+}
+.setting-main { grid-area: main; min-width: 0; }
 .setting-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .setting-ctl {
+  grid-area: ctl;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
 }
+.setting > .setting-slider, .setting-bare > .setting-slider { grid-area: extra; }
 .setting-reset {
   background: none;
   border: none;
@@ -1192,23 +1212,67 @@
 .setting-desc {
   color: var(--text-muted);
   font-size: 12px;
-  margin-bottom: 10px;
+  margin-top: 3px;
 }
-/* Settings page */
+/* Settings page, storyboard view 06: the rail as a card with an icon per section; the
+   section's title, scope and one line at the top of the content; the groups as cards in two
+   columns. Centred on the same column as the bars. */
+.settings-page { max-width: var(--page-max); margin: 0 auto; }
+.settings-err { margin-bottom: 16px; }
 .settings-layout {
   display: grid;
-  grid-template-columns: 210px 1fr;
-  gap: 28px;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
 }
+.settings-rail {
+  position: sticky;
+  top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+}
+.settings-rail-title { margin: 0 0 10px 6px; font-size: 20px; font-weight: 700; }
+.settings-rail .ui-tabs-vertical .ui-tab {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+.settings-rail .ui-tabs-vertical .ui-tab:last-child { border-bottom: none; }
+.settings-rail .ui-tabs-vertical .ui-tab.active {
+  border-radius: var(--radius-md);
+  border-bottom-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.settings-glyph { flex: none; color: var(--text-dim); }
+.settings-rail .ui-tab.active .settings-glyph { color: var(--accent-text); }
+.settings-head { margin: 4px 0 16px; }
+.settings-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 22px; font-weight: 700; }
+.settings-sub { margin: 4px 0 0; color: var(--text-muted); }
+.settings-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.settings-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.settings-col > .ui-card { margin-bottom: 0; }
+.settings-card-desc { margin: -6px 0 10px; color: var(--text-muted); font-size: 13px; }
+.settings-pane.ui-card { margin-bottom: 0; }
+/* The sliders in the accent, not the browser's blue. */
+.setting-slider input[type="range"] { accent-color: var(--accent); }
 
 .settings-content h3 {
   margin: 0 0 4px;
   font-size: 15px;
 }
 /* The tab panes: a readable column, wider where a table needs it. */
-.settings-pane { max-width: 640px; }
-.settings-pane.wide { max-width: 720px; }
-.settings-pane.wider { max-width: 860px; }
+.settings-pane { max-width: 760px; }
+.settings-pane.wide { max-width: 860px; }
+.settings-pane.wider { max-width: 1000px; }
 .settings-group { margin-bottom: 28px; }
 .settings-group-desc { margin-top: -4px; }
 .settings-section { margin-top: 26px; }
@@ -1907,7 +1971,6 @@
 /* --- Settings provenance + controls (additive; nothing above is edited) ------------------- */
 /* .setting-head is space-between with two children. The badge is a third, so without this it
    would be spread to the middle instead of sitting beside its label. */
-.setting-head .ui-badge { margin-right: auto; }
 
 /* A number box beside the slider: idle_timeout_s is 0-6000 over ~600px, so dragging gives
    ~10s per pixel and the value you actually want is unreachable. */
@@ -1915,7 +1978,7 @@
   width: 88px; text-align: right; font-family: var(--font-mono);
 }
 .setting-slider {
-  display: flex; align-items: center; gap: 8px; margin-top: 6px;
+  display: flex; align-items: center; gap: 8px; margin-top: 10px;
 }
 .setting-slider input[type="range"] { flex: 1; min-width: 0; }
 .setting-bound {
