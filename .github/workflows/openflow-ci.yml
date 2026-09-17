@@ -1,9 +1,10 @@
 # OpenFlow: backend tests, frontend checks and the Playwright route walk, on every push.
 #
-# The repository root is the NayaOS monorepo, so only the three directories OpenFlow needs are
-# checked out: openflow/ itself, docs/reference/ (shortcut data the backend serves) and
-# device/userdata-snapshot/ (the database the route walk seeds from). The release matrix that
-# builds the installers lives in openflow-release.yml and runs on openflow-v* tags only.
+# The repository root is the NayaOS monorepo, so only the directories OpenFlow needs are checked
+# out: openflow/ itself, docs/reference/ (shortcut data the backend serves), device/out and
+# device/userdata-snapshot (captured device traces the backend tests decode, and the database
+# snapshot the app seeds from) and tools/ (the converters those tests exercise). The release matrix that builds the
+# installers lives in openflow-release.yml and runs on openflow-v* tags only.
 name: openflow-ci
 
 on:
@@ -35,7 +36,9 @@ jobs:
           sparse-checkout: |
             openflow
             docs/reference
+            device/out
             device/userdata-snapshot
+            tools
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
@@ -55,7 +58,9 @@ jobs:
           sparse-checkout: |
             openflow
             docs/reference
+            device/out
             device/userdata-snapshot
+            tools
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
