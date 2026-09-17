@@ -108,10 +108,12 @@ export default function ActionPalette({
         ? [{ id: "macros", label: "⚡", title: "Macros" }] : []),
     ];
     // Ordered here rather than left to whatever the catalog happens to list, because the strip
-    // is what a person scans first: the two pickers you point at, then the vocabularies, then
-    // the long tail. Anything not named falls to the end rather than disappearing.
-    const ORDER = ["keyboard", "mouse", "module", "basic", "apps", "shortcuts", "extended",
-                   "layers", "macros"];
+    // is what a person scans first: the two pickers you point at, then the key vocabularies
+    // (basic, extended, layers), then the app side (apps, shortcuts, macros); the owner set
+    // this order on 2026-09-17. Module only appears on the Modules page and keeps its place
+    // after Mouse. Anything not named falls to the end rather than disappearing.
+    const ORDER = ["keyboard", "mouse", "module", "basic", "extended", "layers", "apps",
+                   "shortcuts", "macros"];
     const rank = (id) => (ORDER.indexOf(id) === -1 ? ORDER.length : ORDER.indexOf(id));
     return all.slice().sort((a, b) => rank(a.id) - rank(b.id));
   }, [catalog, context, tabIds, filter]);

@@ -22,6 +22,8 @@ describe("ActionPalette", () => {
       expect(screen.getByRole("tab", { name })).toBeInTheDocument();
     }
     expect(screen.getByRole("tab", { name: "Keyboard" })).toHaveAttribute("aria-selected", "true");
+    // The strip's order: pickers, key vocabularies, then the app side.
+    expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["⌨Keyboard", "BBasic", "Layers", "⚡Macros"]);
     expect(screen.getByText("Assigning:")).toHaveTextContent("Assigning: A → Hold");
     const search = screen.getByRole("searchbox", { name: "Search all actions" });
     expect(search.closest(".palette-head")).not.toBeNull();
