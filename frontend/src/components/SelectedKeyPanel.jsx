@@ -11,21 +11,27 @@ import IconButton from "./ui/IconButton";
 // band puts it between the board and the palette, which is where the eye goes next.
 const HALF = { L: "Left half", R: "Right half" };
 
-// The behaviour glyphs, as the storyboard draws them: a pointing finger; one arc over the tip
-// for a tap, two for a double tap, press marks beside the tip for a hold.
+// The behaviour glyphs: a hand with the index finger raised (Tabler Icons "hand-finger",
+// MIT, Pawel Kuna), the same hand every time, with a small modifier that says what the finger
+// does: one arc over the tip for a tap, two for a double tap, a bar under the hand for a hold,
+// and the combinations. The hand is a designer's; only the arcs and the bar are ours.
+const HAND = [
+  "M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5",
+  "M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5",
+  "M14 10.5a1.5 1.5 0 0 1 3 0v1.5",
+  "M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47",
+];
+
 function BehaviorGlyph({ id }) {
   const taps = id.startsWith("double") ? 2 : id === "hold" ? 0 : 1;
   const hold = id.includes("hold");
   return (
-    <svg className="keyband-glyph" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"
-      fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      {/* the finger: a rounded stroke from the tip down, then the knuckles and the thumb */}
-      <path d="M13 9.5v9" strokeWidth="3.4" />
-      <path d="M13 18.5c0 1.6-.6 2.6-1.8 3.4-1.4.9-3.2.8-4.3-.3l-2.7-2.9c-.6-.7-.5-1.7.2-2.2.6-.5 1.5-.4 2 .1l1.6 1.6" />
-      <path d="M13 17.5h2.4c1.2 0 2.1.9 2.1 2v.3M17.5 17.8h1.6c1.2 0 2 .9 2 2v.5M21.1 18.6c1.1 0 2 .9 2 2 0 1.4-.4 3.6-1.6 5.2-.8 1-2 1.7-3.3 1.7h-6" />
-      {taps >= 1 && <path d="M8.5 6.5a6.4 6.4 0 0 1 9 0" />}
-      {taps === 2 && <path d="M5.5 3.5a10.6 10.6 0 0 1 15 0" />}
-      {hold && <path d="M6.5 11h3M16.5 11h3" />}
+    <svg className="keyband-glyph" width="24" height="30" viewBox="0 -5 24 30" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      {HAND.map((d) => <path key={d} d={d} />)}
+      {taps >= 1 && <path d="M5.5 1.5a5.7 5.7 0 0 1 8 0" />}
+      {taps === 2 && <path d="M3.5 -1.5a8.5 8.5 0 0 1 12 0" />}
+      {hold && <path d="M6.5 24.5h11" strokeWidth="2" />}
     </svg>
   );
 }
