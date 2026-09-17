@@ -706,33 +706,174 @@
   padding-top: 16px;
 }
 
-/* Bindings page: the bottom section is a content-sized group (key panel + palette)
-   centred inside the board's own column, so its centre lines up with the Create
-   map's centre on any monitor. 240px = layer-col (220px) + editor-top gap (20px). */
+/* Bindings page: the selected-key band across the top of the bottom section, the palette
+   under it at full width (the storyboard's "Selected key / Key bindings" band, then the
+   action palette). */
 .editor-bottom.bindings-bottom {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 20px;
-  padding-left: 240px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
 }
 
-.bindings-bottom > .skp {
-  flex: 0 0 400px;
+/* --- The selected-key band (components/SelectedKeyPanel) ---------------------------------- */
+.keyband {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 24px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
 }
 
-.bindings-bottom > .palette {
-  flex: 0 0 auto;
-  width: 1090px; /* tab column + gap + the virtual keyboard's ~1020px content (incl. its left pad) */
-}
-
-/* Selected key panel */
-.skp-title {
+.keyband-title {
+  margin-bottom: 10px;
   color: var(--text-muted);
+  font-size: 12px;
   font-weight: 600;
-  margin-bottom: 16px;
 }
 
+.keyband-sel {
+  padding-right: 24px;
+  border-right: 1px solid var(--border);
+}
+
+.keyband-key {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* The big keycap: the same legend the board draws for the key's tap. */
+.keyband-cap {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--bg-key);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-strong);
+  font-size: 26px;
+  font-weight: 600;
+}
+.keyband-cap.long { padding: 0 6px; font-size: 12px; text-align: center; word-break: break-word; }
+.keyband-cap.empty { background: transparent; border-style: dashed; box-shadow: none; color: var(--text-dim); }
+.keyband-cap-sub {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.keyband-text { min-width: 0; }
+.keyband-name {
+  font-size: 18px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.keyband-pos {
+  margin-left: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
+}
+.keyband-hint {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* The behaviour cards: one per slot, the selected one is what the palette writes to. */
+.keyband-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.keyband-card {
+  position: relative;
+  flex: 1 1 180px;
+  min-width: 170px;
+  max-width: 300px;
+}
+
+.keyband-card-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.keyband-card-btn:hover:not(:disabled) { border-color: var(--border-strong); background: var(--bg-hover); }
+.keyband-card-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.keyband-card.selected .keyband-card-btn {
+  border-color: var(--accent);
+  background: var(--bg-selected);
+  box-shadow: var(--ring-accent);
+}
+
+.keyband-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.keyband-glyph { flex: none; color: var(--text-muted); }
+.keyband-card.selected .keyband-glyph { color: var(--accent-text); }
+.keyband-card-label { flex: 1; font-weight: 600; }
+
+/* What the slot does, as a keycap-like chip; dashed and quiet when unassigned. */
+.keyband-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-key);
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+.keyband-act.unset {
+  background: transparent;
+  border-style: dashed;
+  color: var(--text-dim);
+  font-style: italic;
+  font-weight: 400;
+}
+.keyband-act-name { color: var(--text-dim); font-size: 12px; font-weight: 400; }
+
+.keyband-clear {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+@media (max-width: 1180px) {
+  .keyband { grid-template-columns: 1fr; }
+  .keyband-sel { padding-right: 0; border-right: none; }
+}
+
+/* Behavior -> Action rows (Modules gestures, Macros steps, Settings lists) */
 .skp-head {
   display: flex;
   gap: 12px;
@@ -948,11 +1089,6 @@
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-muted);
-}
-
-.skp-hint {
-  color: var(--text-muted);
-  margin-top: 14px;
 }
 
 /* Action palette */
