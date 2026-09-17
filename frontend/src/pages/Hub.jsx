@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { useSSE } from "../lib/useSSE";
+import { useDeviceStream } from "../lib/deviceStream";
 import Card from "../components/ui/Card";
 import { KVRow } from "../components/ui/KV";
 import Notice from "../components/ui/Notice";
@@ -8,7 +8,7 @@ import Notice from "../components/ui/Notice";
 export default function Hub() {
   const [sys, setSys] = useState(null);
   const [err, setErr] = useState(null);
-  const { data: deviceStream, connected } = useSSE("sse:naya-devices-stream");
+  const { data: deviceStream, connected } = useDeviceStream();
 
   useEffect(() => {
     api.systemInfo().then(setSys).catch((e) => setErr(e.message));

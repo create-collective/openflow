@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import IconButton from "./ui/IconButton";
 
-// Profile selector: switch profiles, plus a 3-dot menu (Rename / Duplicate /
-// Export / Load from file / Delete). Sits above the layer list.
-export default function ProfileBar({
+// The profile dropdown: switch profiles, plus a 3-dot menu (Rename / Duplicate / Export /
+// Load from file / Delete). Sits above the layer list today; the shell's persistent profile
+// bar will host the same control, which is why this is ProfileMenu and not ProfileBar.
+export default function ProfileMenu({
   profiles,
   activeProfileId,
   onSwitch,

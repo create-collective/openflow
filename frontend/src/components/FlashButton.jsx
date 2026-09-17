@@ -2,6 +2,8 @@ import { useState } from "react";
 import { invalidateDeviceState, setModuleRead } from "../lib/deviceState";
 import useDoneFlag from "../lib/useDoneFlag";
 import { api } from "../lib/api.js";
+import { getActiveProfileId } from "../lib/activeProfile";
+import { hasReadDevice } from "../lib/deviceActions";
 import Button from "./ui/Button";
 import Modal from "./ui/Modal";
 import Notice from "./ui/Notice";
@@ -13,27 +15,13 @@ import Toggle from "./ui/Toggle";
 // frame's ack, and verifies by reading the device back. The pre-flash read comes back in
 // the result as a backup.
 
-// The profile the Bindings page has selected. A flash MUST name one: the layers table spans
-// every profile, so an unscoped plan would write whichever one the DB happened to return last.
-// If nothing is selected we send nothing and let the backend refuse by name -- better than
-// guessing which keymap goes on the keyboard.
+// The active profile (lib/activeProfile, shared with every page). A flash MUST name one: the
+// layers table spans every profile, so an unscoped plan would write whichever one the DB
+// happened to return last. If nothing is selected we send nothing and let the backend refuse
+// by name, better than guessing which keymap goes on the keyboard. The read gate
+// (hasReadDevice) lives with the read itself in lib/deviceActions.
 function activeProfileId() {
-  try {
-    return localStorage.getItem("openflow.activeProfile") || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-// Has the keyboard been read in this app session? The normal flow is connect -> read ->
-// edit -> flash, so that the plan is built against the board's real state. Without a read the
-// app is guessing at what it is overwriting.
-function hasReadDevice() {
-  try {
-    return Boolean(sessionStorage.getItem("openflow.deviceRead"));
-  } catch {
-    return false;
-  }
+  return getActiveProfileId() || undefined;
 }
 
 function summarize(ops) {

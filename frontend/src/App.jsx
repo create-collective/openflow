@@ -4,7 +4,7 @@ import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { hydrateDeviceState, invalidateDeviceState } from "./lib/deviceState";
 import { api } from "./lib/api";
 import { applyInterfaceScaling, scalingFromSettings } from "./lib/scaling";
-import { useSSE } from "./lib/useSSE";
+import { useDeviceStream } from "./lib/deviceStream";
 import DeviceChip from "./components/DeviceChip";
 import DialogHost from "./components/ui/ConfirmDialog";
 import Hub from "./pages/Hub.jsx";
@@ -36,7 +36,7 @@ const NAV = [
 ];
 
 function Sidebar() {
-  const { data, connected } = useSSE("sse:naya-devices-stream");
+  const { data, connected } = useDeviceStream();
   // If we lose the backend we can no longer vouch for what is on the keyboard.
   useEffect(() => {
     if (!connected) invalidateDeviceState("disconnected");

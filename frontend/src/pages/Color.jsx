@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FlashButton from "../components/FlashButton.jsx";
 import { api } from "../lib/api";
 import { hsvToHex, isValidHex, deviceColor } from "../lib/color";
-import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
+import useProfileEditor from "../lib/useProfileEditor";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
-import ProfileBar from "../components/ProfileBar";
+import ProfileMenu from "../components/ProfileMenu";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Notice from "../components/ui/Notice";
@@ -15,7 +15,7 @@ const BASE_SWATCHES = [
   null, "#ff0000", "#ff6f00", "#ffe500", "#00ff00", "#00ffd9", "#0000ff", "#6f00ff", "#ffffff",
 ];
 // ZMK-style RGB animations NayaFlow exposed.
-// The device's own animation enum, byte 2 of each layer-list entry. Order matters -- it is the
+// The device's own animation enum, byte 2 of each layer-list entry. Order matters: it is the
 // same table the LED keypress records use (keymap_read.LAYER_ANIMATIONS), confirmed against a
 // probe board carrying a different effect on each layer.
 const ANIMATIONS = [
@@ -30,104 +30,31 @@ const TOOLS = [
   { id: "pipette", label: "Pipette", icon: "💧" },
 ];
 
+// The LED map: the same layers and board as Bindings, painted instead of bound. Profiles,
+// layers and their handlers come from useProfileEditor (shared with Bindings); what stays here
+// is the painting: the brush, the tool, the swatches and the colour creator.
 export default function Color() {
-  const [profiles, setProfiles] = useState([]);
-  const [activeProfileId, setActiveProfileId] = useState(() => {
-    try { return localStorage.getItem("openflow.activeProfile") || null; } catch { return null; }
-  });
-  const [activeLayerId, setActiveLayerId] = useState(null);
+  const ed = useProfileEditor();
+  const { profile, layer, keysByPosition, layerMap } = ed;
   const [brush, setBrush] = useState("#00ff00");
   const [tool, setTool] = useState("brush");
   const [swatches, setSwatches] = useState(BASE_SWATCHES);
-  const [err, setErr] = useState(null);
   // Custom color creator state
   const [showCreator, setShowCreator] = useState(false);
   const [hue, setHue] = useState(120);
   const [sat, setSat] = useState(100);
   const [hex, setHex] = useState("#00ff00");
-  // The action catalogue, purely for its `names` -- KeymapBoard needs it to draw NayaFlow's
+  // The action catalogue, purely for its `names`: KeymapBoard needs it to draw NayaFlow's
   // keycap icons. Without it `names` defaults to {} and every cap silently falls back to its
   // text legend, which is why this board used to render in a different face and size from the
   // identical board on Bindings.
   const [names, setNames] = useState({});
 
-  const load = useCallback(async () => {
-    try {
-      const [ud, acts] = await Promise.all([api.userdata(), api.actions()]);
-      setProfiles(ud.profiles || []);
-      setNames(acts?.names || {});
-    } catch (e) {
-      setErr(e.message);
-    }
-  }, []);
-  useEffect(() => { load(); }, [load]);
-
-  const profile = useMemo(
-    () => profiles.find((p) => p.id === activeProfileId) || profiles[0] || null,
-    [profiles, activeProfileId]
-  );
-
   useEffect(() => {
-    if (!profile) return;
-    if (!profile.layers.some((l) => l.id === activeLayerId)) {
-      setActiveLayerId(profile.layers[0]?.id || null);
-    }
-  }, [profile, activeLayerId]);
-
-  const layer = useMemo(
-    () => profile?.layers.find((l) => l.id === activeLayerId) || profile?.layers[0] || null,
-    [profile, activeLayerId]
-  );
-
-  function persistProfile(id) {
-    try { localStorage.setItem("openflow.activeProfile", id || ""); } catch { /* ignore */ }
-  }
-  function switchProfile(id) {
-    setActiveProfileId(id);
-    persistProfile(id);
-    const p = profiles.find((x) => x.id === id);
-    setActiveLayerId(p?.layers[0]?.id || null);
-  }
-  const profileHandlers = {
-    onSwitch: switchProfile,
-    onNew: async () => { const r = await api.createProfile("New Profile"); await load(); switchProfile(r.id); },
-    onRename: async (id, name) => { await api.renameProfile(id, name); await load(); },
-    onDuplicate: async (id) => { const r = await api.duplicateProfile(id); await load(); switchProfile(r.id); },
-    onDelete: async (id) => { await api.deleteProfile(id); persistProfile(null); setActiveProfileId(null); await load(); },
-    onExport: async (id) => {
-      const data = await api.exportProfile(id);
-      downloadJSON(`${safeName(profiles.find((p) => p.id === id)?.name)}.openflow-profile.json`, data);
-    },
-    onImport: async () => {
-      try {
-        const data = await pickJSONFile();
-        if (!data) return;
-        const r = await api.importProfile(data);
-        await load();
-        switchProfile(r.id);
-      } catch (e) { setErr(e.message); }
-    },
-  };
-  const layerFileHandlers = {
-    onExportLayer: async (id) => {
-      const data = await api.exportLayer(id);
-      const l = profile.layers.find((x) => x.id === id);
-      downloadJSON(`${safeName(l?.name)}.openflow-layer.json`, data);
-    },
-    onImportLayer: async () => {
-      try {
-        const data = await pickJSONFile();
-        if (!data || !profile) return;
-        await api.importLayer(profile.id, data);
-        await load();
-      } catch (e) { setErr(e.message); }
-    },
-  };
-  const keysByPosition = useMemo(() => {
-    const map = {};
-    layer?.keys.forEach((k) => (map[k.positionId] = k));
-    return map;
-  }, [layer]);
+    let alive = true;
+    api.actions().then((acts) => { if (alive) setNames(acts?.names || {}); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   // What the BOARD will look like after a flash. The device stores hue + SATURATION and no
   // per-key brightness, so every fully-bright colour survives exactly and dark ones come back
@@ -144,20 +71,13 @@ export default function Color() {
 
   const brushDevice = deviceColor(brush);
 
-  // Resolved once per swatch rather than three times per swatch per render -- and, more to the
+  // Resolved once per swatch rather than three times per swatch per render, and, more to the
   // point, `deviceColor` returns null for anything that is not a valid hex, so calling it inline
   // in both the title and the chip meant one bad swatch value would throw and blank the page.
   const swatchViews = useMemo(
     () => swatches.map((c) => ({ c, dev: deviceColor(c) })),
     [swatches]
   );
-
-  // layerId -> index, so layer-switch keys show "layers icon + number" in the LED view too.
-  const layerMap = useMemo(() => {
-    const m = {};
-    profile?.layers.forEach((l, i) => (m[l.id] = i));
-    return m;
-  }, [profile]);
 
   async function onKey(positionId) {
     if (!layer) return;
@@ -173,9 +93,9 @@ export default function Color() {
       } else {
         await api.setKeyColor({ layerId: layer.id, positionId, colorHex: value });
       }
-      await load();
+      await ed.reload();
     } catch (e) {
-      setErr(e.message);
+      ed.setErr(e.message);
     }
   }
 
@@ -207,35 +127,36 @@ export default function Color() {
     if (!layer) return;
     try {
       await api.setModuleLed({ layerId: layer.id, side, colorHex });
-      await load();
-    } catch (e) { setErr(e.message); }
+      await ed.reload();
+    } catch (e) { ed.setErr(e.message); }
   }
 
   async function setAnimation(anim) {
     if (!layer) return;
-    await api.setLayerAnimation({ layerId: layer.id, animation: anim });
-    await load();
+    try {
+      await api.setLayerAnimation({ layerId: layer.id, animation: anim });
+      await ed.reload();
+    } catch (e) { ed.setErr(e.message); }
   }
 
   if (!profile) {
-    return <div><h1 className="page-title">LED Map</h1><Card><div className="empty">{err || "Loading…"}</div></Card></div>;
+    return <div><h1 className="page-title">LED Map</h1><Card><div className="empty">{ed.error || "Loading…"}</div></Card></div>;
   }
 
   return (
     <div className="editor">
       <div className="editor-top">
         <div className="layer-col">
-          <ProfileBar profiles={profiles} activeProfileId={profile.id} {...profileHandlers} />
+          <ProfileMenu profiles={ed.profiles} activeProfileId={profile.id} {...ed.profileHandlers} />
           <LayerList
+            profiles={ed.profiles.filter((p) => p.id !== profile.id)}
             layers={profile.layers}
             activeLayerId={layer?.id}
-            onSelect={(id) => setActiveLayerId(id)}
-            onAdd={async (name) => { const r = await api.createLayer(profile.id, name); await load(); setActiveLayerId(r.id); }}
-            onRename={async (id, name) => { await api.renameLayer(id, name); await load(); }}
-            onDuplicate={async (id) => { await api.duplicateLayer(id); await load(); }}
-            onDelete={async (id) => { await api.deleteLayer(id); if (activeLayerId === id) setActiveLayerId(null); await load(); }}
-            onSetBase={async (id) => { await api.setBaseLayer(id); await load(); }}
-            {...layerFileHandlers}
+            onSelect={(id) => ed.setActiveLayerId(id)}
+            notice={ed.layerNotice}
+            onDismissNotice={() => ed.setLayerNotice(null)}
+            {...ed.layerHandlers}
+            {...ed.layerFileHandlers}
           />
         </div>
         <div className="board-wrap">
@@ -253,7 +174,7 @@ export default function Color() {
         </div>
       </div>
 
-      {err && <Notice tone="err" style={{ margin: "8px 0" }}>{err}</Notice>}
+      {ed.error && <Notice tone="err" style={{ margin: "8px 0" }}>{ed.error}</Notice>}
 
       <div className="editor-bottom" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <div>
@@ -278,6 +199,7 @@ export default function Color() {
               {swatchViews.map(({ c, dev }, i) => (
                 <button
                   key={i}
+                  type="button"
                   className={"swatch" + (brush === c ? " active" : "") + (c ? "" : " off")}
                   style={c ? { background: c } : undefined}
                   onClick={() => { setBrush(c); if (c) setHex(c); }}
@@ -288,7 +210,7 @@ export default function Color() {
                   )}
                 </button>
               ))}
-              <button className="swatch add" title="Create color" onClick={() => setShowCreator((v) => !v)}>+</button>
+              <button type="button" className="swatch add" title="Create color" onClick={() => setShowCreator((v) => !v)}>+</button>
             </div>
 
             {showCreator && (
@@ -328,7 +250,7 @@ export default function Color() {
         <Card title="Animations">
           {/* This card really was app-only until 2026-09-08, and the reason it looked that way
               is worth keeping: the animation is byte 2 of the layer's entry in the DEVICE'S LAYER
-              LIST, and every board we had ever captured was set to solid on every layer -- so the
+              LIST, and every board we had ever captured was set to solid on every layer, so the
               byte read 0x00 everywhere we looked and sat in the parser as an unnamed constant.
               Worse, the encoder hardcoded 0x00, so any flash that wrote the layer list silently
               reset all three layers to solid. A probe profile with a different effect per layer
@@ -340,6 +262,7 @@ export default function Color() {
             {ANIMATIONS.map((a) => (
               <button
                 key={a.id || "none"}
+                type="button"
                 className={"anim-item" + ((layer?.animationId || null) === a.id ? " active" : "")}
                 onClick={() => setAnimation(a.id)}
               >
