@@ -27,7 +27,7 @@
       "inlineStyles": 0
     },
     "components/VirtualKeyboard.jsx": {
-      "inlineStyles": 5
+      "inlineStyles": 4
     },
     "lib/color.js": {
       "colorLiterals": 6
