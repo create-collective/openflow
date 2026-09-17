@@ -8,8 +8,8 @@ import { KVList, KVRow } from "./KV";
 // A Track has a left and a right unit; the picture follows the bay it is docked in.
 function moduleImg(type, side) {
   const t = String(type || "").toLowerCase();
-  if (t === "track") return `/modules/track-${side === "right" ? "right" : "left"}.png`;
-  return t === "touch" || t === "tune" ? `/modules/${t}.png` : null;
+  if (t === "track") return `/modules/v2/track-${side === "right" ? "right" : "left"}.png`;
+  return t === "touch" || t === "tune" ? `/modules/v2/${t}.png` : null;
 }
 
 function batt(pct) {

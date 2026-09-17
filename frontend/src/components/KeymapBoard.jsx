@@ -14,9 +14,9 @@ import {
 // Track's left and right modules are physically different parts, not one module mirrored,
 // so each gets its own artwork. Touch and Tune are symmetric and use a single image.
 const MODULE_IMG = {
-  track: { left: "/modules/track-left.png", right: "/modules/track-right.png" },
-  touch: "/modules/touch.png",
-  tune: "/modules/tune.png",
+  track: { left: "/modules/v2/track-left.png", right: "/modules/v2/track-right.png" },
+  touch: "/modules/v2/touch.png",
+  tune: "/modules/v2/tune.png",
 };
 
 // `side` is the bay the module sits in, so a Track always renders the artwork for the

@@ -17,7 +17,7 @@ const SLOTS = [
 ];
 
 const moduleImg = (type, side) =>
-  type === "track" ? `/modules/track-${side === "right" ? "right" : "left"}.png` : `/modules/${type}.png`;
+  type === "track" ? `/modules/v2/track-${side === "right" ? "right" : "left"}.png` : `/modules/v2/${type}.png`;
 
 export default function ModuleProfileList({ bays, docked = {}, boardKnown = false }) {
   if (!bays) return null;

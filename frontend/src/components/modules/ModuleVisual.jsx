@@ -6,11 +6,11 @@ export default function ModuleVisual({ type, activeButton, side = "left" }) {
   let src;
   if (type === "TRACK") {
     const m = /button_(\d)/.exec(activeButton || "");
-    src = `/modules/track-${side === "right" ? "right" : "left"}-${m ? m[1] : "1"}.png`;
+    src = `/modules/v2/track-${side === "right" ? "right" : "left"}-${m ? m[1] : "1"}.png`;
   } else if (type === "TUNE") {
-    src = "/modules/tune.png";
+    src = "/modules/v2/tune.png";
   } else {
-    src = "/modules/touch.png";
+    src = "/modules/v2/touch.png";
   }
   return (
     <div className="mod-visual">
