@@ -25,7 +25,13 @@ export default function BoardFit({ children }) {
         for (const c of split.children) if (!c.contains(el)) aside += c.getBoundingClientRect().width;
         aside += parseFloat(getComputedStyle(split).columnGap) || 0;
       }
-      const z = Math.min(1, Math.max(0.5, (inner - aside) / natural));
+      // The card around the board has padding and a border of its own; they are not board.
+      const wrap = el.parentElement ? getComputedStyle(el.parentElement) : null;
+      const frame = wrap
+        ? parseFloat(wrap.paddingLeft) + parseFloat(wrap.paddingRight)
+          + parseFloat(wrap.borderLeftWidth) + parseFloat(wrap.borderRightWidth)
+        : 0;
+      const z = Math.min(1, Math.max(0.5, (inner - aside - frame) / natural));
       el.style.zoom = z.toFixed(4);
     };
     fit();

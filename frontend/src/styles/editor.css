@@ -314,9 +314,9 @@
 }
 
 /* Board */
-/* As wide as the board and at the column's left edge, right after the layer list, so the
-   header above it (the layer's name, the LED colours toggle) starts on the top-left key's
-   left edge and there is no blank run between the list and the board. */
+/* The board in a card, as the storyboard frames it, so the area reads as one thing to click
+   into: as wide as the board plus its padding, at the column's left edge right after the
+   layer list, the header (the layer's name, the LED colors toggle) at its top-left. */
 .board-wrap {
   display: flex;
   flex-direction: column;
@@ -324,6 +324,11 @@
   width: fit-content;
   max-width: 100%;
   justify-self: start;
+  box-sizing: border-box;
+  padding: 14px 18px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
 }
 /* components/BoardFit: the board at the scale that fits; the wrapper is exactly its size. */
 .board-fit { width: fit-content; }

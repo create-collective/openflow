@@ -52,6 +52,10 @@ function dataDir() {
 // directory on Windows and macOS), and following OPENFLOW_DATA_DIR like the backend does. Must
 // precede the single-instance lock: its lock file lives in userData.
 app.setPath("userData", path.join(dataDir(), "shell"));
+// Windows keys the taskbar button by this id. The packaged build gets it from electron-builder
+// (appId); unpackaged, the app had none and the button wore the electron.exe icon whatever the
+// window carried.
+app.setAppUserModelId("io.github.traviswye.openflow");
 
 function sidecarLogPath() {
   return path.join(dataDir(), "logs", "sidecar.log");
