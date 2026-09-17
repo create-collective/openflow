@@ -1084,6 +1084,13 @@
   font: inherit;
 }
 
+/* The module pictures (public/modules/*.png) are grey line art drawn for the dark theme; on a
+   light ground the grey reads washed out and its anti-aliasing shows. Darkened and given
+   more contrast there, wherever one is drawn. */
+[data-theme="light"] img[src^="/modules/"] {
+  filter: brightness(0.55) contrast(1.35);
+}
+
 /* Module visuals */
 .mod-visual {
   display: flex;

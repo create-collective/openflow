@@ -360,8 +360,16 @@ async def status(verbose: bool = False) -> dict:
     time rather than re-opening the port on every mount."""
     svc = get_service()
     halves = await run_in_threadpool(svc.status_all, verbose)
-    saved = await run_in_threadpool(dstate.save_status, halves, verbose)
-    out = {"halves": halves, "at": saved["at"]}
+    # An empty reading (nothing answered: unplugged, or the port busy with a keymap read a
+    # moment earlier) is not worth remembering over the last one that saw the keyboard. The
+    # pages paint their bays and halves from this cache, and persisting a blank wiped them
+    # on every load until the next good read.
+    if halves:
+        saved = await run_in_threadpool(dstate.save_status, halves, verbose)
+        at = saved["at"]
+    else:
+        at = dstate.now_stamp()
+    out = {"halves": halves, "at": at}
     # A half in MCUboot enumerates under a different product id and answers none of the normal
     # protocol, so without this it is not merely unidentified -- it does not appear at all, and
     # the page looks the same as if it were unplugged.

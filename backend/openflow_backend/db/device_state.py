@@ -42,6 +42,11 @@ def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def now_stamp() -> str:
+    """The timestamp format the persisted rows use, for a caller that has nothing to persist."""
+    return _now()
+
+
 def _write(conn, payload: dict, key: str = KEY) -> None:
     now = _now()
     blob = json.dumps(payload)

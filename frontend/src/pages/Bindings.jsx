@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
-import { readDockedModules, lastDockedModules } from "../lib/dockedModules";
+import { baysFromHalves, readDockedModules, lastDockedModules } from "../lib/dockedModules";
+import { useDeviceStream } from "../lib/deviceStream";
 import { subscribeDeviceState, getDeviceState, deviceHasBeenRead } from "../lib/deviceState";
 import { setShortcutTable } from "../lib/shortcutNames";
 import { POS_LABEL } from "../lib/layout";
@@ -44,6 +45,7 @@ export default function Bindings() {
   const [moduleAssign, setModuleAssign] = useState({ left: null, right: null });
   const navigate = useNavigate();
   const deviceRead = useSyncExternalStore(subscribeDeviceState, getDeviceState).modules;
+  const { data: stream } = useDeviceStream();
 
   function setAssign(patch) {
     setModuleAssign((prev) => ({ ...prev, ...patch }));
@@ -70,21 +72,34 @@ export default function Bindings() {
   }, []);
   useEffect(() => { loadExtras(); }, [loadExtras]);
 
-  // Replace the hand-placed bays with what the board reports is actually docked. Best effort:
-  // the keymap read has already succeeded by this point, so a module query that fails should
-  // not turn a good read into an error.
+  // Only a status that actually saw a module may repaint a bay. Right after a keymap read the
+  // port can still be busy and the status comes back with no halves at all; painting THAT
+  // blanked both bays and, since the backend keeps the last status, blanked them on the next
+  // load too. An empty answer is "unknown", not "nothing docked".
+  function paintBays(b) {
+    if (b && (b.left || b.right)) setAssign(b);
+  }
+
+  // After a read, ask the board what is docked. Best effort: the keymap read has already
+  // succeeded, so a module query that fails must not turn a good read into an error.
   async function syncDockedModules() {
     try {
-      setAssign(await readDockedModules(api));
+      paintBays(await readDockedModules(api));
     } catch { /* leave the existing assignment alone */ }
   }
 
-  // Paint the bays from the last persisted status on mount, without touching the port.
+  // Paint the bays from the last persisted status on mount, without touching the port...
   useEffect(() => {
     let alive = true;
-    lastDockedModules(api).then((b) => { if (alive) setAssign(b); }).catch(() => {});
+    lastDockedModules(api).then((b) => { if (alive) paintBays(b); }).catch(() => {});
     return () => { alive = false; };
   }, []);
+  // ...and from then on follow the devices stream: the six-second poll already says which
+  // module sits in which bay (it is what the profile bar shows), so the bays track a module
+  // being docked or swapped without anyone pressing Read.
+  useEffect(() => {
+    paintBays(baysFromHalves(stream?.status?.halves));
+  }, [stream]);
 
   // A read (from the profile bar) has already reloaded the profiles and switched to the one it
   // produced; what is left is this page's own follow-up.
