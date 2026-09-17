@@ -1,0 +1,97 @@
+# OpenFlow release builds: the installers, on openflow-v* tags (or by hand).
+#
+# Each runner freezes the backend for its own platform (PyInstaller builds for the host), builds
+# the renderer, runs the sidecar smoke test against the frozen result, and hands it to
+# electron-builder. Windows first (nsis + portable); macOS (dmg, unsigned) and Linux (AppImage)
+# join the matrix under SCRUM-70. Everyday checks live in openflow-ci.yml.
+name: openflow-release
+
+on:
+  push:
+    tags:
+      - "openflow-v*"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+    working-directory: openflow
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win nsis portable
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"     # unsigned builds: do not go looking for certificates
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            openflow
+            docs/reference
+            device/userdata-snapshot
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: backend with the build extra
+        working-directory: openflow/backend
+        run: pip install -e ".[build]"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            openflow/package-lock.json
+            openflow/frontend/package-lock.json
+      - name: npm ci (shell and renderer)
+        run: |
+          npm ci
+          npm --prefix frontend ci
+      - name: the tag names the version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_NAME}" != "openflow-v${v}" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match version ${v} (bump __version__, npm run version:sync)"
+            exit 1
+          fi
+      - name: build (version check, renderer, sidecar, sidecar smoke, electron-builder)
+        run: npm run build:app -- ${{ matrix.target }}
+      - name: checksums
+        run: |
+          node -e '
+            const fs = require("fs"), crypto = require("crypto");
+            const out = fs.readdirSync("release").filter(f => /\.(exe|dmg|AppImage)$/.test(f))
+              .map(f => crypto.createHash("sha256").update(fs.readFileSync("release/" + f)).digest("hex") + "  " + f);
+            fs.writeFileSync("release/SHA256SUMS-" + process.platform + ".txt", out.join("\n") + "\n");
+            console.log(out.join("\n"));'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openflow-${{ matrix.os }}
+          path: |
+            openflow/release/*.exe
+            openflow/release/*.dmg
+            openflow/release/*.AppImage
+            openflow/release/SHA256SUMS-*.txt
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
