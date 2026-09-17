@@ -16,8 +16,11 @@ sys.path.insert(0, str(_BACKEND / "openflow_backend" / "_vendor"))
 
 from openflow_backend import report  # noqa: E402
 
+# Cleared before every test: on a machine that is actually configured for reporting, these
+# would otherwise leak in and the no-sink cases would pass for the wrong reason.
 _ENV = ("OPENFLOW_JIRA_EMAIL", "OPENFLOW_JIRA_TOKEN", "OPENFLOW_JIRA_URL",
-        "OPENFLOW_JIRA_PROJECT", "OPENFLOW_JIRA_PARENT", "OPENFLOW_JIRA_SPRINT")
+        "OPENFLOW_JIRA_PROJECT", "OPENFLOW_JIRA_PARENT", "OPENFLOW_JIRA_SPRINT",
+        "OPENFLOW_JIRA_WEBHOOK")
 
 
 class _Svc:
@@ -102,3 +105,41 @@ def test_a_title_is_never_empty_and_never_multiline():
     out = report.file_report(_Svc(), {"title": "   ", "happened": "z"}, {"app": {}})
     assert out["summary"] == "OpenFlow report (no title given)"
     print("  the summary is always one line and never blank")
+
+
+def test_a_webhook_alone_is_a_sink_and_is_preferred_over_a_token(monkeypatch, tmp_path):
+    """The webhook can only create, so a machine with one never reaches for the account token."""
+    _clean(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENFLOW_JIRA_WEBHOOK", "https://automation.atlassian.com/pro/hooks/abc")
+    cfg = report.jira_config()
+    assert cfg is not None and cfg["webhook"].endswith("/abc")
+
+    sent = {}
+    def fake_hook(url, summary, description, form):
+        sent.update(url=url, summary=summary, description=description, form=form)
+        return {"status": 200}
+    def fail(*a, **k):
+        raise AssertionError("the account token path must not run when a webhook is configured")
+    monkeypatch.setattr(report, "submit_to_webhook", fake_hook)
+    monkeypatch.setattr(report, "submit_to_jira", fail)
+
+    monkeypatch.setenv("OPENFLOW_JIRA_EMAIL", "someone@example.com")
+    monkeypatch.setenv("OPENFLOW_JIRA_TOKEN", "not-a-real-token")
+    out = report.file_report(_Svc(), {"title": "t", "happened": "h", "page": "/macro"},
+                             {"app": {"version": "0.1.0"}})
+    assert out["ok"] is True and out["sink"] == "webhook"
+    # Automation answers before its rule runs, so there is no key to claim.
+    assert out["key"] is None and out["url"] is None
+    assert sent["summary"] == "t" and "h" in sent["description"] and sent["form"]["page"] == "/macro"
+    print("  a webhook wins over a token, and no issue key is invented")
+
+
+def test_a_failing_webhook_still_hands_the_report_back(monkeypatch, tmp_path):
+    _clean(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENFLOW_JIRA_WEBHOOK", "https://automation.atlassian.com/pro/hooks/abc")
+    monkeypatch.setattr(report, "submit_to_webhook",
+                        lambda *a, **k: (_ for _ in ()).throw(OSError("network is down")))
+    out = report.file_report(_Svc(), {"title": "t", "happened": "h"}, {"app": {}})
+    assert out["ok"] is False and out["configured"] is True
+    assert "network is down" in out["reason"] and "h" in out["description"]
+    print("  a failed send returns the written report rather than losing it")

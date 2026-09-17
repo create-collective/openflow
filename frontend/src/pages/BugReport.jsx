@@ -176,7 +176,7 @@ export default function BugReport() {
               {busy ? "Sending…" : "Send report"}
             </Button>
             <span className="report-hint">
-              {sink === "jira" ? "Goes straight to the OpenFlow tracker."
+              {sink ? "Goes straight to the OpenFlow tracker."
                 : "No tracker is configured here, so you will be given the report to send."}
             </span>
           </div>

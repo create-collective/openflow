@@ -969,7 +969,8 @@ async def report_context(identifiers: bool = False) -> dict:
     svc = get_service()
     last = await run_in_threadpool(dstate.load_status, False)
     ctx = await run_in_threadpool(report.collect_context, svc, dl.entries(40), last)
-    ctx["sink"] = "jira" if report.jira_config() is not None else None
+    cfg = report.jira_config()
+    ctx["sink"] = None if cfg is None else ("webhook" if cfg.get("webhook") else "jira")
     return ctx if identifiers else report.redact(ctx)
 
 

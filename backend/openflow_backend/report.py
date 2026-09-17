@@ -2,15 +2,26 @@
 
 The report is assembled here rather than in the browser so it can carry things the renderer
 cannot see (the backend version, the Python it runs on, the device log) and so the SINK is a
-backend concern. Today there is one sink, Jira, and it is off unless credentials are configured
-on this machine.
+backend concern. Both sinks file into Jira, and both are off unless this machine is configured
+for one.
 
 **No secret ships with OpenFlow.** The Jira site, project, parent epic and sprint are not
-secrets and have defaults below; the account email and API token are read from the environment
-or from `<data dir>/jira.json`, neither of which is in the repository or the installer. A build
-with no credentials returns `configured: false` and the app falls back to letting the user copy
-or save the report themselves. That is deliberate: an API token is scoped to an ACCOUNT, not to
-a project, so a token inside a distributed binary would hand every reader the owner's Jira.
+secrets and have defaults below; anything that authenticates is read from the environment or
+from `<data dir>/jira.json`, neither of which is in the repository or the installer. A build
+with nothing configured returns `configured: false` and the app falls back to letting the user
+copy or save the report themselves.
+
+Two sinks, and the safer one wins when both are present:
+
+1. **An automation incoming webhook** (`webhook`). Atlassian generates and hosts the URL; the
+   secret in it can do exactly one thing, fire that one rule, which creates the issue with the
+   parent, sprint and labels the rule carries. It cannot read anything, edit anything or reach
+   another project, and regenerating the webhook rotates it. The worst an extracted URL buys
+   anyone is junk in the inbox queue. This is the one to ship to testers.
+2. **An account API token** (`email` + `token`). Full REST access, so it returns the issue key
+   and can set the sprint on create, but it authenticates as the ACCOUNT, not as a project. One
+   inside a distributed binary would hand every reader the owner's whole Jira, so it belongs on
+   a trusted machine only.
 """
 from __future__ import annotations
 
@@ -141,8 +152,8 @@ def render(form: dict, context: dict) -> str:
 
 def jira_config() -> dict | None:
     """Defaults, overlaid with `<data dir>/jira.json`, overlaid with the environment. Returns
-    None unless an account email and API token are present, since nothing can be filed without
-    them."""
+    None unless there is something to file WITH: either a webhook URL or an account email and
+    API token."""
     cfg = dict(JIRA_DEFAULTS)
     path = data_dir() / JIRA_FILE
     try:
@@ -154,16 +165,35 @@ def jira_config() -> dict | None:
         pass                                      # a malformed file must not break the page
     for key, env in (("url", "OPENFLOW_JIRA_URL"), ("project", "OPENFLOW_JIRA_PROJECT"),
                      ("parent", "OPENFLOW_JIRA_PARENT"), ("email", "OPENFLOW_JIRA_EMAIL"),
-                     ("token", "OPENFLOW_JIRA_TOKEN"), ("sprint", "OPENFLOW_JIRA_SPRINT")):
+                     ("token", "OPENFLOW_JIRA_TOKEN"), ("sprint", "OPENFLOW_JIRA_SPRINT"),
+                     ("webhook", "OPENFLOW_JIRA_WEBHOOK")):
         if os.environ.get(env):
             cfg[key] = os.environ[env]
-    if not cfg.get("email") or not cfg.get("token"):
+    if not cfg.get("webhook") and not (cfg.get("email") and cfg.get("token")):
         return None
     try:
         cfg["sprint"] = int(cfg["sprint"]) if cfg.get("sprint") not in (None, "") else None
     except (TypeError, ValueError):
         cfg["sprint"] = None
     return cfg
+
+
+def submit_to_webhook(url: str, summary: str, description: str, form: dict) -> dict:
+    """POST the report at an automation incoming webhook. The rule decides what to create, so
+    nothing here names a project, a parent or a sprint; the fields below are what the rule reads
+    as `{{webhookData.summary}}` and so on. Automation answers before the rule has run, so there
+    is no issue key to hand back -- the app says "sent", not "sent as SCRUM-123"."""
+    body = json.dumps({
+        "summary": summary,
+        "description": description,
+        "contact": (form.get("contact") or "").strip(),
+        "page": form.get("page") or "",
+        "source": "openflow-app",
+    }).encode("utf-8")
+    req = urllib.request.Request(url, data=body, method="POST",
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=_TIMEOUT_S) as r:
+        return {"status": r.status}
 
 
 def _jira_post(cfg: dict, fields: dict) -> dict:
@@ -214,6 +244,16 @@ def file_report(svc, form: dict, context: dict) -> dict:
     cfg = jira_config()
     if cfg is None:
         return {"ok": False, "configured": False, "reason": "no-sink",
+                "summary": summary, "description": description}
+    # The webhook first when both are configured: it can only create, so a machine that has one
+    # never needs to reach for the account token.
+    if cfg.get("webhook"):
+        try:
+            submit_to_webhook(cfg["webhook"], summary, description, form)
+        except Exception as e:
+            return {"ok": False, "configured": True, "reason": str(e),
+                    "summary": summary, "description": description}
+        return {"ok": True, "configured": True, "sink": "webhook", "key": None, "url": None,
                 "summary": summary, "description": description}
     try:
         res = submit_to_jira(cfg, summary, description)
