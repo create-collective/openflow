@@ -22,12 +22,12 @@ describe("ModuleProfileList", () => {
   it("lists each bay's profile with its marks", () => {
     render(<ModuleProfileList bays={bays} boardKnown />);
     expect(screen.getByText("For Layer 1 Num Pad")).toBeInTheDocument();
-    const left = screen.getByRole("button", { name: /Track · left/ });
+    const left = screen.getByRole("button", { name: /Track L/ });
     expect(within(left).getByText("Naya Track Left")).toBeInTheDocument();
     expect(within(left).getByText("live")).toBeInTheDocument();
     expect(within(left).queryByText(/base/)).not.toBeInTheDocument();
     expect(left).not.toHaveClass("pending");
-    const right = screen.getByRole("button", { name: /Track · right/ });
+    const right = screen.getByRole("button", { name: /Track R/ });
     expect(within(right).getByText("Disabled")).toBeInTheDocument();
     const touch = screen.getByRole("button", { name: /Touch/ });
     expect(within(touch).getByText("Naya Touch Windows")).toBeInTheDocument();

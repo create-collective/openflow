@@ -11,8 +11,8 @@ import Badge from "./ui/Badge";
 // the profile bar's business. It follows the four bay icons on the board as they change.
 // Clicking a row opens that profile on the Modules page.
 const SLOTS = [
-  { type: "track", side: "left", label: "Track · left" },
-  { type: "track", side: "right", label: "Track · right" },
+  { type: "track", side: "left", label: "Track L" },
+  { type: "track", side: "right", label: "Track R" },
   { type: "touch", side: null, label: "Touch" },
   { type: "tune", side: null, label: "Tune" },
 ];
