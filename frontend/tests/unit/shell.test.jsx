@@ -86,7 +86,7 @@ describe("ProfileBar", () => {
       connected: true,
       data: { status: { halves: [
         { side: "left", connected: true, batteryPercent: 80 },
-        { side: "right", connected: true, batteryPercent: 15, module: { type: "TOUCH", batteryPercent: 50 } },
+        { side: "right", connected: true, batteryPercent: 15, module: { type: "TOUCH", batteryPercent: 50, firmwareVersion: "2.1.2" } },
       ] } },
     };
     setActiveProfileId("p2");
@@ -95,6 +95,7 @@ describe("ProfileBar", () => {
     expect(screen.getByText("L")).toBeInTheDocument();
     expect(screen.getByText("R")).toBeInTheDocument();
     expect(screen.getByText("TOUCH")).toBeInTheDocument();
+    expect(screen.getByText("2.1.2")).toBeInTheDocument(); // the module firmware, in the detail
     expect(screen.getByRole("button", { name: /Back up/ })).toBeEnabled();
     expect(screen.getByRole("button", { name: /Flash to keyboard/ })).toBeInTheDocument();
 

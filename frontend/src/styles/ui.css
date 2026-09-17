@@ -264,6 +264,7 @@
 
 /* --- StatusBox: one half as its own box, two rows (the half, then its module) ------------- */
 .ui-statusbox {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -285,6 +286,27 @@
 .ui-statusbox-module b { color: var(--text); font-weight: var(--fw-semibold); }
 .ui-statusbox-modimg { flex: none; width: 18px; height: 18px; object-fit: contain; }
 .ui-batt { flex: none; color: var(--text-dim); }
+/* The detail under a box on hover or focus, in the same dress as the menus. */
+.ui-statusbox-tip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-dropdown-high);
+  min-width: 250px;
+  padding: 6px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-menu);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-align: left;
+  white-space: nowrap;
+}
+.ui-statusbox:hover .ui-statusbox-tip,
+.ui-statusbox:focus-within .ui-statusbox-tip { display: block; }
+.ui-statusbox-tip .ui-kv { padding: 5px 0; gap: 18px; }
 .ui-batt-fill { fill: var(--ok); }
 .ui-batt.low .ui-batt-fill { fill: var(--warn); }
 

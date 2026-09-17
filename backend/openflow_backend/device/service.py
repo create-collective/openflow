@@ -172,6 +172,9 @@ class DeviceService:
         # battery samples folded across ticks, keyed "side" and "side:module".
         self._live: dict[str, dict] = {}
         self._identity: dict[str, dict] = {}
+        # A docked module's firmware, read once per docking (side, address); it cannot change
+        # while docked, and the poll should not spend a round trip on it every tick.
+        self._module_fw: dict = {}
         self._samples: dict[str, list] = {}
 
     # --- connection management -------------------------------------------------
@@ -340,6 +343,14 @@ class DeviceService:
                     if addr is not None:
                         module["address"] = addr
                         module["docked"] = C.module_side_from_address(addr)
+                    # The firmware, once per docking: the profile bar shows it in the half's
+                    # detail, and status_all already reads it the expensive way.
+                    fw_key = (dev.side, addr)
+                    if fw_key not in self._module_fw:
+                        fp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_FW_VERSION))
+                        self._module_fw[fw_key] = format_fw_version(fp) if fp is not None else None
+                    if self._module_fw.get(fw_key):
+                        module["firmwareVersion"] = self._module_fw[fw_key]
                     mp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_PRECISE_BATTERY))
                     mmv = None
                     if mp is not None and len(mp) >= 2:
@@ -353,6 +364,9 @@ class DeviceService:
                         module["batteryPercent"] = _battery_percent(mmv)
                 else:
                     self._samples.pop(f"{dev.side}:module", None)
+                    # Undocked: forget its firmware, so a swap is read fresh.
+                    for k in [k for k in self._module_fw if k[0] == dev.side]:
+                        self._module_fw.pop(k, None)
                 snap["module"] = module
                 snap["at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
                 self._live[dev.side] = snap

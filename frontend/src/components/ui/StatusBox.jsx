@@ -1,6 +1,10 @@
+import { KVList, KVRow } from "./KV";
+
 // One keyboard half's live state as a box: the dot, L or R, Connected or Off, the battery as a
 // number and a glyph; then the docked module with its picture and its battery. Fed from the
 // devices stream, so it updates every six seconds. The profile bar's device chip renders two.
+// `details` ([label, value] pairs) opens under the box on hover, styled like the app's menus,
+// for what the box has no room for: firmware, millivolts, the module's firmware, the read time.
 const MODULE_IMG = {
   touch: "/modules/touch.png",
   track: "/modules/track-plain.png",
@@ -25,12 +29,14 @@ function Battery({ pct }) {
   );
 }
 
-export default function StatusBox({ side, connected, batteryPercent, module, title, className = "", ...rest }) {
+export default function StatusBox({
+  side, connected, batteryPercent, module, details = null, title, className = "", ...rest
+}) {
   const letter = side === "left" ? "L" : side === "right" ? "R" : "?";
   const cls = ["ui-statusbox", connected ? "" : "ui-statusbox-off", className].filter(Boolean).join(" ");
   const img = module && MODULE_IMG[String(module.type || "").toLowerCase()];
   return (
-    <div {...rest} className={cls} title={title}>
+    <div {...rest} className={cls} title={details ? undefined : title} tabIndex={details ? 0 : undefined}>
       <div className="ui-statusbox-row">
         <span className={"dot " + (connected ? "ok" : "err")} />
         <span className="ui-statusbox-side">{letter}</span>
@@ -59,6 +65,13 @@ export default function StatusBox({ side, connected, batteryPercent, module, tit
           </>
         )}
       </div>
+      {details && details.length > 0 && (
+        <div className="ui-statusbox-tip" role="tooltip">
+          <KVList>
+            {details.map(([k, v]) => <KVRow key={k} k={k} v={v} mono={false} />)}
+          </KVList>
+        </div>
+      )}
     </div>
   );
 }
