@@ -1760,16 +1760,14 @@
 /* A gesture row's own checks (invert, split), set off from the action text. */
 .split-toggle { margin-left: 8px; }
 
-/* The shared action palette on the Modules page. Additive only -- the Bindings rules above are
-   deliberately untouched, since editing a shared .palette rule is how this feature would
-   regress the keymap editor. */
-.modules-bottom {
-  display: block;
-}
-
+/* The shared action palette on the Modules page: the whole width of its card, like the
+   strip above it and like the palette under the Create on Bindings, so the virtual keyboard
+   fits itself to the same width there as here. Additive only -- the Bindings rules above
+   are deliberately untouched, since editing a shared .palette rule is how this feature
+   would regress the keymap editor. */
 .modules-bottom > .palette {
-  width: 1090px;
-  max-width: 100%;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 /* --- Application shortcuts tab -------------------------------------------------------------
