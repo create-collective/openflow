@@ -24,7 +24,7 @@
       "inlineStyles": 4
     },
     "components/SelectedKeyPanel.jsx": {
-      "inlineStyles": 1
+      "inlineStyles": 0
     },
     "components/VirtualKeyboard.jsx": {
       "inlineStyles": 5
