@@ -300,7 +300,7 @@ export default function Troubleshooting() {
           <div className="info-halves">
             <Card className="info-card" ruled title="Lighting">
               <div className="setting-desc" style={{ marginBottom: 10 }}>
-                Restore puts both halves back to the profile's stored colours and animation after
+                Restore puts both halves back to the profile's stored colors and animation after
                 a lighting key changed them at runtime. On and off are the plain LED commands, per
                 half.
               </div>

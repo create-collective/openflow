@@ -224,7 +224,7 @@ export default function FlashButton() {
             )}
             <ul className="flash-diff">
               <li><b>{g.layers}</b> layer{g.layers === 1 ? "" : "s"}</li>
-              <li><b>{g.colors}</b> colour map{g.colors === 1 ? "" : "s"}</li>
+              <li><b>{g.colors}</b> color map{g.colors === 1 ? "" : "s"}</li>
               {g.layerList > 0 && (
                 <li title="Tells the keyboard which layer is which. Written only when the board disagrees.">
                   layer list

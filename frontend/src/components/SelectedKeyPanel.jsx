@@ -11,18 +11,21 @@ import IconButton from "./ui/IconButton";
 // band puts it between the board and the palette, which is where the eye goes next.
 const HALF = { L: "Left half", R: "Right half" };
 
-// The behaviour glyphs: a fingertip, the taps above it, a bar under a hold.
+// The behaviour glyphs, as the storyboard draws them: a pointing finger; one arc over the tip
+// for a tap, two for a double tap, press marks beside the tip for a hold.
 function BehaviorGlyph({ id }) {
-  const taps = id.startsWith("double") ? 2 : 1;
-  const hold = id.includes("hold") || id === "hold";
+  const taps = id.startsWith("double") ? 2 : id === "hold" ? 0 : 1;
+  const hold = id.includes("hold");
   return (
-    <svg className="keyband-glyph" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"
-      fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-      <circle cx="10" cy="12" r="3" fill={id === "hold" ? "currentColor" : "none"} />
-      {id !== "hold" && <path d="M6.5 7.5a5 5 0 0 1 7 0" />}
-      {taps === 2 && <path d="M4 4.5a8.5 8.5 0 0 1 12 0" />}
-      {id === "hold" && <circle cx="10" cy="12" r="6.5" />}
-      {hold && id !== "hold" && <path d="M6 18h8" />}
+    <svg className="keyband-glyph" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      {/* the finger: a rounded stroke from the tip down, then the knuckles and the thumb */}
+      <path d="M13 9.5v9" strokeWidth="3.4" />
+      <path d="M13 18.5c0 1.6-.6 2.6-1.8 3.4-1.4.9-3.2.8-4.3-.3l-2.7-2.9c-.6-.7-.5-1.7.2-2.2.6-.5 1.5-.4 2 .1l1.6 1.6" />
+      <path d="M13 17.5h2.4c1.2 0 2.1.9 2.1 2v.3M17.5 17.8h1.6c1.2 0 2 .9 2 2v.5M21.1 18.6c1.1 0 2 .9 2 2 0 1.4-.4 3.6-1.6 5.2-.8 1-2 1.7-3.3 1.7h-6" />
+      {taps >= 1 && <path d="M8.5 6.5a6.4 6.4 0 0 1 9 0" />}
+      {taps === 2 && <path d="M5.5 3.5a10.6 10.6 0 0 1 15 0" />}
+      {hold && <path d="M6.5 11h3M16.5 11h3" />}
     </svg>
   );
 }
@@ -93,18 +96,20 @@ export default function SelectedKeyPanel({
                   aria-pressed={isActive}
                   onClick={() => onSelectSlot(slot.id)}
                 >
-                  <span className="keyband-card-head">
-                    <BehaviorGlyph id={slot.id} />
-                    <span className="keyband-card-label">{slot.label}</span>
-                    {!slot.enabled
-                      ? <Badge>{slot.experimental ? "experimental" : "soon"}</Badge>
-                      : isActive && <Badge tone="accent">Selected</Badge>}
-                  </span>
-                  {/* Text only: the big cap already shows the icon, and for a letter the
-                      icon IS the letter, so icon plus text read "A A". */}
-                  <span className={"keyband-act" + (b ? "" : " unset")} title={title}>
-                    {text || "Unassigned"}
-                    {name && <span className="keyband-act-name">{name}</span>}
+                  <span className="keyband-card-icon"><BehaviorGlyph id={slot.id} /></span>
+                  <span className="keyband-card-body">
+                    <span className="keyband-card-head">
+                      <span className="keyband-card-label">{slot.label}</span>
+                      {!slot.enabled
+                        ? <Badge>{slot.experimental ? "experimental" : "soon"}</Badge>
+                        : isActive && <Badge tone="accent">Selected</Badge>}
+                    </span>
+                    {/* A keycap, text only: the big cap already shows the icon, and for a letter
+                        the icon IS the letter, so icon plus text read "A A". */}
+                    <span className={"keyband-act" + (b ? "" : " unset")} title={title}>
+                      {text || "Unassigned"}
+                      {name && <span className="keyband-act-name">{name}</span>}
+                    </span>
                   </span>
                 </button>
                 {b && slot.enabled && (

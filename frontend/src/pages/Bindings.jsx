@@ -250,15 +250,15 @@ export default function Bindings() {
                 style={{ marginLeft: 10 }}
                 pressed={ledOutline}
                 title={ledOutline
-                  ? "Hide LED colours"
-                  : "Outline each key in its LED colour, so you can see bindings and colour groups together"}
+                  ? "Hide LED colors"
+                  : "Outline each key in its LED color, so you can see bindings and color groups together"}
                 onClick={() => {
                   const next = !ledOutline;
                   setLedOutline(next);
                   try { localStorage.setItem("openflow.ledOutline", next ? "1" : "0"); } catch { /* ignore */ }
                 }}
               >
-                ◌ LED colours
+                ◌ LED Colors
               </Button>
             </div>
           </div>

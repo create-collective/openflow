@@ -886,10 +886,11 @@
 
 .keyband-card-btn {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 12px;
   width: 100%;
-  padding: 12px 14px;
+  min-height: 92px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-panel);
@@ -906,34 +907,45 @@
   box-shadow: var(--ring-accent);
 }
 
+.keyband-card-icon { flex: none; display: inline-flex; padding-top: 2px; }
+.keyband-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .keyband-card-head {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 22px;
 }
 .keyband-glyph { flex: none; color: var(--text-muted); }
 .keyband-card.selected .keyband-glyph { color: var(--accent-text); }
-.keyband-card-label { flex: 1; font-weight: 600; }
+.keyband-card-label { flex: 1; font-size: 15px; font-weight: 600; }
 
-/* What the slot does, as a keycap-like chip; dashed and quiet when unassigned. */
+/* What the slot does, as a keycap: a 40px cap for a key, wider for a name; dashed and quiet
+   when unassigned. */
 .keyband-act {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   align-self: flex-start;
+  min-width: 44px;
   max-width: 100%;
-  padding: 6px 12px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 14px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--bg-key);
+  box-shadow: var(--shadow-sm);
   color: var(--text-strong);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
 }
 .keyband-act.unset {
   background: transparent;
   border-style: dashed;
+  box-shadow: none;
   color: var(--text-dim);
+  font-size: 13px;
   font-style: italic;
   font-weight: 400;
 }

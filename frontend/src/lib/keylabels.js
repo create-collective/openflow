@@ -63,10 +63,10 @@ const LED_TEXT = {
   LED_BRIGHTNESS_DOWN: "Brightness down",
   LED_SPEED_UP: "Effect speed up",
   LED_SPEED_DOWN: "Effect speed down",
-  LED_COLOR_WHITE: "Lighting colour: white",
-  LED_COLOR_RED: "Lighting colour: red",
-  LED_COLOR_GREEN: "Lighting colour: green",
-  LED_COLOR_BLUE: "Lighting colour: blue",
+  LED_COLOR_WHITE: "Lighting color: white",
+  LED_COLOR_RED: "Lighting color: red",
+  LED_COLOR_GREEN: "Lighting color: green",
+  LED_COLOR_BLUE: "Lighting color: blue",
 };
 
 export function actionText(binding, layerMap) {

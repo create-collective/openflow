@@ -188,7 +188,7 @@ export default function Color() {
           <Card title="LED Color Palette">
             <p className="page-sub" style={{ marginBottom: 10 }}>
               The keyboard stores a hue and a saturation — <strong>brightness is a keyboard-wide
-              setting</strong>, not per key. So pale colours and white come out exactly as
+              setting</strong>, not per key. So pale colors and white come out exactly as
               picked, while dark ones light up at full brightness. The board above shows the
               real result.
             </p>
@@ -221,7 +221,7 @@ export default function Color() {
                     onChange={(e) => { setSat(+e.target.value); }} onInput={() => applyCreator(true)} />
                 </label>
                 <div className="creator-row">
-                  <div className="creator-preview" title="The colour you picked"
+                  <div className="creator-preview" title="The color you picked"
                     style={{ background: isValidHex(hex) ? hex : "#000" }} />
                   <span className="creator-arrow" aria-hidden="true">→</span>
                   <div className="creator-preview" title="How the keyboard will light it"
