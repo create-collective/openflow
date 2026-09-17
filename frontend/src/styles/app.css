@@ -138,9 +138,12 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Sized to the profile's name, so a "Read from keyboard 2026-09-03 13:34" reads whole; the
+   notes to its right give way first, the halves and the actions never do. */
 .shell-bar-profile {
-  flex: none;
-  width: 260px;
+  flex: 0 1 auto;
+  min-width: 260px;
+  max-width: 560px;
 }
 
 .shell-bar-empty {
