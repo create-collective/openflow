@@ -302,6 +302,16 @@
   flex-direction: column;
   gap: 10px;
 }
+/* The board itself, as wide as its keys and centred in the space left once the unit has hit
+   its cap; the modifier row stays under the board's left edge. */
+.vk-board {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
 .vk-frow .vk-base { font-size: calc(var(--vk-unit) * 0.27); }
 
 .vk-boards {
@@ -666,13 +676,18 @@
 }
 
 /* Bindings page: the selected-key band across the top of the bottom section, the palette
-   under it at full width (the storyboard's "Selected key / Key bindings" band, then the
-   action palette). */
+   under it (the storyboard's "Selected key / Key bindings" band, then the action palette).
+   The palette starts where the board's column starts, 240px = layer-col (220px) + the
+   editor-top gap (20px), and the virtual keyboard centres inside it, so the two keyboards
+   share a margin and a centre line. */
 .editor-bottom.bindings-bottom {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 16px;
+}
+.bindings-bottom > .palette {
+  margin-left: 240px;
 }
 
 /* --- The selected-key band (components/SelectedKeyPanel) ---------------------------------- */

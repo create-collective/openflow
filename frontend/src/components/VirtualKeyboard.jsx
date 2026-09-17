@@ -130,6 +130,7 @@ export default function VirtualKeyboard({ disabled, onPick,
   return (
     <div className="vk" ref={root}>
       {disabled && <div className="palette-disabled">{disabledHint}</div>}
+      <div className="vk-board">
       {renderFunctionRow()}
       <div className="vk-boards">
         {renderBlock(MAIN_ROWS, "vk-main")}
@@ -165,6 +166,7 @@ export default function VirtualKeyboard({ disabled, onPick,
             binds <code>{held.join(" + ")} + <span className="vk-combo-key">key</span></code>
           </span>
         )}
+      </div>
       </div>
     </div>
   );
