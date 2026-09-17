@@ -143,9 +143,10 @@ export default function Color() {
   }
 
   return (
-    <div className="editor">
-      <div className="editor-top">
-        <div className="layer-col">
+    // The same two containers as Bindings: the Layers card on the left, the board with its two
+    // cards under it on the right, each stacking on its own.
+    <div className="editor editor-split">
+      <div className="layer-col">
           <LayerList
             profiles={ed.profiles.filter((p) => p.id !== profile.id)}
             layers={profile.layers}
@@ -156,7 +157,8 @@ export default function Color() {
             {...ed.layerHandlers}
             {...ed.layerFileHandlers}
           />
-        </div>
+      </div>
+      <div className="editor-main">
         <div className="board-wrap">
           <div className="board-header">
             <div>
@@ -169,11 +171,10 @@ export default function Color() {
           <KeymapBoard keysByPosition={boardKeys} mode="color" onSelectKey={onKey} layerMap={layerMap}
             names={names} moduleLed={layer?.moduleLed} onModuleLed={paintModule} />
         </div>
-      </div>
 
       {ed.error && <Notice tone="err" style={{ margin: "8px 0" }}>{ed.error}</Notice>}
 
-      <div className="editor-bottom" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="editor-bottom color-bottom">
         <div>
           <Card title="LED Mapping Tools">
             <div className="btn-row">
@@ -268,6 +269,7 @@ export default function Color() {
             ))}
           </div>
         </Card>
+      </div>
       </div>
     </div>
   );

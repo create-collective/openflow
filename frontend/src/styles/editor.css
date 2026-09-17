@@ -6,13 +6,6 @@
   gap: 12px;
 }
 
-.editor-top {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 20px;
-  align-items: start;
-}
-
 /* The left column: the Layers card, and on Bindings the Module profiles card under it. */
 .layer-col {
   display: flex;
@@ -763,14 +756,20 @@
 /* Bindings page: the selected-key band, then the action palette, both exactly the board's
    width (see .editor-main), so they sit centred under the Create and the virtual keyboard
    centres inside them. */
-/* Bindings: two containers side by side. The left column holds the Layers and Module profiles
-   cards; the main column stacks the board, the band and the palette on its own, so a tall
-   left column never pushes the palette down and no rule divides the board from the band. */
+/* Bindings and LED Map: two containers side by side. The left column holds the cards (Layers,
+   and on Bindings Module profiles); the main column stacks the board and what goes under it
+   on its own, so a tall left column never pushes the rest down and no rule divides the page.
+   The group is as wide as its content and centres when the window is wider than that, so on
+   a big screen the whole page sits in the middle while every part keeps its place relative
+   to the others; narrower than the content, it starts at the left and the page scrolls. */
 .editor-split {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 220px auto;
   gap: 20px;
   align-items: start;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
 }
 /* As wide as the board (the bottom section is kept out of the width calculation), so the
    band and the palette are exactly the board's width and centred under it. */
@@ -787,6 +786,15 @@
   align-items: stretch;
   gap: 16px;
   width: 100%;
+  contain: inline-size;
+  border-top: none;
+  padding-top: 0;
+}
+/* LED Map: the tools and palette cards beside the animations card, the board's width. */
+.editor-bottom.color-bottom {
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  box-sizing: border-box;
   contain: inline-size;
   border-top: none;
   padding-top: 0;
