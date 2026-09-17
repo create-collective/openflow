@@ -764,12 +764,28 @@
    the band and the palette are capped at the virtual keyboard's widest (22 units of 64px plus
    its gaps) and left-aligned like the board, so the band, the palette head and both keyboards
    start on one line at every width. */
+/* Bindings: two containers side by side. The left column holds the Layers and Module profiles
+   cards; the main column stacks the board, the band and the palette on its own, so a tall
+   left column never pushes the palette down and no rule divides the board from the band. */
+.editor-split {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.editor-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
 .editor-bottom.bindings-bottom {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 16px;
-  padding-left: 240px;
+  border-top: none;
+  padding-top: 0;
 }
 .bindings-bottom > .keyband,
 .bindings-bottom > .palette {

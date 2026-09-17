@@ -220,9 +220,11 @@ export default function Bindings() {
   }
 
   return (
-    <div className="editor">
-      <div className="editor-top">
-        <div className="layer-col">
+    // Two containers side by side: the left column (layers, module profiles) and the main
+    // column (the board, then the selected-key band and the palette), each stacking on its own
+    // so neither pushes the other around.
+    <div className="editor editor-split">
+      <div className="layer-col">
           <LayerList
             profiles={ed.profiles.filter((p) => p.id !== profile.id)}
             layers={profile.layers}
@@ -234,7 +236,8 @@ export default function Bindings() {
             {...ed.layerFileHandlers}
           />
           <ModuleProfileList bays={bayUI} docked={moduleAssign} />
-        </div>
+      </div>
+      <div className="editor-main">
         <div className="board-wrap">
           <div className="board-header">
             <div>
@@ -283,7 +286,6 @@ export default function Bindings() {
             }}
           />
         </div>
-      </div>
 
       {err && <Notice tone="err" style={{ margin: "8px 0" }}>{err}</Notice>}
 
@@ -307,6 +309,7 @@ export default function Bindings() {
           disabled={selectedPos == null}
           onPick={bind}
         />
+      </div>
       </div>
     </div>
   );
