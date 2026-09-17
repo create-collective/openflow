@@ -104,7 +104,7 @@ describe("Card and Notice and SettingRow", () => {
     );
     expect(screen.getByRole("heading", { name: "Backend" }).parentElement).toHaveClass("ui-card");
     expect(screen.getByRole("heading", { name: "Left" }).parentElement).toHaveClass("ui-card-head");
-    expect(screen.getByText("stale").parentElement).toHaveClass("ui-notice-warn", "ui-notice-sm");
+    expect(screen.getByText("stale").closest(".ui-notice")).toHaveClass("ui-notice-warn", "ui-notice-sm");
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(onDismiss).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: /Reset/ }));

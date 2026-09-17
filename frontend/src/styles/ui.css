@@ -79,6 +79,15 @@
 .ui-badge-warn { background: var(--warn-soft); color: var(--warn); }
 .ui-badge-err { background: var(--err-soft); color: var(--err); }
 .ui-badge-accent { background: var(--accent-soft); color: var(--accent-text); }
+/* A status badge in words ("Matched at last read", "App only"): sentence case, not the
+   shouting caps of the FLASHABLE / VERIFIED tags. */
+.ui-badge-plain {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  padding: 3px 9px;
+}
 .ui-badge-solid {
   background: var(--accent);
   color: var(--accent-fg);
@@ -238,29 +247,87 @@
 .ui-card-actions { margin-left: auto; display: inline-flex; gap: 8px; }
 
 /* --- Notice ------------------------------------------------------------------------------ */
+/* Three levels of emphasis (owner's rule, 2026-09-17): a Badge says status; a quiet notice
+   (info / ok) says a limitation, as a card with an icon, a title, one line of consequence and
+   the technical why behind a Disclosure; a prominent one (warn / err) says a failure or
+   something destructive, tinted, with the next action beside it. */
 .ui-notice {
-  border-left: 3px solid var(--accent);
-  background: var(--bg-panel);
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
   color: var(--text-muted);
-}
-.ui-notice-ok { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--text); }
-.ui-notice-warn { border-left-color: var(--warn); }
-.ui-notice-err { border-left-color: var(--err); background: var(--err-soft); color: var(--text); }
-.ui-notice-sm {
-  font-size: var(--fs-sm);
   line-height: 1.5;
-  color: var(--text-dim);
-  border-left-width: 2px;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  padding: 8px 10px;
 }
-.ui-notice-dismissable { display: flex; align-items: flex-start; gap: 8px; }
-.ui-notice-body { flex: 1; min-width: 0; }
+.ui-notice-icon { flex: none; display: inline-flex; margin-top: 2px; color: var(--accent-text); }
+.ui-notice-main { flex: 1; min-width: 0; }
+.ui-notice-title { color: var(--text); font-weight: 600; margin-bottom: 2px; }
+.ui-notice-action { flex: none; margin-left: 4px; }
+.ui-notice-details { margin-top: 8px; }
+.ui-notice-ok .ui-notice-icon { color: var(--ok); }
+.ui-notice-warn {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+  background: color-mix(in srgb, var(--warn) 9%, var(--bg-card));
+  color: var(--text);
+}
+.ui-notice-warn .ui-notice-icon { color: var(--warn); }
+.ui-notice-err {
+  border-color: color-mix(in srgb, var(--err) 45%, var(--border));
+  background: var(--err-soft);
+  color: var(--text);
+}
+.ui-notice-err .ui-notice-icon { color: var(--err); }
+/* Compact: the inline note inside a panel (a palette caveat, a stale reading). No card. */
+.ui-notice-sm {
+  gap: 8px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.ui-notice-sm .ui-notice-icon { margin-top: 1px; }
+.ui-notice-sm .ui-notice-icon svg { width: 15px; height: 15px; }
+.ui-notice-sm.ui-notice-warn, .ui-notice-sm.ui-notice-err { padding: 8px 12px; border-radius: var(--radius-md); }
+.ui-notice-sm.ui-notice-warn { background: color-mix(in srgb, var(--warn) 9%, transparent); color: var(--text-muted); }
 .ui-notice ul { margin: 6px 0 0; padding-left: 18px; }
 .ui-notice li { margin: 3px 0; line-height: 1.5; }
 .ui-notice code { font-family: var(--font-mono); color: var(--text); }
+
+/* --- Disclosure: "▸ Why is this unavailable?" opening into the explanation --------------- */
+.ui-disclosure-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  color: var(--accent-text);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+.ui-disclosure-summary::-webkit-details-marker { display: none; }
+/* The marker is drawn, not a glyph: the text face has no clean small triangle. */
+.ui-disclosure-summary::before {
+  content: "";
+  width: 0; height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.15s;
+}
+.ui-disclosure[open] > .ui-disclosure-summary::before { transform: rotate(90deg); }
+.ui-disclosure-summary:hover { text-decoration: underline; }
+.ui-disclosure-body {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+}
 
 /* --- StatusBox: one half as its own box, two rows (the half, then its module) ------------- */
 .ui-statusbox {

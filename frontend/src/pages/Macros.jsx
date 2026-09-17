@@ -3,10 +3,12 @@ import { api } from "../lib/api";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 import { actionText } from "../lib/keylabels";
 import MacroRecorder from "../components/MacroRecorder";
+import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import IconButton from "../components/ui/IconButton";
 import Notice from "../components/ui/Notice";
+import { confirmDialog } from "../lib/dialogs";
 
 // Macro editor. Naya never shipped one; ZMK supports macros and the schema is
 // ready, so we build a working editor: create macros, add ordered steps
@@ -50,14 +52,13 @@ export default function Macros() {
   const [macros, setMacros] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [err, setErr] = useState(null);
-  const [newName, setNewName] = useState("");
+  const [nameDraft, setNameDraft] = useState("");
   const [stepKind, setStepKind] = useState("key");
   const [keyCode, setKeyCode] = useState("");
   const [keyState, setKeyState] = useState("tap");
   const [keyType, setKeyType] = useState("key");
   const [textVal, setTextVal] = useState("");
   const [delay, setDelay] = useState(30);
-  const [renaming, setRenaming] = useState(null);
   const [program, setProgram] = useState("");
   const [argsText, setArgsText] = useState("");
   const [recording, setRecording] = useState(false);
@@ -76,20 +77,39 @@ export default function Macros() {
 
   const macro = macros.find((m) => m.id === selectedId) || null;
 
-  async function createMacro() {
-    if (!newName.trim()) return;
-    const r = await api.createMacro(newName.trim());
-    setNewName("");
-    await load();
-    setSelectedId(r.id);
+  // New macro: made at once under a free name and opened, so the name field in the editor is
+  // where it gets its real one (no separate new-name box in the rail).
+  async function newMacro() {
+    const taken = new Set(macros.map((m) => m.name));
+    let name = "New macro";
+    for (let n = 2; taken.has(name); n++) name = `New macro ${n}`;
+    try {
+      const r = await api.createMacro(name);
+      await load();
+      setSelectedId(r.id);
+    } catch (e) { setErr(e.message); }
   }
 
-  async function saveRename() {
-    const name = (renaming || "").trim();
-    if (!macro || !name || name === macro.name) { setRenaming(null); return; }
+  // The name field commits on blur or Enter; an empty one puts the current name back.
+  useEffect(() => { setNameDraft(macro?.name || ""); }, [macro?.id, macro?.name]);
+  async function commitName(value) {
+    const name = (value ?? nameDraft).trim();
+    if (!macro || !name || name === macro.name) { setNameDraft(macro?.name || ""); return; }
     try { await api.renameMacro(macro.id, name); await load(); }
     catch (e) { setErr(e.message); }
-    setRenaming(null);
+  }
+
+  async function deleteMacro() {
+    if (!macro) return;
+    const ok = await confirmDialog({
+      title: `Delete the macro "${macro.name}"?`,
+      message: "Its steps go with it.",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
+    try { await api.deleteMacro(macro.id); setSelectedId(null); await load(); }
+    catch (e) { setErr(e.message); }
   }
 
   async function addStep() {
@@ -113,40 +133,43 @@ export default function Macros() {
   }
 
   return (
-    <div>
-      <h1 className="page-title">Macros</h1>
-      <p className="page-sub">Record ordered sequences of key, text, and wait steps.</p>
-      <Notice style={{ maxWidth: 720, marginBottom: 16 }}>
-        Macros are stored in OpenFlow but <strong>cannot be bound to a key yet</strong>. The
-        keyboard reserves the macro behaviour type but implements no macro table &mdash; every
-        write to it is acknowledged and discarded, and Naya&rsquo;s own software never writes one
-        either. Building them here is safe; they simply do not reach the board.
+    <div className="macros-page">
+      <div className="page-head macros-head">
+        <div>
+          <h1 className="page-title">
+            Macros
+            <Badge className="ui-badge-plain" title="Saved in OpenFlow. Nothing reaches the keyboard.">App only</Badge>
+          </h1>
+          <p className="page-sub">Build sequences of keys, text, and pauses.</p>
+        </div>
+        <Button variant="primary" onClick={newMacro}>+ New macro</Button>
+      </div>
+      {/* The limitation at the quiet level: the consequence in one line, the technical why
+          behind Details. */}
+      <Notice className="macros-notice" title="Your macros are saved in OpenFlow"
+        detailsLabel="Why is this unavailable?"
+        details={<>The keyboard reserves the macro behaviour type but implements no macro table:
+          every write to it is acknowledged and discarded, and Naya&rsquo;s own software never
+          writes one either. Building them here is safe; they simply do not reach the board.</>}>
+        They can&rsquo;t be assigned to keys or run on this keyboard yet.
       </Notice>
-      {err && <Card><Notice tone="err">{err}</Notice></Card>}
+      {err && <Notice tone="err" className="macros-notice" onDismiss={() => setErr(null)}>{err}</Notice>}
 
       <div className="macro-layout">
         <div className="module-list macro-rail">
-          <div className="module-group-title">Macros</div>
-          {macros.length === 0 && <div className="empty" style={{ padding: 16 }}>No macros yet.</div>}
+          <div className="module-group-title">Your macros</div>
+          {macros.length === 0 && <div className="empty macro-empty">No macros yet. New macro starts one.</div>}
           {macros.map((m) => (
             <button
               key={m.id}
+              type="button"
               className={"module-item" + (m.id === selectedId ? " active" : "")}
               onClick={() => setSelectedId(m.id)}
             >
-              ⚡ {m.name} <span style={{ color: "var(--text-dim)" }}>({m.steps.length})</span>
+              <span className="module-item-name">{m.name}</span>
+              <span className="macro-item-count">{m.steps.length} step{m.steps.length === 1 ? "" : "s"}</span>
             </button>
           ))}
-          <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-            <input
-              className="mac-input"
-              placeholder="New macro name"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && createMacro()}
-            />
-            <Button variant="primary" onClick={createMacro}>Add</Button>
-          </div>
         </div>
 
         <div className="module-detail macro-detail">
@@ -155,35 +178,25 @@ export default function Macros() {
           ) : (
             <>
               <div className="macro-head">
-                <h2 style={{ margin: 0 }}>
-                  ⚡{" "}
-                  <span
-                    title="Double-click to rename"
-                    onDoubleClick={() => setRenaming(macro.name)}
-                    style={{ cursor: "text" }}
-                  >{macro.name}</span>
-                </h2>
-                <span className="macro-head-count">
-                  {macro.steps.length} step{macro.steps.length === 1 ? "" : "s"}
-                </span>
-                <Button variant="danger" onClick={async () => {
-                  await api.deleteMacro(macro.id);
-                  setSelectedId(null);
-                  await load();
-                }}>Delete macro</Button>
-              </div>
-              {renaming !== null && (
-                <div className="btn-row" style={{ margin: "0 0 12px" }}>
-                  <input className="mac-input" autoFocus value={renaming}
-                    onChange={(e) => setRenaming(e.target.value)}
+                <label className="macro-name">
+                  <span className="macro-name-label">Macro name</span>
+                  <input className="mac-input macro-name-input" value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onBlur={(e) => commitName(e.currentTarget.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") saveRename();
-                      if (e.key === "Escape") setRenaming(null);
+                      if (e.key === "Enter") commitName(e.currentTarget.value);
+                      if (e.key === "Escape") setNameDraft(macro.name);
                     }} />
-                  <Button variant="primary" onClick={saveRename}>Rename</Button>
-                  <Button onClick={() => setRenaming(null)}>Cancel</Button>
-                </div>
-              )}
+                </label>
+                <Badge className="ui-badge-plain macro-stored"
+                  title="Saved in OpenFlow. It is not on the keyboard and cannot be bound to a key yet.">
+                  Stored in app
+                </Badge>
+                <Button variant="danger" onClick={deleteMacro}>Delete macro</Button>
+              </div>
+              <div className="macro-head-count">
+                {macro.steps.length} step{macro.steps.length === 1 ? "" : "s"} · runs in listed order
+              </div>
 
               <Card className="macro-steps">
               <div className="skp-head">

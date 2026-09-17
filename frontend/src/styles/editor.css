@@ -1079,7 +1079,8 @@
 }
 .module-title { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 20px; }
 .module-title-img { width: 26px; height: 26px; object-fit: contain; flex: none; }
-.module-note { margin: 12px 0 10px; }
+.module-note { margin: 10px 0 0; }
+.module-sync { margin-left: auto; }
 /* The picture on the left, the target tabs and the gesture rows on the right. */
 .module-bindings {
   display: grid;
@@ -2029,19 +2030,30 @@
 /* The page borrowed .module-layout, whose row spanning is tuned for the Modules page's THREE
    children. Macros has two, so the rail collapsed to the height of its own contents and left a
    tall empty column beside a full-height editor. */
+.macros-page { max-width: var(--page-max); margin: 0 auto; }
+.macros-head { align-items: center; margin-bottom: 14px; }
+.macros-head .page-title { display: flex; align-items: center; gap: 10px; }
+.macros-head .page-sub { margin-bottom: 0; }
+.macros-notice { margin-bottom: 16px; }
 .macro-layout {
   display: grid;
   grid-template-columns: 288px minmax(0, 1fr);
-  gap: 24px;
-  align-items: stretch;          /* the rail matches the editor's height rather than its own */
-  min-height: calc(100vh - 210px);
+  gap: 20px;
+  align-items: start;
 }
+/* The rail as a card, like the Modules rail: a name and its step count per row. */
 .macro-rail {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border-strong);
-  padding-right: 16px;
+  position: sticky;
+  top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
 }
+.macro-item-count { flex: none; color: var(--text-dim); font-size: 12px; font-weight: 500; }
+.macro-empty { padding: 10px 6px; font-size: 13px; }
 .macro-detail { min-width: 0; }  /* without this the grid column refuses to shrink and the
                                     keyboard pushes the whole page wider */
 
@@ -2072,13 +2084,17 @@
 .macro-record { margin: 0; }
 .macro-add { margin: 0; }
 .macro-add .vk-boards { overflow-x: visible; }
-/* The chosen key, beside the state select rather than pushed away from it. */
+/* The editor head: the name as a field (it commits itself), the Stored in app badge and
+   Delete at the right, the step count under. */
 .macro-head {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  display: flex; align-items: flex-end; gap: 12px; margin-bottom: 8px;
 }
-.macro-head .btn { margin-left: auto; }
+.macro-name { display: flex; flex-direction: column; gap: 4px; flex: 1; max-width: 380px; }
+.macro-name-label { font-size: 12px; color: var(--text-muted); }
+.macro-name-input { font-size: 16px; font-weight: 700; padding: 8px 12px; }
+.macro-stored { margin-left: auto; margin-bottom: 6px; }
 .macro-head-count {
-  color: var(--text-dim); font-size: 12px; font-family: var(--font-mono);
+  color: var(--text-dim); font-size: 12px; margin-bottom: 16px;
 }
 .macro-pick {
   font-weight: 600; min-width: 140px;

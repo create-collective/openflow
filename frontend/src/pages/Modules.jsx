@@ -6,7 +6,9 @@ import GestureRow from "../components/modules/GestureRow";
 import ModuleRail from "../components/modules/ModuleRail";
 import ModuleSettingsTab from "../components/modules/ModuleSettingsTab";
 import ModuleVisual from "../components/modules/ModuleVisual";
+import Badge from "../components/ui/Badge";
 import Card from "../components/ui/Card";
+import Disclosure from "../components/ui/Disclosure";
 import Notice from "../components/ui/Notice";
 import Tabs from "../components/ui/Tabs";
 import Toggle from "../components/ui/Toggle";
@@ -21,6 +23,27 @@ import useModuleEditor from "../lib/useModuleEditor";
 export default function Modules() {
   const ed = useModuleEditor();
   const { config, device, onDevice } = ed;
+
+  // How this profile stands against the last read, as a status badge in the header with the
+  // sentence behind "Sync details" (it used to be a notice across the card). Nothing without
+  // a read to compare against.
+  const sync = !config || !device ? null
+    : !onDevice ? {
+        tone: "neutral", label: "Not on the keyboard",
+        detail: "Nothing is flashed for this profile: no slot on the keyboard holds it. Flash to put it there.",
+      }
+    : ed.isLive(config.id) ? {
+        tone: "ok", label: "Matched at last read",
+        detail: `All ${onDevice.fieldCount} fields matched when this profile was last read, in slot ${onDevice.slot}.`
+          + (onDevice.trailing > 0 ? ` ${onDevice.trailing} trailing field(s) belong to a previous module config; harmless, left alone.` : ""),
+      }
+    : {
+        tone: "warn", label: "Edited since last read",
+        detail: `The keyboard is running something else in slot ${onDevice.slot}: ${onDevice.differs} gesture(s) differ.`
+          + (onDevice.matchedName ? ` The board's version is "${onDevice.matchedName}".` : "")
+          + " Flash to put this version on it."
+          + (onDevice.trailing > 0 ? ` ${onDevice.trailing} trailing field(s) belong to a previous module config; harmless, left alone.` : ""),
+      };
 
   // A directional gesture is ONE row until it is split, whether its halves are separate
   // bindings (the dial) or the two ends of an axis pair: same row, same checkbox either way.
@@ -118,24 +141,16 @@ export default function Modules() {
                 <img className="module-title-img" alt=""
                   src={`/modules/v2/${config.type === "TRACK" ? (config.variant === "TRACK_RIGHT" ? "track-right" : "track-left") : config.type.toLowerCase()}.png`} />
                 {config.name}
+                {sync && (
+                  <Badge className="ui-badge-plain module-sync" tone={sync.tone} title={sync.detail}>
+                    {sync.tone === "ok" ? "✓ " : ""}{sync.label}
+                  </Badge>
+                )}
               </h2>
               <Tabs variant="underline" ariaLabel="Profile sections" value={ed.tab} onChange={ed.setTab}
                 items={[{ id: "bindings", label: "Bindings" }, { id: "settings", label: "Settings" }]} />
-              {onDevice && (
-                <Notice className="module-note">
-                  {ed.isLive(config.id)
-                    ? `Running on the keyboard as slot ${onDevice.slot}: ${onDevice.fieldCount} fields, everything matches.`
-                    : `Edited since the last read — the keyboard is running something else in slot ${onDevice.slot}` +
-                      ` (${onDevice.differs} gesture(s) differ).` +
-                      (onDevice.matchedName ? ` The board's version is “${onDevice.matchedName}”.` : "")}
-                  {onDevice.trailing > 0 &&
-                    ` ${onDevice.trailing} trailing field(s) belong to a previous module config — harmless, left alone.`}
-                </Notice>
-              )}
-              {device && !onDevice && (
-                <Notice className="module-note">
-                  This config is not currently on the keyboard — nothing is flashed for it.
-                </Notice>
+              {sync && (
+                <Disclosure className="module-note" label="Sync details">{sync.detail}</Disclosure>
               )}
 
               {ed.tab === "bindings" && (
