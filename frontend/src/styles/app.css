@@ -8,7 +8,7 @@
 
 /* Sidebar */
 .sidebar {
-  background: var(--neutral6);
+  background: var(--bg-nav);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -38,19 +38,19 @@
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--text-muted);
   font-weight: 500;
   cursor: pointer;
 }
 
 .nav-item:hover {
-  background: var(--neutral12);
+  background: var(--bg-hover);
   color: var(--text);
 }
 
 .nav-item.active {
-  background: var(--neutral17);
+  background: var(--bg-active);
   color: var(--text);
 }
 
@@ -59,7 +59,7 @@
   font-size: 11px;
   color: var(--text-dim);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 1px 7px;
 }
 
@@ -136,7 +136,7 @@
 .dot {
   width: 9px;
   height: 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--text-dim);
 }
 
@@ -154,17 +154,17 @@
   align-items: center;
   gap: 8px;
   border: 1px solid var(--border-strong);
-  background: var(--neutral12);
+  background: var(--bg-hover);
   color: var(--text);
   padding: 8px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 
 .btn:hover {
-  background: var(--neutral17);
+  background: var(--bg-hover-strong);
 }
 
 /* A button that sits inline with a heading rather than in a button row -- it has to read as a
@@ -212,9 +212,9 @@
 
 .phase-note {
   border-left: 3px solid var(--accent);
-  background: var(--neutral10);
+  background: var(--bg-panel);
   padding: 12px 16px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--text-muted);
 }
 
@@ -224,13 +224,12 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--neutral17);
+  border-radius: var(--radius-pill);
+  background: var(--badge-bg);
   color: var(--text-muted);
 }
 
 /* --- Flash button + preview modal ------------------------------------------ */
-.nav-flash { padding: 0 12px 10px; }
 .flash-btn {
   width: 100%;
   padding: 9px 12px;
@@ -246,37 +245,37 @@
 
 .modal-backdrop {
   position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--backdrop);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
 }
 .modal {
-  background: var(--neutral10);
-  border: 1px solid var(--neutral24);
-  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
   padding: 20px 22px;
   width: min(460px, 92vw);
   max-height: 82vh; overflow: auto;
-  color: var(--neutral90);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  box-shadow: var(--shadow-modal);
 }
-.modal h3 { margin: 0 0 6px; color: var(--neutral100); }
-.modal-sub { margin: 0 0 14px; color: var(--neutral70); font-size: 13px; }
+.modal h3 { margin: 0 0 6px; color: var(--text-strong); }
+.modal-sub { margin: 0 0 14px; color: var(--text-muted); font-size: 13px; }
 .modal-error { color: var(--err); }
 .flash-diff { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; }
-.flash-diff li { color: var(--neutral80); }
+.flash-diff li { color: var(--text); }
 .flash-diff b { color: var(--accent); }
-.flash-diff-tot { color: var(--neutral60) !important; font-size: 12px; padding-top: 6px; }
+.flash-diff-tot { color: var(--text-muted) !important; font-size: 12px; padding-top: 6px; }
 .flash-ops { margin-bottom: 12px; }
-.flash-ops summary { cursor: pointer; color: var(--neutral70); font-size: 13px; }
+.flash-ops summary { cursor: pointer; color: var(--text-muted); font-size: 13px; }
 .flash-ops table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
-.flash-ops td { padding: 3px 6px; border-top: 1px solid var(--neutral17); color: var(--neutral80); }
-.flash-ops .mono { font-family: ui-monospace, monospace; color: var(--neutral60); }
+.flash-ops td { padding: 3px 6px; border-top: 1px solid var(--border); color: var(--text); }
+.flash-ops .mono { font-family: var(--font-mono); color: var(--text-muted); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
 .btn-secondary, .btn-primary {
-  padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; border: none;
+  padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; border: none;
 }
-.btn-secondary { background: var(--neutral20); color: var(--neutral90); }
+.btn-secondary { background: var(--bg-hover-strong); color: var(--text); }
 .btn-primary { background: var(--accent); color: var(--accent-fg); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -285,9 +284,9 @@
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
   padding: 2px 6px; border-radius: 5px; margin: 0 8px; white-space: nowrap;
 }
-.gesture-badge.flashable { background: rgba(52, 211, 153, 0.16); color: var(--ok); }
-.gesture-badge.axis { background: rgba(25, 195, 212, 0.16); color: var(--accent); }
-.gesture-badge.dbonly { background: var(--neutral20); color: var(--neutral60); }
+.gesture-badge.flashable { background: var(--ok-soft); color: var(--ok); }
+.gesture-badge.axis { background: var(--accent-soft); color: var(--accent); }
+.gesture-badge.dbonly { background: var(--badge-bg); color: var(--text-muted); }
 
 /* --- Flash: writing + success feedback -------------------------------------
    A flash is slow and irreversible, and the dialog used to unmount the moment it
@@ -299,7 +298,7 @@
 .board-btn.primary.btn-done {
   background: var(--ok);
   border-color: var(--ok);
-  color: #06281c;
+  color: var(--ok-fg);
 }
 .flash-btn.btn-done:hover,
 .board-btn.btn-done:hover:not(:disabled),
@@ -360,14 +359,11 @@
   font-size: 11px;
   padding: 1px 5px;
   border-radius: 4px;
-  background: var(--neutral10);
+  background: var(--bg-panel);
   color: var(--accent);
 }
 .vk-combo-hint .vk-combo-key { opacity: 0.6; font-style: italic; }
 
-/* A setting the flash cannot place a device field for. Everything on that page used to look
-   applied; the ones that still are not should say so. */
-.setting-apponly { color: var(--err); opacity: 0.85; }
 
 /* No image is a drag source unless it explicitly says it is.
    An <img> is draggable by default, so every picture we add is a potential native drag that
@@ -387,19 +383,19 @@ img:not([draggable="true"]) {
   max-width: 720px;
   margin: 48px auto;
   padding: 24px 28px;
-  border: 1px solid var(--err, #d05);
-  border-radius: var(--radius-sm);
-  background: var(--neutral6);
+  border: 1px solid var(--err);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
 }
 
-.crash-title { margin: 0 0 6px; color: var(--err, #d05); }
+.crash-title { margin: 0 0 6px; color: var(--err); }
 .crash-lede { margin: 0 0 14px; color: var(--text-muted); }
 
 .crash-error {
   margin: 0 0 14px;
   padding: 10px 12px;
-  background: var(--neutral10);
-  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  border-radius: var(--radius-md);
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 12px;
@@ -410,7 +406,7 @@ img:not([draggable="true"]) {
   padding: 1px 5px;
   border: 1px solid var(--border-strong);
   border-radius: 4px;
-  background: var(--neutral10);
+  background: var(--bg-panel);
   font-size: 11px;
 }
 
@@ -427,8 +423,8 @@ img:not([draggable="true"]) {
   margin: 0 4px 10px;
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--neutral10, var(--neutral6));
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
   color: var(--text);
   text-decoration: none;
   font-size: 12px;
@@ -438,6 +434,6 @@ img:not([draggable="true"]) {
 .device-chip-row .dot { flex: none; }
 .device-chip-side { width: 14px; font-weight: 700; }
 .device-chip-batt { margin-left: auto; font-variant-numeric: tabular-nums; }
-.device-chip-batt.low { color: var(--warn, #e0a800); }
+.device-chip-batt.low { color: var(--warn); }
 .device-chip-module { padding-left: 22px; color: var(--text-dim); font-size: 11px; }
 .device-chip-empty { color: var(--text-dim); }

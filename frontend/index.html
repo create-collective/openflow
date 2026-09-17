@@ -1,9 +1,23 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OpenFlow</title>
+    <script>
+      // The theme before first paint, so there is never a flash of the wrong one: the stored
+      // preference (localStorage "openflow.theme": system | light | dark) resolved through the
+      // OS setting. src/lib/theme.js applies the same rule from then on. A plain script, not a
+      // module, so Vite leaves it inline and it runs before the bundle.
+      (function () {
+        var p = null;
+        try { p = localStorage.getItem("openflow.theme"); } catch (e) {}
+        if (p !== "light" && p !== "dark") {
+          p = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.dataset.theme = p;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

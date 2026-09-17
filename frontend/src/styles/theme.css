@@ -1,15 +1,24 @@
 /*
- * OpenFlow theme.
+ * OpenFlow theme: the tokens, and the only place a raw colour may appear.
  *
- * Neutral tonal palette is lifted verbatim from NayaFlow 1.25.1's recovered CSS
- * (index-0wmCXqHW.css) — a standard Material tonal system, safe to reuse as
- * design tokens. The ACCENT is deliberately NOT Naya's brand green (#1dd791):
- * per the clean-reskin decision, OpenFlow uses its own accent so it is visually
- * in the same family without imitating Naya's brand. Placeholder — finalize with
- * the OpenFlow brand.
+ * Three layers, top to bottom:
+ *   1. Primitives: the neutral tonal ramp (NayaFlow 1.25.1's Material tonal system) and the
+ *      brand hexes. Referenced ONLY inside this file; everything else asks for a role.
+ *   2. Semantic roles, dark: what a surface, a border, a piece of text IS, not what shade it
+ *      happens to be. The default, and what [data-theme="dark"] pins.
+ *   3. Semantic roles, light: the same names, other values, under [data-theme="light"].
+ *
+ * The theme attribute is set on <html> before first paint by the inline script in index.html
+ * (localStorage "openflow.theme": system | light | dark, resolved through
+ * prefers-color-scheme) and kept in step by src/lib/theme.js. color-scheme makes native
+ * selects, ranges, checkboxes and scrollbars follow along.
+ *
+ * Rule for callers: pick the token for the ROLE (a hover surface, muted text), never a
+ * lookalike value; tools/check-styles.mjs keeps literals out of the other stylesheets.
  */
 
 :root {
+  /* --- primitives: neutral ramp ---------------------------------------------------------- */
   --neutral0: #000000;
   --neutral4: #0e0e11;
   --neutral6: #131316;
@@ -25,36 +34,175 @@
   --neutral60: #929094;
   --neutral70: #adaaaf;
   --neutral80: #c9c5ca;
+  --neutral87: #dcd8dd;
   --neutral90: #e5e1e6;
+  --neutral92: #ebe7ec;
+  --neutral94: #f1edf2;
   --neutral95: #f3eff4;
+  --neutral96: #f7f3f8;
+  --neutral98: #fdf8fd;
   --neutral100: #ffffff;
 
-  /* Semantic (dark) */
-  --bg: var(--neutral4);
-  --bg-elevated: var(--neutral10);
-  --bg-card: var(--neutral6);
-  --border: var(--neutral20);
-  --border-strong: var(--neutral30);
-  --text: var(--neutral95);
-  --icon: var(--neutral100);        /* keycap icons: pure white, their glyphs are thin */
-  --text-muted: var(--neutral60);
-  --text-dim: var(--neutral50);
+  /* --- primitives: brand and status hexes ------------------------------------------------- */
+  --brand-cyan: #19c3d4;          /* OpenFlow accent (placeholder until the logo work) */
+  --brand-cyan-light: #37d3e2;
+  --brand-cyan-deep: #0fb2c3;
+  --brand-cyan-ink: #0a8391;      /* cyan as TEXT on a light surface */
+  --green-400: #34d399;
+  --green-700: #15803d;
+  --amber-500: #eab308;
+  --amber-700: #b45309;
+  --red-400: #f87171;
+  --red-600: #dc2626;
 
-  /* OpenFlow accent (placeholder — not Naya green) */
-  --accent: #19c3d4;
-  --accent-hover: #37d3e2;
-  --accent-fg: #04121a;
+  /* --- scales (theme independent) ------------------------------------------------------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
 
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --err: #f87171;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-base: 14px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
 
-  --radius: 12px;
-  --radius-sm: 8px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --radius: var(--radius-lg);
+
+  --z-sticky: 1;
+  --z-dropdown: 20;
+  --z-dropdown-high: 40;
+  --z-popover: 60;
+  --z-nav: 100;
+  --z-modal: 1000;
 
   --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", "Fira Code", Consolas, monospace;
+}
+
+/* --- semantic roles: dark (the default) --------------------------------------------------- */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* surfaces */
+  --bg: var(--neutral4);
+  --bg-nav: var(--neutral6);
+  --bg-card: var(--neutral6);
+  --bg-panel: var(--neutral10);          /* inset rows, inputs, notes */
+  --bg-elevated: var(--neutral12);       /* menus, popovers, the modal */
+  --bg-hover: var(--neutral12);
+  --bg-hover-strong: var(--neutral20);
+  --bg-active: var(--neutral17);         /* selected without the accent */
+  --bg-selected: color-mix(in srgb, var(--accent) 22%, var(--bg-hover));
+  --bg-key: var(--neutral6);             /* a keycap without an LED colour */
+  --led-off: var(--neutral20);
+  --hatch-a: var(--neutral20);
+  --hatch-b: var(--neutral10);
+  --badge-bg: var(--neutral20);
+  --backdrop: rgba(0, 0, 0, 0.55);
+
+  /* text */
+  --text: var(--neutral95);
+  --text-strong: var(--neutral100);
+  --text-muted: var(--neutral60);
+  --text-dim: var(--neutral50);
+  --icon: var(--neutral100);             /* keycap icons: pure white, their glyphs are thin */
+  --text-on-light: #0a0a0a;              /* legend on a light LED colour (theme independent) */
+  --text-on-dark: #f5f5f5;               /* legend on a dark LED colour */
+
+  /* borders */
+  --border: var(--neutral20);
+  --border-strong: var(--neutral30);
+  --border-focus: var(--accent);
+
+  /* accent */
+  --accent: var(--brand-cyan);
+  --accent-hover: var(--brand-cyan-light);
+  --accent-fg: #04121a;                  /* text on an accent surface */
+  --accent-text: var(--accent);          /* accent used AS text */
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+
+  /* status */
+  --ok: var(--green-400);
+  --ok-fg: #06281c;
+  --warn: var(--amber-500);
+  --err: var(--red-400);
+  --danger: var(--err);
+  --ok-soft: color-mix(in srgb, var(--ok) 16%, transparent);
+  --warn-soft: color-mix(in srgb, var(--warn) 18%, transparent);
+  --err-soft: color-mix(in srgb, var(--err) 16%, transparent);
+
+  /* controls */
+  --control-track: var(--neutral30);
+  --control-knob: #ffffff;
+
+  /* shadows and rings */
+  --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-popover: 0 12px 34px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --ring-accent: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* --- semantic roles: light ---------------------------------------------------------------- */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: var(--neutral98);
+  --bg-nav: var(--neutral100);
+  --bg-card: var(--neutral100);
+  --bg-panel: var(--neutral95);
+  --bg-elevated: var(--neutral100);
+  --bg-hover: var(--neutral92);
+  --bg-hover-strong: var(--neutral87);
+  --bg-active: var(--neutral90);
+  --bg-selected: color-mix(in srgb, var(--accent) 22%, var(--bg-hover));
+  --bg-key: var(--neutral100);
+  --led-off: var(--neutral87);
+  --hatch-a: var(--neutral87);
+  --hatch-b: var(--neutral95);
+  --badge-bg: var(--neutral90);
+  --backdrop: rgba(20, 20, 28, 0.35);
+
+  --text: var(--neutral10);
+  --text-strong: var(--neutral0);
+  --text-muted: var(--neutral40);
+  --text-dim: var(--neutral50);
+  --icon: var(--neutral10);
+
+  --border: var(--neutral87);
+  --border-strong: var(--neutral80);
+
+  --accent: var(--brand-cyan-deep);
+  --accent-hover: var(--brand-cyan);
+  --accent-text: var(--brand-cyan-ink);
+
+  --ok: var(--green-700);
+  --warn: var(--amber-700);
+  --err: var(--red-600);
+
+  --control-track: var(--neutral80);
+
+  --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.1);
+  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-popover: 0 12px 34px rgba(0, 0, 0, 0.18);
+  --shadow-modal: 0 12px 40px rgba(0, 0, 0, 0.16);
 }
 
 * {
@@ -72,7 +220,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--fs-base);
   -webkit-font-smoothing: antialiased;
 }
 

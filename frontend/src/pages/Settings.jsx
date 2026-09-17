@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { applyInterfaceScaling } from "../lib/scaling";
 import { pickFile, downloadJSON, safeName } from "../lib/files";
 import SettingField from "../components/SettingField";
+import { THEME_PREFERENCES, setThemePreference, useThemePreference } from "../lib/theme";
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
 const REPOS = {
   app: "traviswye/openflow",
@@ -119,6 +120,19 @@ export default function Settings() {
   // later would silently land there too.
   const behaviorGroups = settings?.groups.filter((g) => g.scope === "device") || [];
   const interfaceGroups = settings?.groups.filter((g) => g.scope !== "device") || [];
+  // The theme lives on this machine (localStorage, applied before first paint by index.html),
+  // not in the backend's settings: it is a property of the screen in front of you, like the
+  // window size, and it must be right before the backend has answered.
+  const themePref = useThemePreference();
+  const appearanceGroups = [{
+    group: "Appearance",
+    desc: "How OpenFlow looks on this computer.",
+    fields: [{
+      id: "theme", label: "Theme", kind: "select", options: THEME_PREFERENCES,
+      value: themePref, default: "system", provenance: "app",
+      desc: "System follows the operating system's light or dark setting.",
+    }],
+  }];
 
   return (
     <div>
@@ -138,7 +152,12 @@ export default function Settings() {
           {!settings ? <div className="empty">Loading…</div> : (
             <>
               {tab === "behavior" && <SettingsGroups groups={behaviorGroups} onChange={setSetting} />}
-              {tab === "interface" && <SettingsGroups groups={interfaceGroups} onChange={setSetting} />}
+              {tab === "interface" && (
+                <>
+                  <SettingsGroups groups={appearanceGroups} onChange={(_id, v) => setThemePreference(v)} />
+                  <SettingsGroups groups={interfaceGroups} onChange={setSetting} />
+                </>
+              )}
 
               {tab === "backup" && (
                 <div style={{ maxWidth: 720 }}>

@@ -52,7 +52,7 @@ function contrastText(hex) {
   if (!m) return undefined;
   const n = parseInt(m[1], 16);
   const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-  return lum > 0.6 ? "#0a0a0a" : "#f5f5f5";
+  return lum > 0.6 ? "var(--text-on-light)" : "var(--text-on-dark)";
 }
 
 // One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked,
@@ -71,7 +71,7 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, 
   const color = data?.colorHex;
   const showColor = mode === "color" && color;
   const textColor = showColor ? contrastText(color) : undefined;
-  const fill = showColor ? color : "var(--neutral6)";
+  const fill = showColor ? color : "var(--bg-key)";
   // On Bindings, the LED colour can be shown as an OUTLINE rather than a fill. Filling the cap
   // (what the Colour page does) drowns out the legend, which is the whole point of this page --
   // you want to see the binding AND which colour group it is in at the same time. NayaFlow
@@ -170,7 +170,7 @@ function LedCol({ positions, keysByPosition, selectedPosition, onSelectKey }) {
         return (
           <button key={pos} className={"kb-led" + (selectedPosition === pos ? " selected" : "")}
             title={`LED ${pos}`} onClick={() => onSelectKey(pos)}
-            style={{ width: 1.2 * REM, height: 1.7 * REM, background: color || "var(--neutral20)" }} />
+            style={{ width: 1.2 * REM, height: 1.7 * REM, background: color || "var(--led-off)" }} />
         );
       })}
     </div>
