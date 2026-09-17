@@ -1044,10 +1044,12 @@
    profile as a card (its picture beside its gesture rows) and the palette as a card stacked on
    the right. The page centres on the same column as the bars. */
 .modules-page { max-width: var(--page-max); margin: 0 auto; }
-.modules-head { justify-content: flex-end; min-height: 15px; margin-bottom: 6px; }
+/* Specific enough to beat .page-head (declared later): the note sits at the right, over the
+   profile card, as the storyboard puts its modules-on-keyboard count. */
+.page-head.modules-head { justify-content: flex-end; min-height: 15px; margin-bottom: 6px; }
 .module-layout {
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: 288px minmax(0, 1fr);
   grid-template-rows: auto auto;
   gap: 20px;
   align-items: start;
