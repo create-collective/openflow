@@ -149,13 +149,18 @@ export default function Bindings() {
     // It deliberately does NOT re-resolve through the device read: the profile is a choice
     // about what to flash next, not a mirror of the keyboard. The read still marks which
     // entries are live; that is a label on the options, not a change to the answer.
-    const selectedFor = (type, side) => {
-      const own = cur?.bays?.[key(type, side)];
-      if (own === "disabled") return "disabled";
-      if (own && own !== "transparent") return own;
-      const inh = base?.bays?.[key(type, side)];
-      return inh && inh !== "transparent" ? inh : null;
+    //
+    // A bay's value counts only if it names a profile of the bay's own type; anything else
+    // (a read once stored a Track id in a Tune bay) is unset, and the layer follows the base
+    // layer. The backend applies the same rule when it flashes.
+    const typeOf = (id) => (moduleProfiles || []).find((m) => m.id === id)?.type;
+    const ownFor = (l, type, side) => {
+      const v = l?.bays?.[key(type, side)];
+      if (!v || v === "transparent") return null;
+      if (v === "disabled") return v;
+      return typeOf(v) === type.toUpperCase() ? v : null;
     };
+    const selectedFor = (type, side) => ownFor(cur, type, side) ?? ownFor(base, type, side) ?? null;
 
     return {
       layerLabel,
@@ -172,11 +177,12 @@ export default function Bindings() {
                          onBoard: liveIds.has(m.id) }));
       },
       selectedFor,
-      // True when this layer says nothing and the value shown comes from the base layer.
+      // True when the layer follows the base layer here: it says nothing, or it says the
+      // same thing (the owner's rule: base is whatever equals layer 0).
       inheritedFor: (type, side) => {
         if (!cur || cur.id === base?.id) return false;
-        const own = cur.bays?.[key(type, side)];
-        return !own || own === "transparent";
+        const own = ownFor(cur, type, side);
+        return own == null || own === ownFor(base, type, side);
       },
       onPick: async (type, side, configId) => {
         try {

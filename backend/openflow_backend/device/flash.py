@@ -1069,6 +1069,17 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
         types[r["id"]] = r["type"]
         if r["captured_from"]:
             captured_from[r["id"]] = r["captured_from"]
+    # A bay names a profile of its own type or nothing. A row naming a profile of another
+    # type (a read once stored a Track profile in a Tune bay, 2026-09-17) would have put a
+    # Track slot in the Tune bay byte; the row is dropped instead, as if it had never been
+    # stored, and the layer follows the base layer like any other bay it says nothing about.
+    for order, bays in bays_by_layer.items():
+        for location, value in list(bays.items()):
+            if value in ("transparent", "disabled") or not value:
+                continue
+            want = location.split(":", 1)[0].upper()
+            if types.get(value) != want:
+                del bays[location]
     # Single-field gestures and axis gestures are read apart, because an axis is TWO fields and
     # its two halves can be bound independently once the gesture is split.
     bindings: dict[str, dict[str, str]] = {}

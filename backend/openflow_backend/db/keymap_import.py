@@ -44,7 +44,10 @@ def _import_bays(conn, profile_id, order_to_layer, read, slot_uuid, now) -> int:
     # slots, and one of ours is currently carrying a profile it created. Recording that bay would
     # violate the foreign key and take the whole keymap read down with it, so the config has to
     # exist here, not merely be present on the device.
-    known = {r["id"] for r in conn.execute("SELECT id FROM module_configs")}
+    # ...and it has to be a profile of the bay's own type: the board's bay byte can point at
+    # any slot, and a slot holding a Track profile is no Tune profile. Recording that put a
+    # Track id in a Tune bay (2026-09-17); the bay is left unset and follows the base layer.
+    known = {r["id"]: r["type"] for r in conn.execute("SELECT id, type FROM module_configs")}
     conn.execute("DELETE FROM module_config_bindings WHERE profile_id=?", (profile_id,))
     for order, bays in (read.get("bays") or {}).items():
         lid = order_to_layer.get(int(order))
@@ -59,6 +62,8 @@ def _import_bays(conn, profile_id, order_to_layer, read, slot_uuid, now) -> int:
                 cfg = slot_uuid.get(value)
                 if cfg is None or cfg not in known:
                     continue          # a slot we have no config for: record nothing, invent nothing
+                if known[cfg] != location.split(":", 1)[0].upper():
+                    continue          # a profile of another type: not this bay's to hold
                 state = None
             conn.execute(
                 "INSERT INTO module_config_bindings (profile_id, layer_id, module_config_id, "
