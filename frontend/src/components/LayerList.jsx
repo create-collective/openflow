@@ -103,6 +103,7 @@ export default function LayerList({
 
   return (
     <div className="layer-list" ref={rootRef}>
+      <div className="layer-title">Layers</div>
       {notice && (
         <Notice size="sm" className="layer-note" onDismiss={onDismissNotice}>{notice}</Notice>
       )}
@@ -240,7 +241,7 @@ export default function LayerList({
           <button className="layer-add" onClick={() => setAdding(true)}>+ Add layer</button>
           <span className="layer-import-wrap">
             <button className="layer-add import" title="Import a layer from a file, or copy one from another profile"
-                    onClick={() => setImportOpen((v) => !v)}>Import…</button>
+                    onClick={() => setImportOpen((v) => !v)}>⭱ Import…</button>
             {importOpen && (
               <div className="layer-import-menu">
                 <button onClick={() => { setImportOpen(false); onImportLayer(); }}>

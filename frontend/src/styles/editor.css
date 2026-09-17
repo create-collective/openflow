@@ -13,17 +13,28 @@
   align-items: start;
 }
 
-/* Layer list (top-left) */
+/* Layer list (top-left): a card titled Layers, each layer a bordered row with its grip and
+   number, the active one in the accent, then Add layer and Import as full-width buttons. */
 .layer-col {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
 }
 
 .layer-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
+}
+
+.layer-title {
+  margin-bottom: 2px;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 /* Profile menu (components/ProfileMenu): the name that opens the switch list, and the dots.
@@ -128,17 +139,18 @@
 
 .layer-add-row {
   display: flex;
-  gap: 6px;
-  margin-top: 6px;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .layer-add-row .layer-add {
   margin-top: 0;
-  flex: 1;
+  width: 100%;
 }
 
-.layer-add.import {
-  flex: 0 0 auto;
+.layer-add-row .layer-import-wrap {
+  display: block;
 }
 
 .layer-profile {
@@ -161,22 +173,27 @@
   position: relative;
   display: flex;
   align-items: center;
+  padding-right: 4px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  background: var(--bg-panel);
 }
 
 .layer-row:hover {
+  border-color: var(--border-strong);
   background: var(--bg-hover);
 }
 
 .layer-row.active {
+  border-color: var(--accent);
   background: var(--bg-selected);
 }
 
 .layer-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 12px;
+  padding: 11px 8px 11px 4px;
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -243,12 +260,13 @@
 
 .layer-add {
   margin-top: 6px;
-  text-align: left;
-  background: transparent;
-  border: 1px dashed var(--border-strong);
+  text-align: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   font: inherit;
-  padding: 8px 10px;
+  font-weight: 600;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   cursor: pointer;
 }
@@ -259,10 +277,12 @@
 }
 
 .layer-index {
-  width: 18px;
+  width: 16px;
   color: var(--text-dim);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.layer-row.active .layer-index { color: var(--text); }
 
 .layer-name {
   font-weight: 600;
@@ -1494,7 +1514,7 @@
    rather than sized by the glyph alone. */
 .layer-grip {
   cursor: grab;
-  padding: 0 6px;
+  padding: 0 4px 0 10px;
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1;
