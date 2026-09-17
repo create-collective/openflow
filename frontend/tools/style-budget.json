@@ -18,8 +18,7 @@
       "inlineStyles": 3
     },
     "components/KeymapBoard.jsx": {
-      "inlineStyles": 9,
-      "colorLiterals": 2
+      "inlineStyles": 9
     },
     "components/MacroRecorder.jsx": {
       "inlineStyles": 5
@@ -57,12 +56,6 @@
     },
     "pages/Troubleshooting.jsx": {
       "inlineStyles": 3
-    },
-    "styles/app.css": {
-      "colorLiterals": 8
-    },
-    "styles/editor.css": {
-      "colorLiterals": 45
     }
   }
 }
