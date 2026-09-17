@@ -1,5 +1,5 @@
 {
-  "nativeDialogs": 7,
+  "nativeDialogs": 0,
   "files": {
     "App.jsx": {
       "inlineStyles": 1
@@ -41,9 +41,6 @@
     "pages/Color.jsx": {
       "inlineStyles": 9,
       "colorLiterals": 14
-    },
-    "pages/DeviceManagement.jsx": {
-      "inlineStyles": 2
     },
     "pages/Macros.jsx": {
       "inlineStyles": 28
