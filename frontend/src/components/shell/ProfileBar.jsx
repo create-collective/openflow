@@ -73,7 +73,6 @@ export default function ProfileBar() {
 
       <div className="shell-bar-actions">
         <Button
-          size="sm"
           variant="primary"
           done={dev.justRead}
           onClick={readKeyboard}
@@ -83,7 +82,6 @@ export default function ProfileBar() {
           {dev.busy === "read" ? "Reading…" : dev.justRead ? "✓ Read" : "⌨  Read from keyboard"}
         </Button>
         <Button
-          size="sm"
           onClick={backupNow}
           disabled={!!dev.busy}
           title="Snapshot everything to a backup file. Edits are saved as you make them; this keeps a restore point."

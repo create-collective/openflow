@@ -10,9 +10,9 @@
 .shell-nav {
   display: flex;
   align-items: center;
-  gap: 2px;
-  height: 52px;
-  padding: 0 16px;
+  gap: 4px;
+  height: 64px;
+  padding: 0 20px;
   background: var(--bg-nav);
   border-bottom: 1px solid var(--border);
 }
@@ -21,13 +21,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-right: 12px;
-  padding: 6px 10px;
+  margin-right: 16px;
+  padding: 8px 12px;
   border-radius: var(--radius-md);
   color: var(--text);
   text-decoration: none;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 18px;
   letter-spacing: 0.2px;
 }
 
@@ -36,8 +36,8 @@
 }
 
 .brand-dot {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 4px;
   background: var(--accent);
 }
@@ -46,7 +46,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 12px;
+  padding: 9px 14px;
+  font-size: 15px;
   border: none;
   border-radius: var(--radius-md);
   background: transparent;
@@ -69,6 +70,8 @@
 
 .nav-glyph {
   flex: none;
+  width: 18px;
+  height: 18px;
   color: var(--text-dim);
 }
 .nav-item:hover .nav-glyph,
@@ -114,14 +117,14 @@
   border-radius: var(--radius-md);
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 17px;
+  font-size: 19px;
   line-height: 1;
 }
 .shell-gear:hover { background: var(--bg-hover); color: var(--text); }
 .shell-gear.active { background: var(--bg-active); color: var(--text); }
 
 .shell-theme {
-  font-size: 15px;
+  font-size: 17px;
 }
 
 /* --- The persistent profile bar: the active keyboard profile, one status box per half, the
@@ -129,15 +132,15 @@
 .shell-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
+  gap: 18px;
+  padding: 12px 20px;
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
 }
 
 .shell-bar-profile {
   flex: none;
-  width: 240px;
+  width: 260px;
 }
 
 .shell-bar-empty {
@@ -168,7 +171,7 @@
   gap: 12px;
   overflow: hidden;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .shell-bar-notes .saved-note {
@@ -180,7 +183,12 @@
   flex: none;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+/* The three whole-keyboard actions, a size up from a form button: they are the bar. */
+.shell-bar-actions .ui-btn {
+  padding: 10px 16px;
+  font-size: 15px;
 }
 
 /* Main */
@@ -363,15 +371,15 @@ img:not([draggable="true"]) {
    module beneath each. Fed by the devices stream every six seconds; hover for the detail. */
 .device-chip {
   display: flex;
-  gap: 14px;
-  padding: 5px 10px;
+  gap: 18px;
+  padding: 7px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--bg-panel);
   color: var(--text);
   text-decoration: none;
-  font-size: 12px;
+  font-size: 13px;
 }
-.device-chip .ui-statusbox { min-width: 118px; }
+.device-chip .ui-statusbox { min-width: 134px; font-size: 13px; }
 .device-chip:hover { border-color: var(--accent); }
 .device-chip-empty { color: var(--text-dim); }

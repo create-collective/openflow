@@ -47,9 +47,9 @@
   color: var(--text);
   font: inherit;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 8px 10px;
   border-radius: var(--radius-md);
   text-align: left;
 }

@@ -178,7 +178,6 @@ export default function FlashButton() {
   return (
     <>
       <Button
-        size="sm"
         variant="primary"
         done={flashed}
         onClick={openPreview}
