@@ -2,7 +2,7 @@
   "nativeDialogs": 0,
   "files": {
     "App.jsx": {
-      "inlineStyles": 1
+      "inlineStyles": 0
     },
     "components/ActionPalette.jsx": {
       "inlineStyles": 1
