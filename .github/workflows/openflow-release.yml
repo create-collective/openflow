@@ -95,3 +95,4 @@ jobs:
         with:
           files: artifacts/*
           generate_release_notes: true
+          draft: true          # the owner publishes; nothing goes public by itself
