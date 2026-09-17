@@ -10,25 +10,47 @@ NayaFlow persisted edits offline.
 
 from __future__ import annotations
 
+import logging
+import os
 import shutil
 import sys
 from pathlib import Path
 
-from .config import db_path
+from .config import db_path, seed_db_path
+
+log = logging.getLogger("openflow.seed")
+
 
 def _default_snapshot() -> Path | None:
-    """The captured snapshot that ships with this repository, wherever it is checked out.
-
-    This was an absolute path into one developer's machine, so the script only ever worked
-    there. Walked for instead, so a fresh clone finds its own copy."""
-    for parent in Path(__file__).resolve().parents:
-        candidate = parent / "device" / "userdata-snapshot" / "user-data-2026-08-28.db"
-        if candidate.is_file():
-            return candidate
-    return None
+    """The snapshot that ships with this repository (or with the frozen bundle), wherever it is:
+    config.seed_db_path() knows both layouts."""
+    return seed_db_path()
 
 
 DEFAULT_SNAPSHOT = _default_snapshot()
+
+
+def ensure_seeded() -> Path | None:
+    """First run: put the bundled snapshot in place when there is no database yet.
+
+    Called by the app lifespan BEFORE init_db(), which would otherwise create an empty schema and
+    the app would open with nothing in it. No-op when a database exists, when OPENFLOW_NO_SEED is
+    set (tests, or someone who wants an empty start), or when no snapshot is bundled. The copy
+    lands under a temporary name and is renamed into place, so a crash mid-copy never leaves a
+    half file for init_db to "migrate". Returns the database path when it seeded, else None."""
+    if os.environ.get("OPENFLOW_NO_SEED"):
+        return None
+    dest = db_path()
+    if dest.exists():
+        return None
+    source = seed_db_path()
+    if source is None or not source.is_file():
+        return None
+    staging = dest.with_name(dest.name + ".seeding")
+    shutil.copyfile(source, staging)
+    os.replace(staging, dest)
+    log.info("first run: seeded %s from %s", dest, source)
+    return dest
 
 
 def seed(source: Path, force: bool = False) -> Path:

@@ -33,6 +33,7 @@
   "GET /openapi.json",
   "GET /redoc",
   "GET /sse",
+  "MOUNT /",
   "POST /rpc/add-macro-step",
   "POST /rpc/add-macro-steps",
   "POST /rpc/check-for-updates",
@@ -94,6 +95,7 @@
   "POST /rpc/set-module-led",
   "POST /rpc/set-module-setting",
   "POST /rpc/set-setting",
+  "POST /rpc/shutdown",
   "POST /rpc/text-command",
   "POST /rpc/update-macro-step"
 ]

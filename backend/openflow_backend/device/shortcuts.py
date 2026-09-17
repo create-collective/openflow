@@ -17,27 +17,22 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-def _reference_dir() -> Path:
-    """Where docs/reference lives.
-
-    Walked for rather than reached by a fixed parent index: NayaOS nests this tree under
-    openflow/ while the standalone repository has it at the root, so `parents[4]` is right in one
-    layout and points above the drive root in the other."""
-    for p in Path(__file__).resolve().parents:
-        cand = p / "docs" / "reference"
-        if cand.is_dir():
-            return cand
-    return Path(__file__).resolve().parents[4] / "docs" / "reference"
+from ..config import reference_dir
 
 
-_DICT = _reference_dir() / "shortcut-dictionary.json"
+def _dict_file() -> Path | None:
+    """docs/reference/shortcut-dictionary.json via config.reference_dir(): the source checkout in
+    either layout, or the frozen bundle's resources."""
+    d = reference_dir()
+    return d / "shortcut-dictionary.json" if d else None
 
 
 @lru_cache(maxsize=1)
 def _load() -> dict:
-    if not _DICT.exists():
+    f = _dict_file()
+    if f is None or not f.exists():
         return {"_meta": {}, "shortcuts": []}
-    return json.loads(_DICT.read_text(encoding="utf-8"))
+    return json.loads(f.read_text(encoding="utf-8"))
 
 
 def all_shortcuts() -> list[dict]:

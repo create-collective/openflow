@@ -22,6 +22,7 @@ sys.path.insert(0, str(_BACKEND / "openflow_backend" / "_vendor"))
 
 from starlette.routing import Mount, Route          # noqa: E402
 
+from openflow_backend import app as app_mod         # noqa: E402
 from openflow_backend.app import create_app         # noqa: E402
 
 MANIFEST = Path(__file__).with_name("route-manifest.json")
@@ -51,7 +52,11 @@ def served_routes() -> list[str]:
     return sorted(out)
 
 
-def test_the_served_routes_match_the_manifest():
+def test_the_served_routes_match_the_manifest(tmp_path, monkeypatch):
+    # The renderer mount exists only when a built renderer is found; pin one so the manifest
+    # reads the same with or without frontend/dist on disk (CI's backend job has none).
+    (tmp_path / "index.html").write_text("<div id=root></div>", encoding="utf-8")
+    monkeypatch.setattr(app_mod, "renderer_dir", lambda: tmp_path)
     routes = served_routes()
     if os.environ.get("UPDATE_ROUTE_MANIFEST"):
         MANIFEST.write_text(json.dumps(routes, indent=2) + "\n", encoding="utf-8")

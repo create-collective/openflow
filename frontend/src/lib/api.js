@@ -2,8 +2,11 @@
 // Base URL follows NayaFlow's recovered pattern: the Electron preload exposes the
 // backend port on window.EXPOSED.bgServerPort; standalone dev falls back to 3001.
 
-const bgServerPort = (window.EXPOSED && window.EXPOSED.bgServerPort) || 3001;
-export const BASE = `http://localhost:${bgServerPort}`;
+const bgServerPort = (window.EXPOSED && window.EXPOSED.bgServerPort) || null;
+// With a port from the shell the backend is at 127.0.0.1 and, in the desktop app, is also what
+// serves this page, so the API origin must be byte-identical to the page origin (localhost may
+// resolve to ::1 first). Standalone in a browser tab: the backend's own default port.
+export const BASE = bgServerPort ? `http://127.0.0.1:${bgServerPort}` : "http://localhost:3001";
 
 async function req(method, path, body) {
   const res = await fetch(BASE + path, {

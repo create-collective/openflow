@@ -16,10 +16,11 @@ import io
 import platform
 from pathlib import Path
 
-from fastapi import APIRouter, Body, File, HTTPException, UploadFile
+from fastapi import APIRouter, Body, File, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
 from .. import __version__
+from ..config import instance_token, is_frozen, reference_dir
 from ..db import backup as bak
 from ..db import keymap_import as kmi
 from ..db import macros as mac
@@ -62,7 +63,40 @@ async def info_system() -> dict:
         "arch": platform.machine(),
         "python": platform.python_version(),
         "reference": REFERENCE_FIRMWARE,
+        # The desktop shell launched us with a per-launch token; it accepts only a backend that
+        # echoes its own. None when started by hand.
+        "instance": instance_token(),
+        "frozen": is_frozen(),
     }
+
+
+@router.post("/rpc/shutdown")
+async def shutdown(request: Request, body: dict = Body(default={})) -> dict:
+    """Stop the server cleanly: the lifespan shutdown closes the keyboard's port and stops the
+    poll loop, which a killed process does not do. Offered only to whoever launched us with
+    OPENFLOW_INSTANCE (the desktop shell, the sidecar smoke test) and only with that token."""
+    token = instance_token()
+    if not token or body.get("instance") != token:
+        raise HTTPException(status_code=403, detail="shutdown needs this backend's instance token")
+    server = getattr(request.app.state, "server", None)
+    if server is None:
+        raise HTTPException(status_code=503,
+                            detail="no server handle to stop (not started by openflow_backend.__main__)")
+    server.should_exit = True
+    return {"status": "stopping"}
+
+
+def _catalog_json() -> dict:
+    """docs/reference/firmware-catalog.json via config.reference_dir(): the committed catalogue
+    metadata (versions + hashes, NOT the gitignored image tree). {} when absent or unreadable."""
+    d = reference_dir()
+    cand = d / "firmware-catalog.json" if d else None
+    if cand is None or not cand.is_file():
+        return {}
+    try:
+        return json.loads(cand.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
 
 
 def _firmware_catalog_raw() -> list[dict]:
@@ -70,74 +104,48 @@ def _firmware_catalog_raw() -> list[dict]:
     `generation`, full `plaintextSha256`, `withheldBecause`). _firmware_catalog() below is the UI
     summary and must NOT be handed to the flasher: it drops `side` and truncates the hash, which
     would make every image fail the side check."""
-    from pathlib import Path as _P
-    for parent in _P(__file__).resolve().parents:
-        cand = parent / "docs" / "reference" / "firmware-catalog.json"
-        if cand.is_file():
-            try:
-                return json.loads(cand.read_text(encoding="utf-8")).get("images", [])
-            except (ValueError, OSError):
-                return []
-    return []
+    return _catalog_json().get("images", [])
 
 
 def _firmware_catalog() -> list[dict]:
-    """The bundled firmware images, summarised for the Software page. Reads the committed
-    catalogue metadata (versions + hashes, NOT the gitignored image tree), walked for so it works
-    in either checkout layout. Returns [] rather than raising if it is not present."""
-    from pathlib import Path as _P
-    for parent in _P(__file__).resolve().parents:
-        cand = parent / "docs" / "reference" / "firmware-catalog.json"
-        if cand.is_file():
-            try:
-                data = json.loads(cand.read_text(encoding="utf-8"))
-            except (ValueError, OSError):
-                return []
-            out = []
-            for img in data.get("images", []):
-                version = img.get("createFirmware") or img.get("moduleFirmware")
-                out.append({
-                    "file": img.get("file"),
-                    "target": img.get("target"),                    # keyboard | module
-                    "component": img.get("component"),              # left/right, modules, touch/track/tune, dial
-                    "container": img.get("container"),              # the .sfb userapps sit inside FlashMemory.bin
-                    "generation": img.get("generation"),           # A/B flash generation (keyboard)
-                    "version": version,
-                    "versionConfidence": img.get("versionConfidence"),
-                    # The version number when a release declared one, else the NayaFlow release
-                    # span that shipped the image ("NayaFlow 1.3.8 to 1.6.10"). The UI groups by it.
-                    "versionLabel": img.get("versionLabel") or version,
-                    "bundle": img.get("bundle") or img.get("source"),
-                    "bundles": img.get("bundles") or ([img["bundle"]] if img.get("bundle") else []),
-                    "firstSeen": img.get("firstSeen"),
-                    "lastSeen": img.get("lastSeen"),
-                    "releaseOrder": img.get("releaseOrder"),       # chronological; newest first in the UI
-                    "era": img.get("era"),
-                    "historyPath": img.get("historyPath"),         # where it sits in nayaHistory/firmware-history
-                    "flashable": img.get("flashable", False),
-                    "withheldBecause": img.get("withheldBecause") or [],
-                    "note": img.get("note"),
-                    # keyboard: the MCUboot plaintext hash; bundle: its blob; userapp: the
-                    # bundle's own _HASH sidecar for it
-                    "sha256": (img.get("plaintextSha256") or img.get("blobSha256")
-                               or img.get("sha256") or "")[:16],
-                })
-            return out
-    return []
+    """The bundled firmware images, summarised for the Software page. [] when the catalogue is
+    not present."""
+    out = []
+    for img in _catalog_json().get("images", []):
+        version = img.get("createFirmware") or img.get("moduleFirmware")
+        out.append({
+            "file": img.get("file"),
+            "target": img.get("target"),                    # keyboard | module
+            "component": img.get("component"),              # left/right, modules, touch/track/tune, dial
+            "container": img.get("container"),              # the .sfb userapps sit inside FlashMemory.bin
+            "generation": img.get("generation"),           # A/B flash generation (keyboard)
+            "version": version,
+            "versionConfidence": img.get("versionConfidence"),
+            # The version number when a release declared one, else the NayaFlow release
+            # span that shipped the image ("NayaFlow 1.3.8 to 1.6.10"). The UI groups by it.
+            "versionLabel": img.get("versionLabel") or version,
+            "bundle": img.get("bundle") or img.get("source"),
+            "bundles": img.get("bundles") or ([img["bundle"]] if img.get("bundle") else []),
+            "firstSeen": img.get("firstSeen"),
+            "lastSeen": img.get("lastSeen"),
+            "releaseOrder": img.get("releaseOrder"),       # chronological; newest first in the UI
+            "era": img.get("era"),
+            "historyPath": img.get("historyPath"),         # where it sits in nayaHistory/firmware-history
+            "flashable": img.get("flashable", False),
+            "withheldBecause": img.get("withheldBecause") or [],
+            "note": img.get("note"),
+            # keyboard: the MCUboot plaintext hash; bundle: its blob; userapp: the
+            # bundle's own _HASH sidecar for it
+            "sha256": (img.get("plaintextSha256") or img.get("blobSha256")
+                       or img.get("sha256") or "")[:16],
+        })
+    return out
 
 
 def _firmware_releases() -> list[dict]:
     """The NayaFlow release list the catalogue was built from: tag, date, order, and the Create /
     module firmware version each release declared (None where it declared nothing)."""
-    from pathlib import Path as _P
-    for parent in _P(__file__).resolve().parents:
-        cand = parent / "docs" / "reference" / "firmware-catalog.json"
-        if cand.is_file():
-            try:
-                return json.loads(cand.read_text(encoding="utf-8")).get("releases", [])
-            except (ValueError, OSError):
-                return []
-    return []
+    return _catalog_json().get("releases", [])
 
 
 @router.get("/api/device-log")

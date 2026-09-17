@@ -15,29 +15,25 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-# docs/reference/ lives at the repo root, four levels up from this file.
-def _reference_dir() -> Path:
-    """Where docs/reference lives.
-
-    Walked for rather than reached by a fixed parent index: NayaOS nests this tree under
-    openflow/ while the standalone repository has it at the root, so `parents[4]` is right in one
-    layout and points above the drive root in the other."""
-    for p in Path(__file__).resolve().parents:
-        cand = p / "docs" / "reference"
-        if cand.is_dir():
-            return cand
-    return Path(__file__).resolve().parents[4] / "docs" / "reference"
-
-
-_FILE = _reference_dir() / "app-shortcuts.json"
+from ..config import reference_dir
 
 PLATFORMS = ("windows", "mac")
 
 
+def _file() -> Path | None:
+    """docs/reference/app-shortcuts.json, wherever config.reference_dir() says it is (the source
+    checkout in either layout, or the frozen bundle's resources)."""
+    d = reference_dir()
+    return d / "app-shortcuts.json" if d else None
+
+
 @lru_cache(maxsize=1)
 def _data() -> dict:
+    f = _file()
+    if f is None:
+        return {}
     try:
-        return json.loads(_FILE.read_text(encoding="utf-8")).get("apps") or {}
+        return json.loads(f.read_text(encoding="utf-8")).get("apps") or {}
     except (OSError, ValueError):
         return {}
 
