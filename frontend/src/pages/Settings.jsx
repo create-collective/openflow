@@ -14,11 +14,7 @@ import Notice from "../components/ui/Notice";
 import Tabs from "../components/ui/Tabs";
 import { THEME_PREFERENCES, setThemePreference, useThemePreference } from "../lib/theme";
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
-const REPOS = {
-  app: "traviswye/openflow",
-  companion: "traviswye/create-companion",
-  firmware: "traviswye/openflow-firmware",
-};
+import { REPOS, checkRelease } from "../lib/updates";
 
 const TABS = [
   { id: "behavior", label: "Behavior" },
@@ -102,17 +98,8 @@ export default function Settings() {
 
   const connected = status.some((h) => h.connected);
 
-  // One opt-in release check, reused for OpenFlow and Create Companion -- no forced updater.
-  async function checkRelease(repo, current, setter) {
-    setter({ checking: true });
-    try {
-      const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
-      if (!res.ok) throw new Error(res.status === 404 ? "No public releases yet" : `GitHub ${res.status}`);
-      const d = await res.json();
-      const latest = (d.tag_name || "").replace(/^v/, "");
-      setter({ latest, current, ahead: latest && latest !== current });
-    } catch (e) { setter({ error: e.message }); }
-  }
+  // One opt-in release check (lib/updates), reused for OpenFlow and Create Companion -- no
+  // forced updater.
   const checkUpdate = () => checkRelease(REPOS.app, sys?.backendVersion, setUpdate);
   const checkCompanion = () => checkRelease(REPOS.companion, null, setCompanion);
 
