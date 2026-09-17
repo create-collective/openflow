@@ -74,9 +74,10 @@ export default function TopNav() {
 
   return (
     <nav className="shell-nav" aria-label="Main">
-      <NavLink to="/" end className="brand" title="Hub">
-        <BrandMark size={26} className="brand-mark" />
-        OpenFlow
+      {/* The mark IS the O of OpenFlow, as the signature sheet sets it: mark, then penFlow. */}
+      <NavLink to="/" end className="brand" title="Hub" aria-label="OpenFlow">
+        <BrandMark size={24} className="brand-mark" />
+        <span className="brand-word">penFlow</span>
       </NavLink>
       {NAV.map((item) => (
         <NavLink key={item.to} to={item.to} className={linkClass}>

@@ -190,6 +190,9 @@ function createWindow(port) {
     minHeight: 720,
     show: false,                     // shown on ready-to-show, so no white flash and no blank window
     title: "OpenFlow",
+    // The window and taskbar icon. The packaged build gets it from electron-builder; in dev
+    // mode nothing else sets it and the window wore the Electron default.
+    icon: path.join(__dirname, "..", "build", "icon.png"),
     backgroundColor: "#0e0e11",      // the dark theme's --bg until the theme work lands
     autoHideMenuBar: true,           // native frame; the menu is there behind Alt
     webPreferences: {

@@ -20,7 +20,7 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1px;
   margin-right: 16px;
   padding: 8px 12px;
   border-radius: var(--radius-md);
@@ -35,11 +35,15 @@
   background: var(--bg-hover);
 }
 
-/* The mark, in the brand cyan whatever the theme (the signature sheet keeps it cyan on both
-   grounds); the wordmark beside it is text in the text colour. */
+/* The mark is the O: brand cyan whatever the theme (the sheet keeps it cyan on both grounds),
+   the height of the line so it stands as tall as the letters with their descender; the rest of
+   the word is text in the text colour, set tight against it. */
 .brand-mark {
   flex: none;
   color: var(--brand);
+}
+.brand-word {
+  letter-spacing: -0.3px;
 }
 
 .nav-item {
