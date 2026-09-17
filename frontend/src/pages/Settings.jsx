@@ -4,6 +4,8 @@ import { confirmDialog } from "../lib/dialogs";
 import { applyInterfaceScaling } from "../lib/scaling";
 import { pickFile, downloadJSON, safeName } from "../lib/files";
 import SettingField from "../components/SettingField";
+import SettingRow from "../components/ui/SettingRow";
+import useRunLog from "../lib/useRunLog";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -29,11 +31,11 @@ const TABS = [
 
 function SettingsGroups({ groups, onChange }) {
   return (
-    <div style={{ maxWidth: 640 }}>
+    <div className="settings-pane">
       {groups.map((g) => (
-        <div key={g.group} style={{ marginBottom: 28 }}>
+        <div key={g.group} className="settings-group">
           <h3>{g.group} {g.scope === "device" && <Badge>device</Badge>}</h3>
-          <p className="page-sub" style={{ marginTop: -4 }}>{g.desc}</p>
+          <p className="page-sub settings-group-desc">{g.desc}</p>
           {g.fields.map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
         </div>
       ))}
@@ -59,8 +61,7 @@ export default function Settings() {
   const [logmeta, setLogmeta] = useState({});
   const [recovery, setRecovery] = useState([]);
   const [pairPlan, setPairPlan] = useState(null);
-  const [out, setOut] = useState("");
-  const [busy, setBusy] = useState(false);
+  const { out, busy, run } = useRunLog();
   const [err, setErr] = useState(null);
 
   const load = useCallback(async () => {
@@ -100,13 +101,6 @@ export default function Settings() {
   }
 
   const connected = status.some((h) => h.connected);
-
-  async function run(label, fn) {
-    setBusy(true); setOut(`${label}…`);
-    try { const r = await fn(); setOut(`${label}:\n${JSON.stringify(r, null, 2)}`); }
-    catch (e) { setOut(`${label} failed:\n${e.message}`); }
-    finally { setBusy(false); }
-  }
 
   // One opt-in release check, reused for OpenFlow and Create Companion -- no forced updater.
   async function checkRelease(repo, current, setter) {
@@ -161,7 +155,7 @@ export default function Settings() {
               )}
 
               {tab === "backup" && (
-                <div style={{ maxWidth: 720 }}>
+                <div className="settings-pane wide">
                   <h3>Local Backups</h3>
                   <p className="page-sub">OpenFlow auto-backs up your data every 30 minutes. Restore any snapshot below.</p>
                   <div className="btn-row" style={{ marginBottom: 8 }}>
@@ -204,7 +198,7 @@ export default function Settings() {
               )}
 
               {tab === "troubleshooting" && (
-                <div style={{ maxWidth: 640 }}>
+                <div className="settings-pane">
                   <h3>Troubleshooting <Badge>destructive</Badge></h3>
                   <p className="page-sub" style={{ marginBottom: 12 }}>
                     Actions that erase device data, kept apart from the safe, read-only diagnostics.
@@ -212,14 +206,11 @@ export default function Settings() {
                     the <strong>Information &rsaquo; Troubleshooting</strong> tab.
                   </p>
                   <DeviceGate connected={connected}>
-                    <div className="setting">
-                      <div className="setting-head"><strong>Clear BLE Devices</strong>
-                        <Button variant="danger" disabled={busy} onClick={async () => { if (await confirmDialog({ title: "Clear all Bluetooth bonds?", message: "If the halves are bonded to each other they will need re-pairing.", confirmLabel: "Clear", tone: "danger" })) run("Clear BLE", () => api.sendCommand("clear_ble_devices", [], { side: "left", force: true })); }}>Clear</Button></div>
-                      <div className="setting-desc">Forces the Create to forget all Bluetooth connections.</div>
-                    </div>
+                    <SettingRow label="Clear BLE Devices" desc="Forces the Create to forget all Bluetooth connections."
+                      control={<Button variant="danger" disabled={busy} onClick={async () => { if (await confirmDialog({ title: "Clear all Bluetooth bonds?", message: "If the halves are bonded to each other they will need re-pairing.", confirmLabel: "Clear", tone: "danger" })) run("Clear BLE", () => api.sendCommand("clear_ble_devices", [], { side: "left", force: true })); }}>Clear</Button>} />
                   </DeviceGate>
 
-                  <h3 style={{ marginTop: 26 }}>Recovery procedures</h3>
+                  <h3 className="settings-section">Recovery procedures</h3>
                   <p className="page-sub" style={{ marginBottom: 12 }}>
                     Device-recovery procedures recovered from the vendor software. Each is wired and
                     its exact command is pinned by tests, but they stay <strong>disabled</strong> until
@@ -234,29 +225,25 @@ export default function Settings() {
                       <div key={danger} style={{ marginBottom: 14 }}>
                         <div className="info-sub">{heading}</div>
                         {ops.map((op) => (
-                          <div className="setting" key={op.id}>
-                            <div className="setting-head">
-                              <strong>{op.label}</strong>
-                              <Badge size="xs" tone={op.danger === "destructive" ? "warn" : "neutral"}>{op.danger}</Badge>
-                              <div className="setting-ctl">
-                                <Button variant={op.danger === "destructive" ? "danger" : "secondary"}
-                                  disabled={!op.enabled || busy || !connected}
-                                  title={!op.enabled ? `Wired, enabled after testing on a ${op.needs}` : op.confirm}
-                                  onClick={async () => { if (await confirmDialog({ title: `Run ${op.label}?`, message: op.confirm, confirmLabel: "Run", tone: op.danger === "destructive" ? "danger" : "default" })) run(op.label, () => api.runRecoveryOp(op.id)); }}>
-                                  {op.enabled ? "Run" : "Disabled"}
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="setting-desc">
+                          <SettingRow key={op.id} label={op.label}
+                            badge={<Badge size="xs" tone={op.danger === "destructive" ? "warn" : "neutral"}>{op.danger}</Badge>}
+                            control={
+                              <Button variant={op.danger === "destructive" ? "danger" : "secondary"}
+                                disabled={!op.enabled || busy || !connected}
+                                title={!op.enabled ? `Wired, enabled after testing on a ${op.needs}` : op.confirm}
+                                onClick={async () => { if (await confirmDialog({ title: `Run ${op.label}?`, message: op.confirm, confirmLabel: "Run", tone: op.danger === "destructive" ? "danger" : "default" })) run(op.label, () => api.runRecoveryOp(op.id)); }}>
+                                {op.enabled ? "Run" : "Disabled"}
+                              </Button>
+                            }
+                            desc={<>
                               {op.desc}{!op.enabled && <> — <em>wired, enabled after testing on a {op.needs}.</em></>}
-                              <span className="devlog-detail" style={{ display: "block", opacity: 0.5, fontFamily: "var(--font-mono)", fontSize: 11 }}>{op.command}</span>
-                            </div>
-                          </div>
+                              <span className="settings-command">{op.command}</span>
+                            </>} />
                         ))}
                       </div>
                     );
                   })}
-                  <h3 style={{ marginTop: 26 }}>Guided split-link repair</h3>
+                  <h3 className="settings-section">Guided split-link repair</h3>
                   <p className="page-sub" style={{ marginBottom: 12 }}>
                     NayaFlow's pairing operation as one reviewed sequence: both halves' addresses are
                     stored <strong>before</strong> anything is cleared, each half is pointed at the
@@ -264,18 +251,15 @@ export default function Settings() {
                     verified. Planning only reads. Running is wired but <strong>disabled</strong> until
                     it is watched on a spare pair, and it forgets every Bluetooth host on both halves.
                   </p>
-                  <div className="setting">
-                    <div className="setting-head">
-                      <strong>Plan the repair</strong>
-                      <div className="setting-ctl">
-                        <Button disabled={busy || !connected}
-                          onClick={() => run("Pairing repair plan", () => api.pairingRepairPlan().then((p) => { setPairPlan(p); return p; }))}>Plan</Button>
-                        <Button disabled={busy || !connected} style={{ marginLeft: 6 }}
-                          onClick={() => run("Pairing verify", () => api.pairingRepairVerify())}>Verify link</Button>
-                        <Button variant="danger" disabled title="Wired, enabled after testing on a spare pair" style={{ marginLeft: 6 }}>Run (disabled)</Button>
-                      </div>
-                    </div>
-                    <div className="setting-desc">
+                  <SettingRow label="Plan the repair"
+                    control={<>
+                      <Button disabled={busy || !connected}
+                        onClick={() => run("Pairing repair plan", () => api.pairingRepairPlan().then((p) => { setPairPlan(p); return p; }))}>Plan</Button>
+                      <Button disabled={busy || !connected}
+                        onClick={() => run("Pairing verify", () => api.pairingRepairVerify())}>Verify link</Button>
+                      <Button variant="danger" disabled title="Wired, enabled after testing on a spare pair">Run (disabled)</Button>
+                    </>}
+                    desc={<>
                       {!pairPlan && <>Reads both halves and lists every step with its exact command. Nothing is sent.</>}
                       {pairPlan?.refused && <>Refused: {pairPlan.refused}</>}
                       {pairPlan?.steps && (
@@ -284,7 +268,7 @@ export default function Settings() {
                             <li key={i} style={{ marginBottom: 2 }}>
                               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{s.name}</span>
                               {s.side ? ` (${s.side})` : ""} — {s.detail}
-                              {s.command && <span className="devlog-detail" style={{ display: "block", opacity: 0.5, fontFamily: "var(--font-mono)", fontSize: 11 }}>{s.command}</span>}
+                              {s.command && <span className="settings-command">{s.command}</span>}
                             </li>
                           ))}
                         </ol>
@@ -294,33 +278,27 @@ export default function Settings() {
                           would store: left {pairPlan.record.left.bleAddress} (paired to {pairPlan.record.left.pairAddress || "nothing"}), right {pairPlan.record.right.bleAddress} (paired to {pairPlan.record.right.pairAddress || "nothing"}) · arm {pairPlan.armToken}
                         </span>
                       )}
-                    </div>
-                  </div>
+                    </>} />
                   {out && <pre className="settings-out">{out}</pre>}
                 </div>
               )}
 
               {tab === "logging" && (
-                <div style={{ maxWidth: 860 }}>
+                <div className="settings-pane wider">
                   <h3>Logging &amp; Diagnostics</h3>
-                  <div className="setting">
-                    <div className="setting-head"><strong>Diagnostics Report</strong>
-                      <Button disabled={busy} onClick={() => run("Diagnostics", api.diagnostics)}>Generate</Button></div>
-                    <div className="setting-desc">Collects system + device info to help debug issues.</div>
-                  </div>
-                  <div className="setting-head" style={{ marginTop: 18 }}>
-                    <strong>Device I/O log</strong>
-                    <div className="setting-ctl">
+                  <SettingRow label="Diagnostics Report" desc="Collects system + device info to help debug issues."
+                    control={<Button disabled={busy} onClick={() => run("Diagnostics", api.diagnostics)}>Generate</Button>} />
+                  <SettingRow bare className="settings-log-head" label="Device I/O log"
+                    control={<>
                       <Button disabled={busy} onClick={() => api.deviceLog().then((r) => { setDevlog(r.entries || []); setLogmeta(r); })}>Refresh</Button>
                       <Button disabled={busy} onClick={() => { api.clearDeviceLog().then(() => setDevlog([])); }}>Clear</Button>
                       {logmeta.dir && <Button disabled={busy} onClick={() => api.openLogsFolder()}>Open log folder</Button>}
-                    </div>
-                  </div>
-                  <div className="setting-desc" style={{ marginBottom: 8 }}>
-                    Every command, text query and raw frame exchanged with a connected keyboard, newest last.
-                    Device bytes only. Also written to a daily file under the log folder{logmeta.retentionDays ? `, kept ${logmeta.retentionDays} days` : ""}.
-                    This is where a "flash failed" that actually landed shows what really happened.
-                  </div>
+                    </>}
+                    desc={<>
+                      Every command, text query and raw frame exchanged with a connected keyboard, newest last.
+                      Device bytes only. Also written to a daily file under the log folder{logmeta.retentionDays ? `, kept ${logmeta.retentionDays} days` : ""}.
+                      This is where a "flash failed" that actually landed shows what really happened.
+                    </>} />
                   {devlog.length === 0
                     ? <div className="empty">No device I/O recorded yet. Read or flash the keyboard, then Refresh.</div>
                     : (
@@ -341,7 +319,7 @@ export default function Settings() {
               )}
 
               {tab === "software" && (
-                <div style={{ maxWidth: 640 }}>
+                <div className="settings-pane">
                   <h3>Software &amp; Firmware</h3>
 
                   <KVRow k="OpenFlow" v={sys?.backendVersion} />
@@ -360,7 +338,7 @@ export default function Settings() {
                     Opt-in checks against GitHub Releases. OpenFlow has no forced updater.
                   </p>
 
-                  <h3 style={{ marginTop: 22 }}>Device firmware</h3>
+                  <h3 className="settings-section tight">Device firmware</h3>
                   {status.filter((h) => h.connected).map((h) => (
                     <div key={h.port}>
                       <KVRow k={`${h.description} firmware`} v={h.firmwareVersion || "—"} />
@@ -372,7 +350,7 @@ export default function Settings() {
                     <KVRow k="Naya ships (reference)" v={`Create ${firmware.reference.createFirmware} · module ${firmware.reference.moduleFirmware}`} />
                   )}
 
-                  <h3 style={{ marginTop: 22 }}>Firmware library</h3>
+                  <h3 className="settings-section tight">Firmware library</h3>
                   <p className="page-sub" style={{ marginBottom: 10 }}>
                     Every firmware image OpenFlow has classified, by what it targets and which
                     NayaFlow release bundled it — so a specific version can be picked for an

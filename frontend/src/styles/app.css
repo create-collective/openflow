@@ -84,20 +84,6 @@
   margin: 0 0 24px;
 }
 
-/* Cards */
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  margin-bottom: 16px;
-}
-
-.card h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -127,55 +113,7 @@
   background: var(--err);
 }
 
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-hover);
-  color: var(--text);
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn:hover {
-  background: var(--bg-hover-strong);
-}
-
-/* A button that sits inline with a heading rather than in a button row -- it has to read as a
-   control without competing with the layer name beside it. */
-.btn.tiny {
-  padding: 3px 9px;
-  font-size: 11px;
-  font-weight: 600;
-  gap: 5px;
-  vertical-align: middle;
-}
-
-.btn.primary {
-  background: var(--accent);
-  color: var(--accent-fg);
-  border-color: transparent;
-}
-
-.btn.primary:hover {
-  background: var(--accent-hover);
-}
-
-.btn.danger {
-  border-color: color-mix(in srgb, var(--err) 50%, transparent);
-  color: var(--err);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
+/* A row of buttons (the buttons themselves are ui Button) */
 .btn-row {
   display: flex;
   gap: 10px;
@@ -189,14 +127,6 @@
   padding: 40px 0;
 }
 
-.phase-note {
-  border-left: 3px solid var(--accent);
-  background: var(--bg-panel);
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-}
-
 /* --- Flash preview: the plan inside the dialog (the dialog itself is ui Modal) ------------ */
 .flash-diff { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; }
 .flash-diff li { color: var(--text); }
@@ -207,37 +137,8 @@
 .flash-ops table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
 .flash-ops td { padding: 3px 6px; border-top: 1px solid var(--border); color: var(--text); }
 .flash-ops .mono { font-family: var(--font-mono); color: var(--text-muted); }
-/* --- Module gesture flashability badges ------------------------------------ */
-.gesture-badge {
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-  padding: 2px 6px; border-radius: 5px; margin: 0 8px; white-space: nowrap;
-}
-.gesture-badge.flashable { background: var(--ok-soft); color: var(--ok); }
-.gesture-badge.axis { background: var(--accent-soft); color: var(--accent); }
-.gesture-badge.dbonly { background: var(--badge-bg); color: var(--text-muted); }
-
-/* --- Flash: writing + success feedback -------------------------------------
-   A flash is slow and irreversible, and the dialog used to unmount the moment it
-   started, so it finished with no signal at all. These are the two places that
-   now say what happened: the note inside the dialog, and the button for five
-   seconds after it closes. Additive only -- nothing above is modified. */
-.board-btn.btn-done,
-.board-btn.primary.btn-done {
-  background: var(--ok);
-  border-color: var(--ok);
-  color: var(--ok-fg);
-}
-.board-btn.btn-done:hover:not(:disabled),
-.board-btn.primary.btn-done:hover { background: var(--ok); }
-
-/* The note beside the button, for the detail the badge has no room for. */
+/* The note beside the board buttons, for the detail a badge has no room for. */
 .saved-note.ok { color: var(--ok); }
-
-.phase-note.flash-ok {
-  border-left-color: var(--ok);
-  background: color-mix(in srgb, var(--ok) 12%, transparent);
-  color: var(--text);
-}
 
 .flash-spinner {
   display: inline-block;

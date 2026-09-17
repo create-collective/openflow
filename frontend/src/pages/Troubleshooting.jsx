@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import BleSlots from "../components/BleSlots";
+import useRunLog from "../lib/useRunLog";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -108,8 +109,7 @@ export default function Troubleshooting() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
   const [side, setSide] = useState("left");
-  const [out, setOut] = useState("");
-  const [busy, setBusy] = useState(false);
+  const { out, busy, run, clear } = useRunLog();
   const [live, setLive] = useState(false);   // read in this session, not restored from cache
   const [now, setNow] = useState(() => Date.now());
   // Device | Connections | Troubleshooting. Device Manager's contents fold into these, so that
@@ -159,13 +159,6 @@ export default function Troubleshooting() {
   // commands per half. All report into the output box like the diagnostics do.
   async function lighting(label, fn) {
     await run(label, fn);
-  }
-
-  async function run(label, fn) {
-    setBusy(true); setOut(`${label}…`);
-    try { const res = await fn(); setOut(`${label}:\n${JSON.stringify(res, null, 2)}`); }
-    catch (e) { setOut(`${label} failed:\n${e.message}`); }
-    finally { setBusy(false); }
   }
 
   // How old the reading is, shown rather than used to throw it away. Nothing here expires on a
@@ -375,7 +368,7 @@ export default function Troubleshooting() {
             </Card>
           </div>
           {out && (
-            <Card title="Output" actionsAlign="end" actions={<Button onClick={() => setOut("")}>Clear</Button>}>
+            <Card title="Output" actionsAlign="end" actions={<Button onClick={clear}>Clear</Button>}>
               <pre className="info-out">{out}</pre>
             </Card>
           )}

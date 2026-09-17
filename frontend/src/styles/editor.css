@@ -292,31 +292,6 @@
   gap: 8px;
 }
 
-.board-btn {
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-panel);
-  color: var(--text);
-  cursor: pointer;
-}
-
-.board-btn:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-
-.board-btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-fg);
-}
-
-.board-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 .saved-note {
   font-size: 12px;
   color: var(--text-muted);
@@ -788,6 +763,11 @@
 .skp-beh {
   min-width: 90px;
 }
+/* A gesture's name: capitalised from its slug, plain when it already reads as a name (Pinch &
+   Spread), indented for the two halves of a split axis. */
+.skp-beh-caps { text-transform: capitalize; }
+.skp-beh-plain { text-transform: none; }
+.skp-beh-half { text-transform: none; padding-left: 18px; }
 
 .skp-act {
   font-weight: 600;
@@ -809,12 +789,31 @@
   cursor: not-allowed;
 }
 
-/* Modules page */
+/* Modules page. The rail runs the full height (it spans both grid rows), and the palette sits
+   in the second column beneath the module content. 288px: wide enough that profile names do
+   not wrap, since the rail carries three row actions. */
 .module-layout {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 288px 1fr;
+  grid-template-rows: auto auto;
   gap: 24px;
+  align-items: start;
 }
+.module-layout > .module-list {
+  grid-row: 1 / span 2;
+  position: sticky;
+  top: 16px;
+}
+.module-layout > .modules-bottom {
+  grid-column: 2;
+  margin-top: 4px;
+}
+.module-title { margin: 0 0 12px; }
+.module-note { margin-bottom: 10px; }
+.module-bindings { max-width: 620px; }
+.module-settings { margin-top: 16px; max-width: 640px; }
+.module-setting-live { margin: -6px 0 10px; }
+.module-setting-take { margin-left: 8px; }
 
 .module-group {
   margin-bottom: 16px;
@@ -850,32 +849,6 @@
 .module-item.active {
   background: var(--bg-selected);
   color: var(--text);
-}
-
-.module-tabs,
-.module-btn-tabs {
-  display: flex;
-  gap: 6px;
-  border-bottom: 1px solid var(--border);
-  margin: 14px 0 4px;
-}
-
-.module-tabs .tab,
-.module-btn-tabs .tab {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-weight: 600;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.module-tabs .tab.active,
-.module-btn-tabs .tab.active {
-  color: var(--text);
-  border-bottom-color: var(--accent);
 }
 
 .mac-input {
@@ -943,6 +916,18 @@
   margin: 0 0 4px;
   font-size: 15px;
 }
+/* The tab panes: a readable column, wider where a table needs it. */
+.settings-pane { max-width: 640px; }
+.settings-pane.wide { max-width: 720px; }
+.settings-pane.wider { max-width: 860px; }
+.settings-group { margin-bottom: 28px; }
+.settings-group-desc { margin-top: -4px; }
+.settings-section { margin-top: 26px; }
+.settings-section.tight { margin-top: 22px; }
+.settings-log-head { margin-top: 18px; }
+.settings-log-head .setting-desc { margin-bottom: 8px; }
+/* The exact device command behind a recovery step, under its description. */
+.settings-command { display: block; opacity: 0.5; font-family: var(--font-mono); font-size: 11px; }
 
 .settings-links {
   display: flex;
@@ -1194,12 +1179,19 @@
 /* --- module profile rail ---------------------------------------------------
    A module can hold several profiles and each layer picks one, so this rail
    manages a set rather than showing a fixed four. */
+/* Add profile and Import side by side: two peers that both open something, equal halves and a
+   gap. The dropdown still spans the whole rail (it is absolutely positioned to .module-add), so
+   a long profile name is not squeezed into half the width. */
 .module-add {
   position: relative;
+  display: flex;
+  gap: 8px;
   margin-bottom: 10px;
 }
-.module-add > .board-btn {
-  width: 100%;
+.module-add > .ui-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
 }
 .module-add-menu {
   position: absolute;
@@ -1243,19 +1235,6 @@
 }
 .module-item-row > .module-item { flex: 1; margin-bottom: 0; }
 .module-item-row + .module-item-row { margin-top: 2px; }
-.module-item-x {
-  opacity: 0;
-  border: none;
-  background: transparent;
-  color: var(--text-dim);
-  font: inherit;
-  font-size: 12px;
-  padding: 4px 5px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-.module-item-row:hover .module-item-x { opacity: 1; }
-.module-item-x:hover { background: var(--bg-hover); color: var(--text); }
 
 .module-rename {
   width: 100%;
@@ -1477,16 +1456,8 @@
   cursor: pointer;
 }
 
-.split-toggle {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  margin-left: 8px;
-  color: var(--text-dim);
-  font-size: 11px;
-  white-space: nowrap;
-  cursor: pointer;
-}
+/* A gesture row's own checks (invert, split), set off from the action text. */
+.split-toggle { margin-left: 8px; }
 
 /* The shared action palette on the Modules page. Additive only -- the Bindings rules above are
    deliberately untouched, since editing a shared .palette rule is how this feature would
@@ -1498,43 +1469,6 @@
 .modules-bottom > .palette {
   width: 1090px;
   max-width: 100%;
-}
-
-/* Modules: the profile rail runs the full height of the page.
-   The palette used to be a sibling AFTER .module-layout, so it spanned the full width and the
-   rail stopped where the gesture list ended, leaving a tall empty column. Putting the palette
-   in the grid's second column and spanning the rail down both rows fills that space and gives
-   the profile list room to grow. Additive: .module-layout's columns and .modules-bottom are
-   unchanged, so nothing else that uses them moves. */
-.module-layout {
-  /* Wider than the original 240px: the rail now carries a third row action (export) and the
-     palette no longer needs the full page width, so the space is better spent stopping profile
-     names wrapping onto two lines. */
-  grid-template-columns: 288px 1fr;
-  grid-template-rows: auto auto;
-  align-items: start;
-}
-.module-layout > .module-list {
-  grid-row: 1 / span 2;
-  position: sticky;
-  top: 16px;
-}
-.module-layout > .modules-bottom {
-  grid-column: 2;
-  margin-top: 4px;
-}
-
-/* Add profile and Import sit side by side. They were stacked full-width with no gap, which read
-   as one control split in two; they are two peers that both open something, so they get equal
-   halves and a gap. The dropdown still spans the whole rail (it is absolutely positioned to
-   .module-add), so a long profile name is not squeezed into half the width. */
-.module-add {
-  display: flex;
-  gap: 8px;
-}
-.module-add > .board-btn {
-  flex: 1 1 0;
-  min-width: 0;
 }
 
 /* --- Application shortcuts tab -------------------------------------------------------------
@@ -1660,11 +1594,7 @@
 /* --- Settings provenance + controls (additive; nothing above is edited) ------------------- */
 /* .setting-head is space-between with two children. The badge is a third, so without this it
    would be spread to the middle instead of sitting beside its label. */
-.setting-head .gesture-badge,
 .setting-head .ui-badge { margin-right: auto; }
-.gesture-badge.prov-verified { background: var(--ok-soft); color: var(--ok); }
-.gesture-badge.prov-experimental { background: var(--warn-soft); color: var(--warn); }
-.gesture-badge.prov-app { background: var(--badge-bg); color: var(--text-muted); }
 
 /* A number box beside the slider: idle_timeout_s is 0-6000 over ~600px, so dragging gives
    ~10s per pixel and the value you actually want is unreachable. */
