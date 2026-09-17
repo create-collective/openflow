@@ -1,0 +1,80 @@
+{
+  "name": "openflow",
+  "productName": "OpenFlow",
+  "version": "0.0.1",
+  "private": true,
+  "description": "OpenFlow desktop app: the Electron shell around the frozen Python backend and the built renderer.",
+  "license": "Apache-2.0",
+  "main": "electron/main.js",
+  "scripts": {
+    "version:sync": "node scripts/sync-version.mjs",
+    "version:check": "node scripts/sync-version.mjs --check",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:sidecar": "node scripts/build-sidecar.mjs",
+    "smoke:sidecar": "node scripts/smoke-sidecar.mjs",
+    "build:app": "npm run version:check && npm run build:frontend && npm run build:sidecar && npm run smoke:sidecar && electron-builder --publish never",
+    "build:win": "npm run build:app -- --win nsis portable",
+    "build:mac": "npm run build:app -- --mac dmg",
+    "build:linux": "npm run build:app -- --linux AppImage",
+    "start": "electron .",
+    "start:dev": "cross-env OPENFLOW_DEV=1 electron ."
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^44.4.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "io.github.traviswye.openflow",
+    "productName": "OpenFlow",
+    "copyright": "Copyright 2026 OpenFlow contributors. Apache-2.0.",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "LICENSE"
+    ],
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "backend/dist/openflow-backend",
+        "to": "backend"
+      }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "license": "LICENSE",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "${productName}-${version}-win-${arch}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-win-${arch}-portable.${ext}"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.png",
+      "identity": null,
+      "hardenedRuntime": false,
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Utility",
+      "icon": "build/icon.png",
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
+    }
+  }
+}

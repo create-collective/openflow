@@ -26,3 +26,7 @@ frontend/tests/e2e/shots/
 frontend/tests/e2e/.data/
 frontend/test-results/
 frontend/playwright-report/
+
+# Desktop app build (root package.json: electron + electron-builder)
+/node_modules/
+/release/
