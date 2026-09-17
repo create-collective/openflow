@@ -168,10 +168,11 @@ export default function Modules() {
 
         {/* Inside the layout grid, in the SAME column as the module content, so the profile
             rail beside it can run the full height of the page instead of stopping where the
-            gesture list ends. Rendered unconditionally and never keyed: a conditional render
-            or a key would remount the palette on every pick and reset its tab back to the
-            virtual keyboard. */}
-        <div className="editor-bottom modules-bottom">
+            gesture list ends. Always mounted and never keyed: a conditional render or a key
+            would remount the palette on every pick and reset its tab back to the virtual
+            keyboard. It is only of use on the Bindings tab of a profile, so on Settings (or
+            with nothing to edit) it is hidden rather than unmounted. */}
+        <div className="editor-bottom modules-bottom" hidden={!config || ed.tab !== "bindings"}>
           <BindingTarget selectedBinding={ed.selectedBinding} name={ed.selectedTargetName}
             labelFor={ed.labelFor} onDone={() => ed.setSelectedBindingId(null)} />
           <ActionPalette

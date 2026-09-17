@@ -2074,6 +2074,7 @@
 }
 
 /* --- Modules: the palette card, with the strip that says what it is aimed at ------------- */
+.editor-bottom.modules-bottom[hidden] { display: none; }
 .editor-bottom.modules-bottom {
   display: flex;
   flex-direction: column;
