@@ -137,7 +137,8 @@ export default function Modules() {
 
               {ed.tab === "bindings" && (
                 <div className="module-bindings">
-                  <ModuleVisual type={config.type} activeButton={ed.curTarget} />
+                  <ModuleVisual type={config.type} activeButton={ed.curTarget}
+                    side={config.variant === "TRACK_RIGHT" ? "right" : "left"} />
 
                   {ed.untargeted.length > 0 && (
                     <>

@@ -1,11 +1,12 @@
-// Module display images (from ScreenshotsOfNayaFlow/pngs, centres made transparent). Track swaps
-// image by the active button to highlight it. Absolute paths: in the desktop app the backend
-// serves the renderer at /, so they resolve the same way they do under Vite.
-export default function ModuleVisual({ type, activeButton }) {
+// Module display images (the hi-res set under public/modules, drawn at 1254 px and kept at 512).
+// Track has a left and a right unit and swaps image by the active button to highlight it.
+// Absolute paths: in the desktop app the backend serves the renderer at /, so they resolve the
+// same way they do under Vite.
+export default function ModuleVisual({ type, activeButton, side = "left" }) {
   let src;
   if (type === "TRACK") {
     const m = /button_(\d)/.exec(activeButton || "");
-    src = `/modules/track${m ? m[1] : "1"}.png`;
+    src = `/modules/track-${side === "right" ? "right" : "left"}-${m ? m[1] : "1"}.png`;
   } else if (type === "TUNE") {
     src = "/modules/tune.png";
   } else {

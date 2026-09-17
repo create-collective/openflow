@@ -16,11 +16,8 @@ const SLOTS = [
   { type: "tune", side: null, label: "Tune" },
 ];
 
-const MODULE_IMG = {
-  touch: "/modules/touch.png",
-  track: "/modules/track-plain.png",
-  tune: "/modules/tune.png",
-};
+const moduleImg = (type, side) =>
+  type === "track" ? `/modules/track-${side === "right" ? "right" : "left"}.png` : `/modules/${type}.png`;
 
 export default function ModuleProfileList({ bays, docked = {}, boardKnown = false }) {
   if (!bays) return null;
@@ -45,7 +42,7 @@ export default function ModuleProfileList({ bays, docked = {}, boardKnown = fals
             title={`${s.label}: ${name}.${pending ? " Not on the board yet: the next flash writes it." : ""} Open on the Modules page.`}
             onClick={() => bays.onManage(s.type, s.side)}
           >
-            <img className="modprof-img" src={MODULE_IMG[s.type]} alt="" />
+            <img className="modprof-img" src={moduleImg(s.type, s.side)} alt="" />
             <span className="modprof-text">
               <span className="modprof-head">
                 <span className="modprof-slot">{s.label}</span>

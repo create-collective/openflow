@@ -5,11 +5,12 @@ import { KVList, KVRow } from "./KV";
 // devices stream, so it updates every six seconds. The profile bar's device chip renders two.
 // `details` ([label, value] pairs) opens under the box on hover, styled like the app's menus,
 // for what the box has no room for: firmware, millivolts, the module's firmware, the read time.
-const MODULE_IMG = {
-  touch: "/modules/touch.png",
-  track: "/modules/track-plain.png",
-  tune: "/modules/tune.png",
-};
+// A Track has a left and a right unit; the picture follows the bay it is docked in.
+function moduleImg(type, side) {
+  const t = String(type || "").toLowerCase();
+  if (t === "track") return `/modules/track-${side === "right" ? "right" : "left"}.png`;
+  return t === "touch" || t === "tune" ? `/modules/${t}.png` : null;
+}
 
 function batt(pct) {
   return pct == null ? "—" : `${pct}%`;
@@ -34,7 +35,7 @@ export default function StatusBox({
 }) {
   const letter = side === "left" ? "L" : side === "right" ? "R" : "?";
   const cls = ["ui-statusbox", connected ? "" : "ui-statusbox-off", className].filter(Boolean).join(" ");
-  const img = module && MODULE_IMG[String(module.type || "").toLowerCase()];
+  const img = module && moduleImg(module.type, module.docked || side);
   return (
     <div {...rest} className={cls} title={details ? undefined : title} tabIndex={details ? 0 : undefined}>
       <div className="ui-statusbox-row">

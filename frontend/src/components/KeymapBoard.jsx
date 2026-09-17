@@ -14,7 +14,7 @@ import {
 // Track's left and right modules are physically different parts, not one module mirrored,
 // so each gets its own artwork. Touch and Tune are symmetric and use a single image.
 const MODULE_IMG = {
-  track: { left: "/modules/track4-left.png", right: "/modules/track4-right.png" },
+  track: { left: "/modules/track-left.png", right: "/modules/track-right.png" },
   touch: "/modules/touch.png",
   tune: "/modules/tune.png",
 };
@@ -207,7 +207,7 @@ function ModuleSlot({ id, pos, mode, moduleAssign, keysByPosition, selectedPosit
         if (!onAssignModule) return;
         e.preventDefault();
         // Only a known module type. A native image drag carries a URL, and accepting that put
-        // "/modules/track4-right.png" into the bay, which then rendered as a broken image.
+        // "/modules/track-right.png" into the bay, which then rendered as a broken image.
         const t = e.dataTransfer.getData("text/plain");
         if (t && Object.prototype.hasOwnProperty.call(MODULE_IMG, t)) onAssignModule(id, t);
       }}
