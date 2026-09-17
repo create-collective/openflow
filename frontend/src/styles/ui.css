@@ -262,14 +262,31 @@
 .ui-notice li { margin: 3px 0; line-height: 1.5; }
 .ui-notice code { font-family: var(--font-mono); color: var(--text); }
 
-/* --- StatusBox --------------------------------------------------------------------------- */
-.ui-statusbox { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); color: var(--text); }
+/* --- StatusBox: one half as its own box, two rows (the half, then its module) ------------- */
+.ui-statusbox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.ui-statusbox-off { color: var(--text-muted); }
 .ui-statusbox-row { display: flex; align-items: center; gap: 8px; }
 .ui-statusbox-row .dot { flex: none; }
 .ui-statusbox-side { width: 14px; font-weight: var(--fw-bold); }
-.ui-statusbox-batt { margin-left: auto; font-variant-numeric: tabular-nums; }
+.ui-statusbox-state { font-weight: var(--fw-medium); }
+.ui-statusbox-batt { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
 .ui-statusbox-batt.low { color: var(--warn); }
-.ui-statusbox-module { padding-left: 22px; color: var(--text-dim); font-size: var(--fs-xs); }
+.ui-statusbox-module { color: var(--text-muted); font-size: var(--fs-xs); }
+.ui-statusbox-module b { color: var(--text); font-weight: var(--fw-semibold); }
+.ui-statusbox-modimg { flex: none; width: 18px; height: 18px; object-fit: contain; }
+.ui-batt { flex: none; color: var(--text-dim); }
+.ui-batt-fill { fill: var(--ok); }
+.ui-batt.low .ui-batt-fill { fill: var(--warn); }
 
 /* --- Modal and ConfirmDialog ------------------------------------------------------------- */
 .ui-modal-backdrop {

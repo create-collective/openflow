@@ -367,19 +367,21 @@ img:not([draggable="true"]) {
 .crash-stack pre { overflow-x: auto; font-size: 11px; }
 
 
-/* The live device chip in the profile bar: one status box per half, side by side, the docked
-   module beneath each. Fed by the devices stream every six seconds; hover for the detail. */
+/* The live device chip in the profile bar: one status box per half, each its own box, the
+   docked module with its picture beneath. Fed by the devices stream every six seconds; hover
+   for the detail, click for the Devices page. */
 .device-chip {
   display: flex;
-  gap: 18px;
-  padding: 7px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-panel);
+  gap: 10px;
   color: var(--text);
   text-decoration: none;
+}
+.device-chip .ui-statusbox { min-width: 176px; }
+.device-chip:hover .ui-statusbox { border-color: var(--accent); }
+.device-chip-empty {
+  padding: 12px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
   font-size: 13px;
 }
-.device-chip .ui-statusbox { min-width: 134px; font-size: 13px; }
-.device-chip:hover { border-color: var(--accent); }
-.device-chip-empty { color: var(--text-dim); }
