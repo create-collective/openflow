@@ -381,8 +381,13 @@ export default function ActionPalette({
                             ? <><ActionIcon name={icon} size={22} /><span className="palette-combo">{formatCombo(a.code)}</span></>
                             : formatCombo(a.code);
                         }
+                        // The module grid is sentences ("Cycle windows backwards (Alt + Shift +
+                        // Esc)"), so its cell is a legible icon beside left-aligned text rather
+                        // than a keycap; a 16px glyph stacked over centred text read as nothing.
+                        if (tab.id === "module") {
+                          return <>{icon && <ActionIcon name={icon} size={32} />}<span className="palette-key-text">{a.label}</span></>;
+                        }
                         if (!icon) return a.label;
-                        if (tab.id === "module") return <><ActionIcon name={icon} size={16} className="inline" />{a.label}</>;
                         return <ActionIcon name={icon} size={34} />;
                       })()}
                     </button>

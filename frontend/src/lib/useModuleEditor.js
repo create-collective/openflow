@@ -228,6 +228,12 @@ export default function useModuleEditor() {
   // "split, nothing bound yet", which is the state you are in the instant you tick the box.
   // Hence the open set is local, seeded from the server's view.
   const axisFor = (behavior) => (config?.axes || []).find((a) => a.behavior === behavior);
+  // A pair row is one whether or not it holds a pair right now: an axis row (a Tune scroll, a
+  // Track cursor) is a direction field, so once cleared it must still take only a pair, not
+  // the keyboard. Split is how a single key gets onto one of its directions.
+  const isPairRow = (sb) => sb.actionType === "value"
+    || (sb.actionCode || "").includes(" - ")
+    || (!sb.axisHalf && !!axisFor(sb.behavior));
   const [openAxes, setOpenAxes] = useState(() => new Set());
   useEffect(() => {
     setOpenAxes(new Set((config?.axes || []).filter((a) => a.split).map((a) => a.behavior)));
@@ -287,8 +293,7 @@ export default function useModuleEditor() {
   // keyboard, the mouse and the app picker are custom render branches that never consult it.
   const paletteTabIds = useMemo(() => {
     if (!selectedBinding) return undefined;
-    const isPair = selectedBinding.actionType === "value"
-      || (selectedBinding.actionCode || "").includes(" - ");
+    const isPair = isPairRow(selectedBinding);
     // Every direction pair we know lives in the module tab's Cursor/Scroll/Media categories,
     // and it is grid-rendered, so `filter` genuinely applies there.
     if (isPair) return ["module"];
@@ -307,8 +312,7 @@ export default function useModuleEditor() {
       // another pair can go there, and `fieldKind` is null on these rows so okForKind would
       // wave anything through, which is why the old dropdown offered all 101 actions for a
       // field that can hold five.
-      const isPair = selectedBinding.actionType === "value"
-        || (selectedBinding.actionCode || "").includes(" - ");
+      const isPair = isPairRow(selectedBinding);
       if (isPair) return a.actionType === "value" || a.actionType === "none";
       // An axis HALF is one direction, so it takes a single action, never a pair.
       if (selectedBinding.axisHalf) return a.actionType !== "value";

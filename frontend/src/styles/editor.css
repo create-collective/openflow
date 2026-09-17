@@ -1276,9 +1276,22 @@
   gap: 6px;
 }
 
+/* The module grid: sentence labels beside a legible icon, left-aligned, in cells wide enough
+   that a chord in brackets wraps to a second line rather than a fourth. */
 .palette-grid.wide {
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
 }
+.palette-grid.wide .palette-key,
+.palette-grid.wide .palette-key:has(> .naya-icon) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 12px;
+  text-align: left;
+}
+.palette-grid.wide .palette-key .naya-icon { display: block; margin: 0; flex: none; }
+.palette-key-text { flex: 1; min-width: 0; line-height: 1.3; overflow: hidden; }
 
 .palette-grid.wide .palette-key {
   font-size: 11px;
