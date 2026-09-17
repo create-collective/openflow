@@ -37,7 +37,7 @@ export default function Hub() {
   return (
     <div className="hub">
       <header className="hub-head">
-        <h1 className="hub-title">OpenFlow</h1>
+        <h1 className="hub-title">Welcome to OpenFlow</h1>
         <p className="hub-sub">Open-Source Software for Naya Create: No cloud or external dependencies</p>
       </header>
 
