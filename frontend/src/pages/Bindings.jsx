@@ -14,6 +14,9 @@ import LayerList from "../components/LayerList";
 import ProfileBar from "../components/ProfileBar";
 import SelectedKeyPanel from "../components/SelectedKeyPanel";
 import ActionPalette from "../components/ActionPalette";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import Notice from "../components/ui/Notice";
 
 // Does this profile contain any layer-switch keys? If not, reordering cannot surprise anyone
 // and the notice would just be noise.
@@ -374,7 +377,7 @@ export default function Bindings() {
     return (
       <div>
         <h1 className="page-title">Bindings</h1>
-        <div className="card"><div className="empty">{err || "Loading keymap…"}</div></div>
+        <Card><div className="empty">{err || "Loading keymap…"}</div></Card>
       </div>
     );
   }
@@ -430,10 +433,12 @@ export default function Bindings() {
           <div className="board-header">
             <div>
               <strong>{layer?.name}</strong>
-              <button
-                className={"btn tiny led-toggle" + (ledOutline ? " primary" : "")}
+              <Button
+                size="xs"
+                variant={ledOutline ? "primary" : "secondary"}
+                className="led-toggle"
                 style={{ marginLeft: 10 }}
-                aria-pressed={ledOutline}
+                pressed={ledOutline}
                 title={ledOutline
                   ? "Hide LED colours"
                   : "Outline each key in its LED colour, so you can see bindings and colour groups together"}
@@ -444,7 +449,7 @@ export default function Bindings() {
                 }}
               >
                 ◌ LED colours
-              </button>
+              </Button>
             </div>
             <div className="board-actions-stack">
               {/* Above the buttons rather than beside them: as a sibling in the flex row a
@@ -462,20 +467,22 @@ export default function Bindings() {
                 )}
               </div>
               <div className="board-actions">
-                <button
-                  className={"board-btn primary" + (justRead ? " btn-done" : "")}
+                <Button
+                  size="sm"
+                  variant="primary"
+                  done={justRead}
                   onClick={readFromKeyboard}
                   disabled={!!busy}
                   title="Read the map currently on the connected keyboard into a new profile"
                 >
                   {busy === "read" ? "Reading…" : justRead ? "✓ Read" : "⌨  Read from keyboard"}
-                </button>
-                <button className="board-btn" onClick={saveMap} disabled={!!busy}
+                </Button>
+                <Button size="sm" onClick={saveMap} disabled={!!busy}
                   title="Snapshot this profile to a backup file. Edits are saved as you make them —
   this is for keeping a restore point.">
                   {busy === "save" ? "Backing up…" : "⭳  Back up"}
-                </button>
-                <FlashButton variant="toolbar" />
+                </Button>
+                <FlashButton />
               </div>
             </div>
           </div>
@@ -506,7 +513,7 @@ export default function Bindings() {
         </div>
       </div>
 
-      {err && <div className="phase-note" style={{ margin: "8px 0" }}>{err}</div>}
+      {err && <Notice tone="err" style={{ margin: "8px 0" }}>{err}</Notice>}
 
       <div className="editor-bottom bindings-bottom">
         <SelectedKeyPanel

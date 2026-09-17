@@ -3,6 +3,10 @@ import { api } from "../lib/api";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 import { actionText } from "../lib/keylabels";
 import MacroRecorder from "../components/MacroRecorder";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import IconButton from "../components/ui/IconButton";
+import Notice from "../components/ui/Notice";
 
 // Macro editor. Naya never shipped one; ZMK supports macros and the schema is
 // ready, so we build a working editor: create macros, add ordered steps
@@ -34,9 +38,9 @@ function StepRow({ step, index, count, onDelete, onMove, onDelay }) {
         <span style={{ color: "var(--text-dim)" }}>ms</span>
       </span>
       <span className="step-cell-actions">
-        <button className="skp-x" disabled={index === 0} onClick={() => onMove(index, -1)} title="Move up">↑</button>
-        <button className="skp-x" disabled={index === count - 1} onClick={() => onMove(index, 1)} title="Move down">↓</button>
-        <button className="skp-x" onClick={() => onDelete(step.id)} title="Delete step">✕</button>
+        <IconButton size="sm" disabled={index === 0} onClick={() => onMove(index, -1)} title="Move up">↑</IconButton>
+        <IconButton size="sm" disabled={index === count - 1} onClick={() => onMove(index, 1)} title="Move down">↓</IconButton>
+        <IconButton size="sm" tone="danger" onClick={() => onDelete(step.id)} title="Delete step">✕</IconButton>
       </span>
     </div>
   );
@@ -112,13 +116,13 @@ export default function Macros() {
     <div>
       <h1 className="page-title">Macros</h1>
       <p className="page-sub">Record ordered sequences of key, text, and wait steps.</p>
-      <div className="phase-note" style={{ maxWidth: 720, marginBottom: 16 }}>
+      <Notice style={{ maxWidth: 720, marginBottom: 16 }}>
         Macros are stored in OpenFlow but <strong>cannot be bound to a key yet</strong>. The
         keyboard reserves the macro behaviour type but implements no macro table &mdash; every
         write to it is acknowledged and discarded, and Naya&rsquo;s own software never writes one
         either. Building them here is safe; they simply do not reach the board.
-      </div>
-      {err && <div className="card"><div className="phase-note">{err}</div></div>}
+      </Notice>
+      {err && <Card><Notice tone="err">{err}</Notice></Card>}
 
       <div className="macro-layout">
         <div className="module-list macro-rail">
@@ -141,7 +145,7 @@ export default function Macros() {
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && createMacro()}
             />
-            <button className="btn primary" onClick={createMacro}>Add</button>
+            <Button variant="primary" onClick={createMacro}>Add</Button>
           </div>
         </div>
 
@@ -162,11 +166,11 @@ export default function Macros() {
                 <span className="macro-head-count">
                   {macro.steps.length} step{macro.steps.length === 1 ? "" : "s"}
                 </span>
-                <button className="btn danger" onClick={async () => {
+                <Button variant="danger" onClick={async () => {
                   await api.deleteMacro(macro.id);
                   setSelectedId(null);
                   await load();
-                }}>Delete macro</button>
+                }}>Delete macro</Button>
               </div>
               {renaming !== null && (
                 <div className="btn-row" style={{ margin: "0 0 12px" }}>
@@ -176,12 +180,12 @@ export default function Macros() {
                       if (e.key === "Enter") saveRename();
                       if (e.key === "Escape") setRenaming(null);
                     }} />
-                  <button className="btn primary" onClick={saveRename}>Rename</button>
-                  <button className="btn" onClick={() => setRenaming(null)}>Cancel</button>
+                  <Button variant="primary" onClick={saveRename}>Rename</Button>
+                  <Button onClick={() => setRenaming(null)}>Cancel</Button>
                 </div>
               )}
 
-              <div className="card macro-steps">
+              <Card className="macro-steps">
               <div className="skp-head">
                 <span style={{ minWidth: 34 }}>#</span>
                 <span className="skp-arrow">→</span>
@@ -213,7 +217,7 @@ export default function Macros() {
                 />
               ))}
 
-              </div>
+              </Card>
 
               <div className="macro-compose">
               <MacroRecorder
@@ -224,14 +228,13 @@ export default function Macros() {
                 }}
               />
 
-              <div className="card macro-add">
-                <h3>Add step</h3>
+              <Card className="macro-add" title="Add step">
                 <div className="btn-row" style={{ marginBottom: 12 }}>
                   {["key", "text", "wait", "launch", "command"].map((k) => (
-                    <button key={k} className={"btn" + (stepKind === k ? " primary" : "")} onClick={() => setStepKind(k)}>
+                    <Button key={k} variant={stepKind === k ? "primary" : "secondary"} onClick={() => setStepKind(k)}>
                       {{ key: "Key", text: "Text", wait: "Wait",
                          launch: "Launch app", command: "Run command" }[k]}
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 {stepKind === "key" && (
@@ -280,11 +283,11 @@ export default function Macros() {
                     <input className="mac-input" style={{ width: "100%" }}
                       value={program} onChange={(e) => setProgram(e.target.value)}
                       placeholder="Shell command, e.g. git status" />
-                    <div className="phase-note" style={{ marginTop: 8 }}>
+                    <Notice style={{ marginTop: 8 }}>
                       This runs through a shell, so it can do anything your account can. Prefer
                       &ldquo;Launch app&rdquo; unless you genuinely need shell features like pipes
                       or redirection.
-                    </div>
+                    </Notice>
                   </div>
                 )}
                 {stepKind === "text" && (
@@ -297,9 +300,9 @@ export default function Macros() {
                     Delay (ms):{" "}
                     <input className="mac-input" style={{ width: 80 }} type="number" value={delay} onChange={(e) => setDelay(e.target.value)} />
                   </label>
-                  <button className="btn primary" onClick={addStep}>Add step</button>
+                  <Button variant="primary" onClick={addStep}>Add step</Button>
                 </div>
-              </div>
+              </Card>
               </div>
             </>
           )}

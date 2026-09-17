@@ -1,26 +1,32 @@
 import { useState } from "react";
+import Badge from "./ui/Badge";
+import SettingRow from "./ui/SettingRow";
+import Toggle from "./ui/Toggle";
 
 // One setting control, shared by the Settings page and the Modules settings tab.
 //
 // The Modules tab carried an inlined copy of this: same markup, duplicated, supporting only
 // toggle and slider (no select) and with its own "app only" marker that Settings did not have.
 // Two copies of one control is how they drift -- the copy never gained the numeric box, the
-// min/max labels, or a working Reset on toggles.
+// min/max labels, or a working Reset on toggles. The row itself (label, badge, control, reset,
+// description) is SettingRow; this picks the control for the setting's kind.
 //
 // What we can actually prove about a setting, straight from the backend's `provenance`.
 // Seven settings used to say "Flashed to the device" while none of them reached it, so the
 // honest thing is to say per setting how much is known -- and the experimental set doubles as
 // the queue of things to go and probe.
 const PROVENANCE = {
-  verified: { label: "verified", title: "Confirmed to reach the keyboard." },
+  verified: { label: "verified", tone: "ok", title: "Confirmed to reach the keyboard." },
   experimental: {
     label: "experimental",
+    tone: "warn",
     title: "Stored, but OpenFlow does not send it to the keyboard yet. Changing it will not "
          + "affect how the board behaves.",
   },
-  app: { label: "app only", title: "An OpenFlow preference. Never sent to the keyboard." },
+  app: { label: "app only", tone: "neutral", title: "An OpenFlow preference. Never sent to the keyboard." },
   host: {
     label: "host-side",
+    tone: "neutral",
     title: "Handled on the computer (Create Companion's model), not flashed to the keyboard. "
          + "There is no firmware setting behind it, so this is not something to probe.",
   },
@@ -59,52 +65,38 @@ export default function SettingField({ f, onChange }) {
   // Electron shell. Shown, but inert and labelled, rather than offering a switch that does nothing.
   if (f.deferred) {
     return (
-      <div className="setting setting-deferred">
-        <div className="setting-head">
-          <strong>{f.label}</strong>
-          <span className="gesture-badge prov-app" title={f.deferred}>{f.deferred_badge || "desktop app"}</span>
-        </div>
-        <div className="setting-desc">{f.desc}</div>
-      </div>
+      <SettingRow className="setting-deferred" label={f.label} desc={f.desc}
+        badge={<Badge size="xs" title={f.deferred}>{f.deferred_badge || "desktop app"}</Badge>} />
     );
   }
   const resetLabel = f.kind === "toggle" ? (f.default ? "on" : "off") : `${f.default}${f.unit || ""}`;
+  const control = f.kind === "toggle" ? (
+    <Toggle checked={!!f.value} onChange={(v) => onChange(f.id, v)} label={f.label} />
+  ) : f.kind === "select" ? (
+    <select className="mac-input" value={f.value} onChange={(e) => onChange(f.id, e.target.value)}>
+      {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  ) : (
+    // A number box, because these ranges are unusable as a bare slider: idle_timeout_s
+    // is 0-6000 across ~600px, so one pixel is ten seconds and the exact value you want
+    // is unreachable by dragging.
+    <input type="number" className="mac-input setting-num"
+      min={f.min} max={f.max} value={draft ?? f.value}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commitDraft}
+      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+      title={steps ? `The dial can do: ${steps.join(", ")}` : undefined} />
+  );
   return (
-    <div className="setting">
-      <div className="setting-head">
-        <strong>{f.label}</strong>
-        {prov && (
-          <span className={"gesture-badge prov-" + f.provenance} title={prov.title}>
-            {prov.label}
-          </span>
-        )}
-        <div className="setting-ctl">
-          {changed && (
-            <button className="setting-reset" title={`Reset to ${resetLabel}`}
-              onClick={() => onChange(f.id, f.default)}>↺ Reset</button>
-          )}
-          {f.kind === "toggle" ? (
-            <button className={"toggle" + (f.value ? " on" : "")} onClick={() => onChange(f.id, !f.value)}>
-              <span className="toggle-knob" />
-            </button>
-          ) : f.kind === "select" ? (
-            <select className="mac-input" value={f.value} onChange={(e) => onChange(f.id, e.target.value)}>
-              {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
-            </select>
-          ) : (
-            // A number box, because these ranges are unusable as a bare slider: idle_timeout_s
-            // is 0-6000 across ~600px, so one pixel is ten seconds and the exact value you want
-            // is unreachable by dragging.
-            <input type="number" className="mac-input setting-num"
-              min={f.min} max={f.max} value={draft ?? f.value}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitDraft}
-              onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-              title={steps ? `The dial can do: ${steps.join(", ")}` : undefined} />
-          )}
-        </div>
-      </div>
-      <div className="setting-desc">{f.desc}</div>
+    <SettingRow
+      label={f.label}
+      badge={prov && <Badge size="xs" tone={prov.tone} title={prov.title}>{prov.label}</Badge>}
+      control={control}
+      desc={f.desc}
+      changed={changed}
+      onReset={() => onChange(f.id, f.default)}
+      resetTitle={`Reset to ${resetLabel}`}
+    >
       {f.kind === "slider" && steps && (
         <div className="setting-slider">
           <span className="setting-bound">{steps[0]}{f.unit}</span>
@@ -127,6 +119,6 @@ export default function SettingField({ f, onChange }) {
           <span className="setting-bound">{f.max}{f.unit}</span>
         </div>
       )}
-    </div>
+    </SettingRow>
   );
 }

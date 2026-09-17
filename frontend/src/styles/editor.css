@@ -73,13 +73,6 @@
   font-size: 10px;
 }
 
-/* The profile bar's menu button is always visible, unlike the layer rows' (which reveal on
-   row hover). This must out-specify .layer-menu-btn { opacity: 0 } rather than merely restate
-   it: that rule is defined LATER in this file, so an equal-specificity override loses. */
-.profile-menu-btn.layer-menu-btn {
-  opacity: 1;
-}
-
 .profile-menu {
   position: absolute;
   top: 100%;
@@ -197,26 +190,6 @@
 }
 
 .layer-row.active .layer-item {
-  color: var(--text);
-}
-
-.layer-menu-btn {
-  opacity: 0;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 16px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-}
-
-.layer-row:hover .layer-menu-btn {
-  opacity: 1;
-}
-
-.layer-menu-btn:hover {
-  background: var(--bg-hover-strong);
   color: var(--text);
 }
 
@@ -831,18 +804,6 @@
   cursor: not-allowed;
 }
 
-.skp-x {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.skp-x:hover {
-  color: var(--err);
-}
-
 .palette-key.soon {
   opacity: 0.45;
   cursor: not-allowed;
@@ -971,66 +932,11 @@
   font-size: 12px;
   margin-bottom: 10px;
 }
-.toggle {
-  width: 42px;
-  height: 24px;
-  border-radius: var(--radius-pill);
-  border: none;
-  background: var(--control-track);
-  cursor: pointer;
-  position: relative;
-  transition: background 0.15s;
-}
-.toggle.on {
-  background: var(--ok);
-}
-.toggle-knob {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-pill);
-  background: var(--control-knob);
-  transition: left 0.15s;
-}
-.toggle.on .toggle-knob {
-  left: 21px;
-}
-
 /* Settings page */
 .settings-layout {
   display: grid;
   grid-template-columns: 210px 1fr;
   gap: 28px;
-}
-
-.settings-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.settings-tab {
-  text-align: left;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font: inherit;
-  font-weight: 600;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-
-.settings-tab:hover {
-  background: var(--bg-hover);
-  color: var(--text);
-}
-
-.settings-tab.active {
-  background: var(--bg-selected);
-  color: var(--text);
 }
 
 .settings-content h3 {
@@ -1072,29 +978,6 @@
   grid-template-columns: 44px 1fr;
   gap: 12px;
   max-height: 520px;
-}
-
-.palette-tabs {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.palette-tab {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--bg-panel);
-  color: var(--text-muted);
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.palette-tab.active {
-  background: var(--bg-selected);
-  color: var(--text);
-  border-color: transparent;
 }
 
 .palette-body {
@@ -1481,31 +1364,9 @@
 }
 
 /* Layer-switch keys are re-pointed automatically when layers move. Said once, dismissible
-   for good -- a change the user did not type should be surfaced, but not nagged about. */
-.layer-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 10px;
-  margin-bottom: 6px;
-  border: 1px solid var(--border);
-  border-left: 2px solid var(--accent);
-  border-radius: var(--radius-md);
-  background: var(--bg-panel);
-  font-size: 11px;
-  line-height: 1.45;
-  color: var(--text-dim);
-}
-.layer-note-x {
-  flex: none;
-  border: none;
-  background: transparent;
-  color: var(--text-dim);
-  font: inherit;
-  cursor: pointer;
-  padding: 0 2px;
-}
-.layer-note-x:hover { color: var(--text); }
+   for good -- a change the user did not type should be surfaced, but not nagged about. A
+   small Notice; only its spacing in the layer column is the list's business. */
+.layer-note { margin-bottom: 6px; }
 
 /* Layer rows can be dragged to reorder. */
 /* The grip is the only drag source; see LayerList. It needs a real hit area, so it is padded
@@ -1592,14 +1453,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.bay-tag {
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  color: var(--accent-fg);
-  font-size: 10px;
 }
 
 .bay-menu-note,
@@ -1804,21 +1657,11 @@
 .vm-motion-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--bg-hover-strong); }
 .vm-motion-btn:disabled { opacity: 0.5; cursor: default; }
 
-/* Tabs whose label is an ICON, not a character.
-   `.palette-tab` centres with text-align, which handles a glyph but leaves an inline <svg>
-   sitting on the text baseline -- centred across, a couple of pixels high down. Flex centres the
-   box itself. Scoped with :has(svg) so the character tabs keep the text metrics they were built
-   against; additive, so nothing existing is edited. */
-.palette-tab:has(svg) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 /* --- Settings provenance + controls (additive; nothing above is edited) ------------------- */
 /* .setting-head is space-between with two children. The badge is a third, so without this it
    would be spread to the middle instead of sitting beside its label. */
-.setting-head .gesture-badge { margin-right: auto; }
+.setting-head .gesture-badge,
+.setting-head .ui-badge { margin-right: auto; }
 .gesture-badge.prov-verified { background: var(--ok-soft); color: var(--ok); }
 .gesture-badge.prov-experimental { background: var(--warn-soft); color: var(--warn); }
 .gesture-badge.prov-app { background: var(--badge-bg); color: var(--text-muted); }
@@ -1839,12 +1682,6 @@
 .setting-slider .setting-bound:last-child { text-align: right; }
 
 /* --- Information page (additive) ---------------------------------------------------------- */
-/* .pill had no state variants; these mirror the .dot colours already in app.css so a verdict
-   reads the same way wherever it appears. */
-.pill.ok { background: var(--ok-soft); color: var(--ok); }
-.pill.warn { background: var(--warn-soft); color: var(--warn); }
-.pill.err { background: var(--err-soft); color: var(--err); }
-
 .info-page { padding-bottom: 24px; }
 
 /* Two equal columns that stretch to the same height. The shared .grid is
@@ -1857,19 +1694,11 @@
   align-items: stretch;
   margin-bottom: 16px;
 }
-.info-halves > .card { margin-bottom: 0; }
+.info-halves > .ui-card { margin-bottom: 0; }
 .info-card { display: flex; flex-direction: column; align-items: stretch; }
 /* .info-card is a flex column, so a lone button or the segmented control would stretch to the
    full card width and stop reading as a control. Rows and dividers still span. */
-.info-card > .btn, .info-card > .seg { align-self: flex-start; }
-
-.info-card-head {
-  display: flex; align-items: center; gap: 10px;
-  padding-bottom: 12px; margin-bottom: 4px;
-  border-bottom: 1px solid var(--border-strong);
-}
-.info-card-head h3 { margin: 0; }
-.info-head-btn { margin-left: auto; }
+.info-card > .ui-btn, .info-card > .ui-tabs-segmented { align-self: flex-start; }
 
 /* The verdict, given the width it deserves: this is the answer most people came for, and it
    was previously a card indistinguishable from the ones listing serial numbers. */
@@ -1894,21 +1723,6 @@
   color: var(--text-dim); font-size: 12px; line-height: 1.6; max-width: 78ch;
 }
 
-/* Key/value rows on a fixed label column, so every value starts at the same x. The shared .kv
-   is space-between, which on cards of different widths left values ragged down the page. */
-.info-kv {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 12px; align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-}
-.info-kv:last-child { border-bottom: none; }
-.info-k { color: var(--text-muted); }
-.info-v { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text);
-          overflow-wrap: anywhere; }
-.info-v.mono, .info-v .mono { font-family: var(--font-mono); }
 .info-dim { color: var(--text-dim); font-size: 11px; }
 
 /* A sub-heading inside a card's key/value list, for grouping (Bluetooth, Docked module). */
@@ -1934,26 +1748,9 @@
 .bat-fill.warn { background: var(--warn); }
 .bat-fill.err { background: var(--err); }
 
-/* A segmented control, so picking a half reads as one choice rather than three loose buttons. */
-.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius-md);
-       overflow: hidden; margin-bottom: 12px; }
-.seg-btn {
-  background: transparent; border: 0; color: var(--text-muted);
-  padding: 6px 14px; font: inherit; font-size: 12px; cursor: pointer;
-  border-right: 1px solid var(--border-strong); text-transform: capitalize;
-}
-.seg-btn:last-child { border-right: 0; }
-.seg-btn:hover:not(:disabled) { background: var(--bg-hover-strong); color: var(--text); }
-.seg-btn.active { background: var(--accent); color: var(--accent-fg); }
-.seg-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-
 .info-btn-wrap { flex-wrap: wrap; gap: 8px; }
 .saved-note.stale { color: var(--warn); }
-.info-stale-note {
-  font-size: 12px; color: var(--text-dim); background: var(--bg-panel);
-  border-left: 2px solid var(--warn); border-radius: 0 6px 6px 0;
-  padding: 10px 14px; margin-bottom: 16px;
-}
+.info-stale-note { padding: 10px 14px; margin-bottom: 16px; }
 .info-out {
   white-space: pre-wrap; font-family: var(--font-mono); font-size: 12px;
   margin: 0; max-height: 340px; overflow: auto; color: var(--text-muted);
@@ -1965,11 +1762,7 @@
 
 /* An explanation inside a palette category -- why a whole tab is inert, as opposed to
    .palette-disabled which covers a body that is merely waiting for a selection. */
-.palette-note {
-  font-size: 12px; line-height: 1.5; color: var(--text-dim);
-  background: var(--bg-panel); border-left: 2px solid var(--warn);
-  padding: 8px 10px; border-radius: 0 6px 6px 0; margin: 0 0 10px;
-}
+.palette-note { margin: 0 0 10px; }
 
 /* Per-step delay, editable in the row rather than only at creation time. */
 .step-delay {
@@ -2023,13 +1816,13 @@
 .macro-steps .skp-row:hover { background: var(--bg-hover); }
 .macro-steps .skp-beh { min-width: 34px; color: var(--text-dim); font-family: var(--font-mono); }
 .macro-steps .skp-head { padding: 0 10px 6px; border-bottom: 1px solid var(--border-strong); }
-.macro-steps .skp-x { opacity: 0.55; }
+.macro-steps .ui-iconbtn { opacity: 0.55; }
 .macro-steps .step-cell-delay {
   display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px;
   min-width: 96px;
 }
 .macro-steps .step-cell-actions { display: inline-flex; gap: 2px; min-width: 74px; justify-content: flex-end; }
-.macro-steps .skp-row:hover .skp-x { opacity: 1; }
+.macro-steps .skp-row:hover .ui-iconbtn { opacity: 1; }
 
 /* Record above, add-by-hand below, both full width so the virtual keyboard is not squeezed
    into a 620px card and forced to scroll sideways. */
@@ -2071,12 +1864,6 @@
 .bay-menu-layer { color: var(--text-dim); font-weight: 400; }
 .bay-menu-layer::before { content: "— "; }
 
-/* Bindings a flash could not write. Amber, not red: the flash itself succeeded and the rest of
-   the profile is on the board -- this is a caveat on a success, not a failure. */
-.flash-dropped { border-left: 2px solid var(--warn); }
-.flash-dropped ul { margin: 6px 0 0; padding-left: 18px; }
-.flash-dropped li { margin: 3px 0; line-height: 1.5; }
-.flash-dropped code { font-family: var(--font-mono); color: var(--text); }
 
 
 /* Palette search: one box over every tab. Results are rows, not keycaps, because the point
@@ -2160,7 +1947,7 @@
 
 /* Information page tabs: the segmented control, sized as a page-level strip. */
 .info-tabs { margin: 4px 0 14px; }
-.info-tabs .seg-btn { padding: 8px 16px; font-size: 13px; }
+.info-tabs .ui-tab { padding: 8px 16px; font-size: 13px; }
 
 /* Device I/O log (Settings > Logging) */
 .devlog { font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }

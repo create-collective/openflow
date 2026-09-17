@@ -1,0 +1,267 @@
+/*
+ * The primitives (src/components/ui). Tokens only, never a literal; every metric here was
+ * copied from the page rule it replaced, so moving a page onto a primitive moved no pixels.
+ * Imported after app.css and before editor.css: a page may still tune a primitive with its own
+ * class (.info-tabs, .macro-steps) and win on order.
+ */
+
+/* --- Button ------------------------------------------------------------------------------ */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-hover);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+.ui-btn:hover:not(:disabled) { background: var(--bg-hover-strong); }
+.ui-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ui-btn-primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.ui-btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.ui-btn-danger { border-color: color-mix(in srgb, var(--err) 50%, transparent); color: var(--err); }
+.ui-btn-ghost { background: transparent; border-color: transparent; }
+
+/* sm: the board toolbar (Read / Back up / Flash) and the palette's platform switch. */
+.ui-btn-sm {
+  gap: 6px;
+  font-size: var(--fs-md);
+  font-weight: 400;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border-color: var(--border);
+  background: var(--bg-panel);
+}
+.ui-btn-sm:hover:not(:disabled) { background: var(--bg-panel); border-color: var(--accent); }
+.ui-btn-sm.ui-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.ui-btn-sm.ui-btn-primary:hover:not(:disabled) { background: var(--accent); }
+.ui-btn-sm:disabled { cursor: default; }
+
+/* xs: inline with a heading, reading as a control without competing with the text. */
+.ui-btn-xs { padding: 3px 9px; font-size: var(--fs-xs); font-weight: var(--fw-semibold); gap: 5px; vertical-align: middle; }
+
+/* The green "it worked" state, for a few seconds after a read or a verified flash. */
+.ui-btn-done,
+.ui-btn-done:hover:not(:disabled) { background: var(--ok); border-color: var(--ok); color: var(--ok-fg); }
+
+/* --- IconButton -------------------------------------------------------------------------- */
+.ui-iconbtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.ui-iconbtn:hover:not(:disabled) { background: var(--bg-hover-strong); color: var(--text); }
+.ui-iconbtn:disabled { opacity: 0.4; cursor: default; }
+.ui-iconbtn-sm { font-size: var(--fs-sm); padding: 4px 5px; }
+.ui-iconbtn-plain { padding: 0 2px; border-radius: 0; }
+.ui-iconbtn-plain:hover:not(:disabled) { background: transparent; }
+.ui-iconbtn-danger:hover:not(:disabled) { color: var(--err); background: transparent; }
+.ui-iconbtn-reveal { opacity: 0; }
+.ui-reveal-host:hover .ui-iconbtn-reveal,
+.ui-iconbtn-reveal:focus-visible { opacity: 1; }
+
+/* --- Badge ------------------------------------------------------------------------------- */
+.ui-badge { font-weight: var(--fw-bold); text-transform: uppercase; white-space: nowrap; }
+.ui-badge-sm { font-size: var(--fs-xs); letter-spacing: 0.5px; padding: 2px 8px; border-radius: var(--radius-pill); }
+.ui-badge-xs { font-size: 10px; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 5px; margin: 0 8px; }
+.ui-badge-neutral { background: var(--badge-bg); color: var(--text-muted); }
+.ui-badge-ok { background: var(--ok-soft); color: var(--ok); }
+.ui-badge-warn { background: var(--warn-soft); color: var(--warn); }
+.ui-badge-err { background: var(--err-soft); color: var(--err); }
+.ui-badge-accent { background: var(--accent-soft); color: var(--accent-text); }
+.ui-badge-solid {
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  margin: 0;
+}
+
+/* --- Tabs -------------------------------------------------------------------------------- */
+.ui-tabs { display: flex; }
+.ui-tab { font: inherit; cursor: pointer; }
+
+.ui-tabs-vertical { flex-direction: column; gap: 2px; }
+.ui-tabs-vertical .ui-tab {
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-weight: var(--fw-semibold);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+}
+.ui-tabs-vertical .ui-tab:hover { background: var(--bg-hover); color: var(--text); }
+.ui-tabs-vertical .ui-tab.active { background: var(--bg-selected); color: var(--text); }
+
+.ui-tabs-segmented {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.ui-tabs-segmented .ui-tab {
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  font-size: var(--fs-sm);
+  text-transform: capitalize;
+}
+.ui-tabs-segmented .ui-tab:last-child { border-right: 0; }
+.ui-tabs-segmented .ui-tab:hover:not(:disabled) { background: var(--bg-hover-strong); color: var(--text); }
+.ui-tabs-segmented .ui-tab.active { background: var(--accent); color: var(--accent-fg); }
+.ui-tabs-segmented .ui-tab:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.ui-tabs-underline { gap: 6px; border-bottom: 1px solid var(--border); margin: 14px 0 4px; }
+.ui-tabs-underline .ui-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-weight: var(--fw-semibold);
+  padding: 8px 12px;
+}
+.ui-tabs-underline .ui-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+.ui-tabs-pills { flex-direction: column; gap: 6px; }
+.ui-tabs-pills .ui-tab {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  font-size: 16px;
+}
+.ui-tabs-pills .ui-tab.active { background: var(--bg-selected); color: var(--text); border-color: transparent; }
+/* An icon tab centres as a box; a character tab keeps the text metrics it was built against. */
+.ui-tabs-pills .ui-tab:has(svg) { display: flex; align-items: center; justify-content: center; }
+
+/* --- Toggle ------------------------------------------------------------------------------ */
+.ui-toggle {
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--control-track);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+}
+.ui-toggle.on { background: var(--ok); }
+.ui-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
+.ui-toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--control-knob);
+  transition: left 0.15s;
+}
+.ui-toggle.on .ui-toggle-knob { left: 21px; }
+
+.ui-check {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* --- KV ---------------------------------------------------------------------------------- */
+.ui-kv-split {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ui-kv-grid {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-md);
+}
+.ui-kv:last-child { border-bottom: none; }
+.ui-kv-k { color: var(--text-muted); }
+.ui-kv-v { color: var(--text); }
+.ui-kv-v.mono, .ui-kv-v .mono { font-family: var(--font-mono); }
+.ui-kv-grid .ui-kv-v { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+
+/* --- Card -------------------------------------------------------------------------------- */
+.ui-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+.ui-card h3 { margin: 0 0 12px; font-size: var(--fs-lg); }
+.ui-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-strong);
+}
+.ui-card-head h3 { margin: 0; }
+.ui-card-actions { margin-left: auto; display: inline-flex; gap: 8px; }
+
+/* --- Notice ------------------------------------------------------------------------------ */
+.ui-notice {
+  border-left: 3px solid var(--accent);
+  background: var(--bg-panel);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+}
+.ui-notice-ok { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--text); }
+.ui-notice-warn { border-left-color: var(--warn); }
+.ui-notice-err { border-left-color: var(--err); background: var(--err-soft); color: var(--text); }
+.ui-notice-sm {
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-dim);
+  border-left-width: 2px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 8px 10px;
+}
+.ui-notice-dismissable { display: flex; align-items: flex-start; gap: 8px; }
+.ui-notice-body { flex: 1; min-width: 0; }
+.ui-notice ul { margin: 6px 0 0; padding-left: 18px; }
+.ui-notice li { margin: 3px 0; line-height: 1.5; }
+.ui-notice code { font-family: var(--font-mono); color: var(--text); }
+
+/* --- StatusBox --------------------------------------------------------------------------- */
+.ui-statusbox { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); color: var(--text); }
+.ui-statusbox-row { display: flex; align-items: center; gap: 8px; }
+.ui-statusbox-row .dot { flex: none; }
+.ui-statusbox-side { width: 14px; font-weight: var(--fw-bold); }
+.ui-statusbox-batt { margin-left: auto; font-variant-numeric: tabular-nums; }
+.ui-statusbox-batt.low { color: var(--warn); }
+.ui-statusbox-module { padding-left: 22px; color: var(--text-dim); font-size: var(--fs-xs); }

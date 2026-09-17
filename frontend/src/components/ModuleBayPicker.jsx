@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Badge from "./ui/Badge";
 
 // Choosing which profile a module runs, from the board's module row.
 //
@@ -54,7 +55,7 @@ export default function ModuleBayPicker({
             onClick={() => onPick(p.id)}>
             <span className="bay-radio">{p.id === selectedId ? "◉" : "○"}</span>
             <span className="bay-menu-name">{p.name}</span>
-            {p.onBoard && <span className="bay-tag" title="Running on the keyboard">live</span>}
+            {p.onBoard && <Badge variant="solid" tone="accent" title="Running on the keyboard">live</Badge>}
           </button>
         ))
       )}

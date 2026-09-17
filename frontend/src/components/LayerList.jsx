@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import IconButton from "./ui/IconButton";
+import Notice from "./ui/Notice";
 
 // Layer selector (top-left): profile name + ordered layers with a per-layer
 // 3-dot submenu (rename / use as base / duplicate / delete) and an add-layer row.
@@ -102,15 +104,12 @@ export default function LayerList({
   return (
     <div className="layer-list" ref={rootRef}>
       {notice && (
-        <div className="layer-note">
-          <span>{notice}</span>
-          <button className="layer-note-x" title="Dismiss" onClick={onDismissNotice}>✕</button>
-        </div>
+        <Notice size="sm" className="layer-note" onDismiss={onDismissNotice}>{notice}</Notice>
       )}
       {layers.map((l, i) => (
         <div key={l.id}
              ref={(el) => { if (el) rowRefs.current[l.id] = el; else delete rowRefs.current[l.id]; }}
-             className={"layer-row" + (l.id === activeLayerId ? " active" : "")
+             className={"layer-row ui-reveal-host" + (l.id === activeLayerId ? " active" : "")
                + (dragOver === l.id ? " dragover" : "")}>
           {/* POINTER EVENTS, NOT HTML5 DRAG.
               Native drag failed four different ways here: a <button> covering the row blocks
@@ -172,14 +171,14 @@ export default function LayerList({
             </button>
           )}
 
-          <button
-            className="layer-menu-btn"
+          <IconButton
+            reveal
             draggable={false}
             title="Layer options"
             onClick={() => { setMenuFor(menuFor === l.id ? null : l.id); setConfirmDel(null); }}
           >
             ⋯
-          </button>
+          </IconButton>
 
           {menuFor === l.id && (
             <div className="layer-menu" draggable={false}>

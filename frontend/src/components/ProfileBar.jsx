@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import IconButton from "./ui/IconButton";
 
 // Profile selector: switch profiles, plus a 3-dot menu (Rename / Duplicate /
 // Export / Load from file / Delete). Sits above the layer list.
@@ -62,13 +63,13 @@ export default function ProfileBar({
         </button>
       )}
 
-      <button
-        className="layer-menu-btn profile-menu-btn"
+      <IconButton
+        className="profile-menu-btn"
         title="Profile options"
         onClick={() => { setMenuOpen((v) => !v); setSwitchOpen(false); setConfirmDel(false); }}
       >
         ⋯
-      </button>
+      </IconButton>
 
       {switchOpen && (
         <div className="profile-menu switch">

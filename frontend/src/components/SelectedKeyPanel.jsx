@@ -1,5 +1,7 @@
 import { actionText } from "../lib/keylabels";
 import { ActionIcon, iconNameFor } from "../lib/icons";
+import Badge from "./ui/Badge";
+import IconButton from "./ui/IconButton";
 
 // The bottom-left binding editor: the selected key's Behavior -> Action rows.
 // Pick a behavior slot (Tap/Hold enabled; richer OneKey slots coming soon),
@@ -38,9 +40,9 @@ export default function SelectedKeyPanel({
             <span className="skp-beh">
               {slot.label}
               {!slot.enabled && (
-                <span className="pill" style={{ marginLeft: 8 }}>
+                <Badge style={{ marginLeft: 8 }}>
                   {slot.experimental ? "experimental" : "soon"}
-                </span>
+                </Badge>
               )}
             </span>
             <span className="skp-arrow">→</span>
@@ -57,8 +59,9 @@ export default function SelectedKeyPanel({
               );
             })()}
             {b && slot.enabled && (
-              <button
-                className="skp-x"
+              <IconButton
+                size="sm"
+                tone="danger"
                 title="Clear this slot"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -66,7 +69,7 @@ export default function SelectedKeyPanel({
                 }}
               >
                 ✕
-              </button>
+              </IconButton>
             )}
           </div>
         );

@@ -6,6 +6,9 @@ import AppShortcutPicker from "./AppShortcutPicker";
 import VirtualKeyboard from "./VirtualKeyboard";
 import VirtualMouse from "./VirtualMouse";
 import { ActionIcon, iconNameFor } from "../lib/icons";
+import Badge from "./ui/Badge";
+import Notice from "./ui/Notice";
+import Tabs from "./ui/Tabs";
 
 // The action selector, shared by the keymap editor and by module gestures.
 //
@@ -197,20 +200,18 @@ export default function ActionPalette({
 
   return (
     <div className={"palette" + (className ? " " + className : "")}>
-      <div className="palette-tabs">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            title={t.title}
-            className={"palette-tab" + (tab?.id === t.id ? " active" : "")}
-            onClick={() => setTabId(t.id)}
-          >
-            {t.id === "layers" ? <LayersIcon size={16} />
-              : t.id === "mouse" ? <CursorIcon size={15} />
-              : t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        variant="pills"
+        ariaLabel="Action categories"
+        value={tab?.id}
+        onChange={setTabId}
+        items={tabs.map((t) => ({
+          id: t.id,
+          title: t.title,
+          icon: t.id === "layers" ? <LayersIcon size={16} /> : t.id === "mouse" ? <CursorIcon size={15} /> : undefined,
+          label: t.id === "layers" || t.id === "mouse" ? undefined : t.label,
+        }))}
+      />
 
       <div className="palette-body">
         {/* Inside the body, not beside it: .palette is a two-column grid (tabs | body) and a
@@ -276,15 +277,15 @@ export default function ActionPalette({
           <div className="palette-cat">
             <div className="palette-cat-title">
               Macros <span className="palette-count">{macros.length}</span>
-              <span className="gesture-badge prov-experimental" style={{ marginLeft: 8 }}>
+              <Badge size="xs" tone="warn" style={{ marginLeft: 8 }}>
                 experimental
-              </span>
+              </Badge>
             </div>
-            <div className="palette-note">
+            <Notice size="sm" tone="warn" className="palette-note">
               Macros cannot be bound to a key yet. The keyboard reserves the macro behaviour type
               but implements no macro table, so a bound macro would never reach the board. You can
               still build and edit them on the Macros page.
-            </div>
+            </Notice>
             {macros.length === 0 ? (
               <div className="palette-disabled">No macros yet. Create them on the Macros page.</div>
             ) : (
@@ -307,11 +308,11 @@ export default function ActionPalette({
               <div key={lt.frontendType} className="palette-cat">
                 <div className="palette-cat-title">{lt.label}</div>
                 {lt.frontendType === "layer_polite_toggle" && (
-                  <div className="palette-note">
+                  <Notice size="sm" tone="warn" className="palette-note">
                     Toggle turns a layer on and off. It can’t bring you <em>back down</em>: a lower
                     layer is hidden by the one you’re on, and toggling the base layer does nothing
                     at all. Use <strong>Force Layer</strong> to return.
-                  </div>
+                  </Notice>
                 )}
                 <div className="palette-grid">
                   {layers.map((l, i) => {

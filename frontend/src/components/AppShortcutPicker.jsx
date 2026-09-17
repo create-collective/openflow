@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { formatCombo } from "../lib/combo";
+import Button from "./ui/Button";
 
 // Per-application shortcuts: 5,311 chords across 20 applications.
 //
@@ -81,12 +82,11 @@ export default function AppShortcutPicker({ disabled, onPick, disabledHint }) {
           onChange={(e) => setQ(e.target.value)} />
         <div className="apps-platform">
           {["windows", "mac"].map((p) => (
-            <button key={p}
-              className={"board-btn" + (platform === p ? " primary" : "")}
+            <Button key={p} size="sm" variant={platform === p ? "primary" : "secondary"}
               title="The same action is a different chord per platform, so this changes what gets bound"
               onClick={() => setPlatform(p)}>
               {p === "windows" ? "Win" : "Mac"}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

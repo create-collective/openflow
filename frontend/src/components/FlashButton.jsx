@@ -2,6 +2,9 @@ import { useState } from "react";
 import { invalidateDeviceState, setModuleRead } from "../lib/deviceState";
 import useDoneFlag from "../lib/useDoneFlag";
 import { api } from "../lib/api.js";
+import Button from "./ui/Button";
+import Notice from "./ui/Notice";
+import Toggle from "./ui/Toggle";
 
 // "Flash to keyboard" — previews the diff (dry-run) first, then requires an explicit
 // confirm. Confirm performs the real write: the backend takes a fresh device read first
@@ -49,7 +52,7 @@ function summarize(ops) {
   return g;
 }
 
-export default function FlashButton({ variant = "sidebar" }) {
+export default function FlashButton() {
   const [state, setState] = useState("idle"); // idle | loading | preview | writing | done | error
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -147,11 +150,10 @@ export default function FlashButton({ variant = "sidebar" }) {
 
   return (
     <>
-      <button
-        className={
-          (variant === "toolbar" ? "board-btn primary" : "flash-btn") +
-          (flashed ? " btn-done" : "")
-        }
+      <Button
+        size="sm"
+        variant="primary"
+        done={flashed}
         onClick={openPreview}
         disabled={state === "loading" || state === "writing"}
         title={
@@ -167,7 +169,7 @@ export default function FlashButton({ variant = "sidebar" }) {
           : flashed
           ? "✓ Flashed"
           : "⚡ Flash to keyboard"}
-      </button>
+      </Button>
 
       {/* Kept open through "writing" and "done". It used to render for preview|error only, so
           confirming unmounted the whole dialog mid-write: the "do not unplug it" note and the
@@ -239,7 +241,7 @@ export default function FlashButton({ variant = "sidebar" }) {
                 failure this fixes was finding out never. The key is left alone rather than
                 cleared -- clearing would destroy a binding the user did not ask to remove. */}
             {state === "preview" && preview?.dropped?.length > 0 && (
-              <div className="phase-note flash-dropped">
+              <Notice tone="warn" className="flash-dropped">
                 <strong>
                   {preview.dropped.length} binding{preview.dropped.length === 1 ? "" : "s"} cannot
                   be written to the keyboard
@@ -254,7 +256,7 @@ export default function FlashButton({ variant = "sidebar" }) {
                 </ul>
                 {preview.dropped.length > 6 && <div>…and {preview.dropped.length - 6} more.</div>}
                 <div>Everything else in this flash is unaffected; those keys keep what they have.</div>
-              </div>
+              </Notice>
             )}
 
             {/* Module slots the board carries that this profile does not reference. They are
@@ -262,22 +264,18 @@ export default function FlashButton({ variant = "sidebar" }) {
                 as "unknown" -- and removing one drops a list entry and blanks a slot, so it is
                 asked for per flash rather than done quietly as part of "write everything". */}
             {state === "preview" && preview?.orphans?.length > 0 && (
-              <div className="phase-note">
-                <label className="split-toggle" style={{ marginBottom: 4 }}>
-                  <input type="checkbox" checked={collectOrphans}
-                    onChange={(e) => setCollectOrphans(e.target.checked)} />
-                  Also remove {preview.orphans.length} unused module slot
-                  {preview.orphans.length === 1 ? "" : "s"}
-                </label>
+              <Notice>
+                <Toggle variant="check" style={{ marginBottom: 4 }} checked={collectOrphans} onChange={setCollectOrphans}
+                  label={<>Also remove {preview.orphans.length} unused module slot{preview.orphans.length === 1 ? "" : "s"}</>} />
                 <div style={{ fontSize: 11, opacity: 0.8 }}>
                   {preview.orphans.map((o) => `slot ${o.slot}${o.name ? ` (${o.name})` : ""}`).join(", ")}
                   {" — on the keyboard, not used by this profile. Removing is permanent."}
                 </div>
-              </div>
+              </Notice>
             )}
 
             {state === "preview" && bayGaps.length > 0 && (
-              <div className="phase-note flash-dropped">
+              <Notice tone="warn" className="flash-dropped">
                 <strong>
                   Layer 0 leaves {bayGaps.length} module bay{bayGaps.length === 1 ? "" : "s"} unset:{" "}
                   {bayGaps.map(bayGapName).join(", ")}
@@ -287,30 +285,30 @@ export default function FlashButton({ variant = "sidebar" }) {
                   both sides; the other layers inherit it. A module with nothing on layer 0 runs
                   unconfigured. Pick one on the Bindings board, then preview again.
                 </div>
-              </div>
+              </Notice>
             )}
 
             {!readOk && !recovery && (
-              <div className="phase-note">
+              <Notice>
                 Read the keyboard first (Bindings → Read from keyboard). Flashing without it
                 would write over a state the app has not seen.
-              </div>
+              </Notice>
             )}
             {recovery && (
-              <div className="phase-note">
+              <Notice>
                 <strong>Recovery flash.</strong> The board is not read first, so nothing can be
                 preserved: module-to-dock assignments, transparent keys and double-tap bindings
                 are all overwritten. Only use this if the keyboard cannot be read.
-              </div>
+              </Notice>
             )}
             {state === "writing" && (
-              <div className="phase-note">
+              <Notice>
                 <span className="flash-spinner" aria-hidden="true" />
                 Writing to the keyboard, then reading it back to verify — do not unplug it.
-              </div>
+              </Notice>
             )}
             {state === "done" && result && (
-              <div className={"phase-note " + (dropped.length ? "flash-dropped" : "flash-ok")}>
+              <Notice tone={dropped.length ? "warn" : "ok"} className={dropped.length ? "flash-dropped" : ""}>
                 <strong>Flashed and verified.</strong> {result.ops} operation(s),{" "}
                 {result.frames} frame(s), read back with no differences.
                 {/* Verification only checks records the plan SET, so it passes even when a
@@ -336,25 +334,24 @@ export default function FlashButton({ variant = "sidebar" }) {
                     {dropped.length > 6 && <div>…and {dropped.length - 6} more.</div>}
                   </>
                 )}
-              </div>
+              </Notice>
             )}
 
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={close} disabled={state === "writing"}>
+              <Button onClick={close} disabled={state === "writing"}>
                 {state === "done" ? "Close" : "Cancel"}
-              </button>
+              </Button>
               {state !== "done" && !readOk && !recovery && (
-                <button
-                  className="btn-secondary"
+                <Button
                   onClick={() => setRecovery(true)}
                   title="For a keyboard that can no longer be read. Overwrites everything."
                 >
                   Can't read the board?
-                </button>
+                </Button>
               )}
               {state !== "done" && (
-                <button
-                  className="btn-primary"
+                <Button
+                  variant="primary"
                   onClick={confirmFlash}
                   disabled={state === "writing" || (!readOk && !recovery) || bayGaps.length > 0}
                   title={
@@ -372,7 +369,7 @@ export default function FlashButton({ variant = "sidebar" }) {
                     : recovery
                     ? "Recovery flash (overwrites everything)"
                     : "Confirm flash"}
-                </button>
+                </Button>
               )}
             </div>
           </div>

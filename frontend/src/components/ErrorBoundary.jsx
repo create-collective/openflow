@@ -1,4 +1,5 @@
 import { Component } from "react";
+import Button from "./ui/Button";
 
 /**
  * Catch a render crash and SAY SO, instead of tearing the whole app down silently.
@@ -49,10 +50,10 @@ export default class ErrorBoundary extends Component {
           <kbd>R</kbd>) clears a stale hot-reload, which causes this more often than a real bug.
         </p>
         <div className="btn-row">
-          <button className="btn primary" onClick={() => this.setState({ error: null, info: null })}>
+          <Button variant="primary" onClick={() => this.setState({ error: null, info: null })}>
             Try again
-          </button>
-          <button className="btn" onClick={() => window.location.reload()}>Reload</button>
+          </Button>
+          <Button onClick={() => window.location.reload()}>Reload</Button>
         </div>
         {info?.componentStack && (
           <details className="crash-stack">

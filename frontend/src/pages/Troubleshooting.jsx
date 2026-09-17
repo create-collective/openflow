@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import BleSlots from "../components/BleSlots";
+import Badge from "../components/ui/Badge";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import { KVRow } from "../components/ui/KV";
+import Notice from "../components/ui/Notice";
+import Tabs from "../components/ui/Tabs";
 
 // The page the nav calls "Information". It used to show none: three action buttons and a raw
 // JSON dump, with every action hardcoded to the left half.
@@ -14,13 +20,7 @@ import BleSlots from "../components/BleSlots";
 // 280px tracks left two narrow cards stranded in three empty columns on a wide window.
 
 function KV({ k, v, mono = true, title }) {
-  if (v === null || v === undefined || v === "") return null;
-  return (
-    <div className="info-kv" title={title}>
-      <span className="info-k">{k}</span>
-      <span className={"info-v" + (mono ? " mono" : "")}>{v}</span>
-    </div>
-  );
+  return <KVRow layout="grid" k={k} v={v} mono={mono} title={title} />;
 }
 
 // NayaFlow's own thresholds, so a battery reads the same here as in the app people came from.
@@ -34,16 +34,13 @@ function batteryTone(pct) {
 function Battery({ pct, mv }) {
   if (pct == null) return null;
   return (
-    <div className="info-kv">
-      <span className="info-k">Battery</span>
-      <span className="info-v">
-        <span className="bat">
-          <span className={"bat-fill " + batteryTone(pct)} style={{ width: `${pct}%` }} />
-        </span>
-        <span className="mono">{pct}%</span>
-        {mv ? <span className="info-dim mono">{mv} mV</span> : null}
+    <KVRow layout="grid" k="Battery" mono={false}>
+      <span className="bat">
+        <span className={"bat-fill " + batteryTone(pct)} style={{ width: `${pct}%` }} />
       </span>
-    </div>
+      <span className="mono">{pct}%</span>
+      {mv ? <span className="info-dim mono">{mv} mV</span> : null}
+    </KVRow>
   );
 }
 
@@ -60,13 +57,9 @@ function HalfCard({ h, reference }) {
   const behind = reference && h.firmwareVersion && h.firmwareVersion !== reference.createFirmware;
   const modBehind = reference && m?.firmwareVersion && m.firmwareVersion !== reference.moduleFirmware;
   return (
-    <div className="card info-card">
-      <div className="info-card-head">
-        <span className={"dot " + (h.connected ? "ok" : "err")} />
-        <h3>{h.description || h.side}</h3>
-        <span className="pill">{h.side}</span>
-      </div>
-      {h.error && <div className="phase-note">{h.error}</div>}
+    <Card className="info-card" head={<span className={"dot " + (h.connected ? "ok" : "err")} />}
+      title={h.description || h.side} actions={<Badge>{h.side}</Badge>}>
+      {h.error && <Notice tone="err">{h.error}</Notice>}
 
       <div className="info-sub">Identity</div>
       <KV k="Firmware" v={h.firmwareVersion} />
@@ -102,7 +95,7 @@ function HalfCard({ h, reference }) {
           <Battery pct={m.batteryPercent} mv={m.batteryMillivolts} />
         </>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -202,9 +195,9 @@ export default function Troubleshooting() {
           </p>
         </div>
         <div className="board-actions-stack">
-          <button className="btn primary" onClick={refresh} disabled={loading}>
+          <Button variant="primary" onClick={refresh} disabled={loading}>
             {loading ? "Reading…" : at ? "Read again" : "Read device info"}
-          </button>
+          </Button>
           <span className={"saved-note" + (stale ? " stale" : "")}>
             {at
               ? `${live ? "read" : "as of"} ${at.toLocaleTimeString()} · ${ageText}`
@@ -213,34 +206,28 @@ export default function Troubleshooting() {
         </div>
       </div>
 
-      <div className="seg info-tabs">
-        {[["device", "Device"], ["connections", "Connections"], ["troubleshooting", "Troubleshooting"]].map(([id, label]) => (
-          <button key={id} className={"seg-btn" + (tab === id ? " active" : "")} onClick={() => setTab(id)}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs variant="segmented" className="info-tabs" ariaLabel="Information sections" value={tab} onChange={setTab}
+        items={[{ id: "device", label: "Device" }, { id: "connections", label: "Connections" }, { id: "troubleshooting", label: "Troubleshooting" }]} />
 
-      {err && <div className="card"><div className="phase-note">{err}</div></div>}
+      {err && <Card><Notice tone="err">{err}</Notice></Card>}
 
       {tab === "device" && (
         <>
           {!at && !loading && (
-            <div className="card info-blank">
-              <h3>Nothing read yet</h3>
+            <Card className="info-blank" title="Nothing read yet">
               <div className="setting-desc">
                 Press <strong>Read device info</strong> to ask both halves who they are. It is a
                 read-only USB query — nothing is written to the keyboard.
               </div>
-            </div>
+            </Card>
           )}
           {recovery.length > 0 && (
             <div className="info-banner warn">
               <div className="info-banner-title">
                 Bootloader
-                <span className="pill warn">
+                <Badge tone="warn">
                   {recovery.length} half{recovery.length === 1 ? "" : "s"} in recovery
-                </span>
+                </Badge>
               </div>
               <div className="info-banner-detail">
                 {recovery.map((r) => r.port).join(", ")} — a half in MCUboot answers none of the
@@ -253,10 +240,10 @@ export default function Troubleshooting() {
             </div>
           )}
           {stale && halves.length > 0 && (
-            <div className="info-stale-note">
+            <Notice size="sm" tone="warn" className="info-stale-note">
               This reading is {ageText}. Firmware and addresses will not have changed, but battery
               and pairing may have — read again for those.
-            </div>
+            </Notice>
           )}
           {halves.filter((h) => h.side !== "dongle").length > 0 && (
             <div className="info-halves">
@@ -274,7 +261,7 @@ export default function Troubleshooting() {
             <div className={"info-banner " + (p ? p.tone : "")}>
               <div className="info-banner-title">
                 Split link
-                {p && <span className={"pill " + p.tone}>{p.text}</span>}
+                {p && <Badge tone={p.tone}>{p.text}</Badge>}
               </div>
               <div className="info-banner-detail">{pairing.detail}</div>
               {pairing.state !== "paired" && pairing.state !== "incomplete" && (
@@ -293,25 +280,23 @@ export default function Troubleshooting() {
             </div>
           )}
           <div className="info-halves">
-            <div className="card info-card">
-              <div className="info-card-head"><h3>Bluetooth slots</h3></div>
+            <Card className="info-card" ruled title="Bluetooth slots">
               {/* Which of the five slots the keyboard sends to, and what each holds. A state of
                   the keyboard, not a preference of the app, which is why it is here. */}
               <BleSlots />
-            </div>
+            </Card>
             {halves.filter((h) => h.side === "dongle").length > 0
               ? halves.filter((h) => h.side === "dongle").map((h) => (
                   <HalfCard key={h.port} h={h} reference={sys?.reference} />
                 ))
               : (
-                <div className="card info-card">
-                  <div className="info-card-head"><h3>Dongle</h3></div>
+                <Card className="info-card" ruled title="Dongle">
                   <div className="setting-desc">
                     Not on USB. When the wireless dongle is plugged in it enumerates as its own
                     serial device and appears here after a read. On firmware 3.07 it exposes no
                     keyboard interface, so it cannot bridge a wireless keyboard to this computer.
                   </div>
-                </div>
+                </Card>
               )}
           </div>
         </>
@@ -320,59 +305,52 @@ export default function Troubleshooting() {
       {tab === "troubleshooting" && (
         <>
           <div className="info-halves">
-            <div className="card info-card">
-              <div className="info-card-head"><h3>Lighting</h3></div>
+            <Card className="info-card" ruled title="Lighting">
               <div className="setting-desc" style={{ marginBottom: 10 }}>
                 Restore puts both halves back to the profile's stored colours and animation after
                 a lighting key changed them at runtime. On and off are the plain LED commands, per
                 half.
               </div>
               <div className="btn-row info-btn-wrap">
-                <button className="btn primary" disabled={busy}
+                <Button variant="primary" disabled={busy}
                   onClick={() => lighting("Restore lighting", () => api.restoreLighting("left"))}>
                   Restore lighting
-                </button>
+                </Button>
                 {["left", "right"].map((sd) => (
                   <span key={sd} className="btn-row">
-                    <button className="btn" disabled={busy || (at != null && !connectedSides.includes(sd))}
+                    <Button disabled={busy || (at != null && !connectedSides.includes(sd))}
                       onClick={() => lighting(`LEDs on (${sd})`, () => api.led(sd, "on"))}>
                       LEDs on ({sd})
-                    </button>
-                    <button className="btn" disabled={busy || (at != null && !connectedSides.includes(sd))}
+                    </Button>
+                    <Button disabled={busy || (at != null && !connectedSides.includes(sd))}
                       onClick={() => lighting(`LEDs off (${sd})`, () => api.led(sd, "off"))}>
                       LEDs off ({sd})
-                    </button>
+                    </Button>
                   </span>
                 ))}
               </div>
-            </div>
-            <div className="card info-card">
-              <div className="info-card-head"><h3>Diagnostics</h3></div>
+            </Card>
+            <Card className="info-card" ruled title="Diagnostics">
               <div className="setting-desc" style={{ marginBottom: 10 }}>
                 Run against a chosen half. These read the device; none of them change a binding.
               </div>
-              <div className="seg">
-                {["left", "right", "dongle"].map((sd) => (
-                  <button key={sd}
-                    className={"seg-btn" + (side === sd ? " active" : "")}
-                    disabled={at != null && !connectedSides.includes(sd)}
-                    title={at != null && !connectedSides.includes(sd) ? "Not connected" : undefined}
-                    onClick={() => setSide(sd)}>
-                    {sd}
-                  </button>
-                ))}
-              </div>
+              <Tabs variant="segmented" ariaLabel="Half" value={side} onChange={setSide}
+                items={["left", "right", "dongle"].map((sd) => ({
+                  id: sd, label: sd,
+                  disabled: at != null && !connectedSides.includes(sd),
+                  title: at != null && !connectedSides.includes(sd) ? "Not connected" : undefined,
+                }))} />
               <div className="btn-row info-btn-wrap">
-                <button className="btn" disabled={busy} onClick={() => run("Diagnostics report", api.diagnostics)}>
+                <Button disabled={busy} onClick={() => run("Diagnostics report", api.diagnostics)}>
                   Generate report
-                </button>
-                <button className="btn" disabled={busy} onClick={() => run("Dump settings", () => api.dumpSettings(side))}>
+                </Button>
+                <Button disabled={busy} onClick={() => run("Dump settings", () => api.dumpSettings(side))}>
                   Dump settings
-                </button>
-                <button className="btn" disabled={busy}
+                </Button>
+                <Button disabled={busy}
                   onClick={() => run("SPI flash self-test", () => api.sendCommand("repair_flash", [], { side }))}>
                   Test SPI flash
-                </button>
+                </Button>
               </div>
               <div className="info-sub">Recovery</div>
               <div className="setting-desc">
@@ -380,9 +358,8 @@ export default function Troubleshooting() {
                 <strong> Settings &rsaquo; Troubleshooting</strong> tab, kept apart from these
                 read-only diagnostics so an erase is always a deliberate trip.
               </div>
-            </div>
-            <div className="card info-card">
-              <div className="info-card-head"><h3>Software</h3></div>
+            </Card>
+            <Card className="info-card" ruled title="Software">
               <KV k="OpenFlow" v={sys?.backendVersion} />
               <KV k="Operating system" v={sys ? `${sys.os} ${sys.osVersion}` : null} mono={false} />
               <KV k="Architecture" v={sys?.arch} />
@@ -395,16 +372,12 @@ export default function Troubleshooting() {
                   <KV k="Source" v={sys.reference.source} mono={false} />
                 </>
               )}
-            </div>
+            </Card>
           </div>
           {out && (
-            <div className="card">
-              <div className="info-card-head">
-                <h3>Output</h3>
-                <button className="btn info-head-btn" onClick={() => setOut("")}>Clear</button>
-              </div>
+            <Card title="Output" actionsAlign="end" actions={<Button onClick={() => setOut("")}>Clear</Button>}>
               <pre className="info-out">{out}</pre>
-            </div>
+            </Card>
           )}
         </>
       )}

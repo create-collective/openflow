@@ -3,6 +3,12 @@ import { api } from "../lib/api";
 import { applyInterfaceScaling } from "../lib/scaling";
 import { pickFile, downloadJSON, safeName } from "../lib/files";
 import SettingField from "../components/SettingField";
+import Badge from "../components/ui/Badge";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import { KVRow } from "../components/ui/KV";
+import Notice from "../components/ui/Notice";
+import Tabs from "../components/ui/Tabs";
 import { THEME_PREFERENCES, setThemePreference, useThemePreference } from "../lib/theme";
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
 const REPOS = {
@@ -25,7 +31,7 @@ function SettingsGroups({ groups, onChange }) {
     <div style={{ maxWidth: 640 }}>
       {groups.map((g) => (
         <div key={g.group} style={{ marginBottom: 28 }}>
-          <h3>{g.group} {g.scope === "device" && <span className="pill">device</span>}</h3>
+          <h3>{g.group} {g.scope === "device" && <Badge>device</Badge>}</h3>
           <p className="page-sub" style={{ marginTop: -4 }}>{g.desc}</p>
           {g.fields.map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
         </div>
@@ -36,7 +42,7 @@ function SettingsGroups({ groups, onChange }) {
 
 function DeviceGate({ connected, children }) {
   if (connected) return children;
-  return <div className="phase-note">Connect a Naya Create over USB to use this. These actions run on the device.</div>;
+  return <Notice>Connect a Naya Create over USB to use this. These actions run on the device.</Notice>;
 }
 
 export default function Settings() {
@@ -137,16 +143,10 @@ export default function Settings() {
   return (
     <div>
       <h1 className="page-title">Settings</h1>
-      {err && <div className="card"><div className="phase-note">{err}</div></div>}
+      {err && <Card><Notice tone="err">{err}</Notice></Card>}
 
       <div className="settings-layout">
-        <div className="settings-nav">
-          {TABS.map((t) => (
-            <button key={t.id} className={"settings-tab" + (tab === t.id ? " active" : "")} onClick={() => setTab(t.id)}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <Tabs variant="vertical" ariaLabel="Settings sections" items={TABS} value={tab} onChange={setTab} />
 
         <div className="settings-content">
           {!settings ? <div className="empty">Loading…</div> : (
@@ -164,17 +164,17 @@ export default function Settings() {
                   <h3>Local Backups</h3>
                   <p className="page-sub">OpenFlow auto-backs up your data every 30 minutes. Restore any snapshot below.</p>
                   <div className="btn-row" style={{ marginBottom: 8 }}>
-                    <button className="btn primary" disabled={busy} onClick={() => run("Backup now", async () => { const r = await api.createBackup(); setBackups(await api.backups()); return r; })}>Backup now</button>
+                    <Button variant="primary" disabled={busy} onClick={() => run("Backup now", async () => { const r = await api.createBackup(); setBackups(await api.backups()); return r; })}>Backup now</Button>
                     {backups.dir && (
-                      <button className="btn" disabled={busy} onClick={() => run("Open backup folder", api.openBackupFolder)}>Open backup folder</button>
+                      <Button disabled={busy} onClick={() => run("Open backup folder", api.openBackupFolder)}>Open backup folder</Button>
                     )}
-                    <button className="btn" disabled={busy} onClick={async () => {
+                    <Button disabled={busy} onClick={async () => {
                       const f = await pickFile(".db,.zip");
                       if (!f) return;
                       if (!confirm("Import this backup as your current data? Your current data is snapshotted first.")) return;
                       run("Import backup", async () => { const r = await api.importBackupFile(f); setBackups(await api.backups()); return r; });
-                    }}>Import backup file…</button>
-                    <button className="btn" disabled={busy} onClick={async () => {
+                    }}>Import backup file…</Button>
+                    <Button disabled={busy} onClick={async () => {
                       const f = await pickFile(".db,.zip");
                       if (!f) return;
                       run("Convert to JSON", async () => {
@@ -184,7 +184,7 @@ export default function Settings() {
                         }
                         return { converted: r.profiles.length, saved: r.profiles.map((p) => p.profile?.name) };
                       });
-                    }}>Convert database to JSON…</button>
+                    }}>Convert database to JSON…</Button>
                   </div>
                   <p className="page-sub" style={{ marginBottom: 12 }}>
                     Import a NayaFlow backup (its <code>.zip</code> or the <code>user-data.db</code> inside) — OpenFlow uses the same
@@ -195,7 +195,7 @@ export default function Settings() {
                     <div className="skp-row" key={b.name} style={{ cursor: "default" }}>
                       <span className="skp-beh">{b.kind}</span>
                       <span className="skp-act" style={{ flex: 1 }}>{b.modified} · {b.sizeKb} KB</span>
-                      <button className="btn" disabled={busy} onClick={() => { if (confirm("Restore this backup? Current data is snapshotted first.")) run("Restore", () => api.restoreBackup(b.name)); }}>Restore</button>
+                      <Button disabled={busy} onClick={() => { if (confirm("Restore this backup? Current data is snapshotted first.")) run("Restore", () => api.restoreBackup(b.name)); }}>Restore</Button>
                     </div>
                   ))}
                   {out && <pre className="settings-out">{out}</pre>}
@@ -204,7 +204,7 @@ export default function Settings() {
 
               {tab === "troubleshooting" && (
                 <div style={{ maxWidth: 640 }}>
-                  <h3>Troubleshooting <span className="pill danger">destructive</span></h3>
+                  <h3>Troubleshooting <Badge>destructive</Badge></h3>
                   <p className="page-sub" style={{ marginBottom: 12 }}>
                     Actions that erase device data, kept apart from the safe, read-only diagnostics.
                     Those (lighting restore, SPI self-test, diagnostics report, dump settings) live on
@@ -213,7 +213,7 @@ export default function Settings() {
                   <DeviceGate connected={connected}>
                     <div className="setting">
                       <div className="setting-head"><strong>Clear BLE Devices</strong>
-                        <button className="btn danger" disabled={busy} onClick={() => { if (confirm("Clear all Bluetooth bonds? If the halves are bonded to each other they will need re-pairing.")) run("Clear BLE", () => api.sendCommand("clear_ble_devices", [], { side: "left", force: true })); }}>Clear</button></div>
+                        <Button variant="danger" disabled={busy} onClick={() => { if (confirm("Clear all Bluetooth bonds? If the halves are bonded to each other they will need re-pairing.")) run("Clear BLE", () => api.sendCommand("clear_ble_devices", [], { side: "left", force: true })); }}>Clear</Button></div>
                       <div className="setting-desc">Forces the Create to forget all Bluetooth connections.</div>
                     </div>
                   </DeviceGate>
@@ -236,14 +236,14 @@ export default function Settings() {
                           <div className="setting" key={op.id}>
                             <div className="setting-head">
                               <strong>{op.label}</strong>
-                              <span className={"gesture-badge prov-" + (op.danger === "destructive" ? "experimental" : "app")}>{op.danger}</span>
+                              <Badge size="xs" tone={op.danger === "destructive" ? "warn" : "neutral"}>{op.danger}</Badge>
                               <div className="setting-ctl">
-                                <button className={"btn" + (op.danger === "destructive" ? " danger" : "")}
+                                <Button variant={op.danger === "destructive" ? "danger" : "secondary"}
                                   disabled={!op.enabled || busy || !connected}
                                   title={!op.enabled ? `Wired, enabled after testing on a ${op.needs}` : op.confirm}
                                   onClick={() => { if (confirm(op.confirm)) run(op.label, () => api.runRecoveryOp(op.id)); }}>
                                   {op.enabled ? "Run" : "Disabled"}
-                                </button>
+                                </Button>
                               </div>
                             </div>
                             <div className="setting-desc">
@@ -267,11 +267,11 @@ export default function Settings() {
                     <div className="setting-head">
                       <strong>Plan the repair</strong>
                       <div className="setting-ctl">
-                        <button className="btn" disabled={busy || !connected}
-                          onClick={() => run("Pairing repair plan", () => api.pairingRepairPlan().then((p) => { setPairPlan(p); return p; }))}>Plan</button>
-                        <button className="btn" disabled={busy || !connected} style={{ marginLeft: 6 }}
-                          onClick={() => run("Pairing verify", () => api.pairingRepairVerify())}>Verify link</button>
-                        <button className="btn danger" disabled title="Wired, enabled after testing on a spare pair" style={{ marginLeft: 6 }}>Run (disabled)</button>
+                        <Button disabled={busy || !connected}
+                          onClick={() => run("Pairing repair plan", () => api.pairingRepairPlan().then((p) => { setPairPlan(p); return p; }))}>Plan</Button>
+                        <Button disabled={busy || !connected} style={{ marginLeft: 6 }}
+                          onClick={() => run("Pairing verify", () => api.pairingRepairVerify())}>Verify link</Button>
+                        <Button variant="danger" disabled title="Wired, enabled after testing on a spare pair" style={{ marginLeft: 6 }}>Run (disabled)</Button>
                       </div>
                     </div>
                     <div className="setting-desc">
@@ -304,15 +304,15 @@ export default function Settings() {
                   <h3>Logging &amp; Diagnostics</h3>
                   <div className="setting">
                     <div className="setting-head"><strong>Diagnostics Report</strong>
-                      <button className="btn" disabled={busy} onClick={() => run("Diagnostics", api.diagnostics)}>Generate</button></div>
+                      <Button disabled={busy} onClick={() => run("Diagnostics", api.diagnostics)}>Generate</Button></div>
                     <div className="setting-desc">Collects system + device info to help debug issues.</div>
                   </div>
                   <div className="setting-head" style={{ marginTop: 18 }}>
                     <strong>Device I/O log</strong>
                     <div className="setting-ctl">
-                      <button className="btn" disabled={busy} onClick={() => api.deviceLog().then((r) => { setDevlog(r.entries || []); setLogmeta(r); })}>Refresh</button>
-                      <button className="btn" disabled={busy} onClick={() => { api.clearDeviceLog().then(() => setDevlog([])); }}>Clear</button>
-                      {logmeta.dir && <button className="btn" disabled={busy} onClick={() => api.openLogsFolder()}>Open log folder</button>}
+                      <Button disabled={busy} onClick={() => api.deviceLog().then((r) => { setDevlog(r.entries || []); setLogmeta(r); })}>Refresh</Button>
+                      <Button disabled={busy} onClick={() => { api.clearDeviceLog().then(() => setDevlog([])); }}>Clear</Button>
+                      {logmeta.dir && <Button disabled={busy} onClick={() => api.openLogsFolder()}>Open log folder</Button>}
                     </div>
                   </div>
                   <div className="setting-desc" style={{ marginBottom: 8 }}>
@@ -343,20 +343,18 @@ export default function Settings() {
                 <div style={{ maxWidth: 640 }}>
                   <h3>Software &amp; Firmware</h3>
 
-                  <div className="kv"><span className="k">OpenFlow</span><span className="v">{sys?.backendVersion}</span></div>
-                  <div className="kv"><span className="k">OS</span><span className="v">{sys?.os} {sys?.arch}</span></div>
+                  <KVRow k="OpenFlow" v={sys?.backendVersion} />
+                  <KVRow k="OS" v={sys ? `${sys.os} ${sys.arch}` : null} />
                   <div className="btn-row" style={{ margin: "10px 0" }}>
-                    <button className="btn" onClick={checkUpdate}>Check OpenFlow for updates</button>
-                    <button className="btn" onClick={checkCompanion}>Check Create Companion</button>
+                    <Button onClick={checkUpdate}>Check OpenFlow for updates</Button>
+                    <Button onClick={checkCompanion}>Check Create Companion</Button>
                   </div>
                   {update?.checking && <div className="page-sub">Checking OpenFlow…</div>}
-                  {update?.error && <div className="phase-note">OpenFlow: {update.error}</div>}
-                  {update?.latest && <div className="kv"><span className="k">OpenFlow latest</span>
-                    <span className="v">{update.latest}{update.ahead ? " (update available)" : " (up to date)"}</span></div>}
+                  {update?.error && <Notice tone="err">OpenFlow: {update.error}</Notice>}
+                  {update?.latest && <KVRow k="OpenFlow latest" v={`${update.latest}${update.ahead ? " (update available)" : " (up to date)"}`} />}
                   {companion?.checking && <div className="page-sub">Checking Create Companion…</div>}
-                  {companion?.error && <div className="phase-note">Create Companion: {companion.error}</div>}
-                  {companion?.latest && <div className="kv"><span className="k">Create Companion latest</span>
-                    <span className="v">{companion.latest}</span></div>}
+                  {companion?.error && <Notice tone="err">Create Companion: {companion.error}</Notice>}
+                  {companion?.latest && <KVRow k="Create Companion latest" v={companion.latest} />}
                   <p className="page-sub" style={{ marginTop: 4 }}>
                     Opt-in checks against GitHub Releases. OpenFlow has no forced updater.
                   </p>
@@ -364,14 +362,13 @@ export default function Settings() {
                   <h3 style={{ marginTop: 22 }}>Device firmware</h3>
                   {status.filter((h) => h.connected).map((h) => (
                     <div key={h.port}>
-                      <div className="kv"><span className="k">{h.description} firmware</span><span className="v">{h.firmwareVersion || "—"}</span></div>
-                      {h.module?.firmwareVersion && <div className="kv"><span className="k">{h.module.type} module firmware</span><span className="v">{h.module.firmwareVersion}</span></div>}
+                      <KVRow k={`${h.description} firmware`} v={h.firmwareVersion || "—"} />
+                      {h.module?.firmwareVersion && <KVRow k={`${h.module.type} module firmware`} v={h.module.firmwareVersion} />}
                     </div>
                   ))}
                   {!connected && <p className="page-sub">Connect the keyboard to read device firmware versions.</p>}
                   {firmware?.reference && (
-                    <div className="kv"><span className="k">Naya ships (reference)</span>
-                      <span className="v">Create {firmware.reference.createFirmware} · module {firmware.reference.moduleFirmware}</span></div>
+                    <KVRow k="Naya ships (reference)" v={`Create ${firmware.reference.createFirmware} · module ${firmware.reference.moduleFirmware}`} />
                   )}
 
                   <h3 style={{ marginTop: 22 }}>Firmware library</h3>
@@ -419,9 +416,9 @@ export default function Settings() {
                               <span className="skp-beh">{im.component || "?"}{im.generation ? ` · gen ${im.generation}` : ""}</span>
                               <span className="skp-act" style={{ flex: 1 }}>{im.file}{im.container ? ` in ${im.container}` : ""}</span>
                               <span className="v" style={{ fontFamily: "var(--font-mono)", opacity: 0.6 }}>{im.sha256 ? im.sha256 + "…" : "encrypted"}</span>
-                              <button className="btn" disabled title={im.flashable ? "Wired, enabled after testing on a donor unit" : (im.withheldBecause || []).join("; ") || "Not a flashable image"} style={{ marginLeft: 8 }}>
+                              <Button disabled title={im.flashable ? "Wired, enabled after testing on a donor unit" : (im.withheldBecause || []).join("; ") || "Not a flashable image"} style={{ marginLeft: 8 }}>
                                 {im.flashable ? "Flash (disabled)" : "—"}
-                              </button>
+                              </Button>
                             </div>
                           ))}
                         </div>

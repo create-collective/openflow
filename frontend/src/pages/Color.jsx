@@ -6,6 +6,9 @@ import { downloadJSON, pickJSONFile, safeName } from "../lib/files";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
 import ProfileBar from "../components/ProfileBar";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import Notice from "../components/ui/Notice";
 
 // Base swatches (recovered "Rainbow" palette + off). Users add custom colors.
 const BASE_SWATCHES = [
@@ -215,7 +218,7 @@ export default function Color() {
   }
 
   if (!profile) {
-    return <div><h1 className="page-title">LED Map</h1><div className="card"><div className="empty">{err || "Loading…"}</div></div></div>;
+    return <div><h1 className="page-title">LED Map</h1><Card><div className="empty">{err || "Loading…"}</div></Card></div>;
   }
 
   return (
@@ -243,30 +246,28 @@ export default function Color() {
                 shown as the keyboard will light it
               </span>
             </div>
-            <div className="board-actions"><FlashButton variant="toolbar" /></div>
+            <div className="board-actions"><FlashButton /></div>
           </div>
           <KeymapBoard keysByPosition={boardKeys} mode="color" onSelectKey={onKey} layerMap={layerMap}
             names={names} moduleLed={layer?.moduleLed} onModuleLed={paintModule} />
         </div>
       </div>
 
-      {err && <div className="phase-note" style={{ margin: "8px 0" }}>{err}</div>}
+      {err && <Notice tone="err" style={{ margin: "8px 0" }}>{err}</Notice>}
 
       <div className="editor-bottom" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <div>
-          <div className="card">
-            <h3>LED Mapping Tools</h3>
+          <Card title="LED Mapping Tools">
             <div className="btn-row">
               {TOOLS.map((t) => (
-                <button key={t.id} className={"btn" + (tool === t.id ? " primary" : "")} onClick={() => setTool(t.id)}>
+                <Button key={t.id} variant={tool === t.id ? "primary" : "secondary"} onClick={() => setTool(t.id)}>
                   {t.icon} {t.label}
-                </button>
+                </Button>
               ))}
             </div>
-          </div>
+          </Card>
 
-          <div className="card">
-            <h3>LED Color Palette</h3>
+          <Card title="LED Color Palette">
             <p className="page-sub" style={{ marginBottom: 10 }}>
               The keyboard stores a hue and a saturation — <strong>brightness is a keyboard-wide
               setting</strong>, not per key. So pale colours and white come out exactly as
@@ -309,8 +310,8 @@ export default function Color() {
                   <input className="mac-input" value={hex}
                     onChange={(e) => setHex(e.target.value)}
                     onBlur={() => applyCreator(false)} />
-                  <button className="btn" onClick={() => applyCreator(true)}>Use HSV</button>
-                  <button className="btn primary" onClick={addSwatch}>Add swatch</button>
+                  <Button onClick={() => applyCreator(true)}>Use HSV</Button>
+                  <Button variant="primary" onClick={addSwatch}>Add swatch</Button>
                 </div>
                 {brushDevice && (
                   <p className="page-sub" style={{ marginTop: 6 }}>
@@ -321,11 +322,10 @@ export default function Color() {
                 )}
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
-        <div className="card">
-          <h3>Animations</h3>
+        <Card title="Animations">
           {/* This card really was app-only until 2026-09-08, and the reason it looked that way
               is worth keeping: the animation is byte 2 of the layer's entry in the DEVICE'S LAYER
               LIST, and every board we had ever captured was set to solid on every layer -- so the
@@ -347,7 +347,7 @@ export default function Color() {
               </button>
             ))}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

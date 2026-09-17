@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import Button from "./ui/Button";
+import { KVRow } from "./ui/KV";
+import Notice from "./ui/Notice";
 
 // The keyboard's five Bluetooth slots, read from the left half's status. Slot 0 is never
 // offered by NayaFlow's keys and is most likely the dongle's, so it is shown but not
@@ -51,17 +54,15 @@ export default function BleSlots({ side = "left" }) {
   return (
     <div>
       <div className="btn-row" style={{ alignItems: "center", marginBottom: 8 }}>
-        <button className="btn" onClick={load} disabled={busy}>{busy ? "Reading…" : "Refresh"}</button>
+        <Button onClick={load} busy={busy}>{busy ? "Reading…" : "Refresh"}</Button>
         {data && <span className="saved-note ok">Active slot: {data.activeProfile}</span>}
       </div>
-      {err && <div className="error">{err}</div>}
+      {err && <Notice tone="err">{err}</Notice>}
       {!data && !err && <div className="empty">Reading Bluetooth status…</div>}
       {data && (data.slots || []).map((s) => (
-        <div className="kv" key={s.index} style={{ alignItems: "center" }}>
-          <span className="k">
-            {s.reserved ? "Slot 0 — reserved (dongle)" : `Slot ${s.index} (BT ${s.index})`}
-          </span>
-          <span className="v" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <KVRow key={s.index} style={{ alignItems: "center" }}
+          k={s.reserved ? "Slot 0 — reserved (dongle)" : `Slot ${s.index} (BT ${s.index})`}>
+          <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span title={[
               s.active ? "The keyboard sends to this slot when on wireless output." : null,
               s.connected ? "The paired host is connected right now." : s.bonded ? "A host is paired here." : "Nothing is paired here.",
@@ -71,18 +72,18 @@ export default function BleSlots({ side = "left" }) {
             </span>
             {!s.reserved && (
               <>
-                <button className="btn" disabled={busy || s.active} onClick={() => select(s.index)}
-                  title="Same as pressing this BT key on the keyboard.">Select</button>
-                <button className="btn" disabled={busy} onClick={() => clear(s.index)}
-                  title="Forget the host paired here and start pairing mode for this slot.">Clear &amp; pair</button>
+                <Button disabled={busy || s.active} onClick={() => select(s.index)}
+                  title="Same as pressing this BT key on the keyboard.">Select</Button>
+                <Button disabled={busy} onClick={() => clear(s.index)}
+                  title="Forget the host paired here and start pairing mode for this slot.">Clear &amp; pair</Button>
               </>
             )}
           </span>
-        </div>
+        </KVRow>
       ))}
-      <div className="phase-note" style={{ marginTop: 8 }}>
+      <Notice style={{ marginTop: 8 }}>
         Read from the left half over USB. The keyboard keeps the active slot across power cycles.
-      </div>
+      </Notice>
     </div>
   );
 }

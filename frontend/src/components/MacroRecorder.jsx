@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chordFromEvent } from "../lib/recordkeys";
+import Badge from "./ui/Badge";
+import Button from "./ui/Button";
+import Card from "./ui/Card";
+import Notice from "./ui/Notice";
+import Toggle from "./ui/Toggle";
 
 // Record a macro by typing it, instead of adding steps one at a time.
 //
@@ -57,11 +62,8 @@ export default function MacroRecorder({ onCommit, onCancel }) {
   }));
 
   return (
-    <div className="card macro-record">
-      <h3>
-        Record
-        {recording && <span className="pill err" style={{ marginLeft: 8 }}>recording</span>}
-      </h3>
+    <Card className="macro-record"
+      title={<>Record{recording && <Badge tone="err" style={{ marginLeft: 8 }}>recording</Badge>}</>}>
 
       {!recording && events.length === 0 && (
         <div className="setting-desc" style={{ marginBottom: 10 }}>
@@ -72,9 +74,9 @@ export default function MacroRecorder({ onCommit, onCancel }) {
       )}
 
       {recording && (
-        <div className="phase-note" style={{ marginBottom: 10 }}>
+        <Notice style={{ marginBottom: 10 }}>
           Recording. Every keystroke is captured — press <strong>Escape</strong> to stop.
-        </div>
+        </Notice>
       )}
 
       {events.length > 0 && (
@@ -90,26 +92,22 @@ export default function MacroRecorder({ onCommit, onCancel }) {
 
       <div className="btn-row" style={{ marginTop: 12, alignItems: "center" }}>
         {!recording ? (
-          <button className="btn primary" onClick={start}>
+          <Button variant="primary" onClick={start}>
             {events.length ? "Record again" : "Record"}
-          </button>
+          </Button>
         ) : (
-          <button className="btn" onClick={stop}>Stop</button>
+          <Button onClick={stop}>Stop</Button>
         )}
         {events.length > 0 && !recording && (
           <>
-            <label style={{ color: "var(--text-muted)", display: "flex", gap: 6, alignItems: "center" }}>
-              <input type="checkbox" checked={keepTiming}
-                onChange={(e) => setKeepTiming(e.target.checked)} />
-              Keep my timing
-            </label>
-            <button className="btn primary" onClick={() => onCommit(steps)}>
+            <Toggle variant="check" checked={keepTiming} onChange={setKeepTiming} label="Keep my timing" />
+            <Button variant="primary" onClick={() => onCommit(steps)}>
               Add {steps.length} step{steps.length === 1 ? "" : "s"}
-            </button>
-            <button className="btn" onClick={() => { setEvents([]); onCancel?.(); }}>Discard</button>
+            </Button>
+            <Button onClick={() => { setEvents([]); onCancel?.(); }}>Discard</Button>
           </>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

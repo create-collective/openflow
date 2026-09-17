@@ -104,27 +104,6 @@
   gap: 16px;
 }
 
-/* Rows / key-value */
-.kv {
-  display: flex;
-  justify-content: space-between;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.kv:last-child {
-  border-bottom: none;
-}
-
-.kv .k {
-  color: var(--text-muted);
-}
-
-.kv .v {
-  font-family: var(--font-mono);
-  color: var(--text);
-}
-
 /* Status dot */
 .status {
   display: inline-flex;
@@ -218,31 +197,7 @@
   color: var(--text-muted);
 }
 
-.pill {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--badge-bg);
-  color: var(--text-muted);
-}
-
-/* --- Flash button + preview modal ------------------------------------------ */
-.flash-btn {
-  width: 100%;
-  padding: 9px 12px;
-  border: none;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--accent-fg);
-  font-weight: 600;
-  cursor: pointer;
-}
-.flash-btn:hover { background: var(--accent-hover); }
-.flash-btn:disabled { opacity: 0.6; cursor: default; }
-
+/* --- Flash preview modal ---------------------------------------------------- */
 .modal-backdrop {
   position: fixed; inset: 0;
   background: var(--backdrop);
@@ -272,13 +227,6 @@
 .flash-ops td { padding: 3px 6px; border-top: 1px solid var(--border); color: var(--text); }
 .flash-ops .mono { font-family: var(--font-mono); color: var(--text-muted); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
-.btn-secondary, .btn-primary {
-  padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; border: none;
-}
-.btn-secondary { background: var(--bg-hover-strong); color: var(--text); }
-.btn-primary { background: var(--accent); color: var(--accent-fg); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
 /* --- Module gesture flashability badges ------------------------------------ */
 .gesture-badge {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
@@ -293,14 +241,12 @@
    started, so it finished with no signal at all. These are the two places that
    now say what happened: the note inside the dialog, and the button for five
    seconds after it closes. Additive only -- nothing above is modified. */
-.flash-btn.btn-done,
 .board-btn.btn-done,
 .board-btn.primary.btn-done {
   background: var(--ok);
   border-color: var(--ok);
   color: var(--ok-fg);
 }
-.flash-btn.btn-done:hover,
 .board-btn.btn-done:hover:not(:disabled),
 .board-btn.primary.btn-done:hover { background: var(--ok); }
 
@@ -430,10 +376,4 @@ img:not([draggable="true"]) {
   font-size: 12px;
 }
 .device-chip:hover { border-color: var(--accent); }
-.device-chip-row { display: flex; align-items: center; gap: 8px; }
-.device-chip-row .dot { flex: none; }
-.device-chip-side { width: 14px; font-weight: 700; }
-.device-chip-batt { margin-left: auto; font-variant-numeric: tabular-nums; }
-.device-chip-batt.low { color: var(--warn); }
-.device-chip-module { padding-left: 22px; color: var(--text-dim); font-size: 11px; }
 .device-chip-empty { color: var(--text-dim); }

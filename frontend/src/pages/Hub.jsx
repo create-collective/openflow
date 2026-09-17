@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useSSE } from "../lib/useSSE";
+import Card from "../components/ui/Card";
+import { KVRow } from "../components/ui/KV";
+import Notice from "../components/ui/Notice";
 
 export default function Hub() {
   const [sys, setSys] = useState(null);
@@ -22,40 +25,27 @@ export default function Hub() {
       </p>
 
       <div className="grid">
-        <div className="card">
-          <h3>Backend</h3>
+        <Card title="Backend">
           <div className="status">
             <span className={"dot " + (connected ? "ok" : "err")} />
             {connected ? "Connected" : "Offline"}
           </div>
           {sys && (
             <>
-              <div className="kv">
-                <span className="k">Version</span>
-                <span className="v">{sys.backendVersion}</span>
-              </div>
-              <div className="kv">
-                <span className="k">OS</span>
-                <span className="v">{sys.os} {sys.arch}</span>
-              </div>
+              <KVRow k="Version" v={sys.backendVersion} />
+              <KVRow k="OS" v={`${sys.os} ${sys.arch}`} />
             </>
           )}
-          {err && <div className="phase-note">{err}</div>}
-        </div>
+          {err && <Notice tone="err">{err}</Notice>}
+        </Card>
 
-        <div className="card">
-          <h3>Devices</h3>
+        <Card title="Devices">
           {devices.length === 0 ? (
             <div className="empty">No Naya Create detected. Connect via USB.</div>
           ) : (
-            devices.map((d) => (
-              <div className="kv" key={d.port}>
-                <span className="k">{d.description}</span>
-                <span className="v">{d.port}</span>
-              </div>
-            ))
+            devices.map((d) => <KVRow key={d.port} k={d.description} v={d.port} />)
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );
