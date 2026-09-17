@@ -20,3 +20,9 @@ data/
 # Naya-proprietary UI reference (kept locally as design reference, not shipped).
 # See docs/asset-provenance.md — the OSS product must be a clean reskin.
 ScreenshotsOfNayaFlow/
+
+# Frontend test artefacts (screenshots are compared by eye, never committed)
+frontend/tests/e2e/shots/
+frontend/tests/e2e/.data/
+frontend/test-results/
+frontend/playwright-report/
