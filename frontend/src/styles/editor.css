@@ -1263,6 +1263,8 @@
 .settings-col > .ui-card { margin-bottom: 0; }
 .settings-card-desc { margin: -6px 0 10px; color: var(--text-muted); font-size: 13px; }
 .settings-pane.ui-card { margin-bottom: 0; }
+/* An inert setting (no control: not on the keyboard, or not in this build) reads as such. */
+.setting-deferred { opacity: 0.6; }
 /* The sliders in the accent, not the browser's blue. */
 .setting-slider input[type="range"] { accent-color: var(--accent); }
 

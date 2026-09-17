@@ -44,8 +44,11 @@ SETTINGS_SCHEMA = [
              "device_values": {"Balanced": "balanced", "Hold-Preferred": "hold-preferred",
                                "Tap-Preferred": "tap-preferred",
                                "Tap-Unless-Interrupted": "tap-unless-interrupted"}},
+            # Also the OneKey tap window (the "tap timeout" of a tap-dance model): the 2026-09-17
+            # capture showed it written into every hold-tap record, both banks, and nothing else.
             {"id": "tapping_term_ms", "label": "Tapping Term (ms)", "kind": "slider",
-             "desc": "How long the keyboard waits before deciding a key is held.",
+             "desc": "How long the keyboard waits before deciding a key is held; also the tap "
+                     "window for double-tap and tap+hold.",
              "min": 10, "max": 1000, "default": 200, "unit": "ms", "provenance": VERIFIED,
              "device_key": "8fe34f61-df0c-48c9-b0f7-ee9bfbaa2a05"},
             # `min_nonzero`: the firmware refuses 1-29 s (measured 2026-09-11, ack 0xEA, value
@@ -97,27 +100,35 @@ SETTINGS_SCHEMA = [
     {
         "group": "OneKey Timing",
         "scope": "device",
-        # No correlation id is known for these and nothing in the flash path reads them yet. The
-        # owner's position (2026-09-17): tap / hold / double-tap / tap+hold all work on the board,
-        # so the timing behind them has to live there somewhere, mapping unknown -- which is what
-        # EXPERIMENTAL means (the probe queue). What IS known on the wire: every hold-tap record
-        # carries its own flavour + tapping term (remap.encode_holdtap_param), and NayaFlow's own
-        # settings expose only those two; a NayaFlow USB write capture is the next probe.
+        # Probed 2026-09-17 (device/out/onekey-timing-20260917-analysis.txt): the timing the
+        # keyboard holds for tap / hold / double-tap / tap+hold is the tapping term + flavour in
+        # every hold-tap record, both banks, and nothing else. So the tap timeout of this model
+        # IS tapping_term_ms above (owner: "the same intended behavior"), and is not repeated
+        # here. The three that remain have no counterpart on the wire; they stay listed but
+        # inert (`deferred`, like the tray toggle) until a firmware mapping turns up or the open
+        # OneKey firmware gives them one.
         "desc": "Global timing for multi-behavior keys (ZMK tap Dance behavior). Not flashed to "
-                "the keyboard -- the firmware mapping for these settings are currently unknown.",
+                "the keyboard -- the firmware mapping for these settings are currently unknown "
+                "or do not exist.",
         "fields": [
-            {"id": "onekey_tap_timeout_ms", "label": "Tap Timeout (ms)", "kind": "slider",
-             "desc": "Window to register a second tap (double-tap detection).",
-             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": EXPERIMENTAL},
             {"id": "onekey_holdstart_ms", "label": "Hold Start (ms)", "kind": "slider",
              "desc": "Minimum time from keydown before a hold triggers.",
-             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": EXPERIMENTAL},
+             "min": 50, "max": 500, "default": 200, "unit": "ms", "provenance": EXPERIMENTAL,
+             "deferred": "Not on the keyboard: no firmware mapping is known for this, and the "
+                         "2026-09-17 capture found none. Disabled until one turns up.",
+             "deferred_badge": "not mapped"},
             {"id": "onekey_waitfor_ms", "label": "Wait For Release (ms)", "kind": "slider",
              "desc": "Delay before a held action repeats (release for a single output).",
-             "min": 0, "max": 1000, "default": 500, "unit": "ms", "provenance": EXPERIMENTAL},
+             "min": 0, "max": 1000, "default": 500, "unit": "ms", "provenance": EXPERIMENTAL,
+             "deferred": "Not on the keyboard: no firmware mapping is known for this, and the "
+                         "2026-09-17 capture found none. Disabled until one turns up.",
+             "deferred_badge": "not mapped"},
             {"id": "onekey_overlap_pct", "label": "Overlap (%)", "kind": "slider",
              "desc": "Overlap tolerated during fast typing before a hold triggers.",
-             "min": 0, "max": 100, "default": 20, "unit": "%", "provenance": EXPERIMENTAL},
+             "min": 0, "max": 100, "default": 20, "unit": "%", "provenance": EXPERIMENTAL,
+             "deferred": "Not on the keyboard: no firmware mapping is known for this, and the "
+                         "2026-09-17 capture found none. Disabled until one turns up.",
+             "deferred_badge": "not mapped"},
         ],
     },
     {
