@@ -45,11 +45,8 @@
     "pages/Macros.jsx": {
       "inlineStyles": 28
     },
-    "pages/Modules.jsx": {
-      "inlineStyles": 9
-    },
     "pages/Settings.jsx": {
-      "inlineStyles": 41
+      "inlineStyles": 24
     },
     "pages/Troubleshooting.jsx": {
       "inlineStyles": 3
