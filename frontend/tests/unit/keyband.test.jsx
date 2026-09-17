@@ -48,6 +48,15 @@ describe("SelectedKeyPanel", () => {
     expect(screen.queryByText("Double Tap + Hold")).not.toBeInTheDocument();
   });
 
+  it("shows a layer-switch key as the layers glyph and its number instead of crashing", () => {
+    render(
+      <SelectedKeyPanel label="LB1" bindings={{ tap: { actionCode: "MO_LAYER_l2", actionType: "layer_momentary" } }}
+        slots={slots} activeSlot="tap" layerMap={{ l2: 2 }} onSelectSlot={() => {}} onClearSlot={() => {}} />
+    );
+    expect(screen.getByText("LB1 · Left half")).toBeInTheDocument();
+    expect(document.querySelector(".keyband-cap")).toHaveTextContent("2");
+  });
+
   it("with no key selected, says so and offers nothing to pick", () => {
     render(<SelectedKeyPanel label={null} slots={slots} activeSlot="tap" onSelectSlot={() => {}} onClearSlot={() => {}} />);
     expect(screen.getByText("No key selected")).toBeInTheDocument();

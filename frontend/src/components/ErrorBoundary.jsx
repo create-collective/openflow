@@ -39,7 +39,7 @@ export default class ErrorBoundary extends Component {
       <div className="crash">
         <h2 className="crash-title">This page failed to render</h2>
         <p className="crash-lede">
-          The rest of the app still works — switch pages using the sidebar. Nothing was written to
+          The rest of the app still works — switch pages using the bar at the top. Nothing was written to
           your keyboard, and nothing was saved.
         </p>
         <pre className="crash-error">{String(error?.message || error)}</pre>

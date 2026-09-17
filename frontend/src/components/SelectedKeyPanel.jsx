@@ -1,5 +1,6 @@
 import { actionText, keyLegend } from "../lib/keylabels";
 import { ActionIcon, iconNameFor } from "../lib/icons";
+import LayersIcon from "./LayersIcon";
 import Badge from "./ui/Badge";
 import IconButton from "./ui/IconButton";
 
@@ -47,7 +48,12 @@ export default function SelectedKeyPanel({
   names = {},          // catalog.names: code -> {label, name, tooltip, alias}
 }) {
   const tap = bindings.tap;
+  // The legend is {main, sub} for a key, {layer: {type, num}} for a layer switch (the board
+  // draws those as the layers glyph and a number); reading `main` off the latter crashed
+  // the page the moment a layer key was selected (2026-09-17).
   const legend = tap ? keyLegend(tap, layerMap) : null;
+  const legendMain = legend && legend.main != null ? String(legend.main) : "";
+  const legendLayer = legend?.layer || null;
   const tapIcon = tap && iconNameFor(tap.actionCode, names);
   const half = label ? HALF[label[0]] : null;
 
@@ -57,9 +63,11 @@ export default function SelectedKeyPanel({
         <div className="keyband-title">Selected key</div>
         {label ? (
           <div className="keyband-key">
-            <div className={"keyband-cap" + (legend && !tapIcon && legend.main.length > 3 ? " long" : "")} aria-hidden="true">
-              {tapIcon ? <ActionIcon name={tapIcon} size={28} /> : legend ? legend.main : label}
-              {legend && legend.sub && !tapIcon && <span className="keyband-cap-sub">{legend.sub}</span>}
+            <div className={"keyband-cap" + (!tapIcon && !legendLayer && legendMain.length > 3 ? " long" : "")} aria-hidden="true">
+              {tapIcon ? <ActionIcon name={tapIcon} size={28} />
+                : legendLayer ? <><LayersIcon size={16} /> {legendLayer.num}</>
+                : legendMain || label}
+              {legend?.sub && !tapIcon && <span className="keyband-cap-sub">{legend.sub}</span>}
             </div>
             {/* The block is as wide as the layer list beside the board, so the cards start
                 where the board's column does; what a pick writes to is said by the palette. */}
