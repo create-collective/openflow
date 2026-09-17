@@ -265,3 +265,31 @@
 .ui-statusbox-batt { margin-left: auto; font-variant-numeric: tabular-nums; }
 .ui-statusbox-batt.low { color: var(--warn); }
 .ui-statusbox-module { padding-left: 22px; color: var(--text-dim); font-size: var(--fs-xs); }
+
+/* --- Modal and ConfirmDialog ------------------------------------------------------------- */
+.ui-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+.ui-modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  width: min(460px, 92vw);
+  max-height: 82vh;
+  overflow: auto;
+  color: var(--text);
+  box-shadow: var(--shadow-modal);
+  outline: none;
+}
+.ui-modal-title { margin: 0 0 6px; color: var(--text-strong); font-size: var(--fs-lg); }
+.ui-modal-sub { margin: 0 0 14px; color: var(--text-muted); font-size: var(--fs-md); }
+.ui-modal-detail { margin: 0 0 14px; color: var(--text-dim); font-size: var(--fs-sm); }
+.ui-modal-error { color: var(--err); }
+.ui-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }

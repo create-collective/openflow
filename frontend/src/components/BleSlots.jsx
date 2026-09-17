@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { confirmDialog } from "../lib/dialogs";
 import Button from "./ui/Button";
 import { KVRow } from "./ui/KV";
 import Notice from "./ui/Notice";
@@ -41,13 +42,24 @@ export default function BleSlots({ side = "left" }) {
     }
   }
 
-  function select(i) {
-    if (!confirm(`Switch the keyboard to Bluetooth slot ${i}?\n\nThis is the same as pressing BT ${i} on the keyboard: typing moves to whatever is paired in that slot. If nothing is paired there, typing stops until you press USB-C on the keyboard or power cycle it.`)) return;
+  async function select(i) {
+    const ok = await confirmDialog({
+      title: `Switch the keyboard to Bluetooth slot ${i}?`,
+      message: `This is the same as pressing BT ${i} on the keyboard: typing moves to whatever is paired in that slot. If nothing is paired there, typing stops until you press USB-C on the keyboard or power cycle it.`,
+      confirmLabel: "Switch",
+    });
+    if (!ok) return;
     act(`Select slot ${i}`, () => api.selectBleProfile(side, i));
   }
 
-  function clear(i) {
-    if (!confirm(`Clear Bluetooth slot ${i} and start pairing?\n\nWhatever is paired in slot ${i} is forgotten. The keyboard then advertises so a new host can pair to it.`)) return;
+  async function clear(i) {
+    const ok = await confirmDialog({
+      title: `Clear Bluetooth slot ${i} and start pairing?`,
+      message: `Whatever is paired in slot ${i} is forgotten. The keyboard then advertises so a new host can pair to it.`,
+      confirmLabel: "Clear and pair",
+      tone: "danger",
+    });
+    if (!ok) return;
     act(`Clear slot ${i}`, () => api.clearBleProfile(side, i));
   }
 

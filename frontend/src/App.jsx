@@ -6,8 +6,8 @@ import { api } from "./lib/api";
 import { applyInterfaceScaling, scalingFromSettings } from "./lib/scaling";
 import { useSSE } from "./lib/useSSE";
 import DeviceChip from "./components/DeviceChip";
+import DialogHost from "./components/ui/ConfirmDialog";
 import Hub from "./pages/Hub.jsx";
-import DeviceManagement from "./pages/DeviceManagement.jsx";
 import Troubleshooting from "./pages/Troubleshooting.jsx";
 import Settings from "./pages/Settings.jsx";
 import Placeholder from "./pages/Placeholder.jsx";
@@ -27,9 +27,10 @@ const NAV = [
   { to: "/colormapping", label: "LED Map" },
   { to: "/module-configuration", label: "Modules" },
   { to: "/macro", label: "Macros" },
-  // Device Manager left the nav on 2026-09-11: its halves, its lighting buttons and its live
-  // status all live on Information (Device / Connections / Troubleshooting) and in the chip
-  // below the brand. The route stays so a saved link still opens.
+  // Device Manager left the nav on 2026-09-11 and the code on 2026-09-17: its halves, its
+  // lighting buttons and its live status all live on Information (Device / Connections /
+  // Troubleshooting) and in the chip below the brand. The route redirects so a saved link
+  // still lands somewhere useful.
   { to: "/information", label: "Information" },
   { to: "/settings", label: "Settings" },
 ];
@@ -43,7 +44,6 @@ function Sidebar() {
   // Seed from the last read the backend recorded, so a reload does not drop the live marks.
   // It is a belief with a timestamp, not a claim about the board right now -- see deviceState.
   useEffect(() => { hydrateDeviceState(api); }, []);
-  const deviceCount = data?.devices?.length ?? 0;
   return (
     <nav className="sidebar">
       <div className="brand">
@@ -59,10 +59,6 @@ function Sidebar() {
           className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}
         >
           {item.label}
-          {item.phase === 2 && <span className="badge">soon</span>}
-          {item.to === "/device-management" && deviceCount > 0 && (
-            <span className="badge">{deviceCount}</span>
-          )}
         </NavLink>
       ))}
       <div className="nav-spacer" />
@@ -99,7 +95,7 @@ export default function App() {
         <RouteBoundary>
         <Routes>
           <Route path="/" element={<Hub />} />
-          <Route path="/device-management" element={<DeviceManagement />} />
+          <Route path="/device-management" element={<Navigate to="/information" replace />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/layer-management" element={<Bindings />} />
           <Route path="/colormapping" element={<Color />} />
@@ -111,6 +107,8 @@ export default function App() {
         </Routes>
         </RouteBoundary>
       </main>
+      {/* One host for every confirmDialog() in the app; see lib/dialogs.js. */}
+      <DialogHost />
     </div>
   );
 }

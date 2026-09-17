@@ -1,3 +1,4 @@
+import { confirmDialog } from "../lib/dialogs";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useSyncExternalStore } from "react";
 import { subscribeDeviceState, getDeviceState, setModuleRead, deviceStateAt,
@@ -300,7 +301,13 @@ export default function Modules() {
   async function removeProfile(m) {
     // The backend refuses the last profile of a type -- a module with no profile cannot be
     // driven -- so surface that reason rather than a bare failure.
-    if (!window.confirm(`Delete the module profile "${m.name}"? Its bindings go with it.`)) return;
+    const ok = await confirmDialog({
+      title: `Delete the module profile "${m.name}"?`,
+      message: "Its bindings go with it.",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     setErr(null);
     try {
       await api.deleteModuleProfile(m.id);

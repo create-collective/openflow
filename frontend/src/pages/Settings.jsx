@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { confirmDialog } from "../lib/dialogs";
 import { applyInterfaceScaling } from "../lib/scaling";
 import { pickFile, downloadJSON, safeName } from "../lib/files";
 import SettingField from "../components/SettingField";
@@ -171,7 +172,7 @@ export default function Settings() {
                     <Button disabled={busy} onClick={async () => {
                       const f = await pickFile(".db,.zip");
                       if (!f) return;
-                      if (!confirm("Import this backup as your current data? Your current data is snapshotted first.")) return;
+                      if (!(await confirmDialog({ title: "Import this backup as your current data?", message: "Your current data is snapshotted first.", confirmLabel: "Import" }))) return;
                       run("Import backup", async () => { const r = await api.importBackupFile(f); setBackups(await api.backups()); return r; });
                     }}>Import backup file…</Button>
                     <Button disabled={busy} onClick={async () => {
@@ -195,7 +196,7 @@ export default function Settings() {
                     <div className="skp-row" key={b.name} style={{ cursor: "default" }}>
                       <span className="skp-beh">{b.kind}</span>
                       <span className="skp-act" style={{ flex: 1 }}>{b.modified} · {b.sizeKb} KB</span>
-                      <Button disabled={busy} onClick={() => { if (confirm("Restore this backup? Current data is snapshotted first.")) run("Restore", () => api.restoreBackup(b.name)); }}>Restore</Button>
+                      <Button disabled={busy} onClick={async () => { if (await confirmDialog({ title: "Restore this backup?", message: "Current data is snapshotted first.", confirmLabel: "Restore" })) run("Restore", () => api.restoreBackup(b.name)); }}>Restore</Button>
                     </div>
                   ))}
                   {out && <pre className="settings-out">{out}</pre>}
@@ -213,7 +214,7 @@ export default function Settings() {
                   <DeviceGate connected={connected}>
                     <div className="setting">
                       <div className="setting-head"><strong>Clear BLE Devices</strong>
-                        <Button variant="danger" disabled={busy} onClick={() => { if (confirm("Clear all Bluetooth bonds? If the halves are bonded to each other they will need re-pairing.")) run("Clear BLE", () => api.sendCommand("clear_ble_devices", [], { side: "left", force: true })); }}>Clear</Button></div>
+                        <Button variant="danger" disabled={busy} onClick={async () => { if (await confirmDialog({ title: "Clear all Bluetooth bonds?", message: "If the halves are bonded to each other they will need re-pairing.", confirmLabel: "Clear", tone: "danger" })) run("Clear BLE", () => api.sendCommand("clear_ble_devices", [], { side: "left", force: true })); }}>Clear</Button></div>
                       <div className="setting-desc">Forces the Create to forget all Bluetooth connections.</div>
                     </div>
                   </DeviceGate>
@@ -241,7 +242,7 @@ export default function Settings() {
                                 <Button variant={op.danger === "destructive" ? "danger" : "secondary"}
                                   disabled={!op.enabled || busy || !connected}
                                   title={!op.enabled ? `Wired, enabled after testing on a ${op.needs}` : op.confirm}
-                                  onClick={() => { if (confirm(op.confirm)) run(op.label, () => api.runRecoveryOp(op.id)); }}>
+                                  onClick={async () => { if (await confirmDialog({ title: `Run ${op.label}?`, message: op.confirm, confirmLabel: "Run", tone: op.danger === "destructive" ? "danger" : "default" })) run(op.label, () => api.runRecoveryOp(op.id)); }}>
                                   {op.enabled ? "Run" : "Disabled"}
                                 </Button>
                               </div>

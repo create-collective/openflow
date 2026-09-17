@@ -3,6 +3,7 @@ import { invalidateDeviceState, setModuleRead } from "../lib/deviceState";
 import useDoneFlag from "../lib/useDoneFlag";
 import { api } from "../lib/api.js";
 import Button from "./ui/Button";
+import Modal from "./ui/Modal";
 import Notice from "./ui/Notice";
 import Toggle from "./ui/Toggle";
 
@@ -148,6 +149,44 @@ export default function FlashButton() {
   const s = preview?.summary;
   const g = s ? summarize(s.ops) : null;
 
+  const footer = (
+    <>
+      <Button onClick={close} disabled={state === "writing"}>
+        {state === "done" ? "Close" : "Cancel"}
+      </Button>
+      {state !== "done" && !readOk && !recovery && (
+        <Button
+          onClick={() => setRecovery(true)}
+          title="For a keyboard that can no longer be read. Overwrites everything."
+        >
+          Can't read the board?
+        </Button>
+      )}
+      {state !== "done" && (
+        <Button
+          variant="primary"
+          onClick={confirmFlash}
+          disabled={state === "writing" || (!readOk && !recovery) || bayGaps.length > 0}
+          title={
+            bayGaps.length > 0
+              ? "Layer 0 leaves a module bay unset; fill it on the Bindings board first"
+              : recovery
+              ? "Overwrites the keyboard without reading it first"
+              : readOk
+              ? "Writes this profile to the keyboard, then reads it back to verify"
+              : "Read the keyboard first"
+          }
+        >
+          {state === "writing"
+            ? "Writing…"
+            : recovery
+            ? "Recovery flash (overwrites everything)"
+            : "Confirm flash"}
+        </Button>
+      )}
+    </>
+  );
+
   return (
     <>
       <Button
@@ -174,207 +213,170 @@ export default function FlashButton() {
       {/* Kept open through "writing" and "done". It used to render for preview|error only, so
           confirming unmounted the whole dialog mid-write: the "do not unplug it" note and the
           verified summary below were unreachable, and a flash finished with no signal at all.
-          The backdrop stops dismissing while a write is in flight -- there is nothing to go
-          back to, and the click would only hide the one thing worth watching. */}
-      {state !== "idle" && state !== "loading" && (
-        <div className="modal-backdrop" onClick={state === "writing" ? undefined : close}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>
-              {state === "writing" ? "Flashing…" : state === "done" ? "Flashed ✓" : "Flash to keyboard"}
-            </h3>
+          Not dismissable while a write is in flight -- there is nothing to go back to, and the
+          click would only hide the one thing worth watching. */}
+      <Modal
+        open={state !== "idle" && state !== "loading"}
+        title={state === "writing" ? "Flashing…" : state === "done" ? "Flashed ✓" : "Flash to keyboard"}
+        onClose={close}
+        dismissable={state !== "writing"}
+        footer={footer}
+      >
+        {state === "error" && (
+          <p className="ui-modal-error">
+            {wrote ? "Flash failed" : "Preview failed"}: {error}
+          </p>
+        )}
 
-            {state === "error" && (
-              <p className="modal-error">
-                {wrote ? "Flash failed" : "Preview failed"}: {error}
+        {(state === "preview" || state === "writing") && s && (
+          <>
+            {state === "preview" && (
+              <p className="ui-modal-sub">
+                Preview (dry run) — nothing is written until you confirm.
               </p>
             )}
+            <ul className="flash-diff">
+              <li><b>{g.layers}</b> layer{g.layers === 1 ? "" : "s"}</li>
+              <li><b>{g.colors}</b> colour map{g.colors === 1 ? "" : "s"}</li>
+              {g.layerList > 0 && (
+                <li title="Tells the keyboard which layer is which. Written only when the board disagrees.">
+                  layer list
+                </li>
+              )}
+              {g.wipes > 0 && <li><b>{g.wipes}</b> deleted-layer wipe{g.wipes === 1 ? "" : "s"}</li>}
+              {g.modules > 0 && <li><b>{g.modules}</b> module config{g.modules === 1 ? "" : "s"}</li>}
+              {/* A full module store is garbage-collected as far as needed: a slot holding a
+                  profile this keyboard profile does not reference is written over. Said out
+                  loud, because the profile it held is gone from the board afterwards. */}
+              {preview?.modules?.reclaimed?.length > 0 && (
+                <li title="No free module slot was left, so a slot holding a module profile this keyboard profile does not use is written over.">
+                  reusing {preview.modules.reclaimed.map((r) => `slot ${r.slot} (was ${r.was})`).join(", ")}
+                </li>
+              )}
+              {g.timeouts > 0 && <li>timeouts</li>}
+              <li className="flash-diff-tot">
+                {s.total_frames} frames · {s.total_bytes} bytes → {s.dest}
+              </li>
+            </ul>
+            <details className="flash-ops">
+              <summary>Write plan ({s.ops.length} ops)</summary>
+              <table>
+                <tbody>
+                  {s.ops.map((op, i) => (
+                    <tr key={i}>
+                      <td>{op.label}</td>
+                      <td className="mono">{op.sub}</td>
+                      <td>{op.payload_bytes} B</td>
+                      <td>{op.frames} fr</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          </>
+        )}
 
-            {(state === "preview" || state === "writing") && s && (
+        {/* Bindings the encoder cannot express. Shown BEFORE writing, because the whole
+            failure this fixes was finding out never. The key is left alone rather than
+            cleared -- clearing would destroy a binding the user did not ask to remove. */}
+        {state === "preview" && preview?.dropped?.length > 0 && (
+          <Notice tone="warn" className="flash-dropped">
+            <strong>
+              {preview.dropped.length} binding{preview.dropped.length === 1 ? "" : "s"} cannot
+              be written to the keyboard
+            </strong>
+            <ul>
+              {preview.dropped.slice(0, 6).map((d, i) => (
+                <li key={i}>
+                  <code>{d.actionCode || d.actionType}</code> on layer {d.layer}, key{" "}
+                  {d.position} — {d.reason}
+                </li>
+              ))}
+            </ul>
+            {preview.dropped.length > 6 && <div>…and {preview.dropped.length - 6} more.</div>}
+            <div>Everything else in this flash is unaffected; those keys keep what they have.</div>
+          </Notice>
+        )}
+
+        {/* Module slots the board carries that this profile does not reference. They are
+            invisible otherwise -- one has sat on the reference board for weeks reading back
+            as "unknown" -- and removing one drops a list entry and blanks a slot, so it is
+            asked for per flash rather than done quietly as part of "write everything". */}
+        {state === "preview" && preview?.orphans?.length > 0 && (
+          <Notice>
+            <Toggle variant="check" style={{ marginBottom: 4 }} checked={collectOrphans} onChange={setCollectOrphans}
+              label={<>Also remove {preview.orphans.length} unused module slot{preview.orphans.length === 1 ? "" : "s"}</>} />
+            <div style={{ fontSize: 11, opacity: 0.8 }}>
+              {preview.orphans.map((o) => `slot ${o.slot}${o.name ? ` (${o.name})` : ""}`).join(", ")}
+              {" — on the keyboard, not used by this profile. Removing is permanent."}
+            </div>
+          </Notice>
+        )}
+
+        {state === "preview" && bayGaps.length > 0 && (
+          <Notice tone="warn" className="flash-dropped">
+            <strong>
+              Layer 0 leaves {bayGaps.length} module bay{bayGaps.length === 1 ? "" : "s"} unset:{" "}
+              {bayGaps.map(bayGapName).join(", ")}
+            </strong>
+            <div>
+              The first layer must choose a profile (or "disabled") for every module type on
+              both sides; the other layers inherit it. A module with nothing on layer 0 runs
+              unconfigured. Pick one on the Bindings board, then preview again.
+            </div>
+          </Notice>
+        )}
+
+        {!readOk && !recovery && (
+          <Notice>
+            Read the keyboard first (Bindings → Read from keyboard). Flashing without it
+            would write over a state the app has not seen.
+          </Notice>
+        )}
+        {recovery && (
+          <Notice>
+            <strong>Recovery flash.</strong> The board is not read first, so nothing can be
+            preserved: module-to-dock assignments, transparent keys and double-tap bindings
+            are all overwritten. Only use this if the keyboard cannot be read.
+          </Notice>
+        )}
+        {state === "writing" && (
+          <Notice>
+            <span className="flash-spinner" aria-hidden="true" />
+            Writing to the keyboard, then reading it back to verify — do not unplug it.
+          </Notice>
+        )}
+        {state === "done" && result && (
+          <Notice tone={dropped.length ? "warn" : "ok"} className={dropped.length ? "flash-dropped" : ""}>
+            <strong>Flashed and verified.</strong> {result.ops} operation(s),{" "}
+            {result.frames} frame(s), read back with no differences.
+            {/* Verification only checks records the plan SET, so it passes even when a
+                binding could not be encoded. Saying "verified" and stopping there is what
+                made this class of bug invisible for so long. */}
+            {dropped.length > 0 && (
               <>
-                {state === "preview" && (
-                  <p className="modal-sub">
-                    Preview (dry run) — nothing is written until you confirm.
-                  </p>
-                )}
-                <ul className="flash-diff">
-                  <li><b>{g.layers}</b> layer{g.layers === 1 ? "" : "s"}</li>
-                  <li><b>{g.colors}</b> colour map{g.colors === 1 ? "" : "s"}</li>
-                  {g.layerList > 0 && (
-                    <li title="Tells the keyboard which layer is which. Written only when the board disagrees.">
-                      layer list
-                    </li>
-                  )}
-                  {g.wipes > 0 && <li><b>{g.wipes}</b> deleted-layer wipe{g.wipes === 1 ? "" : "s"}</li>}
-                  {g.modules > 0 && <li><b>{g.modules}</b> module config{g.modules === 1 ? "" : "s"}</li>}
-                  {/* A full module store is garbage-collected as far as needed: a slot holding a
-                      profile this keyboard profile does not reference is written over. Said out
-                      loud, because the profile it held is gone from the board afterwards. */}
-                  {preview?.modules?.reclaimed?.length > 0 && (
-                    <li title="No free module slot was left, so a slot holding a module profile this keyboard profile does not use is written over.">
-                      reusing {preview.modules.reclaimed.map((r) => `slot ${r.slot} (was ${r.was})`).join(", ")}
-                    </li>
-                  )}
-                  {g.timeouts > 0 && <li>timeouts</li>}
-                  <li className="flash-diff-tot">
-                    {s.total_frames} frames · {s.total_bytes} bytes → {s.dest}
-                  </li>
-                </ul>
-                <details className="flash-ops">
-                  <summary>Write plan ({s.ops.length} ops)</summary>
-                  <table>
-                    <tbody>
-                      {s.ops.map((op, i) => (
-                        <tr key={i}>
-                          <td>{op.label}</td>
-                          <td className="mono">{op.sub}</td>
-                          <td>{op.payload_bytes} B</td>
-                          <td>{op.frames} fr</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </details>
-              </>
-            )}
-
-            {/* Bindings the encoder cannot express. Shown BEFORE writing, because the whole
-                failure this fixes was finding out never. The key is left alone rather than
-                cleared -- clearing would destroy a binding the user did not ask to remove. */}
-            {state === "preview" && preview?.dropped?.length > 0 && (
-              <Notice tone="warn" className="flash-dropped">
-                <strong>
-                  {preview.dropped.length} binding{preview.dropped.length === 1 ? "" : "s"} cannot
-                  be written to the keyboard
-                </strong>
+                <div style={{ marginTop: 8 }}>
+                  <strong>
+                    But {dropped.length} binding{dropped.length === 1 ? "" : "s"} could not be
+                    written.
+                  </strong>{" "}
+                  Those keys keep what the keyboard already had on them.
+                </div>
                 <ul>
-                  {preview.dropped.slice(0, 6).map((d, i) => (
+                  {dropped.slice(0, 6).map((d, i) => (
                     <li key={i}>
                       <code>{d.actionCode || d.actionType}</code> on layer {d.layer}, key{" "}
                       {d.position} — {d.reason}
                     </li>
                   ))}
                 </ul>
-                {preview.dropped.length > 6 && <div>…and {preview.dropped.length - 6} more.</div>}
-                <div>Everything else in this flash is unaffected; those keys keep what they have.</div>
-              </Notice>
+                {dropped.length > 6 && <div>…and {dropped.length - 6} more.</div>}
+              </>
             )}
+          </Notice>
+        )}
 
-            {/* Module slots the board carries that this profile does not reference. They are
-                invisible otherwise -- one has sat on the reference board for weeks reading back
-                as "unknown" -- and removing one drops a list entry and blanks a slot, so it is
-                asked for per flash rather than done quietly as part of "write everything". */}
-            {state === "preview" && preview?.orphans?.length > 0 && (
-              <Notice>
-                <Toggle variant="check" style={{ marginBottom: 4 }} checked={collectOrphans} onChange={setCollectOrphans}
-                  label={<>Also remove {preview.orphans.length} unused module slot{preview.orphans.length === 1 ? "" : "s"}</>} />
-                <div style={{ fontSize: 11, opacity: 0.8 }}>
-                  {preview.orphans.map((o) => `slot ${o.slot}${o.name ? ` (${o.name})` : ""}`).join(", ")}
-                  {" — on the keyboard, not used by this profile. Removing is permanent."}
-                </div>
-              </Notice>
-            )}
-
-            {state === "preview" && bayGaps.length > 0 && (
-              <Notice tone="warn" className="flash-dropped">
-                <strong>
-                  Layer 0 leaves {bayGaps.length} module bay{bayGaps.length === 1 ? "" : "s"} unset:{" "}
-                  {bayGaps.map(bayGapName).join(", ")}
-                </strong>
-                <div>
-                  The first layer must choose a profile (or "disabled") for every module type on
-                  both sides; the other layers inherit it. A module with nothing on layer 0 runs
-                  unconfigured. Pick one on the Bindings board, then preview again.
-                </div>
-              </Notice>
-            )}
-
-            {!readOk && !recovery && (
-              <Notice>
-                Read the keyboard first (Bindings → Read from keyboard). Flashing without it
-                would write over a state the app has not seen.
-              </Notice>
-            )}
-            {recovery && (
-              <Notice>
-                <strong>Recovery flash.</strong> The board is not read first, so nothing can be
-                preserved: module-to-dock assignments, transparent keys and double-tap bindings
-                are all overwritten. Only use this if the keyboard cannot be read.
-              </Notice>
-            )}
-            {state === "writing" && (
-              <Notice>
-                <span className="flash-spinner" aria-hidden="true" />
-                Writing to the keyboard, then reading it back to verify — do not unplug it.
-              </Notice>
-            )}
-            {state === "done" && result && (
-              <Notice tone={dropped.length ? "warn" : "ok"} className={dropped.length ? "flash-dropped" : ""}>
-                <strong>Flashed and verified.</strong> {result.ops} operation(s),{" "}
-                {result.frames} frame(s), read back with no differences.
-                {/* Verification only checks records the plan SET, so it passes even when a
-                    binding could not be encoded. Saying "verified" and stopping there is what
-                    made this class of bug invisible for so long. */}
-                {dropped.length > 0 && (
-                  <>
-                    <div style={{ marginTop: 8 }}>
-                      <strong>
-                        But {dropped.length} binding{dropped.length === 1 ? "" : "s"} could not be
-                        written.
-                      </strong>{" "}
-                      Those keys keep what the keyboard already had on them.
-                    </div>
-                    <ul>
-                      {dropped.slice(0, 6).map((d, i) => (
-                        <li key={i}>
-                          <code>{d.actionCode || d.actionType}</code> on layer {d.layer}, key{" "}
-                          {d.position} — {d.reason}
-                        </li>
-                      ))}
-                    </ul>
-                    {dropped.length > 6 && <div>…and {dropped.length - 6} more.</div>}
-                  </>
-                )}
-              </Notice>
-            )}
-
-            <div className="modal-actions">
-              <Button onClick={close} disabled={state === "writing"}>
-                {state === "done" ? "Close" : "Cancel"}
-              </Button>
-              {state !== "done" && !readOk && !recovery && (
-                <Button
-                  onClick={() => setRecovery(true)}
-                  title="For a keyboard that can no longer be read. Overwrites everything."
-                >
-                  Can't read the board?
-                </Button>
-              )}
-              {state !== "done" && (
-                <Button
-                  variant="primary"
-                  onClick={confirmFlash}
-                  disabled={state === "writing" || (!readOk && !recovery) || bayGaps.length > 0}
-                  title={
-                    bayGaps.length > 0
-                      ? "Layer 0 leaves a module bay unset; fill it on the Bindings board first"
-                      : recovery
-                      ? "Overwrites the keyboard without reading it first"
-                      : readOk
-                      ? "Writes this profile to the keyboard, then reads it back to verify"
-                      : "Read the keyboard first"
-                  }
-                >
-                  {state === "writing"
-                    ? "Writing…"
-                    : recovery
-                    ? "Recovery flash (overwrites everything)"
-                    : "Confirm flash"}
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </>
   );
 }

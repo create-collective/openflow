@@ -197,26 +197,7 @@
   color: var(--text-muted);
 }
 
-/* --- Flash preview modal ---------------------------------------------------- */
-.modal-backdrop {
-  position: fixed; inset: 0;
-  background: var(--backdrop);
-  display: flex; align-items: center; justify-content: center;
-  z-index: var(--z-modal);
-}
-.modal {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-  padding: 20px 22px;
-  width: min(460px, 92vw);
-  max-height: 82vh; overflow: auto;
-  color: var(--text);
-  box-shadow: var(--shadow-modal);
-}
-.modal h3 { margin: 0 0 6px; color: var(--text-strong); }
-.modal-sub { margin: 0 0 14px; color: var(--text-muted); font-size: 13px; }
-.modal-error { color: var(--err); }
+/* --- Flash preview: the plan inside the dialog (the dialog itself is ui Modal) ------------ */
 .flash-diff { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; }
 .flash-diff li { color: var(--text); }
 .flash-diff b { color: var(--accent); }
@@ -226,7 +207,6 @@
 .flash-ops table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
 .flash-ops td { padding: 3px 6px; border-top: 1px solid var(--border); color: var(--text); }
 .flash-ops .mono { font-family: var(--font-mono); color: var(--text-muted); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
 /* --- Module gesture flashability badges ------------------------------------ */
 .gesture-badge {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
