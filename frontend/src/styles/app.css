@@ -269,10 +269,14 @@
 .hub-sub { margin: 4px 0 0; color: var(--text-muted); font-size: 15px; }
 .hub-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   align-items: start;
 }
+.hub-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.hub-col .card { margin: 0; }
+.hub-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.hub-section { margin: 8px 0 -4px; font-size: 15px; font-weight: 700; }
 /* The device card: the Create runs off the right and bottom edges under a fade, the name at
    the top-left, the button at the bottom-left above the fade. */
 .hub-splash {
@@ -281,7 +285,7 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  min-height: 400px;
+  min-height: 360px;
   padding: 26px 28px 28px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -314,8 +318,6 @@
 .hub-text { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .hub-link { color: var(--accent-text); font-weight: 600; font-size: 13px; text-decoration: none; }
 .hub-link:hover { text-decoration: underline; }
-.hub-side { display: flex; flex-direction: column; gap: 16px; }
-.hub-side .card { margin: 0; }
 .hub-empty { color: var(--text-muted); padding: 6px 0; }
 .hub-notes { margin: 0 0 14px; padding-left: 18px; color: var(--text); font-size: 13px; line-height: 1.5; }
 .hub-notes li + li { margin-top: 6px; }
