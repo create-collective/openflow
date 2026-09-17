@@ -675,27 +675,29 @@
   padding-top: 16px;
 }
 
-/* Bindings page: the selected-key band across the top of the bottom section, the palette
-   under it (the storyboard's "Selected key / Key bindings" band, then the action palette).
-   The palette starts where the board's column starts, 240px = layer-col (220px) + the
-   editor-top gap (20px), and the virtual keyboard centres inside it, so the two keyboards
-   share a margin and a centre line. */
+/* Bindings page: the selected-key band, then the action palette, both inside the board's
+   column: the section is indented by the layer list and its gap (240px = 220px + 20px), and
+   the band and the palette are capped at the virtual keyboard's widest (22 units of 64px plus
+   its gaps) and centred, so the band, the palette head and both keyboards start on one line
+   and share a centre. */
 .editor-bottom.bindings-bottom {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   gap: 16px;
+  padding-left: 240px;
 }
+.bindings-bottom > .keyband,
 .bindings-bottom > .palette {
-  margin-left: 240px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1454px;
 }
 
 /* --- The selected-key band (components/SelectedKeyPanel) ---------------------------------- */
-/* The key block is the layer list's width (220px less the band's 18px padding) and the gap the
-   editor's, so the cards start where the board's column and the palette's head do. */
 .keyband {
   display: grid;
-  grid-template-columns: 202px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: 20px;
   padding: 14px 18px;
   border: 1px solid var(--border);
