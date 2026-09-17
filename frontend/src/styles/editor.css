@@ -691,10 +691,12 @@
 }
 
 /* --- The selected-key band (components/SelectedKeyPanel) ---------------------------------- */
+/* The key block is the layer list's width (220px less the band's 18px padding) and the gap the
+   editor's, so the cards start where the board's column and the palette's head do. */
 .keyband {
   display: grid;
-  grid-template-columns: minmax(260px, 340px) 1fr;
-  gap: 24px;
+  grid-template-columns: 202px minmax(0, 1fr);
+  gap: 20px;
   padding: 14px 18px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -709,14 +711,14 @@
 }
 
 .keyband-sel {
-  padding-right: 24px;
+  padding-right: 16px;
   border-right: 1px solid var(--border);
 }
 
 .keyband-key {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* The big keycap: the same legend the board draws for the key's tap. */
@@ -726,14 +728,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--bg-key);
   box-shadow: var(--shadow-sm);
   color: var(--text-strong);
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 600;
 }
 .keyband-cap.long { padding: 0 6px; font-size: 12px; text-align: center; word-break: break-word; }
@@ -749,22 +751,18 @@
 
 .keyband-text { min-width: 0; }
 .keyband-name {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .keyband-pos {
-  margin-left: 8px;
+  margin-top: 2px;
   color: var(--text-dim);
   font-size: 12px;
   font-weight: 500;
-}
-.keyband-hint {
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 13px;
+  white-space: nowrap;
 }
 
 /* The behaviour cards: one per slot, the selected one is what the palette writes to. */
@@ -842,10 +840,6 @@
   right: 8px;
 }
 
-@media (max-width: 1180px) {
-  .keyband { grid-template-columns: 1fr; }
-  .keyband-sel { padding-right: 0; border-right: none; }
-}
 
 /* Behavior -> Action rows (Modules gestures, Macros steps, Settings lists) */
 .skp-head {

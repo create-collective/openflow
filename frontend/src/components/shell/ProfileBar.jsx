@@ -39,18 +39,7 @@ export default function ProfileBar() {
         )}
       </div>
 
-      <div className="shell-bar-status">
-        {connected ? (
-          <DeviceChip status={data?.status} />
-        ) : (
-          <span className="shell-bar-offline" title="The backend is not answering">
-            <span className="dot err" />
-            Backend offline
-          </span>
-        )}
-      </div>
-
-      {/* Between the status and the buttons, in space that is there whether or not there is a
+      {/* Between the profile and the halves, in space that is there whether or not there is a
           note, so nothing moves when one arrives. */}
       <div className="shell-bar-notes">
         {err ? (
@@ -68,6 +57,17 @@ export default function ProfileBar() {
             )}
             {dev.saved && <span className="saved-note">Backed up {dev.saved.toLocaleTimeString()}</span>}
           </>
+        )}
+      </div>
+
+      <div className="shell-bar-status">
+        {connected ? (
+          <DeviceChip status={data?.status} />
+        ) : (
+          <span className="shell-bar-offline" title="The backend is not answering">
+            <span className="dot err" />
+            Backend offline
+          </span>
         )}
       </div>
 

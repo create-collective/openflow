@@ -41,7 +41,6 @@ export default function SelectedKeyPanel({
   const legend = tap ? keyLegend(tap, layerMap) : null;
   const tapIcon = tap && iconNameFor(tap.actionCode, names);
   const half = label ? HALF[label[0]] : null;
-  const active = slots.find((s) => s.id === activeSlot);
 
   return (
     <section className="keyband" aria-label="Selected key">
@@ -53,16 +52,11 @@ export default function SelectedKeyPanel({
               {tapIcon ? <ActionIcon name={tapIcon} size={28} /> : legend ? legend.main : label}
               {legend && legend.sub && !tapIcon && <span className="keyband-cap-sub">{legend.sub}</span>}
             </div>
+            {/* The block is as wide as the layer list beside the board, so the cards start
+                where the board's column does; what a pick writes to is said by the palette. */}
             <div className="keyband-text">
-              <div className="keyband-name">
-                {tap ? actionText(tap, layerMap) : "Unassigned"}
-                <span className="keyband-pos">{label} · {half}</span>
-              </div>
-              <div className="keyband-hint">
-                {active
-                  ? <>Assigning <strong>{active.label}</strong>: pick an action below.</>
-                  : "Choose a behavior, then an action below."}
-              </div>
+              <div className="keyband-name">{tap ? actionText(tap, layerMap) : "Unassigned"}</div>
+              <div className="keyband-pos">{label} · {half}</div>
             </div>
           </div>
         ) : (
@@ -70,7 +64,7 @@ export default function SelectedKeyPanel({
             <div className="keyband-cap empty" aria-hidden="true">?</div>
             <div className="keyband-text">
               <div className="keyband-name">No key selected</div>
-              <div className="keyband-hint">Select a key on the map to edit its bindings.</div>
+              <div className="keyband-pos">Select one on the map.</div>
             </div>
           </div>
         )}

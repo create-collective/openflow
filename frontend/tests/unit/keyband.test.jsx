@@ -29,7 +29,6 @@ describe("SelectedKeyPanel", () => {
       />
     );
     expect(screen.getByText("LC2 · Left half")).toBeInTheDocument();
-    expect(screen.getByText(/Assigning/)).toHaveTextContent("Assigning Hold: pick an action below.");
 
     const hold = card("Hold");
     expect(hold).toHaveAttribute("aria-pressed", "true");
@@ -53,7 +52,7 @@ describe("SelectedKeyPanel", () => {
   it("with no key selected, says so and offers nothing to pick", () => {
     render(<SelectedKeyPanel label={null} slots={slots} activeSlot="tap" onSelectSlot={() => {}} onClearSlot={() => {}} />);
     expect(screen.getByText("No key selected")).toBeInTheDocument();
-    expect(screen.getByText("Select a key on the map to edit its bindings.")).toBeInTheDocument();
+    expect(screen.getByText("Select one on the map.")).toBeInTheDocument();
     for (const s of slots) expect(card(s.label)).toBeDisabled();
   });
 });
