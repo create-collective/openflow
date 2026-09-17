@@ -135,9 +135,16 @@ export default function VirtualKeyboard({ disabled, onPick,
   );
 
   return (
-    <div className="vk" ref={root}>
-      {disabled && <div className="palette-disabled">{disabledHint}</div>}
-      <div className="vk-board">
+    <div className={"vk" + (disabled ? " locked" : "")} ref={root}>
+      {/* Nothing to bind to yet: the board is there, dimmed and blurred, with the reason over
+          its middle; a selection on the map unlocks it. A line of text above it read as a
+          warning about the keyboard rather than a state of the page. */}
+      {disabled && (
+        <div className="vk-lock" role="status">
+          <span className="vk-lock-msg">{disabledHint}</span>
+        </div>
+      )}
+      <div className="vk-board" aria-hidden={disabled || undefined}>
       {renderFunctionRow()}
       <div className="vk-boards">
         {renderBlock(MAIN_ROWS, "vk-main")}

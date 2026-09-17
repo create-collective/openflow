@@ -298,9 +298,36 @@
 /* Virtual keyboard tab */
 .vk {
   --vk-unit: 42px;           /* set by the component to what fits, 42 to 64 */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+/* Locked: no key on the map yet. The board stays visible but dimmed and blurred, inert, with
+   the reason centred over it. */
+.vk.locked .vk-board {
+  opacity: 0.45;
+  filter: blur(2px);
+  pointer-events: none;
+  user-select: none;
+}
+.vk-lock {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vk-lock-msg {
+  padding: 10px 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-popover);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
 }
 /* The board itself, as wide as its keys and centred in the space left once the unit has hit
    its cap; the modifier row stays under the board's left edge. */

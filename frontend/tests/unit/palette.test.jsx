@@ -51,8 +51,11 @@ describe("ActionPalette", () => {
     expect(screen.getByRole("button", { name: "F24" })).toBeEnabled();
   });
 
-  it("without a target, a category tab says to select a key first", () => {
+  it("without a target, the keyboard is locked under its message and a category tab says why", () => {
     render(<ActionPalette catalog={catalog} disabled onPick={() => {}} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Select a key on the map first.");
+    expect(screen.getByRole("status").closest(".vk")).toHaveClass("locked");
+    expect(screen.getByRole("button", { name: "F1", hidden: true })).toBeDisabled();
     fireEvent.click(screen.getByRole("tab", { name: "Basic" }));
     expect(screen.getByText("Select a key on the map first.")).toBeInTheDocument();
   });
