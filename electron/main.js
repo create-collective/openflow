@@ -19,7 +19,7 @@
 //   * the sidecar's output lands in <data dir>/logs/sidecar.log, named in the error dialog when
 //     the backend fails to start or dies.
 
-const { app, BrowserWindow, Menu, dialog, shell } = require("electron");
+const { app, BrowserWindow, Menu, dialog, screen, shell } = require("electron");
 const { spawn, spawnSync } = require("child_process");
 const crypto = require("crypto");
 const fs = require("fs");
@@ -187,9 +187,13 @@ function buildMenu() {
 
 function createWindow(port) {
   const pageOrigin = DEV ? "http://localhost:5173" : `http://127.0.0.1:${port}`;
+  // 1960 x 1150 by default (the owner's call, 2026-09-17): the Bindings page at 1x with room
+  // around it. On a smaller display, the work area instead, so the window is never born
+  // larger than the screen.
+  const area = screen.getPrimaryDisplay().workAreaSize;
   win = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    width: Math.min(1960, area.width),
+    height: Math.min(1150, area.height),
     minWidth: 1100,
     minHeight: 720,
     show: false,                     // shown on ready-to-show, so no white flash and no blank window

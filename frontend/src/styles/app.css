@@ -7,12 +7,16 @@
 }
 
 /* --- Top navigation: the logo (to the Hub), the pages, a More menu, the theme switch ------ */
+/* The bars run edge to edge, but what is in them sits on the page column: a side padding that
+   grows once the window is wider than the page (--page-max plus the 36px the main pane pads),
+   so the logo stands over the Layers card and the actions end over the board, whatever the
+   window. Narrower, the padding is the main pane's own 36px. */
 .shell-nav {
   display: flex;
   align-items: center;
   gap: 4px;
   height: 64px;
-  padding: 0 20px;
+  padding: 0 max(36px, calc((100% - var(--page-max)) / 2));
   background: var(--bg-nav);
   border-bottom: 1px solid var(--border);
 }
@@ -137,7 +141,7 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 12px 20px;
+  padding: 12px max(36px, calc((100% - var(--page-max)) / 2));
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
 }

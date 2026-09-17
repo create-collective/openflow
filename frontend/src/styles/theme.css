@@ -132,6 +132,9 @@
   --border-focus: var(--accent);
 
   /* accent */
+  /* The page column the bars centre their contents on: the Bindings group at 1x (220px layer
+     column + 20px gap + the 1556px board), which the main pane centres in the same way. */
+  --page-max: 1796px;
   --brand: #03b9c9;                  /* the mark, from the signature sheet; not the UI accent */
   --accent: var(--brand-cyan);
   --accent-hover: var(--brand-cyan-light);
