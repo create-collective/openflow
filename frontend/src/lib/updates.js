@@ -6,6 +6,9 @@ export const REPOS = {
   app: "traviswye/openflow",
   companion: "traviswye/create-companion",
   firmware: "traviswye/openflow-firmware",
+  // The CLI our device communication is built on (Cory Bennett, Apache-2.0), vendored under
+  // backend/openflow_backend/_vendor/nayactl; see VENDOR.md there.
+  nayactl: "Qonfused/nayactl",
 };
 
 export function versionFromTag(tag) {

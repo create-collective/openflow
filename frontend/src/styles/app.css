@@ -314,7 +314,7 @@
   background: linear-gradient(to top, var(--bg-card), transparent);
   pointer-events: none;
 }
-.hub-cta { position: relative; z-index: 1; padding: 11px 26px; font-size: 15px; }
+.hub-cta { position: relative; z-index: 1; padding: 14px 34px; font-size: 17px; }
 .hub-text { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .hub-link { color: var(--accent-text); font-weight: 600; font-size: 13px; text-decoration: none; }
 .hub-link:hover { text-decoration: underline; }

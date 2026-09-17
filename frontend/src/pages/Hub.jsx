@@ -115,11 +115,22 @@ export default function Hub() {
           <h2 className="hub-section">Other Software for the Create</h2>
           <Card title="Create Companion">
             <p className="hub-text">
-              The host-side engine that turns the Create&apos;s F13 to F24 keys and module gestures into
-              actions on this computer. Installed separately.
+              The host-side engine that turns the Create&apos;s module gestures into dynamic, profiled
+              keybindings for the application you are working in. Installed separately.
             </p>
             <a className="hub-link" href={`https://github.com/${REPOS.companion}/releases/latest`} target="_blank" rel="noreferrer">
               Latest release ↗
+            </a>
+          </Card>
+
+          <Card title="nayactl">
+            <p className="hub-text">
+              Command-line communication with the Naya Create, by Cory Bennett. OpenFlow talks to
+              the keyboard through nayactl: it is built on this project and ships a copy of it
+              under the Apache 2.0 licence.
+            </p>
+            <a className="hub-link" href={`https://github.com/${REPOS.nayactl}`} target="_blank" rel="noreferrer">
+              nayactl on GitHub ↗
             </a>
           </Card>
         </div>
