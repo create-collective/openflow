@@ -273,20 +273,44 @@
   gap: 20px;
   align-items: start;
 }
-/* The Create, at a size that leaves the boxes beside it in view, with the one button in. */
+/* The device card: the Create runs off the right and bottom edges under a fade, the name at
+   the top-left, the button at the bottom-left above the fade. */
 .hub-splash {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  padding: 24px 32px 28px;
+  justify-content: space-between;
+  align-items: flex-start;
+  min-height: 400px;
+  padding: 26px 28px 28px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--bg-card);
+  background: linear-gradient(160deg, var(--bg-card), var(--bg-panel));
   overflow: hidden;
 }
-.hub-cta { padding: 11px 26px; font-size: 15px; }
-.hub-splash-img { display: block; width: min(100%, 680px); height: auto; }
+.hub-splash-head { position: relative; z-index: 1; }
+.hub-device { margin: 0; font-size: 26px; font-weight: 700; }
+.hub-device-sub { margin: 4px 0 0; color: var(--text-muted); font-size: 14px; }
+.hub-splash-img {
+  position: absolute;
+  right: -4%;
+  bottom: -16%;
+  width: 78%;
+  max-width: 980px;
+  height: auto;
+  pointer-events: none;
+}
+.hub-splash::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background: linear-gradient(to top, var(--bg-card), transparent);
+  pointer-events: none;
+}
+.hub-cta { position: relative; z-index: 1; padding: 11px 26px; font-size: 15px; }
 .hub-text { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .hub-link { color: var(--accent-text); font-weight: 600; font-size: 13px; text-decoration: none; }
 .hub-link:hover { text-decoration: underline; }

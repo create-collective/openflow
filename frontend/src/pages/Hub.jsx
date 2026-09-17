@@ -26,6 +26,13 @@ export default function Hub() {
   const halves = stream?.status?.halves || [];
   const version = sys?.backendVersion;
   const whatsNew = notesFor(version);
+  // One line under the device name: what is on USB right now.
+  const on = halves.filter((h) => h.connected);
+  const modules = on.map((h) => h.module?.type).filter(Boolean);
+  const deviceLine = on.length === 0
+    ? "Not on USB"
+    : (on.length === 2 ? "Both halves connected" : `${on[0].side === "left" ? "Left" : "Right"} half connected`)
+      + (modules.length ? ` · ${modules.join(" and ")} docked` : "");
 
   return (
     <div className="hub">
@@ -35,7 +42,13 @@ export default function Hub() {
       </header>
 
       <div className="hub-body">
+      {/* The device card: the name and what is connected at the top-left, the Create large
+          and running off the card under a fade, the one button in at the bottom-left. */}
       <section className="hub-splash">
+        <div className="hub-splash-head">
+          <h2 className="hub-device">Naya Create</h2>
+          <p className="hub-device-sub">{deviceLine}</p>
+        </div>
         <img className="hub-splash-img" src="/brand/create-splash.png" alt="The Naya Create with a Touch and a Tune docked" />
         <Button variant="primary" className="hub-cta" onClick={() => navigate("/layer-management")}>
           Configure
