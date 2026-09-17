@@ -62,21 +62,18 @@ function splitLed(groups) {
   return out;
 }
 
-// The groups as cards: the first fills the left column, the rest stack in the right, as
-// the storyboard lays them out; one group alone takes the left column.
+// The groups as cards, one under another (the storyboard tiles them in two columns; the
+// owner preferred the tiles stacked).
 function SettingsGroups({ groups, onChange }) {
-  const card = (g) => (
-    <Card key={g.group} className="settings-card" title={g.group}>
-      {g.desc && <p className="settings-card-desc">{g.desc}</p>}
-      {g.fields.map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
-    </Card>
-  );
-  const [first, ...rest] = groups;
-  if (!first) return null;
+  if (!groups.length) return null;
   return (
     <div className="settings-cards">
-      <div className="settings-col">{card(first)}</div>
-      {rest.length > 0 && <div className="settings-col">{rest.map(card)}</div>}
+      {groups.map((g) => (
+        <Card key={g.group} className="settings-card" title={g.group}>
+          {g.desc && <p className="settings-card-desc">{g.desc}</p>}
+          {g.fields.map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
+        </Card>
+      ))}
     </div>
   );
 }

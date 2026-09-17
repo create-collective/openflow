@@ -1252,11 +1252,12 @@
 .settings-head { margin: 4px 0 16px; }
 .settings-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 22px; font-weight: 700; }
 .settings-sub { margin: 4px 0 0; color: var(--text-muted); }
+/* One card under another (owner's call, 2026-09-17: the tiles, not the two columns). */
 .settings-cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 20px;
-  align-items: start;
+  max-width: 920px;
 }
 .settings-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .settings-col > .ui-card { margin-bottom: 0; }
