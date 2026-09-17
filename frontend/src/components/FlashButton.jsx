@@ -24,6 +24,14 @@ function activeProfileId() {
   return getActiveProfileId() || undefined;
 }
 
+// Recovery flash: skips the pre-flash read, writes everything, and cannot verify afterwards,
+// so it overwrites what the app does not model -- module-to-dock assignments, transparent keys
+// and second-bank (double-tap / tap+hold) bindings. It is the right tool for a board that can
+// no longer be read and the wrong thing to click by accident, so it is not offered while the
+// beta build is out (owner, 2026-09-17). Flip this to bring the button back; the backend path
+// is untouched and still demands acknowledgeRecovery.
+const RECOVERY_OFFERED = false;
+
 // One glyph per kind of thing a flash writes (Tabler Icons, MIT, Pawel Kuna: stack, palette,
 // list, cpu, clock).
 const FLASH_GLYPH = {
@@ -160,7 +168,7 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
       <Button onClick={close} disabled={state === "writing"}>
         {state === "done" ? "Close" : "Cancel"}
       </Button>
-      {state !== "done" && !readOk && !recovery && (
+      {RECOVERY_OFFERED && state !== "done" && !readOk && !recovery && (
         <Button
           onClick={() => setRecovery(true)}
           title="For a keyboard that can no longer be read. Overwrites everything."
