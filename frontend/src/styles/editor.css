@@ -52,7 +52,11 @@
 .modprof-row.pending { border-color: var(--accent); box-shadow: var(--ring-accent); }
 .modprof-img { flex: none; width: 26px; height: 26px; object-fit: contain; }
 .modprof-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.modprof-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--text-dim); font-size: 11px; }
+/* One line, fixed height, never wrapping: a mark arriving (live, base) must not change the
+   row's shape. The slot label gives way first. */
+.modprof-head { display: flex; align-items: center; gap: 6px; height: 16px; color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.modprof-slot { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.modprof-inherit { color: var(--text-dim); }
 .modprof-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
 .modprof-name.unset { color: var(--text-dim); font-weight: 400; font-style: italic; }
 

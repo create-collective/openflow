@@ -251,8 +251,7 @@ export default function Bindings() {
             {...ed.layerHandlers}
             {...ed.layerFileHandlers}
           />
-          <ModuleProfileList bays={bayUI} docked={moduleAssign}
-            boardKnown={!!deviceRead && Object.keys(deviceRead).length > 0} />
+          <ModuleProfileList bays={bayUI} boardKnown={!!deviceRead && Object.keys(deviceRead).length > 0} />
       </div>
       <div className="editor-main">
         <div className="board-wrap">

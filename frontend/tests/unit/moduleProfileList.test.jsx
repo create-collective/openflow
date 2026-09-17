@@ -1,6 +1,6 @@
 // The module-profile card under the layers: one row per bay with the profile the layer arms,
-// marked live when the board runs it, base when inherited, docked when the module is present;
-// a row opens that profile on the Modules page.
+// marked live when the board runs it and base when inherited; a row opens that profile on
+// the Modules page.
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ModuleProfileList from "../../src/components/ModuleProfileList";
@@ -20,20 +20,18 @@ const bays = {
 
 describe("ModuleProfileList", () => {
   it("lists each bay's profile with its marks", () => {
-    render(<ModuleProfileList bays={bays} docked={{ left: "track", right: "touch" }} boardKnown />);
+    render(<ModuleProfileList bays={bays} boardKnown />);
     expect(screen.getByText("For Layer 1 Num Pad")).toBeInTheDocument();
     const left = screen.getByRole("button", { name: /Track · left/ });
     expect(within(left).getByText("Naya Track Left")).toBeInTheDocument();
     expect(within(left).getByText("live")).toBeInTheDocument();
-    expect(within(left).getByText("docked")).toBeInTheDocument();
+    expect(within(left).queryByText(/base/)).not.toBeInTheDocument();
     expect(left).not.toHaveClass("pending");
     const right = screen.getByRole("button", { name: /Track · right/ });
     expect(within(right).getByText("Disabled")).toBeInTheDocument();
-    expect(within(right).queryByText("docked")).not.toBeInTheDocument();
     const touch = screen.getByRole("button", { name: /Touch/ });
     expect(within(touch).getByText("Naya Touch Windows")).toBeInTheDocument();
-    expect(within(touch).getByText("base")).toBeInTheDocument();
-    expect(within(touch).getByText("docked")).toBeInTheDocument();
+    expect(within(touch).getByText(/base/)).toBeInTheDocument();
     expect(touch).toHaveClass("pending"); // selected, but the board is not running it
     const tune = screen.getByRole("button", { name: /Tune/ });
     expect(within(tune).getByText("Not set")).toBeInTheDocument();
@@ -42,7 +40,7 @@ describe("ModuleProfileList", () => {
   });
 
   it("marks nothing as pending until the board has been read", () => {
-    render(<ModuleProfileList bays={bays} docked={{}} />);
+    render(<ModuleProfileList bays={bays} />);
     expect(screen.getByRole("button", { name: /Touch/ })).not.toHaveClass("pending");
   });
 
