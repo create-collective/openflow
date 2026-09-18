@@ -3,6 +3,18 @@
 // what they can now do, what stopped happening.
 const CHANGELOG = [
   {
+    version: "0.2.0",
+    date: "2026-09-17",
+    notes: [
+      "Every page restyled: the profile bar, Modules, Macros, Settings and Devices, in both themes.",
+      "Report a problem, under More: it collects what OpenFlow knows about your machine, shows you exactly what it will send, and strips hardware identifiers unless you ask for them.",
+      "Messages are quieter and clearer: a badge for status, a short notice for a limitation with the technical why behind Details, and a tinted warning only for something that failed.",
+      "Modules: a gesture can be cleared with an x rather than only overwritten, the palette sits under the profile it edits, and the action list is readable.",
+      "Flash to keyboard is offered on the pages that change what gets written, and its preview says what will be written before you confirm.",
+      "Settings: what the keyboard really stores for multi-behaviour keys is the tapping term and the interrupt flavour; the timings with no firmware mapping are listed but inert.",
+    ],
+  },
+  {
     version: "0.1.0",
     date: "2026-09-17",
     notes: [
