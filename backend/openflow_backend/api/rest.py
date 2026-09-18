@@ -393,6 +393,7 @@ async def status_last(deep: bool = False) -> dict:
     paints this immediately and says "as of", and re-reading is a deliberate click.
     """
     got = await run_in_threadpool(dstate.load_status, deep)
+    got["released"] = get_service().released
     # Recomputed from the cached halves rather than persisted: it is derived, and storing a
     # derived verdict is how a stale one outlives the data it came from.
     if deep and got.get("halves"):
@@ -958,6 +959,19 @@ async def set_base_layer(body: dict = Body(...)) -> dict:
         return await run_in_threadpool(ud.set_base_layer, body["layerId"])
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/release-device")
+async def release_device() -> dict:
+    """Close the serial ports and stand the poll down, so NayaFlow (or anything else) can use
+    the keyboard without OpenFlow being quit. Nothing on the device changes."""
+    return await run_in_threadpool(get_service().release)
+
+
+@router.post("/rpc/reconnect-device")
+async def reconnect_device() -> dict:
+    """Take the keyboard back; the next poll tick reopens it."""
+    return await run_in_threadpool(get_service().reconnect)
 
 
 @router.get("/api/report/context")

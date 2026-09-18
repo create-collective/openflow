@@ -74,6 +74,8 @@
   "POST /rpc/pairing-repair",
   "POST /rpc/read-keyboard",
   "POST /rpc/read-modules",
+  "POST /rpc/reconnect-device",
+  "POST /rpc/release-device",
   "POST /rpc/rename-layer",
   "POST /rpc/rename-macro",
   "POST /rpc/rename-module-profile",

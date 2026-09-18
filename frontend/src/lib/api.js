@@ -34,6 +34,8 @@ export const api = {
   statusLive: () => req("GET", "/api/status/live"),
   statusLast: () => req("GET", "/api/status/last"),
   diagnostics: () => req("GET", "/api/diagnostics/report"),
+  releaseDevice: () => req("POST", "/rpc/release-device"),
+  reconnectDevice: () => req("POST", "/rpc/reconnect-device"),
   reportContext: (identifiers = false) => req("GET", `/api/report/context?identifiers=${identifiers ? 1 : 0}`),
   reportBug: (body) => req("POST", "/rpc/report-bug", body),
   firmwareCatalog: () => req("GET", "/api/firmware-catalog"),

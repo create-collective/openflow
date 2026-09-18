@@ -29,6 +29,7 @@ def compose(devices: list, snapshot: dict) -> tuple[str, dict]:
     stream compares leaves timestamps out, so a tick that changed nothing sends nothing."""
     payload = {"devices": devices, "status": snapshot}
     quiet = {"devices": devices,
+             "released": bool(snapshot.get("released")),
              "status": {"halves": [{k: v for k, v in h.items() if k != "at"}
                                    for h in snapshot.get("halves", [])]}}
     return json.dumps(quiet, sort_keys=True), payload

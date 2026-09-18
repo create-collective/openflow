@@ -2089,6 +2089,7 @@ textarea.report-input { resize: vertical; line-height: 1.5; font-family: inherit
 }
 .info-age.stale { color: var(--warn); }
 .info-glyph { flex: none; }
+.info-released { margin-bottom: 16px; }
 /* A card's own lead action (Restore lighting), above the rows it applies to. */
 .info-lead-btn { align-self: flex-start; margin-bottom: 6px; }
 .info-runon { padding-bottom: 12px; border-bottom: 1px solid var(--border); }

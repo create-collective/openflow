@@ -27,7 +27,9 @@ GOOD = [
 
 def _client(monkeypatch, readings):
     it = iter(readings)
-    svc = types.SimpleNamespace(status_all=lambda verbose=False: next(it))
+    # `released` is part of the service the routes talk to: /api/status/last reports it so the
+    # Devices page knows whether OpenFlow is holding the ports. The double carries it too.
+    svc = types.SimpleNamespace(status_all=lambda verbose=False: next(it), released=False)
     monkeypatch.setattr(rest, "get_service", lambda: svc)
     monkeypatch.setattr(rest.recovery_mod, "find_recovery_ports", lambda: [])
     app = FastAPI()

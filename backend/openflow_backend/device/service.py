@@ -165,9 +165,16 @@ def _pairing_verdict(halves: list[dict]) -> dict:
 class DeviceService:
     """Owns serial connections to connected halves and exposes structured ops."""
 
+    RELEASED_REASON = "released so other software can use the keyboard"
+    RELEASED_ERROR = ("the keyboard is released so other software can use it; "
+                      "reconnect in OpenFlow to take it back")
+
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._transports: dict[str, SerialTransport] = {}
+        # Released: every port closed and the poll standing down, so another application can
+        # talk to the keyboard. Not a connection state of the device -- a decision of ours.
+        self._released = False
         # Live status (see tick): side -> the last tick's snapshot; port -> identity read once;
         # battery samples folded across ticks, keyed "side" and "side:module".
         self._live: dict[str, dict] = {}
@@ -204,11 +211,38 @@ class DeviceService:
         except Exception:
             return False
 
+    @property
+    def released(self) -> bool:
+        return self._released
+
+    def release(self) -> dict:
+        """Hand the keyboard over: close every handle and stop the poll reopening them.
+
+        The halves are marked not connected, because after this we genuinely do not know what
+        they are doing -- another application may be flashing them. The reason says it was a
+        choice rather than a cable falling out."""
+        with self._lock:
+            self._released = True
+            for port in list(self._transports):
+                self._drop(port)
+            for side, snap in list(self._live.items()):
+                if snap.get("connected"):
+                    self._mark_disconnected(side, snap.get("port"), self.RELEASED_REASON)
+        return {"released": True}
+
+    def reconnect(self) -> dict:
+        """Take it back. The next poll tick reopens whatever is still on the bus."""
+        with self._lock:
+            self._released = False
+        return {"released": False}
+
     def _transport_for(self, port: str, dest: int) -> SerialTransport:
         # The CACHE holds the real transport; the caller gets it wrapped in a LoggingTransport so
         # every send is recorded (device_log). Wrapping on return, not in the cache, keeps the
         # cached identity and the liveness check operating on the real handle.
         from .device_log import LoggingTransport
+        if self._released:
+            raise TransportError(self.RELEASED_ERROR)
         t = self._transports.get(port)
         if not (t is not None and t.is_connected and self._alive(t)):
             if t is not None:
@@ -376,6 +410,8 @@ class DeviceService:
 
     def tick_all(self) -> dict:
         """Tick every enumerated half; a half that is no longer enumerated is marked gone."""
+        if self._released:
+            return self.snapshot()      # released: touch nothing, and do not reopen the ports
         seen = set()
         for dev in find_naya_serial_ports():
             seen.add(dev.side)
@@ -390,7 +426,7 @@ class DeviceService:
         """The last tick's view of every half. In-memory; no device I/O."""
         with self._lock:
             halves = [dict(v) for _k, v in sorted(self._live.items())]
-        return {"halves": halves}
+        return {"halves": halves, "released": self._released}
 
     # --- status ----------------------------------------------------------------
 

@@ -129,6 +129,7 @@ export default function Troubleshooting() {
   const [side, setSide] = useState("left");
   const { out, busy, run, clear } = useRunLog();
   const [live, setLive] = useState(false);   // read in this session, not restored from cache
+  const [released, setReleased] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   // Device | Connections | Troubleshooting. Device Manager's contents fold into these, so that
   // page leaves the nav (2026-09-11, owner). More tabs may come; these three are the spine.
@@ -140,6 +141,16 @@ export default function Troubleshooting() {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
+
+  // Hand the keyboard to another application, or take it back. Releasing closes the serial
+  // ports and stands the poll down; nothing on the device changes either way.
+  const toggleRelease = useCallback(async () => {
+    setErr(null);
+    try {
+      const r = released ? await api.reconnectDevice() : await api.releaseDevice();
+      setReleased(!!r.released);
+    } catch (e) { setErr(e.message); }
+  }, [released]);
 
   const refresh = useCallback(async () => {
     setLoading(true); setErr(null);
@@ -160,6 +171,7 @@ export default function Troubleshooting() {
   useEffect(() => {
     let cancelled = false;
     api.systemInfo().then((r) => !cancelled && setSys(r)).catch(() => {});
+    api.statusLast().then((r) => !cancelled && setReleased(!!r.released)).catch(() => {});
     (async () => {
       try {
         const last = await api.statusLastDeep();
@@ -203,10 +215,18 @@ export default function Troubleshooting() {
           <h1 className="page-title">Device information</h1>
           <p className="page-sub">Hardware, connections, and diagnostics for your Create.</p>
         </div>
-        <Button onClick={refresh} disabled={loading}>
-          <Glyph name="refresh" />
-          {loading ? "Reading…" : at ? "Read again" : "Read device info"}
-        </Button>
+        <div className="btn-row">
+          <Button onClick={toggleRelease} variant={released ? "primary" : "secondary"}
+            title={released
+              ? "Open the keyboard again so OpenFlow can read and flash it"
+              : "Close the serial ports so NayaFlow or another application can use the keyboard"}>
+            {released ? "Reconnect keyboard" : "Release keyboard"}
+          </Button>
+          <Button onClick={refresh} disabled={loading || released}>
+            <Glyph name="refresh" />
+            {loading ? "Reading…" : at ? "Read again" : "Read device info"}
+          </Button>
+        </div>
       </div>
 
       {/* The tabs, with how old the reading is at the other end of the same row: it belongs to
@@ -222,7 +242,16 @@ export default function Troubleshooting() {
         </span>
       </div>
 
-      {err && <Card><Notice tone="err">{err}</Notice></Card>}
+      {released && (
+        <Notice tone="warn" className="info-released" title="The keyboard is released"
+          action={<Button onClick={toggleRelease}>Reconnect</Button>}>
+          OpenFlow has closed the serial ports and stopped polling, so another application can
+          use the keyboard. Nothing here can read or flash until you reconnect. What is shown
+          below is the last reading.
+        </Notice>
+      )}
+
+      {err && <Notice tone="err" className="info-released" onDismiss={() => setErr(null)}>{err}</Notice>}
 
       {tab === "device" && (
         <>
