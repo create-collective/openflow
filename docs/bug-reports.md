@@ -46,6 +46,15 @@ Two things to know. Automation answers before its rule has run, so OpenFlow cann
 issue key: the page says the report was sent, not that it was filed as SCRUM-123. And automation
 rule executions are metered by Jira plan, so check the limit if reports ever come in volume.
 
+### A gotcha when running the dev build
+
+`jira.json` is read from the **data directory**, and a dev launch usually overrides that with
+`OPENFLOW_DATA_DIR`. A file in `%APPDATA%\OpenFlow` is then invisible to it, even though the
+packaged app would find it. For dev, either put a copy in whatever `OPENFLOW_DATA_DIR` points
+at, or set `OPENFLOW_JIRA_WEBHOOK` in the environment you launch from. The override is
+deliberate: the data directory is authoritative, so a scratch data directory (a test run, for
+instance) never picks up the real credentials by accident.
+
 ## The full-access way: an account API token (a trusted machine only)
 
 Either set two environment variables before starting OpenFlow:
