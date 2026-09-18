@@ -1,0 +1,5 @@
+# The Linux packaging files are run by bash and udev on the user's machine, where a CRLF ending
+# is a syntax error (bash reports "command not found" for a stray carriage return). Keep them LF
+# even in a Windows checkout (core.autocrlf=true), so a local build from WSL packages the same
+# bytes CI does.
+build/linux/** text eol=lf

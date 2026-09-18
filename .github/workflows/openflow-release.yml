@@ -2,9 +2,9 @@
 #
 # Each runner freezes the backend for its own platform and hands it to electron-builder.
 # PyInstaller cannot cross-compile, so every platform we ship needs its own runner: there is
-# no way to build the macOS sidecar from Windows. Windows (nsis + portable) and macOS (dmg,
-# unsigned) are here; Linux (AppImage) joins under SCRUM-70. Everyday checks live in
-# openflow-ci.yml.
+# no way to build the macOS sidecar from Windows. Windows (nsis + portable), macOS (dmg,
+# unsigned, one row per architecture) and Linux (AppImage + deb, SCRUM-70) are here. Everyday
+# checks live in openflow-ci.yml.
 name: openflow-release
 
 on:
@@ -28,17 +28,23 @@ jobs:
             target: --win nsis portable
           # One row per Mac architecture: the frozen sidecar is built for the runner it is
           # built on, so an Apple Silicon build will not run on an Intel Mac at all.
-          # macos-latest is Apple Silicon; macos-15-intel is the Intel one (macos-26-intel also
-          # exists). NOT macos-13: that label was retired, and a job asking for it is never
-          # allocated a runner -- it sits queued indefinitely rather than failing, which is how
-          # the v0.2.0 release run hung for over an hour on 2026-09-18.
-          # An Intel build DOES run on Apple Silicon through Rosetta, so when runner minutes
-          # matter more than speed, keep the Intel row alone and drop the arm64 one. macOS
-          # runners bill at 10x the Linux rate on a private repository.
+          # macos-latest is Apple Silicon; macos-15-intel is GitHub's Intel image. It replaced
+          # macos-13, which was retired: on 2026-09-18 two runs sat queued on it for hours and
+          # never started. An Intel build DOES run on Apple Silicon through Rosetta, so when
+          # runner minutes matter more than speed, keep the x64 row alone and drop the arm64
+          # one. macOS runners bill at 10x the Linux rate on a private repository.
           - os: macos-latest
             target: --mac dmg --arm64
           - os: macos-15-intel
             target: --mac dmg --x64
+          # Linux: an AppImage that runs on most distributions, and a .deb that also installs
+          # the udev rule (build/linux/70-openflow.rules) letting the user open the keyboard's
+          # serial ports. Built on the OLDEST Ubuntu image on purpose: the frozen sidecar links
+          # against the build machine's glibc, so a 22.04 build (glibc 2.35) runs on 22.04 and
+          # newer, Debian 12, Fedora 36 and later, where a 24.04 build would refuse to start
+          # on all of the older ones.
+          - os: ubuntu-22.04
+            target: --linux AppImage deb --x64
     runs-on: ${{ matrix.os }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"     # unsigned builds: do not go looking for certificates
@@ -88,7 +94,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs"), crypto = require("crypto");
-            const out = fs.readdirSync("release").filter(f => /\.(exe|dmg|AppImage)$/.test(f))
+            const out = fs.readdirSync("release").filter(f => /\.(exe|dmg|AppImage|deb)$/.test(f))
               .map(f => crypto.createHash("sha256").update(fs.readFileSync("release/" + f)).digest("hex") + "  " + f);
             fs.writeFileSync("release/SHA256SUMS-" + process.env.SUMS_FOR + ".txt", out.join("\n") + "\n");
             console.log(out.join("\n"));'
@@ -99,6 +105,7 @@ jobs:
             openflow/release/*.exe
             openflow/release/*.dmg
             openflow/release/*.AppImage
+            openflow/release/*.deb
             openflow/release/SHA256SUMS-*.txt
           if-no-files-found: error
 

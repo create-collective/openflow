@@ -8,6 +8,7 @@ import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import { KVList, KVRow } from "../components/ui/KV";
 import Notice from "../components/ui/Notice";
+import LinuxAccessNotice, { accessFix } from "../components/LinuxAccessNotice";
 
 // The front door: the header, then the Create with one button into Bindings; beside it the
 // backend, the keyboard on USB, what is new in this version with an opt-in release check,
@@ -24,13 +25,15 @@ export default function Hub() {
   }, []);
 
   const halves = stream?.status?.halves || [];
+  // Linux without the udev rule: on USB, but the ports will not open (LinuxAccessNotice).
+  const fix = accessFix(halves);
   const version = sys?.backendVersion;
   const whatsNew = notesFor(version);
   // One line under the device name: what is on USB right now.
   const on = halves.filter((h) => h.connected);
   const modules = on.map((h) => h.module?.type).filter(Boolean);
   const deviceLine = on.length === 0
-    ? "Not on USB"
+    ? (fix ? "On USB, but Linux will not let OpenFlow open it" : "Not on USB")
     : (on.length === 2 ? "Both halves connected" : `${on[0].side === "left" ? "Left" : "Right"} half connected`)
       + (modules.length ? ` · ${modules.join(" and ")} docked` : "");
 
@@ -40,6 +43,8 @@ export default function Hub() {
         <h1 className="hub-title">Welcome to OpenFlow</h1>
         <p className="hub-sub">Open-Source Software for Naya Create: No cloud or external dependencies</p>
       </header>
+
+      <LinuxAccessNotice fix={fix} className="hub-access" />
 
       <div className="hub-body">
         <div className="hub-col">
@@ -69,7 +74,7 @@ export default function Hub() {
                       mono={false}
                       v={h.connected
                         ? `${h.port ? h.port + " · " : ""}${h.batteryPercent != null ? h.batteryPercent + "%" : "connected"}${h.module ? " · " + h.module.type : ""}`
-                        : "off"}
+                        : (h.fix ? "no permission" : "off")}
                     />
                   ))}
                 </KVList>

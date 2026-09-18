@@ -24,7 +24,7 @@ from .._vendor.nayactl.transport import (
     TransportError,
 )
 from .._vendor.nayactl.util import format_fw_version, hexline
-from . import ble_status, spi_flash_test
+from . import ble_status, port_access, spi_flash_test
 
 __all__ = [
     "DeviceService",
@@ -251,7 +251,13 @@ class DeviceService:
                 except Exception:
                     pass
             t = SerialTransport(port, dest)
-            t.connect()  # performs the mandatory CDC handshake
+            try:
+                t.connect()  # performs the mandatory CDC handshake
+            except TransportError as e:
+                # Linux without the udev rule: say so, with the fix, instead of "Cannot open".
+                if port_access.is_permission_denied(e):
+                    raise port_access.PortAccessDenied(port) from e
+                raise
             self._transports[port] = t
         return LoggingTransport(t, port)
 
@@ -320,7 +326,8 @@ class DeviceService:
         del buf[:-self.TICK_SAMPLES]
         return sorted(buf)[len(buf) // 2]
 
-    def _mark_disconnected(self, side: str, port: str | None, why: str) -> dict:
+    def _mark_disconnected(self, side: str, port: str | None, why: str,
+                           fix: dict | None = None) -> dict:
         from datetime import datetime, timezone
         if port:
             self._drop(port)
@@ -329,6 +336,8 @@ class DeviceService:
             self._samples.pop(k, None)
         snap = {"side": side, "port": port, "connected": False, "error": why,
                 "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        if fix:
+            snap["fix"] = fix       # what the page shows to put it right (port_access)
         self._live[side] = snap
         return snap
 
@@ -406,7 +415,8 @@ class DeviceService:
                 self._live[dev.side] = snap
                 return snap
             except TransportError as e:
-                return self._mark_disconnected(dev.side, dev.port, str(e))
+                return self._mark_disconnected(dev.side, dev.port, str(e),
+                                               fix=getattr(e, "fix", None))
 
     def tick_all(self) -> dict:
         """Tick every enumerated half; a half that is no longer enumerated is marked gone."""
@@ -459,6 +469,8 @@ class DeviceService:
                     entry["connected"] = True
                 except TransportError as e:
                     entry["error"] = str(e)
+                    if getattr(e, "fix", None):
+                        entry["fix"] = e.fix
                     self._drop(dev.port)
                 out.append(entry)
         return out

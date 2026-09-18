@@ -4,6 +4,8 @@
   "version": "0.2.0",
   "private": true,
   "description": "OpenFlow desktop app: the Electron shell around the frozen Python backend and the built renderer.",
+  "homepage": "https://github.com/traviswye/NayaOS/tree/master/openflow",
+  "desktopName": "openflow.desktop",
   "license": "Apache-2.0",
   "main": "electron/main.js",
   "scripts": {
@@ -15,7 +17,7 @@
     "build:app": "npm run version:check && npm run build:frontend && npm run build:sidecar && npm run smoke:sidecar && electron-builder --publish never",
     "build:win": "npm run build:app -- --win nsis portable",
     "build:mac": "npm run build:app -- --mac dmg",
-    "build:linux": "npm run build:app -- --linux AppImage",
+    "build:linux": "npm run build:app -- --linux AppImage deb",
     "start": "electron .",
     "start:dev": "cross-env OPENFLOW_DEV=1 electron ."
   },
@@ -84,11 +86,23 @@
     },
     "linux": {
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb"
       ],
       "category": "Utility",
       "icon": "build/icon.png",
+      "synopsis": "Configure the Naya Create keyboard, offline",
+      "description": "Configure the Naya Create keyboard offline: key bindings, lighting, modules and macros.",
+      "maintainer": "traviswye <traviswye@gmail.com>",
+      "syncDesktopName": true,
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
+    },
+    "deb": {
+      "afterInstall": "build/linux/after-install.sh",
+      "afterRemove": "build/linux/after-remove.sh",
+      "fpm": [
+        "build/linux/70-openflow.rules=/usr/lib/udev/rules.d/70-openflow.rules"
+      ]
     }
   }
 }
