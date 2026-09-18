@@ -28,13 +28,16 @@ jobs:
             target: --win nsis portable
           # One row per Mac architecture: the frozen sidecar is built for the runner it is
           # built on, so an Apple Silicon build will not run on an Intel Mac at all.
-          # macos-latest is Apple Silicon; macos-13 is the last Intel image. An Intel build
-          # DOES run on Apple Silicon through Rosetta, so when runner minutes matter more than
-          # speed, keep the x64 row alone and drop the arm64 one. macOS runners bill at 10x
-          # the Linux rate on a private repository.
+          # macos-latest is Apple Silicon; macos-15-intel is the Intel one (macos-26-intel also
+          # exists). NOT macos-13: that label was retired, and a job asking for it is never
+          # allocated a runner -- it sits queued indefinitely rather than failing, which is how
+          # the v0.2.0 release run hung for over an hour on 2026-09-18.
+          # An Intel build DOES run on Apple Silicon through Rosetta, so when runner minutes
+          # matter more than speed, keep the Intel row alone and drop the arm64 one. macOS
+          # runners bill at 10x the Linux rate on a private repository.
           - os: macos-latest
             target: --mac dmg --arm64
-          - os: macos-13
+          - os: macos-15-intel
             target: --mac dmg --x64
     runs-on: ${{ matrix.os }}
     env:
