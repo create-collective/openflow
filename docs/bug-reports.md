@@ -30,7 +30,10 @@ OPENFLOW_REPORT_WEBHOOK=https://... npm run build:win
 ```
 
 The spec prints which host reports will go to, or says reports will be copy-and-save only when
-no webhook is configured, so a build never quietly ships without one. Runtime precedence is
+no webhook is configured, so a build never quietly ships without one. A release built by CI
+reads the same variable from the `OPENFLOW_REPORT_WEBHOOK` repository secret (Settings >
+Secrets and variables > Actions), so add it there before tagging or the published installers
+will have no sink. Runtime precedence is
 environment, then `jira.json` on the machine, then whatever the build shipped, so a tester can
 redirect their own reports and a developer can override both.
 

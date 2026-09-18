@@ -1,9 +1,10 @@
 # OpenFlow release builds: the installers, on openflow-v* tags (or by hand).
 #
-# Each runner freezes the backend for its own platform (PyInstaller builds for the host), builds
-# the renderer, runs the sidecar smoke test against the frozen result, and hands it to
-# electron-builder. Windows first (nsis + portable); macOS (dmg, unsigned) and Linux (AppImage)
-# join the matrix under SCRUM-70. Everyday checks live in openflow-ci.yml.
+# Each runner freezes the backend for its own platform and hands it to electron-builder.
+# PyInstaller cannot cross-compile, so every platform we ship needs its own runner: there is
+# no way to build the macOS sidecar from Windows. Windows (nsis + portable) and macOS (dmg,
+# unsigned) are here; Linux (AppImage) joins under SCRUM-70. Everyday checks live in
+# openflow-ci.yml.
 name: openflow-release
 
 on:
@@ -25,9 +26,25 @@ jobs:
         include:
           - os: windows-latest
             target: --win nsis portable
+          # One row per Mac architecture: the frozen sidecar is built for the runner it is
+          # built on, so an Apple Silicon build will not run on an Intel Mac at all.
+          # macos-latest is Apple Silicon; macos-13 is the last Intel image. An Intel build
+          # DOES run on Apple Silicon through Rosetta, so when runner minutes matter more than
+          # speed, keep the x64 row alone and drop the arm64 one. macOS runners bill at 10x
+          # the Linux rate on a private repository.
+          - os: macos-latest
+            target: --mac dmg --arm64
+          - os: macos-13
+            target: --mac dmg --x64
     runs-on: ${{ matrix.os }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"     # unsigned builds: do not go looking for certificates
+      # Where the in-app report form sends things, baked into the build so a tester can file
+      # one with no setup. Only ever an automation webhook url: the secret in it fires a
+      # single rule that creates a single issue, and can read or edit nothing. Add it under
+      # Settings > Secrets and variables > Actions. Without it the build still succeeds and
+      # the app falls back to offering the report to be copied or saved.
+      OPENFLOW_REPORT_WEBHOOK: ${{ secrets.OPENFLOW_REPORT_WEBHOOK }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,12 +80,14 @@ jobs:
       - name: build (version check, renderer, sidecar, sidecar smoke, electron-builder)
         run: npm run build:app -- ${{ matrix.target }}
       - name: checksums
+        env:
+          SUMS_FOR: ${{ matrix.os }}     # not process.platform: both Mac rows report darwin
         run: |
           node -e '
             const fs = require("fs"), crypto = require("crypto");
             const out = fs.readdirSync("release").filter(f => /\.(exe|dmg|AppImage)$/.test(f))
               .map(f => crypto.createHash("sha256").update(fs.readFileSync("release/" + f)).digest("hex") + "  " + f);
-            fs.writeFileSync("release/SHA256SUMS-" + process.platform + ".txt", out.join("\n") + "\n");
+            fs.writeFileSync("release/SHA256SUMS-" + process.env.SUMS_FOR + ".txt", out.join("\n") + "\n");
             console.log(out.join("\n"));'
       - uses: actions/upload-artifact@v4
         with:
