@@ -5,8 +5,10 @@ import useRunLog from "../lib/useRunLog";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
+import Disclosure from "../components/ui/Disclosure";
 import { KVRow } from "../components/ui/KV";
 import Notice from "../components/ui/Notice";
+import SettingRow from "../components/ui/SettingRow";
 import Tabs from "../components/ui/Tabs";
 
 // The page the nav calls "Information". It used to show none: three action buttons and a raw
@@ -19,6 +21,20 @@ import Tabs from "../components/ui/Tabs";
 //
 // Layout note: the halves use a fixed two-column grid, not the shared .grid, whose auto-fill of
 // 280px tracks left two narrow cards stranded in three empty columns on a wide window.
+
+// Tabler Icons (MIT, Pawel Kuna): refresh, clock.
+function Glyph({ name }) {
+  const d = name === "refresh"
+    ? "M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"
+    : "M12 7v5l3 3";
+  return (
+    <svg className="info-glyph" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {name === "clock" && <circle cx="12" cy="12" r="9" />}
+      <path d={d} />
+    </svg>
+  );
+}
 
 function KV({ k, v, mono = true, title }) {
   return <KVRow layout="grid" k={k} v={v} mono={mono} title={title} />;
@@ -45,12 +61,13 @@ function Battery({ pct, mv }) {
   );
 }
 
+// The verdict as a short pill; the sentence under it still says the whole thing.
 const PAIRING = {
-  paired: { tone: "ok", text: "Halves are bonded to each other" },
-  "half-paired": { tone: "warn", text: "Only one half points at its partner" },
-  "not-paired": { tone: "err", text: "Halves are not bonded to each other" },
-  incomplete: { tone: "warn", text: "Both halves must be connected to check" },
-  unknown: { tone: "warn", text: "Neither half reported a pair address" },
+  paired: { tone: "ok", text: "Halves paired" },
+  "half-paired": { tone: "warn", text: "One half only" },
+  "not-paired": { tone: "err", text: "Not bonded" },
+  incomplete: { tone: "warn", text: "Both halves needed" },
+  unknown: { tone: "warn", text: "No pair address" },
 };
 
 function HalfCard({ h, reference }) {
@@ -59,14 +76,15 @@ function HalfCard({ h, reference }) {
   const modBehind = reference && m?.firmwareVersion && m.firmwareVersion !== reference.moduleFirmware;
   return (
     <Card className="info-card" head={<span className={"dot " + (h.connected ? "ok" : "err")} />}
-      title={h.description || h.side} actions={<Badge>{h.side}</Badge>}>
+      title={h.description || h.side}
+      actions={<Badge className="ui-badge-plain">{h.side === "dongle" ? "Dongle" : `${h.side[0].toUpperCase()}${h.side.slice(1)} half`}</Badge>}>
       {h.error && <Notice tone="err">{h.error}</Notice>}
 
       <div className="info-sub">Identity</div>
       <KV k="Firmware" v={h.firmwareVersion} />
-      {behind && <div className="info-flag">Naya ships {reference.createFirmware}</div>}
+      {behind && <div className="info-flag">Naya reference: {reference.createFirmware}</div>}
       <KV k="Hardware ID" v={h.hardwareId} />
-      <KV k="USB product id"
+      <KV k="USB product ID"
         v={h.pid != null ? `0x${h.pid.toString(16).toUpperCase().padStart(4, "0")}` : null}
         title="Identifies which half this is, and which firmware image it would take." />
       <KV k="Port" v={h.port} />
@@ -91,7 +109,7 @@ function HalfCard({ h, reference }) {
         <>
           <KV k="Type" v={m.type} mono={false} />
           <KV k="Firmware" v={m.firmwareVersion} />
-          {modBehind && <div className="info-flag">Naya ships {reference.moduleFirmware}</div>}
+          {modBehind && <div className="info-flag">Naya reference: {reference.moduleFirmware}</div>}
           <KV k="Address" v={m.address != null ? `0x${m.address.toString(16).toUpperCase()}` : null} />
           <Battery pct={m.batteryPercent} mv={m.batteryMillivolts} />
         </>
@@ -180,27 +198,29 @@ export default function Troubleshooting() {
 
   return (
     <div className="info-page">
-      <div className="page-head">
+      <div className="page-head info-head">
         <div>
-          <h1 className="page-title">Information</h1>
-          <p className="page-sub">
-            What is connected, what firmware it runs, and whether the halves can see each other.
-          </p>
+          <h1 className="page-title">Device information</h1>
+          <p className="page-sub">Hardware, connections, and diagnostics for your Create.</p>
         </div>
-        <div className="board-actions-stack">
-          <Button variant="primary" onClick={refresh} disabled={loading}>
-            {loading ? "Reading…" : at ? "Read again" : "Read device info"}
-          </Button>
-          <span className={"saved-note" + (stale ? " stale" : "")}>
-            {at
-              ? `${live ? "read" : "as of"} ${at.toLocaleTimeString()} · ${ageText}`
-              : "Reads over USB. Nothing is written."}
-          </span>
-        </div>
+        <Button onClick={refresh} disabled={loading}>
+          <Glyph name="refresh" />
+          {loading ? "Reading…" : at ? "Read again" : "Read device info"}
+        </Button>
       </div>
 
-      <Tabs variant="segmented" className="info-tabs" ariaLabel="Information sections" value={tab} onChange={setTab}
-        items={[{ id: "device", label: "Device" }, { id: "connections", label: "Connections" }, { id: "troubleshooting", label: "Troubleshooting" }]} />
+      {/* The tabs, with how old the reading is at the other end of the same row: it belongs to
+          every tab, not to the button that refreshes it. */}
+      <div className="info-tabrow">
+        <Tabs variant="segmented" className="info-tabs" ariaLabel="Information sections" value={tab} onChange={setTab}
+          items={[{ id: "device", label: "Device" }, { id: "connections", label: "Connections" }, { id: "troubleshooting", label: "Troubleshooting" }]} />
+        <span className={"info-age" + (stale ? " stale" : "")}>
+          <Glyph name="clock" />
+          {at
+            ? `Last ${live ? "read" : "reading"} ${ageText}`
+            : "Reads over USB. Nothing is written."}
+        </span>
+      </div>
 
       {err && <Card><Notice tone="err">{err}</Notice></Card>}
 
@@ -254,7 +274,7 @@ export default function Troubleshooting() {
             <div className={"info-banner " + (p ? p.tone : "")}>
               <div className="info-banner-title">
                 Split link
-                {p && <Badge tone={p.tone}>{p.text}</Badge>}
+                {p && <Badge className="ui-badge-plain" tone={p.tone}>{p.text}</Badge>}
               </div>
               <div className="info-banner-detail">{pairing.detail}</div>
               {pairing.state !== "paired" && pairing.state !== "incomplete" && (
@@ -283,12 +303,17 @@ export default function Troubleshooting() {
                   <HalfCard key={h.port} h={h} reference={sys?.reference} />
                 ))
               : (
-                <Card className="info-card" ruled title="Dongle">
-                  <div className="setting-desc">
-                    Not on USB. When the wireless dongle is plugged in it enumerates as its own
-                    serial device and appears here after a read. On firmware 3.07 it exposes no
-                    keyboard interface, so it cannot bridge a wireless keyboard to this computer.
-                  </div>
+                <Card className="info-card" ruled title="Dongle"
+                  actions={<Badge className="ui-badge-plain">Not on USB</Badge>} actionsAlign="end">
+                  <Notice icon="info" title="Connect your dongle">
+                    Plug it into USB, then read again to see its information.
+                  </Notice>
+                  <div className="info-sub">Firmware 3.07 limitation</div>
+                  <div className="setting-desc">Wireless keyboard input is unavailable with this firmware.</div>
+                  <Disclosure label="Technical details">
+                    The dongle enumerates as its own serial device. Firmware 3.07 exposes no keyboard
+                    interface, so it cannot bridge wireless keyboard input to this computer.
+                  </Disclosure>
                 </Card>
               )}
           </div>
@@ -304,67 +329,71 @@ export default function Troubleshooting() {
                 a lighting key changed them at runtime. On and off are the plain LED commands, per
                 half.
               </div>
-              <div className="btn-row info-btn-wrap">
-                <Button variant="primary" disabled={busy}
-                  onClick={() => lighting("Restore lighting", () => api.restoreLighting("left"))}>
-                  Restore lighting
-                </Button>
-                {["left", "right"].map((sd) => (
-                  <span key={sd} className="btn-row">
-                    <Button disabled={busy || (at != null && !connectedSides.includes(sd))}
-                      onClick={() => lighting(`LEDs on (${sd})`, () => api.led(sd, "on"))}>
-                      LEDs on ({sd})
-                    </Button>
-                    <Button disabled={busy || (at != null && !connectedSides.includes(sd))}
-                      onClick={() => lighting(`LEDs off (${sd})`, () => api.led(sd, "off"))}>
-                      LEDs off ({sd})
-                    </Button>
-                  </span>
-                ))}
-              </div>
+              <Button variant="primary" disabled={busy} className="info-lead-btn"
+                onClick={() => lighting("Restore lighting", () => api.restoreLighting("left"))}>
+                Restore lighting
+              </Button>
+              {["left", "right"].map((sd) => (
+                <SettingRow key={sd} label={`${sd[0].toUpperCase()}${sd.slice(1)} half`}
+                  control={
+                    <span className="btn-row">
+                      <Button size="sm" disabled={busy || (at != null && !connectedSides.includes(sd))}
+                        onClick={() => lighting(`LEDs on (${sd})`, () => api.led(sd, "on"))}>
+                        LEDs on
+                      </Button>
+                      <Button size="sm" disabled={busy || (at != null && !connectedSides.includes(sd))}
+                        onClick={() => lighting(`LEDs off (${sd})`, () => api.led(sd, "off"))}>
+                        LEDs off
+                      </Button>
+                    </span>
+                  } />
+              ))}
+              <div className="setting-desc">On and off change the LEDs on that half.</div>
             </Card>
-            <Card className="info-card" ruled title="Diagnostics">
-              <div className="setting-desc" style={{ marginBottom: 10 }}>
-                Run against a chosen half. These read the device; none of them change a binding.
-              </div>
-              <Tabs variant="segmented" ariaLabel="Half" value={side} onChange={setSide}
-                items={["left", "right", "dongle"].map((sd) => ({
-                  id: sd, label: sd,
-                  disabled: at != null && !connectedSides.includes(sd),
-                  title: at != null && !connectedSides.includes(sd) ? "Not connected" : undefined,
-                }))} />
-              <div className="btn-row info-btn-wrap">
-                <Button disabled={busy} onClick={() => run("Diagnostics report", api.diagnostics)}>
-                  Generate report
-                </Button>
-                <Button disabled={busy} onClick={() => run("Dump settings", () => api.dumpSettings(side))}>
-                  Dump settings
-                </Button>
-                <Button disabled={busy}
-                  onClick={() => run("SPI flash self-test", () => api.sendCommand("repair_flash", [], { side }))}>
-                  Test SPI flash
-                </Button>
-              </div>
-              <div className="info-sub">Recovery</div>
-              <div className="setting-desc">
-                Destructive recovery -- clearing Bluetooth bonds, wiping keymaps -- lives on the
-                <strong> Settings &rsaquo; Troubleshooting</strong> tab, kept apart from these
-                read-only diagnostics so an erase is always a deliberate trip.
-              </div>
+            <Card className="info-card" ruled title="Diagnostics"
+              actions={<Badge className="ui-badge-plain">Read-only</Badge>} actionsAlign="end">
+              <SettingRow bare className="info-runon" label="Run on"
+                control={
+                  <Tabs variant="segmented" ariaLabel="Half" value={side} onChange={setSide}
+                    items={["left", "right", "dongle"].map((sd) => ({
+                      id: sd, label: `${sd[0].toUpperCase()}${sd.slice(1)}`,
+                      disabled: at != null && !connectedSides.includes(sd),
+                      title: at != null && !connectedSides.includes(sd) ? "Not connected" : undefined,
+                    }))} />
+                } />
+              <SettingRow label="Generate report" desc="Collect device information and diagnostics."
+                control={<Button size="sm" disabled={busy}
+                  onClick={() => run("Diagnostics report", api.diagnostics)}>Generate</Button>} />
+              <SettingRow label="Dump settings" desc="Read the selected half's stored settings."
+                control={<Button size="sm" disabled={busy}
+                  onClick={() => run("Dump settings", () => api.dumpSettings(side))}>Read</Button>} />
+              <SettingRow label="Test SPI flash" desc="Run the device's flash diagnostic."
+                control={<Button size="sm" disabled={busy}
+                  onClick={() => run("SPI flash self-test", () => api.sendCommand("repair_flash", [], { side }))}>Run test</Button>} />
+              <div className="setting-desc info-runon-note">These checks do not change your bindings.</div>
+              <Disclosure label="Recovery → Settings / Troubleshooting">
+                Clearing Bluetooth bonds and wiping keymaps are managed in Settings &rsaquo;
+                Troubleshooting, with a confirmation before data is erased.
+              </Disclosure>
             </Card>
-            <Card className="info-card" ruled title="Software">
-              <KV k="OpenFlow" v={sys?.backendVersion} />
-              <KV k="Operating system" v={sys ? `${sys.os} ${sys.osVersion}` : null} mono={false} />
-              <KV k="Architecture" v={sys?.arch} />
-              <KV k="Python" v={sys?.python} />
-              {sys?.reference && (
-                <>
-                  <div className="info-sub">Firmware Naya ships</div>
-                  <KV k="Create" v={sys.reference.createFirmware} />
-                  <KV k="Module" v={sys.reference.moduleFirmware} />
-                  <KV k="Source" v={sys.reference.source} mono={false} />
-                </>
-              )}
+            <Card className="info-card info-span" ruled title="Software">
+              <div className="info-software">
+                <div>
+                  <div className="info-sub info-sub-first">This computer</div>
+                  <KV k="OpenFlow" v={sys?.backendVersion} />
+                  <KV k="Operating system" v={sys ? `${sys.os} ${sys.osVersion}` : null} mono={false} />
+                  <KV k="Architecture" v={sys?.arch} />
+                  <KV k="Python" v={sys?.python} />
+                </div>
+                {sys?.reference && (
+                  <div>
+                    <div className="info-sub info-sub-first">Naya firmware reference</div>
+                    <KV k="Create" v={sys.reference.createFirmware} />
+                    <KV k="Module" v={sys.reference.moduleFirmware} />
+                    <KV k="Source" v={sys.reference.source} mono={false} />
+                  </div>
+                )}
+              </div>
             </Card>
           </div>
           {out && (

@@ -2071,6 +2071,38 @@ textarea.report-input { resize: vertical; line-height: 1.5; font-family: inherit
 
 .info-dim { color: var(--text-dim); font-size: 11px; }
 
+/* The head, and the tab row that carries the reading's age at its far end. */
+.info-head { align-items: center; margin-bottom: 14px; }
+.info-head .page-sub { margin-bottom: 0; }
+.info-tabrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.info-tabrow .info-tabs { margin-bottom: 12px; }
+.info-age {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-bottom: 12px;
+  color: var(--text-muted); font-size: 12px;
+}
+.info-age.stale { color: var(--warn); }
+.info-glyph { flex: none; }
+/* A card's own lead action (Restore lighting), above the rows it applies to. */
+.info-lead-btn { align-self: flex-start; margin-bottom: 6px; }
+.info-runon { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.info-runon .ui-tabs-segmented { margin-bottom: 0; }
+.info-runon-note { margin-top: 12px; }
+/* Software: this computer beside what Naya ships, across the full width. */
+.info-span { grid-column: 1 / -1; }
+.info-software {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+.info-sub-first { margin-top: 0; padding-top: 0; border-top: none; }
+
 /* A sub-heading inside a card's key/value list, for grouping (Bluetooth, Docked module). */
 .info-sub {
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
@@ -2078,8 +2110,16 @@ textarea.report-input { resize: vertical; line-height: 1.5; font-family: inherit
   border-top: 1px solid var(--border-strong);
 }
 .info-empty { color: var(--text-dim); font-size: 12px; padding: 6px 0; font-style: italic; }
+/* What Naya ships, when this unit runs something else: a quiet amber tag under the value. */
 .info-flag {
-  font-size: 11px; color: var(--warn); padding: 2px 0 6px;
+  display: inline-block;
+  align-self: flex-start;   /* the card is a flex column: without this the pill spans it */
+  margin: 0 0 8px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 11px;
 }
 .info-blank { text-align: center; padding: 40px 20px; }
 .info-blank h3 { margin-bottom: 6px; }
