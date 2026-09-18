@@ -36,7 +36,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from . import __version__
-from .config import data_dir
+from .config import data_dir, resources_dir
 
 # Not secrets: the site and the queue are already written down in the project's own docs.
 JIRA_DEFAULTS = {
@@ -48,7 +48,8 @@ JIRA_DEFAULTS = {
     "issueTypeId": "10003",        # Task (this project has no Bug type)
     "labels": ["user-reported", "needs-triage"],
 }
-JIRA_FILE = "jira.json"
+JIRA_FILE = "jira.json"          # this machine's own config, in the data directory
+SINK_FILE = "report-sink.json"   # what the installer shipped, if anything (openflow_backend.spec)
 _TIMEOUT_S = 20
 
 # Key names whose VALUES identify a particular unit or person. Matched case-insensitively as
@@ -150,19 +151,37 @@ def render(form: dict, context: dict) -> str:
 
 # --- the Jira sink ---------------------------------------------------------------------- #
 
-def jira_config() -> dict | None:
-    """Defaults, overlaid with `<data dir>/jira.json`, overlaid with the environment. Returns
-    None unless there is something to file WITH: either a webhook URL or an account email and
-    API token."""
-    cfg = dict(JIRA_DEFAULTS)
-    path = data_dir() / JIRA_FILE
+def _overlay(cfg: dict, path: Path | None) -> None:
+    """Merge a JSON file over cfg, if it is there and readable. A malformed one is ignored:
+    a bad config file must not take the report page down with it."""
+    if path is None:
+        return
     try:
         if path.is_file():
             loaded = json.loads(path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 cfg.update(loaded)
     except Exception:
-        pass                                      # a malformed file must not break the page
+        pass
+
+
+def jira_config() -> dict | None:
+    """Where a report goes, from three places, each overriding the one before:
+
+    1. `resources/report-sink.json`, baked in at build time — this is how a tester's installer
+       arrives already able to file, with no setup. Only ever a WEBHOOK: it can do one thing,
+       fire one rule, and is rotated by regenerating it. An account token must never go here.
+    2. `<data dir>/jira.json`, this machine's own config, so a developer or a tester can point
+       reports somewhere else without rebuilding.
+    3. `OPENFLOW_JIRA_*` in the environment, which wins over both.
+
+    Returns None when there is nothing to file with, and the app then offers the report to be
+    copied or saved instead.
+    """
+    cfg = dict(JIRA_DEFAULTS)
+    res = resources_dir()
+    _overlay(cfg, (res / SINK_FILE) if res is not None else None)
+    _overlay(cfg, data_dir() / JIRA_FILE)
     for key, env in (("url", "OPENFLOW_JIRA_URL"), ("project", "OPENFLOW_JIRA_PROJECT"),
                      ("parent", "OPENFLOW_JIRA_PARENT"), ("email", "OPENFLOW_JIRA_EMAIL"),
                      ("token", "OPENFLOW_JIRA_TOKEN"), ("sprint", "OPENFLOW_JIRA_SPRINT"),

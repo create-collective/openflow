@@ -21,6 +21,7 @@
 #   resources/LICENSE      Apache-2.0
 # The package's own data (db/schema.sql, db/*.json, device/*.json, the vendored nayactl LICENSE)
 # is collected next to the package by collect_data_files.
+import json
 import os
 import sys
 from pathlib import Path
@@ -59,6 +60,29 @@ datas += [
     (str(RENDERER), "resources/renderer"),
     (str(OPENFLOW / "LICENSE"), "resources"),
 ]
+
+# Where in-app reports go, baked in so an installed copy can file one with no setup. Only ever
+# an automation WEBHOOK url: the secret in it fires one rule that creates one issue, it cannot
+# read or edit anything, and regenerating the rule's webhook rotates it. An account API token is
+# scoped to the whole ACCOUNT and must never be built in.
+#
+# The value comes from OPENFLOW_REPORT_WEBHOOK, or from backend/report-sink.json (gitignored) if
+# that exists. Neither is in the repository, so the URL never enters git history. A build with
+# neither still succeeds -- the app then offers the report to be copied or saved.
+_sink = os.environ.get("OPENFLOW_REPORT_WEBHOOK", "").strip()
+_sink_src = BACKEND / "report-sink.json"
+if not _sink and _sink_src.is_file():
+    _sink = json.loads(_sink_src.read_text(encoding="utf-8")).get("webhook", "").strip()
+if _sink:
+    if not _sink.startswith("https://"):
+        raise SystemExit("openflow_backend.spec: the report webhook must be an https url")
+    _sink_out = BACKEND / "build" / "report-sink.json"
+    _sink_out.parent.mkdir(parents=True, exist_ok=True)
+    _sink_out.write_text(json.dumps({"webhook": _sink}), encoding="utf-8")
+    datas += [(str(_sink_out), "resources")]
+    print(f"openflow_backend.spec: in-app reports will go to {_sink.split('/')[2]}")
+else:
+    print("openflow_backend.spec: no report webhook configured; reports will be copy/save only")
 
 hiddenimports = (
     collect_submodules("uvicorn")                        # lifespan/loop/http classes are resolved by name

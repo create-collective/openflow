@@ -7,6 +7,7 @@ No hardware, no network.
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -143,3 +144,42 @@ def test_a_failing_webhook_still_hands_the_report_back(monkeypatch, tmp_path):
     assert out["ok"] is False and out["configured"] is True
     assert "network is down" in out["reason"] and "h" in out["description"]
     print("  a failed send returns the written report rather than losing it")
+
+
+def test_a_build_can_ship_its_own_sink(monkeypatch, tmp_path):
+    """The point of choosing a webhook: an installed copy files reports with no setup."""
+    _clean(monkeypatch, tmp_path)
+    res = tmp_path / "resources"
+    res.mkdir()
+    (res / report.SINK_FILE).write_text(
+        json.dumps({"webhook": "https://automation.atlassian.com/pro/hooks/shipped"}), encoding="utf-8")
+    monkeypatch.setenv("OPENFLOW_RESOURCES_DIR", str(res))
+    cfg = report.jira_config()
+    assert cfg is not None and cfg["webhook"].endswith("/shipped")
+    print("  a bundled report-sink.json is a working sink on its own")
+
+
+def test_the_machine_and_the_environment_both_beat_what_was_shipped(monkeypatch, tmp_path):
+    _clean(monkeypatch, tmp_path)
+    res = tmp_path / "resources"
+    res.mkdir()
+    (res / report.SINK_FILE).write_text(
+        json.dumps({"webhook": "https://automation.atlassian.com/pro/hooks/shipped"}), encoding="utf-8")
+    monkeypatch.setenv("OPENFLOW_RESOURCES_DIR", str(res))
+
+    # This machine's own config overrides the build's.
+    (tmp_path / report.JIRA_FILE).write_text(
+        json.dumps({"webhook": "https://automation.atlassian.com/pro/hooks/machine"}), encoding="utf-8")
+    assert report.jira_config()["webhook"].endswith("/machine")
+
+    # And the environment overrides that.
+    monkeypatch.setenv("OPENFLOW_JIRA_WEBHOOK", "https://automation.atlassian.com/pro/hooks/env")
+    assert report.jira_config()["webhook"].endswith("/env")
+    print("  precedence: environment > this machine > what the build shipped")
+
+
+def test_a_malformed_config_is_ignored_rather_than_fatal(monkeypatch, tmp_path):
+    _clean(monkeypatch, tmp_path)
+    (tmp_path / report.JIRA_FILE).write_text("{not json at all", encoding="utf-8")
+    assert report.jira_config() is None      # no sink, but no exception either
+    print("  a broken config file leaves no sink rather than breaking the page")

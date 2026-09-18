@@ -13,7 +13,28 @@ project, epic and sprint have defaults in `backend/openflow_backend/report.py` (
 secrets, they are written down in this repo already) and the two secrets are read at runtime
 from outside the tree.
 
-## The quick way: an automation incoming webhook (recommended for testers)
+## Shipping it inside an installer
+
+A build bakes the webhook in, so an installed copy files reports with **no setup by the person
+running it**. That is the whole reason for choosing a webhook over an account token: the secret
+in the URL can do exactly one thing, fire one rule that creates one issue in one project, and
+regenerating the rule's webhook rotates it. An account token would hand every reader the whole
+account, so one must never be built in.
+
+The build takes the URL from `OPENFLOW_REPORT_WEBHOOK`, or from `backend/report-sink.json`
+(`{"webhook": "https://..."}`), which is gitignored. Neither is in the repository, so the URL
+never enters git history.
+
+```
+OPENFLOW_REPORT_WEBHOOK=https://... npm run build:win
+```
+
+The spec prints which host reports will go to, or says reports will be copy-and-save only when
+no webhook is configured, so a build never quietly ships without one. Runtime precedence is
+environment, then `jira.json` on the machine, then whatever the build shipped, so a tester can
+redirect their own reports and a developer can override both.
+
+## Setting the rule up: an automation incoming webhook
 
 Atlassian generates and hosts the URL, so there is nothing to buy, host or deploy. The secret in
 it can do exactly one thing: fire that one rule. It cannot read, edit, or reach another project,
