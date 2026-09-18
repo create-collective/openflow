@@ -272,4 +272,11 @@ if (!app.requestSingleInstanceLock()) {
       stopBackend().finally(() => app.quit());
     }
   });
+
+  // A signal is a quit too. Without these, SIGTERM or SIGINT (pkill, Ctrl+C in the terminal that
+  // launched an AppImage, that terminal closing) ended the shell without before-quit and orphaned
+  // the backend, still holding the keyboard's ports (seen in a Linux launch test, 2026-09-18).
+  // On Linux that is worse than a stray process: POSIX serial ports are not exclusive the way
+  // COM ports are, so the next launch's backend could open the same port alongside it.
+  for (const sig of ["SIGTERM", "SIGINT", "SIGHUP"]) process.on(sig, () => app.quit());
 }

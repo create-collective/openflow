@@ -277,6 +277,10 @@ def _talk(port: str, frame: bytes, timeout: float = 2.0) -> dict:
             last_open_error = e
             _time.sleep(0.35)
     else:
+        # Linux without the udev rule refuses the bootloader's ports as it does the halves'.
+        from . import port_access
+        if port_access.is_permission_denied(last_open_error):
+            raise serial.SerialException(port_access.denied_message(port)) from last_open_error
         raise last_open_error
 
     # Opened the way the vendored transport opens a Naya CDC port, not with pyserial's defaults.

@@ -1,0 +1,21 @@
+# OpenFlow: access to the Naya Create's USB serial ports (vendor 37d1).
+#
+# Each half of the keyboard, and a half in its recovery bootloader, shows up as a CDC serial
+# port (/dev/ttyACM*). Those belong to root and the dialout group, so without this rule a
+# normal user's OpenFlow cannot open them and the keyboard reads as not connected.
+#
+# Installed by the .deb to /usr/lib/udev/rules.d. For the AppImage, copy it to
+# /etc/udev/rules.d yourself (OpenFlow shows the commands when it hits the problem), then:
+#     sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=tty
+#
+# Numbered below 73 so the uaccess tag is in place before systemd-logind's 73-seat-late.rules
+# turns it into an ACL for whoever is logged in at the seat. The two rule lines are repeated
+# in openflow_backend/device/port_access.py (the in-app fix); a backend test keeps them equal.
+
+# ModemManager probes every new USB serial port with modem commands for several seconds after
+# it appears. On the keyboard that collides with the CDC protocol, and in the bootloader it
+# eats into the few seconds a recovery flash has. Tell it to leave the whole device alone.
+ACTION!="remove", SUBSYSTEMS=="usb", ATTRS{idVendor}=="37d1", ENV{ID_MM_DEVICE_IGNORE}="1"
+
+# Let the user at the seat open the ports (no dialout membership, no re-login).
+ACTION!="remove", SUBSYSTEM=="tty", ATTRS{idVendor}=="37d1", TAG+="uaccess"

@@ -321,6 +321,27 @@
 .hub-link { color: var(--accent-text); font-weight: 600; font-size: 13px; text-decoration: none; }
 .hub-link:hover { text-decoration: underline; }
 .hub-empty { color: var(--text-muted); padding: 6px 0; }
+/* Linux without OpenFlow's udev rule: the commands that fix it (LinuxAccessNotice), above the
+   Hub's columns so they get the full width the long first line needs. */
+.hub-access { margin: 0 0 16px; }
+.access-fix-text { margin: 0 0 8px; }
+.access-fix-text.err { color: var(--err); }
+.access-fix-cmd {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+  /* The mono face draws != as a single glyph; someone typing the rule by hand must see two. */
+  font-variant-ligatures: none;
+}
 .hub-notes { margin: 0 0 14px; padding-left: 18px; color: var(--text); font-size: 13px; line-height: 1.5; }
 .hub-notes li + li { margin-top: 6px; }
 .hub-update { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
