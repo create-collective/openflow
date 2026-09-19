@@ -191,6 +191,12 @@ def _pairing_verdict(halves: list[dict]) -> dict:
                       f"{paired_to(left) or 'nothing'}, right to {paired_to(right) or 'nothing'}."}
 
 
+# The order two halves are drawn in, everywhere. A keyboard has a left and a right and the
+# screen has a left and a right; matching them is the whole of it. Anything unexpected (a
+# dongle, an unknown side) sorts after, rather than being dropped or silently leading.
+_SIDE_ORDER = {"left": 0, "right": 1}
+
+
 class DeviceService:
     """Owns serial connections to connected halves and exposes structured ops."""
 
@@ -963,7 +969,15 @@ class DeviceService:
         for devs in groups.values():
             ordered = sorted(devs, key=self._rank)
             out.append((ordered[0], [x.port for x in ordered[1:]]))
-        return out
+        # LEFT then RIGHT, always. The order used to follow DISCOVERY, so whichever half
+        # enumerated first came first -- and the Devices page, which draws them in the order it
+        # is given, put the right half on the left of the screen whenever the right happened to
+        # come up first (SCRUM-89, seen on a board whose right half led by 1.7 s). Sorted here
+        # rather than in status_all because all three callers want the same guarantee and a
+        # discovery-ordered list is useful to none of them. The port is the tiebreak so the
+        # order is total, never incidental.
+        return sorted(out, key=lambda t: (_SIDE_ORDER.get(t[0].side, len(_SIDE_ORDER)),
+                                          t[0].side or "", t[0].port or ""))
 
     # --- the ignore list -------------------------------------------------------
 

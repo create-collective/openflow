@@ -147,3 +147,43 @@ def test_unignoring_gives_the_port_a_clean_try(svc, monkeypatch):
     assert "COM17" in [d.port for d in svc.visible_ports()]
     assert "COM17" not in svc._port_health, "its old failure must not follow it back"
     print("  unignoring clears the remembered failure")
+
+
+# --- the order two halves are drawn in (SCRUM-89) ----------------------------------------------
+
+def test_halves_come_back_left_then_right_whatever_the_discovery_order(svc, monkeypatch):
+    """The Devices page draws halves in the order it is given. That order used to follow
+    DISCOVERY, so a board whose right half enumerated first (1.7 s ahead, on the donor) put the
+    right half on the LEFT of the screen. Nothing was mislabelled; the layout just did not match
+    the keyboard in front of you, which is the one thing two columns implicitly promise."""
+    _enumerate(monkeypatch, [_dev("COM22", "right", RIGHT_SERIAL),
+                             _dev("COM23", "left", LEFT_SERIAL)])
+    assert [d.side for d, _o in svc.halves_seen()] == ["left", "right"]
+
+
+def test_the_order_holds_when_the_left_is_discovered_first(svc, monkeypatch):
+    """The other direction, so this is a guarantee rather than a reversal."""
+    _enumerate(monkeypatch, [_dev("COM23", "left", LEFT_SERIAL),
+                             _dev("COM22", "right", RIGHT_SERIAL)])
+    assert [d.side for d, _o in svc.halves_seen()] == ["left", "right"]
+
+
+def test_an_unknown_side_sorts_after_the_two_real_ones(svc, monkeypatch):
+    """A dongle or an unrecognised side must not lead, and must not be dropped either: showing
+    what we see beats omitting it (the owner's rule on the docked-side question)."""
+    # Built inline: the shared helper names the description from the side, which a sideless
+    # device does not have.
+    unknown = SimpleNamespace(port="COM30", side=None, serial_number="X1", pid=300,
+                              description="Unknown Naya device")
+    _enumerate(monkeypatch, [unknown,
+                             _dev("COM22", "right", RIGHT_SERIAL),
+                             _dev("COM23", "left", LEFT_SERIAL)])
+    assert [d.side for d, _o in svc.halves_seen()] == ["left", "right", None]
+
+
+def test_ghosted_ports_still_collapse_to_one_entry_per_half(svc, monkeypatch):
+    """Ordering must not disturb the grouping SCRUM-82 added: four ports, two halves."""
+    _enumerate(monkeypatch, GHOSTED)
+    seen = svc.halves_seen()
+    assert [d.side for d, _o in seen] == ["left", "right"]
+    assert all(others for _d, others in seen), "each half should still report its other port"
