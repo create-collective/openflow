@@ -11,11 +11,14 @@ import {
   LEFT_LEDS, RIGHT_LEDS, KEY_UNIT, REM,
 } from "../lib/boardgeom";
 
-// Track's left and right modules are physically different parts, not one module mirrored,
-// so each gets its own artwork. Touch and Tune are symmetric and use a single image.
+// Track's left and right modules are physically different PARTS. A Touch is one part, but
+// it is not symmetric: docked in the left bay it presents the mirror of what it presents
+// on the right, so it needs both images too. This comment used to claim Touch and Tune
+// were both symmetric and shared one image, which is how a Touch on the left came to be
+// drawn as a right-hand part (SCRUM-93). The Tune is a dial and genuinely is symmetric.
 const MODULE_IMG = {
   track: { left: "/modules/v2/track-left.png", right: "/modules/v2/track-right.png" },
-  touch: "/modules/v2/touch.png",
+  touch: { left: "/modules/v2/touch-left.png", right: "/modules/v2/touch-right.png" },
   tune: "/modules/v2/tune.png",
 };
 
@@ -35,7 +38,10 @@ function moduleImg(type, side) {
 const PALETTE = [
   { key: "track:left", type: "track", side: "left", art: "left", label: "Track (left)" },
   { key: "track:right", type: "track", side: "right", art: "right", label: "Track (right)" },
-  { key: "touch", type: "touch", side: null, art: "left", label: "Touch" },
+  // `art` is which picture the PALETTE shows; the bay it lands in decides what gets drawn
+  // there. Right-hand for the Touch so the picker looks exactly as it did before it had
+  // two images to choose from.
+  { key: "touch", type: "touch", side: null, art: "right", label: "Touch" },
   { key: "tune", type: "tune", side: null, art: "left", label: "Tune" },
 ];
 function paletteType(key) {

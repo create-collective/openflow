@@ -10,7 +10,9 @@ export default function ModuleVisual({ type, activeButton, side = "left" }) {
   } else if (type === "TUNE") {
     src = "/modules/v2/tune.png";
   } else {
-    src = "/modules/v2/touch.png";
+    // The Modules page edits a PROFILE, which has no docked side, so the right-hand image
+    // stands for the part. Named explicitly; see SCRUM-93.
+    src = "/modules/v2/touch-right.png";
   }
   return (
     <div className="mod-visual">

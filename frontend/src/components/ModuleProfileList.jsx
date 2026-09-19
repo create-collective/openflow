@@ -17,8 +17,13 @@ const SLOTS = [
   { type: "tune", side: null, label: "Tune" },
 ];
 
+// This row is a PROFILE, not a docked position: for Touch and Tune one control governs both
+// bays, so there is no side to draw. The right-hand Touch is named explicitly as the generic
+// depiction rather than inheriting a file called touch.png that silently meant one side.
 const moduleImg = (type, side) =>
-  type === "track" ? `/modules/v2/track-${side === "right" ? "right" : "left"}.png` : `/modules/v2/${type}.png`;
+  type === "track" ? `/modules/v2/track-${side === "right" ? "right" : "left"}.png`
+    : type === "touch" ? "/modules/v2/touch-right.png"
+      : `/modules/v2/${type}.png`;
 
 export default function ModuleProfileList({ bays, boardKnown = false }) {
   if (!bays) return null;

@@ -5,11 +5,14 @@ import { KVList, KVRow } from "./KV";
 // devices stream, so it updates every six seconds. The profile bar's device chip renders two.
 // `details` ([label, value] pairs) opens under the box on hover, styled like the app's menus,
 // for what the box has no room for: firmware, millivolts, the module's firmware, the read time.
-// A Track has a left and a right unit; the picture follows the bay it is docked in.
+// The picture follows the bay it is docked in. A Track has two physically different units;
+// a Touch is one part that presents its mirror image depending on the bay. Only the Tune,
+// being a dial, looks the same either way.
 function moduleImg(type, side) {
   const t = String(type || "").toLowerCase();
-  if (t === "track") return `/modules/v2/track-${side === "right" ? "right" : "left"}.png`;
-  return t === "touch" || t === "tune" ? `/modules/v2/${t}.png` : null;
+  const hand = side === "right" ? "right" : "left";
+  if (t === "track" || t === "touch") return `/modules/v2/${t}-${hand}.png`;
+  return t === "tune" ? "/modules/v2/tune.png" : null;
 }
 
 function batt(pct) {
