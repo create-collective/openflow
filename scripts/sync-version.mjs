@@ -39,4 +39,18 @@ for (const rel of ["package.json", "frontend/package.json"]) {
   console.log(`sync-version: ${rel} ${pkg.version} -> ${version}`);
 }
 if (drift) process.exit(1);
-console.log(`sync-version: ${version}${check ? " everywhere" : ""}`);
+
+// Release notes are not optional. The Hub looks up the running version in changelog.js and
+// falls back to the NEWEST entry when there is none -- so a bump without notes shows the
+// previous release's notes to the user, silently and with nothing logged. Checked here
+// because version:check already gates build:app and runs in CI, which makes this the one
+// place a forgotten entry gets caught before a build reaches anybody.
+const changelog = readFileSync(resolve(ROOT, "frontend/src/changelog.js"), "utf8");
+if (!changelog.includes(`version: "${version}"`)) {
+  console.error(`sync-version: frontend/src/changelog.js has no entry for ${version}.`);
+  console.error("  The Hub would show the previous release's notes instead. Add one:");
+  console.error(`    { version: "${version}", date: "YYYY-MM-DD", notes: [...] },`);
+  process.exit(1);
+}
+
+console.log(`sync-version: ${version}${check ? " everywhere, with release notes" : ""}`);

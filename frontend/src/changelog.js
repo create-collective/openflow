@@ -3,6 +3,18 @@
 // what they can now do, what stopped happening.
 const CHANGELOG = [
   {
+    version: "0.3.0-beta.2",
+    date: "2026-09-19",
+    notes: [
+      "Pinch and spread are two separate gestures on the Touch and the Tune, and together they are a zoom axis: pinch to zoom out, spread to zoom in, as smooth motion rather than repeated keystrokes. Split them and each direction can do something of its own.",
+      "Commands meant for the right half reach the right half. Reading, flashing, the LED buttons and the diagnostics could all act on the left instead when the right was not recognised, with nothing said about it.",
+      "Flashing no longer fails because of one key. A binding that cannot be written is named, with what the key will keep doing, and everything else still flashes.",
+      "A key set only to tap stops coming back as tap and hold after a read, and stops re-creating itself every time you flash.",
+      "A keyboard that shows up on more than one COM port is handled: OpenFlow uses the port that answers, shows both halves once each, and lets you ignore a port left behind by a disconnect.",
+      "Shortcut names say what the chord does on the tab you found it under, so a Windows chord is no longer labelled with a macOS action. Thirteen everyday shortcuts were added and four of our own names corrected.",
+    ],
+  },
+  {
     version: "0.2.0",
     date: "2026-09-17",
     notes: [
