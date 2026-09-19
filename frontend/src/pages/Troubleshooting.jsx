@@ -80,11 +80,17 @@ function HalfCard({ h, reference, onIgnorePort }) {
       actions={<Badge className="ui-badge-plain">{h.side === "dongle" ? "Dongle" : `${h.side[0].toUpperCase()}${h.side.slice(1)} half`}</Badge>}>
       {h.error && <Notice tone="err">{h.error}</Notice>}
 
-      {/* A half that re-enumerated leaves its old port behind and Windows keeps listing
-          it. We cannot remove that node, only stop choosing it -- which we already do,
-          since resolution prefers whichever port answers. This says the ghost is there
-          and offers to drop it from the list for good. */}
-      {h.stalePorts?.length > 0 && (
+      {/* Only when the half could NOT be reached. A port that refused the handshake is
+          not necessarily a ghost: on 3.28.7 every half exposes two CDC interfaces at once,
+          permanently, and only one answers (SCRUM-90). The old copy asserted it was "left
+          over from when it reconnected", which on that firmware is plainly untrue.
+
+          The backend falls through to the sibling by itself now, so on a half we DID reach
+          there is nothing for the user to do, and Ignore is worse than nothing: it persists
+          to ignored-ports.json for good, and ignoring the interface that later becomes the
+          answering one is how a half stops being found at all. When the half is connected
+          this is reported as plain detail under Identity instead. */}
+      {h.stalePorts?.length > 0 && !h.connected && (
         <Notice tone="warn" className="info-stale-port"
           title={`Also seen on ${h.stalePorts.join(", ")}`}
           action={onIgnorePort && (
@@ -92,8 +98,10 @@ function HalfCard({ h, reference, onIgnorePort }) {
               Ignore {h.stalePorts[0]}
             </Button>
           )}>
-          This half answered on {h.port}. The other port is left over from when it
-          reconnected, and nothing here uses it.
+          This half did not answer. {h.stalePorts.length > 1 ? "These ports were" : "This port was"}
+          {" "}tried and stayed silent; if {h.stalePorts.length > 1 ? "they are" : "it is"} a
+          leftover from a reconnection, dropping {h.stalePorts.length > 1 ? "them" : "it"} from
+          the list stops us trying {h.stalePorts.length > 1 ? "them" : "it"} again.
         </Notice>
       )}
 
@@ -105,6 +113,12 @@ function HalfCard({ h, reference, onIgnorePort }) {
         v={h.pid != null ? `0x${h.pid.toString(16).toUpperCase().padStart(4, "0")}` : null}
         title="Identifies which half this is, and which firmware image it would take." />
       <KV k="Port" v={h.port} />
+      {/* Named, not warned about: the half works, and which interface answered is the
+          useful fact when someone is diagnosing one that does not. */}
+      {h.connected && h.stalePorts?.length > 0 && (
+        <KV k="Did not answer" v={h.stalePorts.join(", ")}
+          title="This half exposes more than one serial interface. Only the port above answers; the others are left alone." />
+      )}
       <Battery pct={h.batteryPercent} mv={h.batteryMillivolts} />
 
       {h.ble && (
