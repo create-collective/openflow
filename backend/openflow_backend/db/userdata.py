@@ -608,12 +608,16 @@ def _ensure_touch_defaults(conn) -> None:
 #     we build rows from stored bindings and an unbound gesture has no row.
 #   * dial split: NayaFlow exposes only a combined dial binding; the enum has each direction
 #     separately. Those are fields 0x22/0x23 -- see the retraction note below.
-#   * pinch and spread are ONE gesture on this hardware (a single "pinch + tap"), so they are
-#     one row rather than the enum's two.
+#   * pinch & spread is an AXIS, like vertical and horizontal: one combined row that the
+#     split control breaks into a pinch half and a spread half. It is listed here because
+#     NayaFlow leaves both fields empty, so a fresh profile has no row to edit.
+_ZOOM = "mouse - ZOOM_OUT - ZOOM_IN"   # module_fields.ZOOM_PAIR, spelled here to keep
+                                       # db/ from importing device/ at module scope.
 _GESTURE_SLOTS = {
     "TUNE": (
         "tap:tune:1_finger",                    # blank in NayaFlow; device field 0x08
-        "pinch:tune:2_fingers",       # rendered "Pinch & Spread": one gesture, not two
+        # Seeded AS zoom, not unbound: see _ensure_gesture_slots. Fields 0x14/0x15.
+        ("pinch&spread:tune:2_fingers", _ZOOM, "value"),
         # NayaFlow exposes only the combined "rotate:tune:dial" binding; these are the two
         # halves, at 0x22/0x23. The earlier doubt ("Touch carries the identical pair and has no
         # dial") came from a Touch map probed at a 36-field hybrid slot -- a real Touch config
@@ -626,18 +630,24 @@ _GESTURE_SLOTS = {
     "TOUCH": (
         "tap:touch:1_finger",           # left click; device field 0x0b
         "tap:touch:2_fingers",          # NayaFlow default: right click; device field 0x0c
-        "pinch:touch:2_fingers",      # rendered "Pinch & Spread": one gesture, not two
+        ("pinch&spread:touch:2_fingers", _ZOOM, "value"),   # fields 0x11/0x12
     ),
 }
 
 
 def _ensure_gesture_slots(conn) -> None:
-    """Backfill unbound gesture rows so every gesture the module supports is editable.
+    """Backfill gesture rows so every gesture the module supports is editable.
 
-    Additive and idempotent: only inserts a behavior that has no row yet, and always as
-    an unbound ('none') action -- it never touches an existing binding. Rows are created
-    up front rather than synthesised in get_modules so the flash/diff path sees ordinary
-    bindings with real ids."""
+    Additive and idempotent: only inserts a behavior that has no row yet, and it never
+    touches an existing binding. Rows are created up front rather than synthesised in
+    get_modules so the flash/diff path sees ordinary bindings with real ids.
+
+    An entry is either a behavior (seeded unbound) or (behavior, code, action_type) for one
+    that has to be seeded WITH a value. Only the pinch axis needs the second form, and it
+    needs it because encode_axis writes an axis's stock motion whenever neither half
+    carries an override and never consults the combined row: a row seeded unbound would
+    read "Unassigned" in the UI while the flash put a zoom pair on the board, which is the
+    app-says-X / board-says-Y split that keeps a profile adrift forever."""
     now = _now()
     for mtype, behaviors in _GESTURE_SLOTS.items():
         for m in conn.execute("SELECT id FROM module_configs WHERE type=?", (mtype,)).fetchall():
@@ -647,14 +657,16 @@ def _ensure_gesture_slots(conn) -> None:
                     "SELECT behavior FROM module_bindings WHERE module_config_id=?", (cid,)
                 )
             }
-            for behavior in behaviors:
+            for entry in behaviors:
+                behavior, code, atype = (entry if isinstance(entry, tuple)
+                                         else (entry, "", "none"))
                 if behavior in existing:
                     continue
                 conn.execute(
                     "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
                     "invert, threshold, direction, mode, module_config_id, id, updated_at, created_at) "
                     "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (None, "", "none", behavior, 0, 0, "+", 0, cid, str(uuid.uuid4()), now, now),
+                    (None, code, atype, behavior, 0, 0, "+", 0, cid, str(uuid.uuid4()), now, now),
                 )
     conn.commit()
 

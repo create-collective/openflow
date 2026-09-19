@@ -33,7 +33,10 @@ _ENUM = next(d / "docs" / "reference" / "naya-gesture-enum.json"
 def test_slots_are_real_nayaflow_gestures():
     enum = set(json.loads(_ENUM.read_text()))
     for mtype, behaviors in U._GESTURE_SLOTS.items():
-        for b in behaviors:
+        for entry in behaviors:
+            # An entry is a behavior, or (behavior, code, action_type) for a slot seeded with
+            # a value. Only the name is checked against the enum.
+            b = entry[0] if isinstance(entry, tuple) else entry
             assert b in enum, f"{mtype} slot {b!r} is not in the NayaFlow gesture enum"
             assert b.split(":")[1] == mtype.lower(), f"{b!r} filed under the wrong module type"
     print(f"  {sum(len(v) for v in U._GESTURE_SLOTS.values())} slots, all in the enum")
@@ -66,10 +69,17 @@ def test_backfill_is_additive_and_idempotent():
     assert after_two == after_one, "backfill is not idempotent"
     kept = conn.execute("SELECT * FROM module_bindings WHERE id='keep-me'").fetchone()
     assert kept["action_code"] == "C_MUTE", "backfill clobbered an existing binding"
-    unbound = conn.execute(
-        "SELECT * FROM module_bindings WHERE behavior='pinch:tune:2_fingers'"
+    # The pinch axis is the one slot seeded WITH a value rather than unbound, because an
+    # axis row that says nothing still flashes the stock motion (see _ensure_gesture_slots).
+    zoom = conn.execute(
+        "SELECT * FROM module_bindings WHERE behavior='pinch&spread:tune:2_fingers'"
     ).fetchone()
-    assert unbound["action_type"] == "none" and unbound["action_code"] == ""
+    assert zoom["action_type"] == "value"
+    assert zoom["action_code"] == "mouse - ZOOM_OUT - ZOOM_IN"
+    unbound = conn.execute(
+        "SELECT * FROM module_bindings WHERE behavior='tap:tune:1_finger'"
+    ).fetchone()
+    assert unbound["action_code"] == "C_MUTE", "an existing row is never reseeded"
     print(f"  {after_one} rows after backfill, existing binding preserved, second run a no-op")
 
 

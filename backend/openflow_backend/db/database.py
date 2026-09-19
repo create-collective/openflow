@@ -139,6 +139,11 @@ def init_db(path: Path | None = None) -> None:
         # rows over so a user's existing choices start taking effect instead of being dropped.
         from .settings import migrate_legacy_setting_keys
         migrate_legacy_setting_keys(conn)
+        # Pinch and spread used to be modelled as one gesture, on a behavior that matched no
+        # device field. The axis replaced it; the dead rows would otherwise render as a
+        # second, unbindable Pinch line in the editor.
+        from .module_profiles import drop_retired_pinch_rows
+        drop_retired_pinch_rows(conn)
         conn.commit()
     finally:
         conn.close()

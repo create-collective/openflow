@@ -127,6 +127,10 @@ def label_fields(module_type: str, parsed_fields: list[tuple[int, int, bytes]]) 
 #
 # Mapped explicitly rather than by category, because a category is not unique within a module:
 # Touch carries two cat-4 pairs and only one of them is the 2-finger scroll.
+# The zoom pair, named once: motion_name() and _motion_directions() both read it back out
+# of the axis defaults, so ZOOM_OUT = (8, -1) and ZOOM_IN = (8, +1) need no second table.
+ZOOM_PAIR = "mouse - ZOOM_OUT - ZOOM_IN"
+
 AXIS_HALVES = {
     "TRACK": {
         "vertical:track":   {"-": 0x05, "+": 0x06, "category": 1,
@@ -151,6 +155,16 @@ AXIS_HALVES = {
                                     "default": "mouse - SCROLL_UP - SCROLL_DOWN"},
         "horizontal:tune:1_finger": {"-": 0x0C, "+": 0x0D, "category": 6,
                                     "default": "mouse - SCROLL_LEFT - SCROLL_RIGHT"},
+        # The third 2-finger axis. NayaCore calls these two fields PINCH_IN_2 and
+        # PINCH_OUT_2 in its own pre-flash dump, and its category enum -- whose members
+        # 0/1/3/4/6 are exactly the ones we had already measured -- puts STATIC_ZOOM at 8.
+        # Proved on hardware 2026-09-18: category 8 with opposite selectors zooms smoothly
+        # in both directions, and split into two keypresses each half fires alone. Minus is
+        # PINCH (fingers together, zoom out) and plus is SPREAD (zoom in), the ordinary
+        # trackpad convention. Zoom is NOT flipped per OS and needs no exception for that:
+        # convention_sign only touches category 4.
+        "pinch&spread:tune:2_fingers": {"-": 0x14, "+": 0x15, "category": 8,
+                                    "default": ZOOM_PAIR},
     },
     "TOUCH": {
         "vertical:touch:1_finger":    {"-": 0x05, "+": 0x06, "category": 1,
@@ -167,6 +181,10 @@ AXIS_HALVES = {
                                       "default": "mouse - SCROLL_UP - SCROLL_DOWN"},
         "horizontal:touch:2_fingers": {"-": 0x0F, "+": 0x10, "category": 6,
                                       "default": "mouse - SCROLL_LEFT - SCROLL_RIGHT"},
+        # See the Tune entry: the same zoom axis and the same category, one block earlier
+        # because a Touch has no dial and its 2-finger block starts at 0x0d.
+        "pinch&spread:touch:2_fingers": {"-": 0x11, "+": 0x12, "category": 8,
+                                      "default": ZOOM_PAIR},
     },
 }
 
@@ -177,8 +195,11 @@ AXIS_HALVES = {
 # Established on the Touch, 2026-09-09. NayaFlow writes all four fields empty on every flash
 # (every NayaFlow-written capture we hold has them at 0x07), and a docked Touch still moves the
 # cursor on one finger, left-clicks on a one-finger tap and right-clicks on a two-finger tap.
-# Pinch/spread (0x11/0x12) are empty too and do NOTHING, so they are not here: for them, empty
-# really is unbound. The rest of the Touch (2-finger scroll, 3-finger tap, the swipes) is stored
+# Pinch/spread (0x11/0x12) are empty on a NayaFlow-written board too, but they are NOT
+# firmware-driven: they are simply unbound, because NayaFlow never writes them (it drops the
+# pinch half and the combined form while assembling the profile). Written by hand they work,
+# as a category-8 zoom axis -- see AXIS_HALVES -- so they are an ordinary axis, not a
+# default. The rest of the Touch (2-finger scroll, 3-finger tap, the swipes) is stored
 # explicitly, as is everything on the Track and the Tune.
 #
 # Why it matters both ways. The explicit records OpenFlow used to write for these -- cat 1 / cat 0
@@ -239,7 +260,7 @@ SPLITTABLE_TYPES = {"TRACK", "TUNE", "TOUCH"}
 UNSPLITTABLE_AXES = {"TOUCH": {"vertical:touch:1_finger", "horizontal:touch:1_finger"}}
 
 # Rendering order: the order the module is actually used in, not alphabetical.
-AXIS_ORDER = ["vertical", "horizontal", "rotate"]
+AXIS_ORDER = ["vertical", "horizontal", "pinch&spread", "rotate"]
 
 
 def splittable_axes(module_type: str) -> dict:

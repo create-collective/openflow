@@ -390,3 +390,29 @@ def repoint_bays(pairs, profile_id) -> int:
         return moved
     finally:
         conn.close()
+
+# The behaviors the old "pinch and spread are one gesture" model invented. They pointed at no
+# device field (flashable False), so nothing was ever written through them; the pinch axis
+# replaced them on 2026-09-18. See tests/test_pinch_spread.py.
+_RETIRED_PINCH = ("pinch:touch:2_fingers", "pinch:tune:2_fingers")
+
+
+def drop_retired_pinch_rows(conn) -> int:
+    """Delete the unbound leftovers of the old pinch model; return how many went.
+
+    A BOUND row is left alone. It is the user's binding, it was never reaching the keyboard
+    anyway, and deleting it to tidy a data model is not a trade a migration gets to make.
+
+    Tolerates a database with no module_bindings at all: this runs from init_db, which also runs
+    over an imported NayaFlow or beta database that predates the table.
+    """
+    has_table = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='module_bindings'"
+    ).fetchone()
+    if has_table is None:
+        return 0
+    placeholders = ",".join("?" for _ in _RETIRED_PINCH)
+    cur = conn.execute(
+        "DELETE FROM module_bindings WHERE behavior IN (" + placeholders + ") "
+        "AND (action_code IS NULL OR action_code = '')", _RETIRED_PINCH)
+    return cur.rowcount or 0

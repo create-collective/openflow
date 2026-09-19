@@ -8,7 +8,7 @@ export const TYPE_ORDER = ["TOUCH", "TRACK", "TUNE"];
 
 // Canonical gesture order so Track Left / Right (and every config) list the same way: the DB
 // returns them in inconsistent orders.
-const GESTURE_ORDER = ["vertical", "horizontal", "rotate", "tap",
+const GESTURE_ORDER = ["vertical", "horizontal", "pinch&spread", "rotate", "tap",
   "swipe_up", "swipe_down", "swipe_left", "swipe_right"];
 export function gestureIndex(g) {
   const i = GESTURE_ORDER.indexOf(g);
@@ -16,9 +16,10 @@ export function gestureIndex(g) {
 }
 export const byGesture = (a, b) => gestureIndex(a.gesture) - gestureIndex(b.gesture);
 
-// Behaviors whose slug does not read as a name. Pinch and spread are ONE gesture on this
-// hardware (a single "pinch + tap"), so it is one row, not two.
-export const GESTURE_LABEL = { pinch: "Pinch & Spread" };
+// Behaviors whose slug does not read as a name. Pinch & spread is an AXIS: one
+// combined row that the split control breaks into a pinch half and a spread half,
+// exactly like vertical becomes scroll up and scroll down.
+export const GESTURE_LABEL = { "pinch&spread": "Pinch & Spread" };
 export function gestureName(gesture) {
   return GESTURE_LABEL[gesture] || (gesture || "").replace(/_/g, " ");
 }

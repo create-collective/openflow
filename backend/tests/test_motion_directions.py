@@ -25,12 +25,14 @@ H = "horizontal:touch:2_fingers"        # fields 0x0f (-) / 0x10 (+), category 6
 V = "vertical:touch:2_fingers"          # fields 0x0d (-) / 0x0e (+), category 4
 
 
-def test_the_eight_directions_are_the_stock_pairs_halves():
+def test_every_direction_is_one_half_of_a_stock_pair():
     assert MF.MOTION_DIRECTIONS == {
         "SCROLL_UP": (4, -1), "SCROLL_DOWN": (4, 1),
         "SCROLL_LEFT": (6, -1), "SCROLL_RIGHT": (6, 1),
         "MOUSE_LEFT": (0, -1), "MOUSE_RIGHT": (0, 1),
         "MOUSE_DOWN": (1, -1), "MOUSE_UP": (1, 1),
+        # The zoom axis behind pinch & spread, proved on hardware 2026-09-18.
+        "ZOOM_OUT": (8, -1), "ZOOM_IN": (8, 1),
     }
     assert MF.MOTION_NAMES[(6, -1)] == "SCROLL_LEFT"
 
@@ -72,8 +74,12 @@ def test_the_compare_agrees_with_the_app_row_for_a_direction_on_a_half():
         vh["-"]: (R.TWO_WORD, R.encode_two_word(4, -1)),
         vh["+"]: (R.TWO_WORD, R.encode_two_word(4, 1)),
     }
+    # Every axis the module has needs a row, or the compare answers for the missing one
+    # with its stock motion and reports a board that holds nothing as adrift. The Touch
+    # gained a third 2-finger axis (pinch & spread) on 2026-09-18.
     app = {H: "mouse - SCROLL_LEFT - SCROLL_RIGHT", (H, "-"): "SCROLL_UP",
-           V: "mouse - SCROLL_UP - SCROLL_DOWN"}
+           V: "mouse - SCROLL_UP - SCROLL_DOWN",
+           "pinch&spread:touch:2_fingers": ""}
     rows, differs = rest._compare(T, fields, app)
     by = {(r["gesture"], r.get("half")): r for r in rows}
     assert by[(H, "-")]["device"] == "SCROLL_UP" and by[(H, "-")]["differs"] is False

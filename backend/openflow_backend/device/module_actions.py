@@ -25,6 +25,9 @@ MODULE_ACTIONS = [
     # Scroll
     {"code": "mouse - SCROLL_UP - SCROLL_DOWN", "label": "Vertical Scroll", "actionType": "value", "group": "Scroll"},
     {"code": "mouse - SCROLL_LEFT - SCROLL_RIGHT", "label": "Horizontal Scroll", "actionType": "value", "group": "Scroll"},
+    # Zoom binds to the 2-finger pinch axis on a Touch or Tune. NayaFlow has no zoom
+    # action at all, which is why its own pinch & spread control could never be given one.
+    {"code": "mouse - ZOOM_OUT - ZOOM_IN", "label": "Zoom", "actionType": "value", "group": "Scroll"},
     # Mouse buttons
     {"code": "M1", "label": "Left Click", "actionType": "mouse", "group": "Clicks"},
     {"code": "M2", "label": "Right Click", "actionType": "mouse", "group": "Clicks"},

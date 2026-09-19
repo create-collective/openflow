@@ -31,7 +31,10 @@ from openflow_backend.device import module_layout as ML  # noqa: E402
 from openflow_backend.device import remap as R  # noqa: E402
 
 T = "TOUCH"
-TWO = {"horizontal:touch:2_fingers", "vertical:touch:2_fingers"}
+# Three 2-finger axes since 2026-09-18: pinch & spread is one too (fields 0x11/0x12, a
+# category-8 zoom pair proved on hardware).
+TWO = {"horizontal:touch:2_fingers", "vertical:touch:2_fingers",
+       "pinch&spread:touch:2_fingers"}
 ONE = {"horizontal:touch:1_finger", "vertical:touch:1_finger"}
 EMPTY = (R.NONE_BEH, b"")
 CID = "touch-1"

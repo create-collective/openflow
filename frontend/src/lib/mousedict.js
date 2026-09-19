@@ -56,6 +56,12 @@ export const MOUSE_MOTION = [
     hint: "Move the pointer left and right. Binds to a horizontal axis.",
     axis: "horizontal",
   },
+  {
+    code: "mouse - ZOOM_OUT - ZOOM_IN",
+    label: "Zoom",
+    hint: "Zoom out and in. Binds to the 2-finger pinch axis on a Touch or Tune.",
+    axis: "pinch & spread",
+  },
 ];
 
 // Single DIRECTIONS, for one half of a split axis. Each is the two-word motion record the
@@ -70,6 +76,8 @@ export const MOUSE_DIRECTIONS = [
   { code: "MOUSE_DOWN", label: "Cursor down", hint: "Move the pointer down, one direction." },
   { code: "MOUSE_LEFT", label: "Cursor left", hint: "Move the pointer left, one direction." },
   { code: "MOUSE_RIGHT", label: "Cursor right", hint: "Move the pointer right, one direction." },
+  { code: "ZOOM_OUT", label: "Zoom out", hint: "Zoom out, one direction." },
+  { code: "ZOOM_IN", label: "Zoom in", hint: "Zoom in, one direction." },
 ];
 
 /** What a pick sends. Buttons are a single action; motion is a direction pair. */

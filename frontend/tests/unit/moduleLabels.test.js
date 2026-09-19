@@ -12,8 +12,10 @@ describe("gesture ordering and names", () => {
     const rows = [{ gesture: "swipe_up" }, { gesture: "weird" }, { gesture: "vertical" }, { gesture: "tap" }];
     expect(rows.sort(byGesture).map((r) => r.gesture)).toEqual(["vertical", "tap", "swipe_up", "weird"]);
   });
-  it("names pinch as one gesture and tidies the rest", () => {
-    expect(gestureName("pinch")).toBe("Pinch & Spread");
+  it("names the pinch axis and tidies the rest", () => {
+    // Pinch & spread is an axis, not one gesture: the combined behavior carries the name and
+    // the split control breaks it into halves (proved on hardware 2026-09-18).
+    expect(gestureName("pinch&spread")).toBe("Pinch & Spread");
     expect(gestureName("swipe_left")).toBe("swipe left");
     expect(targetLabel("button_2")).toBe("Button 2");
   });

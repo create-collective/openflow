@@ -1,492 +1,504 @@
-{
- "TUNE": {
-  "slot_seen": 2,
-  "fields": {
-   "0x00": {
-    "kind": "speed",
-    "label": "pointer_speed"
-   },
-   "0x01": {
-    "kind": "speed",
-    "label": "scroll_speed"
-   },
-   "0x02": {
-    "kind": "speed",
-    "label": "pointer_accel"
-   },
-   "0x03": {
-    "kind": "flag",
-    "label": "flag_03",
-    "value": 1
-   },
-   "0x04": {
-    "kind": "flag",
-    "label": "flag_04",
-    "value": 0
-   },
-   "0x05": {
-    "kind": "setting",
-    "label": "ticks_per_rotation",
-    "value": 5,
-    "note": "DEGREES PER DETENT: the dial gives 360 / byte detents per turn, so the stock 5 is NayaFlow's default of 72 and the slider minimum of 5 detents is the byte 72. Measured live 2026-09-16 (SCRUM-50): 36 -> about 10 detents, 10 -> about 33, 90 -> exactly 4. Strength did not change (that is 0x06). module_fields.setting_to_wire converts; the app stores detents per turn."
-   },
-   "0x06": {
-    "kind": "setting",
-    "label": "setting_06",
-    "value": 75
-   },
-   "0x07": {
-    "kind": "setting",
-    "label": "setting_07",
-    "value": 1
-   },
-   "0x08": {
-    "kind": "keypress",
-    "gesture": "tap:tune:1_finger",
-    "default_action": "(user-set: Backspace)",
-    "note": "the 1-finger tap we captured flashing; the probe shows it EMPTY again, so a later flash rewrote the whole slot"
-   },
-   "0x09": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x0a": {
-    "kind": "axis",
-    "axis": 4,
-    "direction": -1,
-    "note": "scroll L/R axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
-    "gesture": "horizontal:tune:1_finger"
-   },
-   "0x0b": {
-    "kind": "axis",
-    "axis": 4,
-    "direction": 1,
-    "note": "scroll L/R axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
-    "gesture": "horizontal:tune:1_finger"
-   },
-   "0x0c": {
-    "kind": "axis",
-    "axis": 6,
-    "direction": -1,
-    "note": "scroll U/D axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
-    "gesture": "vertical:tune:1_finger"
-   },
-   "0x0d": {
-    "kind": "axis",
-    "axis": 6,
-    "direction": 1,
-    "note": "scroll U/D axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
-    "gesture": "vertical:tune:1_finger"
-   },
-   "0x0e": {
-    "kind": "keypress",
-    "gesture": "tap:tune:2_fingers",
-    "default_action": "C_PLAY_PAUSE",
-    "note": null
-   },
-   "0x0f": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x10": {
-    "kind": "keypress",
-    "gesture": "swipe_up:tune:2_fingers",
-    "default_action": "C_BRIGHTNESS_INC",
-    "note": null
-   },
-   "0x11": {
-    "kind": "keypress",
-    "gesture": "swipe_down:tune:2_fingers",
-    "default_action": "C_BRIGHTNESS_DEC",
-    "note": null
-   },
-   "0x12": {
-    "kind": "keypress",
-    "gesture": "swipe_left:tune:2_fingers",
-    "default_action": "C_REWIND",
-    "note": null
-   },
-   "0x13": {
-    "kind": "keypress",
-    "gesture": "swipe_right:tune:2_fingers",
-    "default_action": "C_FAST_FORWARD",
-    "note": null
-   },
-   "0x14": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x15": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x16": {
-    "kind": "keypress",
-    "gesture": "tap:tune:3_fingers",
-    "default_action": "C_MUTE",
-    "note": null
-   },
-   "0x17": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x18": {
-    "kind": "keypress",
-    "gesture": "swipe_up:tune:3_fingers",
-    "default_action": null,
-    "note": "LED action (brightness up) - keypress slot empty"
-   },
-   "0x19": {
-    "kind": "keypress",
-    "gesture": "swipe_down:tune:3_fingers",
-    "default_action": null,
-    "note": "LED action (brightness down) - keypress slot empty"
-   },
-   "0x1a": {
-    "kind": "keypress",
-    "gesture": "swipe_left:tune:3_fingers",
-    "default_action": "C_PREVIOUS",
-    "note": null
-   },
-   "0x1b": {
-    "kind": "keypress",
-    "gesture": "swipe_right:tune:3_fingers",
-    "default_action": "C_NEXT",
-    "note": null
-   },
-   "0x1c": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x1d": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x1e": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x1f": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x20": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x21": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x22": {
-    "kind": "keypress",
-    "gesture": "clockwise_rotate:tune:dial",
-    "note": "dial clockwise; holds C_VOL_UP in the stock profile"
-   },
-   "0x23": {
-    "kind": "keypress",
-    "gesture": "counter_clockwise_rotate:tune:dial",
-    "note": "dial counter-clockwise; holds C_VOL_DOWN in the stock profile"
-   }
-  },
-  "note": "Scroll axes are cat 4 (0x0a/0x0b) and cat 6 (0x0c/0x0d) -- the SAME bytes a Touch carries at 0x0d-0x10 for its 2-finger scroll. The Tune has no pointer axes of its own; forcing cat 0/cat 1 into these fields does move the cursor, but slowly, and no config value changes that."
- },
- "TRACK": {
-  "slot_seen": 4,
-  "confidence": "CONFIRMED by a live write + read-back (2026-09-02)",
-  "source": "NayaFlow flash of the 'Naya Track Left' profile, captured on the wire (device/out/track-swap-writes.json slot 4) and read back (device/out/module-probe-after-trackflash.json). Our encoder re-encodes that captured write byte-exactly.",
-  "note": "The four category-3 fields 0x0b-0x0e ARE the Track's buttons 1-4, and the value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4) -- proven by a single-field write in C2. They are NOT limited to mouse buttons: NayaFlow wrote a second Track profile on 2026-09-03 with 4-byte KEYPRESS records (D/R/S/T) in those same fields, so the field's record TYPE decides what it holds. The earlier claim that Track has no keypress gesture fields was wrong -- we had only ever seen these fields holding masks. A Track config is 15 fields (0x00-0x0e).",
-  "fields": {
-   "0x00": {
-    "kind": "speed",
-    "label": "pointer_speed",
-    "value": 10
-   },
-   "0x01": {
-    "kind": "speed",
-    "label": "scroll_speed",
-    "value": 10
-   },
-   "0x02": {
-    "kind": "speed",
-    "label": "pointer_accel",
-    "value": 50
-   },
-   "0x03": {
-    "kind": "setting",
-    "label": "setting_0x03",
-    "value": 1
-   },
-   "0x04": {
-    "kind": "setting",
-    "label": "setting_0x04",
-    "value": 0
-   },
-   "0x05": {
-    "kind": "axis",
-    "axis": 1,
-    "direction": -1,
-    "note": "pointer/scroll routing"
-   },
-   "0x06": {
-    "kind": "axis",
-    "axis": 1,
-    "direction": 1,
-    "note": "pointer/scroll routing"
-   },
-   "0x07": {
-    "kind": "axis",
-    "axis": 0,
-    "direction": -1,
-    "note": "pointer/scroll routing"
-   },
-   "0x08": {
-    "kind": "axis",
-    "axis": 0,
-    "direction": 1,
-    "note": "pointer/scroll routing"
-   },
-   "0x09": {
-    "kind": "axis",
-    "axis": 4,
-    "direction": 1,
-    "note": "pointer/scroll routing"
-   },
-   "0x0a": {
-    "kind": "axis",
-    "axis": 4,
-    "direction": -1,
-    "note": "pointer/scroll routing"
-   },
-   "0x0b": {
-    "kind": "mouse_button",
-    "gesture": "tap:track:button_1",
-    "mask": 1,
-    "value": "M1",
-    "note": "button 1; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
-   },
-   "0x0c": {
-    "kind": "mouse_button",
-    "gesture": "tap:track:button_2",
-    "mask": 4,
-    "value": "M3",
-    "note": "button 2; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
-   },
-   "0x0d": {
-    "kind": "mouse_button",
-    "gesture": "tap:track:button_3",
-    "mask": 2,
-    "value": "M2",
-    "note": "button 3; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
-   },
-   "0x0e": {
-    "kind": "mouse_button",
-    "gesture": "tap:track:button_4",
-    "mask": 8,
-    "value": "M4",
-    "note": "button 4; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
-   }
-  }
- },
- "_meta": {
-  "source": "live read-only probe 2026-09-02 (tools/naya_module_probe.py) + earlier device reads",
-  "note": "TUNE and TRACK confirmed against live reads; TRACK additionally against a captured write. TOUCH from the live probe. Slot indices are NOT stable (Tune 4->2; Track appeared at 4) -- resolve slots from WRITE_MODULE_CONFIG_LIST or a live read, never a constant.",
-  "generated": "2026-09-02"
- },
- "TOUCH": {
-  "slot_seen": 1,
-  "source": "live probe 2026-09-02 (device/out/module-probe-baseline.json) slot 1 -- full 36-field read; supersedes the earlier partial",
-  "fields": {
-   "0x00": {
-    "kind": "speed",
-    "label": "pointer_speed",
-    "value": 10
-   },
-   "0x01": {
-    "kind": "speed",
-    "label": "scroll_speed",
-    "value": 50
-   },
-   "0x02": {
-    "kind": "speed",
-    "label": "pointer_accel",
-    "value": 50
-   },
-   "0x03": {
-    "kind": "flag",
-    "label": "setting_0x03",
-    "value": 1
-   },
-   "0x04": {
-    "kind": "flag",
-    "label": "setting_0x04",
-    "value": 0
-   },
-   "0x05": {
-    "kind": "axis",
-    "axis": 1,
-    "direction": -1,
-    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
-   },
-   "0x06": {
-    "kind": "axis",
-    "axis": 1,
-    "direction": 1,
-    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
-   },
-   "0x07": {
-    "kind": "axis",
-    "axis": 0,
-    "direction": -1,
-    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
-   },
-   "0x08": {
-    "kind": "axis",
-    "axis": 0,
-    "direction": 1,
-    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
-   },
-   "0x09": {
-    "kind": "axis",
-    "axis": 4,
-    "direction": 1,
-    "note": "scroll/pointer routing"
-   },
-   "0x0a": {
-    "kind": "axis",
-    "axis": 4,
-    "direction": -1,
-    "note": "scroll/pointer routing"
-   },
-   "0x0b": {
-    "kind": "mouse_button",
-    "mask": 1,
-    "value": "M1 (firmware default when empty)",
-    "gesture": "tap:touch:1_finger",
-    "note": "tap:touch:1_finger. EMPTY = left click, done by the module firmware; NayaFlow never writes this field. The 'M4' once recorded here was OpenFlow's own write, not stock. Written empty at the default M1; a key or other button is written explicitly."
-   },
-   "0x0c": {
-    "kind": "mouse_button",
-    "mask": 2,
-    "value": "M2 (firmware default when empty)",
-    "gesture": "tap:touch:2_fingers",
-    "note": "tap:touch:2_fingers. EMPTY = right click, done by the module firmware; NayaFlow never writes this field. The 'mask 2 = M2' once observed here was OpenFlow's own write. Written empty at the default M2; anything else is written explicitly."
-   },
-   "0x0d": {
-    "kind": "axis",
-    "axis": 4,
-    "direction": -1,
-    "note": "scroll/pointer routing"
-   },
-   "0x0e": {
-    "kind": "axis",
-    "axis": 4,
-    "direction": 1,
-    "note": "scroll/pointer routing"
-   },
-   "0x0f": {
-    "kind": "axis",
-    "axis": 6,
-    "direction": -1,
-    "note": "scroll/pointer routing"
-   },
-   "0x10": {
-    "kind": "axis",
-    "axis": 6,
-    "direction": 1,
-    "note": "scroll/pointer routing"
-   },
-   "0x11": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x12": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x13": {
-    "kind": "mouse_button",
-    "mask": 4,
-    "value": "M3",
-    "gesture": "tap:touch:3_fingers",
-    "note": "tap-to-click; category-3 record, same shape as a Track button"
-   },
-   "0x14": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x15": {
-    "kind": "keypress",
-    "gesture": "swipe_up:touch:3_fingers",
-    "default_action": "LALT + LSHIFT + ESC"
-   },
-   "0x16": {
-    "kind": "keypress",
-    "gesture": "swipe_down:touch:3_fingers",
-    "default_action": "LALT + ESC"
-   },
-   "0x17": {
-    "kind": "keypress",
-    "gesture": "swipe_left:touch:3_fingers",
-    "default_action": "LCTRL + LSHIFT + TAB"
-   },
-   "0x18": {
-    "kind": "keypress",
-    "gesture": "swipe_right:touch:3_fingers",
-    "default_action": "LCTRL + TAB"
-   },
-   "0x19": {
-    "kind": "keypress",
-    "gesture": "tap:touch:4_fingers",
-    "default_action": "LGUI + TAB"
-   },
-   "0x1a": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x1b": {
-    "kind": "keypress",
-    "gesture": "swipe_up:touch:4_fingers",
-    "default_action": "LALT + PG_UP"
-   },
-   "0x1c": {
-    "kind": "keypress",
-    "gesture": "swipe_down:touch:4_fingers",
-    "default_action": "LALT + PG_DN"
-   },
-   "0x1d": {
-    "kind": "keypress",
-    "gesture": "swipe_left:touch:4_fingers",
-    "default_action": "LGUI + LCTRL + LEFT"
-   },
-   "0x1e": {
-    "kind": "keypress",
-    "gesture": "swipe_right:touch:4_fingers",
-    "default_action": "LGUI + LCTRL + RIGHT"
-   },
-   "0x1f": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x20": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x21": {
-    "kind": "unbound",
-    "note": "none - slot exists, no binding"
-   },
-   "0x22": {
-    "kind": "keypress",
-    "gesture": null,
-    "note": "on-device keypress, no default-map match (C_VOL_UP)"
-   },
-   "0x23": {
-    "kind": "keypress",
-    "gesture": null,
-    "note": "on-device keypress, no default-map match (C_VOL_DOWN)"
-   }
-  },
-  "note": "Category-3 fields are mouse-button records (tap-to-click), not axes. Only 0x13 (M3 = 3-finger tap) survived the fresh 2026-09-02 write; 1- and 2-finger tap are not stored on the device at all, so they are firmware or host defaults. The Touch's 1-finger CURSOR gestures have no device fields at all -- only its 2-finger scroll is stored (cat 4/cat 6 at 0x0d-0x10). Its cursor is native module firmware, which is why a Tune cannot be made to behave like one by copying config. Confirmed live 2026-09-09 with a Touch docked: 1-finger cursor, 1-finger tap = left click and 2-finger tap = right click all work with 0x05-0x08, 0x0b, 0x0c empty; pinch/spread (0x11/0x12) are empty and do nothing. See module_fields.FIRMWARE_DEFAULTS."
- }
-}
+{
+ "TUNE": {
+  "slot_seen": 2,
+  "fields": {
+   "0x00": {
+    "kind": "speed",
+    "label": "pointer_speed"
+   },
+   "0x01": {
+    "kind": "speed",
+    "label": "scroll_speed"
+   },
+   "0x02": {
+    "kind": "speed",
+    "label": "pointer_accel"
+   },
+   "0x03": {
+    "kind": "flag",
+    "label": "flag_03",
+    "value": 1
+   },
+   "0x04": {
+    "kind": "flag",
+    "label": "flag_04",
+    "value": 0
+   },
+   "0x05": {
+    "kind": "setting",
+    "label": "ticks_per_rotation",
+    "value": 5,
+    "note": "DEGREES PER DETENT: the dial gives 360 / byte detents per turn, so the stock 5 is NayaFlow's default of 72 and the slider minimum of 5 detents is the byte 72. Measured live 2026-09-16 (SCRUM-50): 36 -> about 10 detents, 10 -> about 33, 90 -> exactly 4. Strength did not change (that is 0x06). module_fields.setting_to_wire converts; the app stores detents per turn."
+   },
+   "0x06": {
+    "kind": "setting",
+    "label": "setting_06",
+    "value": 75
+   },
+   "0x07": {
+    "kind": "setting",
+    "label": "setting_07",
+    "value": 1
+   },
+   "0x08": {
+    "kind": "keypress",
+    "gesture": "tap:tune:1_finger",
+    "default_action": "(user-set: Backspace)",
+    "note": "the 1-finger tap we captured flashing; the probe shows it EMPTY again, so a later flash rewrote the whole slot"
+   },
+   "0x09": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x0a": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": -1,
+    "note": "scroll L/R axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
+    "gesture": "vertical:tune:1_finger"
+   },
+   "0x0b": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": 1,
+    "note": "scroll L/R axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
+    "gesture": "vertical:tune:1_finger"
+   },
+   "0x0c": {
+    "kind": "axis",
+    "axis": 6,
+    "direction": -1,
+    "note": "scroll U/D axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
+    "gesture": "horizontal:tune:1_finger"
+   },
+   "0x0d": {
+    "kind": "axis",
+    "axis": 6,
+    "direction": 1,
+    "note": "scroll U/D axis Directions inverted on this device 2026-09-03 (deliberate fix: scroll ran backwards).",
+    "gesture": "horizontal:tune:1_finger"
+   },
+   "0x0e": {
+    "kind": "keypress",
+    "gesture": "tap:tune:2_fingers",
+    "default_action": "C_PLAY_PAUSE",
+    "note": null
+   },
+   "0x0f": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x10": {
+    "kind": "keypress",
+    "gesture": "swipe_up:tune:2_fingers",
+    "default_action": "C_BRIGHTNESS_INC",
+    "note": null
+   },
+   "0x11": {
+    "kind": "keypress",
+    "gesture": "swipe_down:tune:2_fingers",
+    "default_action": "C_BRIGHTNESS_DEC",
+    "note": null
+   },
+   "0x12": {
+    "kind": "keypress",
+    "gesture": "swipe_left:tune:2_fingers",
+    "default_action": "C_REWIND",
+    "note": null
+   },
+   "0x13": {
+    "kind": "keypress",
+    "gesture": "swipe_right:tune:2_fingers",
+    "default_action": "C_FAST_FORWARD",
+    "note": null
+   },
+   "0x14": {
+    "kind": "axis",
+    "axis": 8,
+    "direction": -1,
+    "gesture": "pinch&spread:tune:2_fingers",
+    "note": "pinch half of the 2-finger zoom axis. NayaCore names this field PINCH_IN_2 in its own profile dump, and category 8 is its STATIC_ZOOM. Proved on hardware 2026-09-18: as a category-8 pair the two fields zoom, and split into keypresses each half fires alone. Empty on every NayaFlow-written board because NayaFlow never writes it."
+   },
+   "0x15": {
+    "kind": "axis",
+    "axis": 8,
+    "direction": 1,
+    "gesture": "pinch&spread:tune:2_fingers",
+    "note": "spread half of the 2-finger zoom axis. NayaCore names this field PINCH_OUT_2 in its own profile dump, and category 8 is its STATIC_ZOOM. Proved on hardware 2026-09-18: as a category-8 pair the two fields zoom, and split into keypresses each half fires alone. Empty on every NayaFlow-written board because NayaFlow never writes it."
+   },
+   "0x16": {
+    "kind": "keypress",
+    "gesture": "tap:tune:3_fingers",
+    "default_action": "C_MUTE",
+    "note": null
+   },
+   "0x17": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x18": {
+    "kind": "keypress",
+    "gesture": "swipe_up:tune:3_fingers",
+    "default_action": null,
+    "note": "LED action (brightness up) - keypress slot empty"
+   },
+   "0x19": {
+    "kind": "keypress",
+    "gesture": "swipe_down:tune:3_fingers",
+    "default_action": null,
+    "note": "LED action (brightness down) - keypress slot empty"
+   },
+   "0x1a": {
+    "kind": "keypress",
+    "gesture": "swipe_left:tune:3_fingers",
+    "default_action": "C_PREVIOUS",
+    "note": null
+   },
+   "0x1b": {
+    "kind": "keypress",
+    "gesture": "swipe_right:tune:3_fingers",
+    "default_action": "C_NEXT",
+    "note": null
+   },
+   "0x1c": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x1d": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x1e": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x1f": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x20": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x21": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x22": {
+    "kind": "keypress",
+    "gesture": "clockwise_rotate:tune:dial",
+    "note": "dial clockwise; holds C_VOL_UP in the stock profile"
+   },
+   "0x23": {
+    "kind": "keypress",
+    "gesture": "counter_clockwise_rotate:tune:dial",
+    "note": "dial counter-clockwise; holds C_VOL_DOWN in the stock profile"
+   }
+  },
+  "note": "Scroll axes are cat 4 (0x0a/0x0b) and cat 6 (0x0c/0x0d) -- the SAME bytes a Touch carries at 0x0d-0x10 for its 2-finger scroll. The Tune has no pointer axes of its own; forcing cat 0/cat 1 into these fields does move the cursor, but slowly, and no config value changes that."
+ },
+ "TRACK": {
+  "slot_seen": 4,
+  "confidence": "CONFIRMED by a live write + read-back (2026-09-02)",
+  "source": "NayaFlow flash of the 'Naya Track Left' profile, captured on the wire (device/out/track-swap-writes.json slot 4) and read back (device/out/module-probe-after-trackflash.json). Our encoder re-encodes that captured write byte-exactly.",
+  "note": "The four category-3 fields 0x0b-0x0e ARE the Track's buttons 1-4, and the value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4) -- proven by a single-field write in C2. They are NOT limited to mouse buttons: NayaFlow wrote a second Track profile on 2026-09-03 with 4-byte KEYPRESS records (D/R/S/T) in those same fields, so the field's record TYPE decides what it holds. The earlier claim that Track has no keypress gesture fields was wrong -- we had only ever seen these fields holding masks. A Track config is 15 fields (0x00-0x0e).",
+  "fields": {
+   "0x00": {
+    "kind": "speed",
+    "label": "pointer_speed",
+    "value": 10
+   },
+   "0x01": {
+    "kind": "speed",
+    "label": "scroll_speed",
+    "value": 10
+   },
+   "0x02": {
+    "kind": "speed",
+    "label": "pointer_accel",
+    "value": 50
+   },
+   "0x03": {
+    "kind": "setting",
+    "label": "setting_0x03",
+    "value": 1
+   },
+   "0x04": {
+    "kind": "setting",
+    "label": "setting_0x04",
+    "value": 0
+   },
+   "0x05": {
+    "kind": "axis",
+    "axis": 1,
+    "direction": -1,
+    "note": "pointer/scroll routing"
+   },
+   "0x06": {
+    "kind": "axis",
+    "axis": 1,
+    "direction": 1,
+    "note": "pointer/scroll routing"
+   },
+   "0x07": {
+    "kind": "axis",
+    "axis": 0,
+    "direction": -1,
+    "note": "pointer/scroll routing"
+   },
+   "0x08": {
+    "kind": "axis",
+    "axis": 0,
+    "direction": 1,
+    "note": "pointer/scroll routing"
+   },
+   "0x09": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": 1,
+    "note": "pointer/scroll routing"
+   },
+   "0x0a": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": -1,
+    "note": "pointer/scroll routing"
+   },
+   "0x0b": {
+    "kind": "mouse_button",
+    "gesture": "tap:track:button_1",
+    "mask": 1,
+    "value": "M1",
+    "note": "button 1; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
+   },
+   "0x0c": {
+    "kind": "mouse_button",
+    "gesture": "tap:track:button_2",
+    "mask": 4,
+    "value": "M3",
+    "note": "button 2; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
+   },
+   "0x0d": {
+    "kind": "mouse_button",
+    "gesture": "tap:track:button_3",
+    "mask": 2,
+    "value": "M2",
+    "note": "button 3; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
+   },
+   "0x0e": {
+    "kind": "mouse_button",
+    "gesture": "tap:track:button_4",
+    "mask": 8,
+    "value": "M4",
+    "note": "button 4; value is a mouse-button bitmask (1=M1 2=M2 4=M3 8=M4)"
+   }
+  }
+ },
+ "_meta": {
+  "source": "live read-only probe 2026-09-02 (tools/naya_module_probe.py) + earlier device reads",
+  "note": "TUNE and TRACK confirmed against live reads; TRACK additionally against a captured write. TOUCH from the live probe. Slot indices are NOT stable (Tune 4->2; Track appeared at 4) -- resolve slots from WRITE_MODULE_CONFIG_LIST or a live read, never a constant. 2026-09-18: the 2-finger pinch pair (TOUCH 0x11/0x12, TUNE 0x14/0x15) identified from NayaCore's own field names and proved on hardware as a category-8 zoom axis.",
+  "generated": "2026-09-02"
+ },
+ "TOUCH": {
+  "slot_seen": 1,
+  "source": "live probe 2026-09-02 (device/out/module-probe-baseline.json) slot 1 -- full 36-field read; supersedes the earlier partial",
+  "fields": {
+   "0x00": {
+    "kind": "speed",
+    "label": "pointer_speed",
+    "value": 10
+   },
+   "0x01": {
+    "kind": "speed",
+    "label": "scroll_speed",
+    "value": 50
+   },
+   "0x02": {
+    "kind": "speed",
+    "label": "pointer_accel",
+    "value": 50
+   },
+   "0x03": {
+    "kind": "flag",
+    "label": "setting_0x03",
+    "value": 1
+   },
+   "0x04": {
+    "kind": "flag",
+    "label": "setting_0x04",
+    "value": 0
+   },
+   "0x05": {
+    "kind": "axis",
+    "axis": 1,
+    "direction": -1,
+    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
+   },
+   "0x06": {
+    "kind": "axis",
+    "axis": 1,
+    "direction": 1,
+    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
+   },
+   "0x07": {
+    "kind": "axis",
+    "axis": 0,
+    "direction": -1,
+    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
+   },
+   "0x08": {
+    "kind": "axis",
+    "axis": 0,
+    "direction": 1,
+    "note": "1-finger cursor half. EMPTY on every NayaFlow-written board and the module firmware drives the cursor itself; an explicit cat 1/0 record here gives only the coarse motion the Tune experiments measured. Written empty at the default (2026-09-09)."
+   },
+   "0x09": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": 1,
+    "note": "scroll/pointer routing"
+   },
+   "0x0a": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": -1,
+    "note": "scroll/pointer routing"
+   },
+   "0x0b": {
+    "kind": "mouse_button",
+    "mask": 1,
+    "value": "M1 (firmware default when empty)",
+    "gesture": "tap:touch:1_finger",
+    "note": "tap:touch:1_finger. EMPTY = left click, done by the module firmware; NayaFlow never writes this field. The 'M4' once recorded here was OpenFlow's own write, not stock. Written empty at the default M1; a key or other button is written explicitly."
+   },
+   "0x0c": {
+    "kind": "mouse_button",
+    "mask": 2,
+    "value": "M2 (firmware default when empty)",
+    "gesture": "tap:touch:2_fingers",
+    "note": "tap:touch:2_fingers. EMPTY = right click, done by the module firmware; NayaFlow never writes this field. The 'mask 2 = M2' once observed here was OpenFlow's own write. Written empty at the default M2; anything else is written explicitly."
+   },
+   "0x0d": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": -1,
+    "note": "scroll/pointer routing"
+   },
+   "0x0e": {
+    "kind": "axis",
+    "axis": 4,
+    "direction": 1,
+    "note": "scroll/pointer routing"
+   },
+   "0x0f": {
+    "kind": "axis",
+    "axis": 6,
+    "direction": -1,
+    "note": "scroll/pointer routing"
+   },
+   "0x10": {
+    "kind": "axis",
+    "axis": 6,
+    "direction": 1,
+    "note": "scroll/pointer routing"
+   },
+   "0x11": {
+    "kind": "axis",
+    "axis": 8,
+    "direction": -1,
+    "gesture": "pinch&spread:touch:2_fingers",
+    "note": "pinch half of the 2-finger zoom axis. NayaCore names this field PINCH_IN_2 in its own profile dump, and category 8 is its STATIC_ZOOM. Proved on hardware 2026-09-18: as a category-8 pair the two fields zoom, and split into keypresses each half fires alone. Empty on every NayaFlow-written board because NayaFlow never writes it."
+   },
+   "0x12": {
+    "kind": "axis",
+    "axis": 8,
+    "direction": 1,
+    "gesture": "pinch&spread:touch:2_fingers",
+    "note": "spread half of the 2-finger zoom axis. NayaCore names this field PINCH_OUT_2 in its own profile dump, and category 8 is its STATIC_ZOOM. Proved on hardware 2026-09-18: as a category-8 pair the two fields zoom, and split into keypresses each half fires alone. Empty on every NayaFlow-written board because NayaFlow never writes it."
+   },
+   "0x13": {
+    "kind": "mouse_button",
+    "mask": 4,
+    "value": "M3",
+    "gesture": "tap:touch:3_fingers",
+    "note": "tap-to-click; category-3 record, same shape as a Track button"
+   },
+   "0x14": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x15": {
+    "kind": "keypress",
+    "gesture": "swipe_up:touch:3_fingers",
+    "default_action": "LALT + LSHIFT + ESC"
+   },
+   "0x16": {
+    "kind": "keypress",
+    "gesture": "swipe_down:touch:3_fingers",
+    "default_action": "LALT + ESC"
+   },
+   "0x17": {
+    "kind": "keypress",
+    "gesture": "swipe_left:touch:3_fingers",
+    "default_action": "LCTRL + LSHIFT + TAB"
+   },
+   "0x18": {
+    "kind": "keypress",
+    "gesture": "swipe_right:touch:3_fingers",
+    "default_action": "LCTRL + TAB"
+   },
+   "0x19": {
+    "kind": "keypress",
+    "gesture": "tap:touch:4_fingers",
+    "default_action": "LGUI + TAB"
+   },
+   "0x1a": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x1b": {
+    "kind": "keypress",
+    "gesture": "swipe_up:touch:4_fingers",
+    "default_action": "LALT + PG_UP"
+   },
+   "0x1c": {
+    "kind": "keypress",
+    "gesture": "swipe_down:touch:4_fingers",
+    "default_action": "LALT + PG_DN"
+   },
+   "0x1d": {
+    "kind": "keypress",
+    "gesture": "swipe_left:touch:4_fingers",
+    "default_action": "LGUI + LCTRL + LEFT"
+   },
+   "0x1e": {
+    "kind": "keypress",
+    "gesture": "swipe_right:touch:4_fingers",
+    "default_action": "LGUI + LCTRL + RIGHT"
+   },
+   "0x1f": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x20": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x21": {
+    "kind": "unbound",
+    "note": "none - slot exists, no binding"
+   },
+   "0x22": {
+    "kind": "keypress",
+    "gesture": null,
+    "note": "on-device keypress, no default-map match (C_VOL_UP)"
+   },
+   "0x23": {
+    "kind": "keypress",
+    "gesture": null,
+    "note": "on-device keypress, no default-map match (C_VOL_DOWN)"
+   }
+  },
+  "note": "Category-3 fields are mouse-button records (tap-to-click), not axes. Only 0x13 (M3 = 3-finger tap) survived the fresh 2026-09-02 write; 1- and 2-finger tap are not stored on the device at all, so they are firmware or host defaults. The Touch's 1-finger CURSOR gestures have no device fields at all -- only its 2-finger scroll is stored (cat 4/cat 6 at 0x0d-0x10). Its cursor is native module firmware, which is why a Tune cannot be made to behave like one by copying config. Confirmed live 2026-09-09 with a Touch docked: 1-finger cursor, 1-finger tap = left click and 2-finger tap = right click all work with 0x05-0x08, 0x0b, 0x0c empty; pinch/spread (0x11/0x12) are empty because NayaFlow never writes them, not because they do nothing -- written by hand they are a working zoom axis (2026-09-18). See module_fields.FIRMWARE_DEFAULTS."
+ }
+}
