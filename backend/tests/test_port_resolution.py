@@ -187,3 +187,36 @@ def test_ghosted_ports_still_collapse_to_one_entry_per_half(svc, monkeypatch):
     seen = svc.halves_seen()
     assert [d.side for d, _o in seen] == ["left", "right"]
     assert all(others for _d, others in seen), "each half should still report its other port"
+
+
+# --- module firmware is cached per unit, not per bay (SCRUM-98) --------------------------------
+
+def test_module_firmware_cache_is_keyed_by_the_half_not_the_bay(svc):
+    """Swapping keyboards with the modules fitted used to inherit the previous board's module
+    firmware. The dock address says TYPE and SIDE -- every left Tune is address 64 -- so two
+    different keyboards shared one cache entry, and the only invalidation is the undock branch,
+    which that swap never takes.
+
+    Reproduced against the real dict rather than the wire: the bug is entirely in the key."""
+    TUNE_LEFT = 64
+    # The board that was plugged in first.
+    svc._module_fw[(LEFT_SERIAL, TUNE_LEFT)] = "2.3.3"
+    # A DIFFERENT keyboard, same bay, same module type, same address.
+    other = "42A44FE4776195CB"
+    assert (other, TUNE_LEFT) not in svc._module_fw, \
+        "a different half must not hit the first board's entry"
+    # The old key shape is what made them collide.
+    assert ("left", TUNE_LEFT) not in svc._module_fw, \
+        "entries are no longer written under a bare side"
+
+
+def test_undocking_clears_that_half_s_entries(svc):
+    """The clear has to use the same key shape the entries are written under; matching on the
+    side alone stopped clearing anything once the key became the serial."""
+    svc._module_fw[(LEFT_SERIAL, 64)] = "2.1.2"
+    svc._module_fw[(RIGHT_SERIAL, 17)] = "2.1.2"
+    owner = LEFT_SERIAL
+    for k in [k for k in svc._module_fw if k[0] == owner]:
+        svc._module_fw.pop(k, None)
+    assert (LEFT_SERIAL, 64) not in svc._module_fw
+    assert (RIGHT_SERIAL, 17) in svc._module_fw, "the other half must be untouched"

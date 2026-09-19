@@ -62,11 +62,21 @@ def test_swapping_one_half_still_counts_as_matching(attached):
     assert rest._cache_matches_attached(cached(LEFT, RIGHT)) is True
 
 
-def test_nothing_on_usb_is_not_a_mismatch(attached):
-    """Unplugging everything makes the reading OLD, not WRONG. Saying it belongs to another
-    keyboard would be false, and the page would be accusing itself over an empty bus."""
+def test_nothing_on_usb_is_reported_as_disconnected(attached):
+    """Unplugging everything makes the reading OLD, not WRONG -- it is not a DIFFERENT keyboard,
+    so it must not be reported as one. But a page listing ports and modules for hardware that is
+    gone needs to say so, which is why this is its own answer rather than silence."""
     attached()
-    assert rest._cache_matches_attached(cached(LEFT, RIGHT)) is None
+    assert rest._cache_matches_attached(cached(LEFT, RIGHT)) == "disconnected"
+
+
+def test_disconnected_is_not_confused_with_a_mismatch(attached):
+    """The two states read very differently to a user and must not collapse into each other."""
+    attached()
+    gone = rest._cache_matches_attached(cached(LEFT))
+    attached(OTHER_L)
+    foreign = rest._cache_matches_attached(cached(LEFT))
+    assert gone == "disconnected" and foreign is False
 
 
 def test_a_cache_without_serials_cannot_be_judged(attached):

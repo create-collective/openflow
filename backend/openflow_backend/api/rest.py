@@ -413,8 +413,12 @@ async def status(verbose: bool = False) -> dict:
 def _cache_matches_attached(cached: dict):
     """Does a cached status describe the keyboard that is attached NOW?
 
-    True / False / None, where None means we cannot tell -- no serial on one side or the
-    other, which is a real state on older firmware and must not be reported as a mismatch.
+    One of:
+      True            a serial in the cache is on the bus now
+      False           none is: this describes a DIFFERENT keyboard
+      "disconnected"  nothing is on the bus at all
+      None            cannot tell -- no serial on one side or the other, which is a real
+                      state on older firmware and must not be reported as a mismatch
 
     Compared by SERIAL against USB enumeration. That needs no serial I/O, so the answer
     costs nothing and cannot disturb a port; asking the keyboard would defeat the point of
@@ -433,7 +437,11 @@ def _cache_matches_attached(cached: dict):
         return None                # enumeration failed: say nothing rather than guess
     now.discard(None)
     if not now:
-        return None                # nothing on USB: the cache is old, not WRONG
+        # Nothing on USB. The reading is not about a DIFFERENT keyboard, but it is about one
+        # that is no longer here, and a page showing its ports and modules with no marker is
+        # the same confusion in a quieter form. Reported as its own state so the page can say
+        # which of the two it is.
+        return "disconnected"
     return bool(have & now)
 
 

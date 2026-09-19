@@ -360,7 +360,18 @@ export default function Troubleshooting() {
               keyboard's. The bar at the top of the window is current.
             </Notice>
           )}
-          {describesAttached !== false && stale && halves.length > 0 && (
+          {/* The keyboard this describes is not plugged in at all. Not a different board, so
+              the wording is about absence rather than mistaken identity -- but a page listing
+              ports and modules for hardware that is gone needs to say so either way. */}
+          {describesAttached === "disconnected" && halves.length > 0 && (
+            <Notice size="sm" tone="warn" className="info-stale-note"
+              title="This keyboard is no longer connected"
+              action={<Button size="sm" onClick={refresh} busy={loading}>Read again</Button>}>
+              Everything below was read {ageText}, while it was plugged in. Nothing on USB
+              answers to it now, so none of it has been re-checked.
+            </Notice>
+          )}
+          {describesAttached !== false && describesAttached !== "disconnected" && stale && halves.length > 0 && (
             <Notice size="sm" tone="warn" className="info-stale-note">
               This reading is {ageText}. Firmware and addresses will not have changed, but battery
               and pairing may have — read again for those.

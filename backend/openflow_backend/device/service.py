@@ -437,7 +437,15 @@ class DeviceService:
                         module["docked"] = C.module_side_from_address(addr)
                     # The firmware, once per docking: the profile bar shows it in the half's
                     # detail, and status_all already reads it the expensive way.
-                    fw_key = (dev.side, addr)
+                    #
+                    # Keyed by the HALF, not by the bay. The dock address says type and side,
+                    # so every left Tune is address 64 -- two different keyboards shared one
+                    # entry and a board swap inherited the previous one's firmware, which the
+                    # undock branch below never cleared because nothing was undocked
+                    # (SCRUM-98). The serial is what halves_seen already uses to tell one
+                    # keyboard from another; older firmware reporting none falls back to the
+                    # side, which is exactly the behaviour this had before.
+                    fw_key = (dev.serial_number or dev.side, addr)
                     if fw_key not in self._module_fw:
                         fp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_FW_VERSION))
                         self._module_fw[fw_key] = format_fw_version(fp) if fp is not None else None
@@ -456,8 +464,11 @@ class DeviceService:
                         module["batteryPercent"] = _battery_percent(mmv)
                 else:
                     self._samples.pop(f"{dev.side}:module", None)
-                    # Undocked: forget its firmware, so a swap is read fresh.
-                    for k in [k for k in self._module_fw if k[0] == dev.side]:
+                    # Undocked: forget its firmware, so a swap is read fresh. Cleared by the
+                    # same key shape the entries are written under -- matching on the side
+                    # alone stopped clearing anything once the key became the serial.
+                    owner = dev.serial_number or dev.side
+                    for k in [k for k in self._module_fw if k[0] == owner]:
                         self._module_fw.pop(k, None)
                 snap["module"] = module
                 snap["at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
