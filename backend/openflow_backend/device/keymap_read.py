@@ -238,6 +238,12 @@ BAY_POSITIONS = range(0x4A, 0x52)
 # This is what "four behaviours per key" actually is -- not four slots in one record. Reads that
 # stop at 0x51 silently drop every double-tap and tap+hold binding on the board.
 SECOND_BANK = 0x52
+# A hold-tap half that is four zero bytes carries NO action. The device pads the unused
+# half of the record this way, so it is the difference between "hold does nothing" and
+# "there is no hold" -- and only the second is true. Reading it as a binding invented a
+# tap+hold on keys that had only a tap, and the invention survived a flash (SCRUM-96).
+EMPTY_SLOT = bytes(4)
+
 SECOND_BANK_BEHAVIOR = {"press": "double_tap", "hold": "tap_hold"}
 
 
@@ -305,9 +311,16 @@ def translate(typ: int, param: bytes, order_to_layer: dict[int, str]) -> list[tu
         return []
     if typ in HOLD_TAP_TYPES and len(param) >= 16:
         h = len(param) - 16          # header length (8 for 0x10, 5 for 0x03)
-        h_at, h_code = decode_keypress(param[h:h + 4])       # &mt HOLD ...
-        t_at, t_code = decode_keypress(param[h + 8:h + 12])  # ... TAP
-        return [("press", t_at, t_code), ("hold", h_at, h_code)]
+        hold_raw, tap_raw = param[h:h + 4], param[h + 8:h + 12]
+        # Either half may be empty and that half is then simply not bound. On the second
+        # bank this is routine: a key with a tap+hold but no double-tap is written with an
+        # empty TAP slot (flash._second_bank_record), and the reverse for the other.
+        out = []
+        if tap_raw != EMPTY_SLOT:
+            out.append(("press", *decode_keypress(tap_raw)))
+        if hold_raw != EMPTY_SLOT:
+            out.append(("hold", *decode_keypress(hold_raw)))
+        return out
     if typ == LAYER_HOLD:
         return [("press", "layer_polite_hold", layer_code("MO_LAYER_"))]
     if typ == OUTPUTS:
