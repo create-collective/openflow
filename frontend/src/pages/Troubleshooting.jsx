@@ -70,7 +70,7 @@ const PAIRING = {
   unknown: { tone: "warn", text: "No pair address" },
 };
 
-function HalfCard({ h, reference }) {
+function HalfCard({ h, reference, onIgnorePort }) {
   const m = h.module;
   const behind = reference && h.firmwareVersion && h.firmwareVersion !== reference.createFirmware;
   const modBehind = reference && m?.firmwareVersion && m.firmwareVersion !== reference.moduleFirmware;
@@ -79,6 +79,23 @@ function HalfCard({ h, reference }) {
       title={h.description || h.side}
       actions={<Badge className="ui-badge-plain">{h.side === "dongle" ? "Dongle" : `${h.side[0].toUpperCase()}${h.side.slice(1)} half`}</Badge>}>
       {h.error && <Notice tone="err">{h.error}</Notice>}
+
+      {/* A half that re-enumerated leaves its old port behind and Windows keeps listing
+          it. We cannot remove that node, only stop choosing it -- which we already do,
+          since resolution prefers whichever port answers. This says the ghost is there
+          and offers to drop it from the list for good. */}
+      {h.stalePorts?.length > 0 && (
+        <Notice tone="warn" className="info-stale-port"
+          title={`Also seen on ${h.stalePorts.join(", ")}`}
+          action={onIgnorePort && (
+            <Button size="sm" onClick={() => onIgnorePort(h.stalePorts[0])}>
+              Ignore {h.stalePorts[0]}
+            </Button>
+          )}>
+          This half answered on {h.port}. The other port is left over from when it
+          reconnected, and nothing here uses it.
+        </Notice>
+      )}
 
       <div className="info-sub">Identity</div>
       <KV k="Firmware" v={h.firmwareVersion} />
@@ -130,6 +147,7 @@ export default function Troubleshooting() {
   const { out, busy, run, clear } = useRunLog();
   const [live, setLive] = useState(false);   // read in this session, not restored from cache
   const [released, setReleased] = useState(false);
+  const [ignored, setIgnored] = useState([]);
   const [now, setNow] = useState(() => Date.now());
   // Device | Connections | Troubleshooting. Device Manager's contents fold into these, so that
   // page leaves the nav (2026-09-11, owner). More tabs may come; these three are the spine.
@@ -152,6 +170,33 @@ export default function Troubleshooting() {
     } catch (e) { setErr(e.message); }
   }, [released]);
 
+  // Stop using a port, or take it back. Neither touches the device: an ignored port is
+  // one we decline to choose, which is all anything can do about a node Windows keeps.
+  // The screen is corrected in place rather than by re-reading the keyboard, which
+  // would be a USB round trip for what is a decision about a list.
+  const ignorePort = useCallback(async (port) => {
+    setErr(null);
+    try {
+      const r = await api.ignorePort(port);
+      setIgnored(r.ignored || []);
+      setHalves((hs) => hs
+        .filter((h) => h.port !== port)
+        .map((h) => (h.stalePorts?.includes(port)
+          ? { ...h, stalePorts: h.stalePorts.filter((p) => p !== port) }
+          : h)));
+    } catch (e) { setErr(e.message); }
+  }, []);
+
+  // Coming back is not instant: the port reappears on the next read, which the button
+  // beside this says.
+  const unignorePort = useCallback(async (port) => {
+    setErr(null);
+    try {
+      const r = await api.unignorePort(port);
+      setIgnored(r.ignored || []);
+    } catch (e) { setErr(e.message); }
+  }, []);
+
   const refresh = useCallback(async () => {
     setLoading(true); setErr(null);
     try {
@@ -172,6 +217,7 @@ export default function Troubleshooting() {
     let cancelled = false;
     api.systemInfo().then((r) => !cancelled && setSys(r)).catch(() => {});
     api.statusLast().then((r) => !cancelled && setReleased(!!r.released)).catch(() => {});
+    api.devices().then((r) => !cancelled && setIgnored(r.ignored || [])).catch(() => {});
     (async () => {
       try {
         const last = await api.statusLastDeep();
@@ -242,6 +288,20 @@ export default function Troubleshooting() {
         </span>
       </div>
 
+      {ignored.length > 0 && (
+        <Notice className="info-stale-port" title="Ignored ports"
+          details={ignored.map((p) => (
+            <div key={p} className="info-ignored-row">
+              <span className="mono">{p}</span>
+              <Button size="sm" onClick={() => unignorePort(p)}>Use it again</Button>
+            </div>
+          ))}
+          detailsLabel={`${ignored.length} port${ignored.length === 1 ? "" : "s"}`}>
+          OpenFlow is leaving these alone. Nothing on the keyboard changed; they are
+          simply not offered as a way to reach it.
+        </Notice>
+      )}
+
       {released && (
         <Notice tone="warn" className="info-released" title="The keyboard is released"
           action={<Button onClick={toggleRelease}>Reconnect</Button>}>
@@ -290,7 +350,7 @@ export default function Troubleshooting() {
           {halves.filter((h) => h.side !== "dongle").length > 0 && (
             <div className="info-halves">
               {halves.filter((h) => h.side !== "dongle").map((h) => (
-                <HalfCard key={h.port} h={h} reference={sys?.reference} />
+                <HalfCard key={h.port} h={h} reference={sys?.reference} onIgnorePort={ignorePort} />
               ))}
             </div>
           )}

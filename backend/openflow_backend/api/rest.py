@@ -352,7 +352,30 @@ async def ui_state() -> dict:
 @router.get("/api/devices")
 async def devices() -> dict:
     svc = get_service()
-    return {"devices": await run_in_threadpool(svc.list_devices)}
+    return {"devices": await run_in_threadpool(svc.list_devices),
+            "ignored": svc.ignored_ports()}
+
+
+@router.post("/rpc/ignore-port")
+async def ignore_port(body: dict = Body(...)) -> dict:
+    """Leave a port alone: no resolution, no poll, not on the Devices page.
+
+    For the port a keyboard left behind when it re-enumerated. Windows keeps listing such a
+    node and nothing we do removes it, so the most we can offer is to stop choosing it. Kept
+    on disk, because those ghosts outlive an app restart.
+    """
+    port = (body.get("port") or "").strip()
+    if not port:
+        raise HTTPException(status_code=400, detail="which port?")
+    return await run_in_threadpool(get_service().ignore_port, port)
+
+
+@router.post("/rpc/unignore-port")
+async def unignore_port(body: dict = Body(...)) -> dict:
+    port = (body.get("port") or "").strip()
+    if not port:
+        raise HTTPException(status_code=400, detail="which port?")
+    return await run_in_threadpool(get_service().unignore_port, port)
 
 
 @router.get("/api/status")

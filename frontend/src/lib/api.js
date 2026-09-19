@@ -26,6 +26,8 @@ export const api = {
   systemInfo: () => req("GET", "/api/info/system"),
   uiState: () => req("GET", "/api/ui/state"),
   devices: () => req("GET", "/api/devices"),
+  ignorePort: (port) => req("POST", "/rpc/ignore-port", { port }),
+  unignorePort: (port) => req("POST", "/rpc/unignore-port", { port }),
   status: () => req("GET", "/api/status"),
   // verbose adds the BLE identity block + the pairing cross-check. Five extra round trips per
   // half, so it is opt-in: Device Manager does not need it, the Information page does.

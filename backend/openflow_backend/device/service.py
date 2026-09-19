@@ -12,6 +12,7 @@ from async code must use asyncio.to_thread / run_in_threadpool.
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from typing import Callable
@@ -32,6 +33,34 @@ __all__ = [
     "DangerousCommandError",
     "parse_keyscan_event",
 ]
+
+
+# Ports the user has told us to leave alone, kept in the data directory rather than in
+# memory: the ghosts this exists for survive an app restart, so an ignore that did not
+# would be no use.
+IGNORED_PORTS_FILE = "ignored-ports.json"
+
+
+def _ignored_path():
+    from ..config import data_dir
+    return data_dir() / IGNORED_PORTS_FILE
+
+
+def _load_ignored() -> set:
+    try:
+        got = json.loads(_ignored_path().read_text(encoding="utf-8"))
+        return {str(p) for p in got} if isinstance(got, list) else set()
+    except Exception:
+        return set()          # missing or malformed: ignore nothing, never fail to start
+
+
+def _save_ignored(ports: set) -> None:
+    try:
+        path = _ignored_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(sorted(ports)), encoding="utf-8")
+    except OSError:
+        pass                  # a read-only data dir must not break the app
 
 
 def parse_keyscan_event(frame_payload: bytes) -> dict | None:
@@ -183,6 +212,13 @@ class DeviceService:
         # while docked, and the poll should not spend a round trip on it every tick.
         self._module_fw: dict = {}
         self._samples: dict[str, list] = {}
+        # port -> {"ok": bool, "at": float}: did this port last answer a handshake? Windows
+        # keeps enumerating a port whose device detached uncleanly, and such a ghost is
+        # indistinguishable from a live one until something tries to talk to it.
+        self._port_health: dict[str, dict] = {}
+        # Ports the user has told us to leave alone. Persisted: the ghosts that prompted
+        # this survived an app restart, so an ignore that did not would be useless.
+        self._ignored: set[str] = _load_ignored()
 
     # --- connection management -------------------------------------------------
 
@@ -251,13 +287,20 @@ class DeviceService:
                 except Exception:
                     pass
             t = SerialTransport(port, dest)
+            # The one place a port is proved good or bad, so what we remember about it cannot
+            # drift from what happened when something actually tried to talk to it.
             try:
                 t.connect()  # performs the mandatory CDC handshake
             except TransportError as e:
+                self._note_port(port, False)
                 # Linux without the udev rule: say so, with the fix, instead of "Cannot open".
                 if port_access.is_permission_denied(e):
                     raise port_access.PortAccessDenied(port) from e
                 raise
+            except Exception:
+                self._note_port(port, False)
+                raise
+            self._note_port(port, True)
             self._transports[port] = t
         return LoggingTransport(t, port)
 
@@ -304,7 +347,7 @@ class DeviceService:
                 "description": d.description,
                 "serialNumber": d.serial_number,
             }
-            for d in find_naya_serial_ports()
+            for d, _others in self.halves_seen()
         ]
 
     # --- live status: one light tick per half, on the app's timer -----------------------------
@@ -423,7 +466,7 @@ class DeviceService:
         if self._released:
             return self.snapshot()      # released: touch nothing, and do not reopen the ports
         seen = set()
-        for dev in find_naya_serial_ports():
+        for dev, _others in self.halves_seen():
             seen.add(dev.side)
             self.tick(dev)
         with self._lock:
@@ -449,8 +492,11 @@ class DeviceService:
         """
         out: list[dict] = []
         with self._lock:
-            for dev in find_naya_serial_ports():
+            for dev, others in self.halves_seen():
                 entry: dict = {
+                    # Ports of this same half we are not using: a re-enumeration leaves the
+                    # old one behind, and saying so beats pretending it is not there.
+                    "stalePorts": others,
                     "port": dev.port,
                     "side": dev.side,
                     "description": dev.description,
@@ -885,12 +931,72 @@ class DeviceService:
 
     # --- helpers ---------------------------------------------------------------
 
+    def _note_port(self, port: str, ok: bool) -> None:
+        self._port_health[port] = {"ok": ok, "at": time.time()}
+
+    def _rank(self, dev) -> tuple:
+        """Best port first: one that answered, then one never tried, then one that failed --
+        oldest failure first, so a port that has since recovered gets another go rather than
+        being blacklisted for the life of the process."""
+        h = self._port_health.get(dev.port)
+        if h is None:
+            return (1, 0.0, dev.port)
+        return ((0, -h["at"], dev.port) if h["ok"] else (2, h["at"], dev.port))
+
+    def visible_ports(self) -> list:
+        """Enumerated ports minus the ones the user told us to ignore."""
+        return [d for d in find_naya_serial_ports() if d.port not in self._ignored]
+
+    def halves_seen(self) -> list[tuple]:
+        """One (device, [other ports]) per PHYSICAL half.
+
+        Two ports reporting the same serial number are one keyboard -- that is what a half
+        looks like after it re-enumerates and Windows keeps the old node. They are grouped
+        rather than dropped, and the ports not chosen are handed back, so the page can say
+        they exist instead of silently hiding them. A missing serial (older firmware) falls
+        back to side and product id, the next best thing that still names one unit.
+        """
+        groups: dict = {}
+        for d in self.visible_ports():
+            groups.setdefault(d.serial_number or f"{d.side}:{d.pid}", []).append(d)
+        out = []
+        for devs in groups.values():
+            ordered = sorted(devs, key=self._rank)
+            out.append((ordered[0], [x.port for x in ordered[1:]]))
+        return out
+
+    # --- the ignore list -------------------------------------------------------
+
+    def ignored_ports(self) -> list[str]:
+        return sorted(self._ignored)
+
+    def ignore_port(self, port: str) -> dict:
+        """Leave a port alone: no resolution, no tick, not on the Devices page."""
+        with self._lock:
+            self._drop(port)
+            self._ignored.add(port)
+            _save_ignored(self._ignored)
+        return {"ignored": self.ignored_ports()}
+
+    def unignore_port(self, port: str) -> dict:
+        with self._lock:
+            self._ignored.discard(port)
+            self._port_health.pop(port, None)   # give it a clean try next time
+            _save_ignored(self._ignored)
+        return {"ignored": self.ignored_ports()}
+
     def _require_side(self, side: str):
-        for d in find_naya_serial_ports():
-            if d.side == side:
-                return d
-        # fall back to first device if the exact side isn't present
-        devs = find_naya_serial_ports()
-        if devs:
-            return devs[0]
-        raise TransportError(f"No {side} device found. Is it connected via USB?")
+        """The port to talk to for this side.
+
+        Prefers one that has answered. It used to take the first match and stop, which is how
+        a ghost port ahead of the live one broke every read and flash in the app (SCRUM-82).
+        It also no longer falls back to a device of a DIFFERENT side: that turned 'the left
+        half is not plugged in' into silently talking to the right one, which on a flash
+        means writing to the wrong half.
+        """
+        cands = [d for d in self.visible_ports() if d.side == side]
+        if not cands:
+            seen = {d.side for d in self.visible_ports()}
+            extra = f" Connected: {', '.join(sorted(seen))}." if seen else ""
+            raise TransportError(f"No {side} device found. Is it connected via USB?{extra}")
+        return sorted(cands, key=self._rank)[0]

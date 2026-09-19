@@ -62,6 +62,7 @@
   "POST /rpc/flash-firmware",
   "POST /rpc/flash-module-firmware",
   "POST /rpc/flash-preview",
+  "POST /rpc/ignore-port",
   "POST /rpc/import-backup-file",
   "POST /rpc/import-layer",
   "POST /rpc/import-module-profile",
@@ -101,5 +102,6 @@
   "POST /rpc/set-setting",
   "POST /rpc/shutdown",
   "POST /rpc/text-command",
+  "POST /rpc/unignore-port",
   "POST /rpc/update-macro-step"
 ]
