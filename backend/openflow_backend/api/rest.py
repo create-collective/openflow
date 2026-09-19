@@ -9,6 +9,7 @@ not-implemented status rather than 404 so the UI can surface state cleanly.
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 import json
 import io
@@ -37,6 +38,8 @@ from ..device.commands import CommandError, dispatch
 from ..device import recovery as recovery_mod
 from ..device.service import DangerousCommandError, TransportError, pairing_report
 from .state import get_service
+
+log = logging.getLogger("openflow.api")
 
 router = APIRouter()
 
@@ -1854,6 +1857,11 @@ async def flash_preview(body: dict = Body(default={})) -> dict:
         result = await run_in_threadpool(_flash_preview, body.get("profileId"),
                                          body.get("side", "left"))
     except Exception as e:  # DB/encode errors surface cleanly to the UI
+        # The UI gets a short message; the log gets the stack. Without this a report of
+        # "flash preview failed: <something>" cannot be located at all -- the whole
+        # traceback was discarded here, and the log a user sent back held nothing but
+        # uvicorn's startup lines (SCRUM-95).
+        log.exception("flash preview failed")
         raise HTTPException(status_code=400, detail=f"flash preview failed: {e}")
     return {"dryRun": True, **result}
 

@@ -264,7 +264,13 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
             if r["at"] is not None and r["p"] in FULL_LAYER_POSITIONS:
                 by_pos.setdefault(r["p"], []).append(r)
         for pos, rows in by_pos.items():
-            rec = _binding_rows_to_record(rows, term, flavour, layer_order)
+            # One unencodable binding must cost that key, not the flash. Before this, a
+            # single hold slot the board carried as zeros aborted the preview and no key
+            # on the board could be written (SCRUM-95).
+            try:
+                rec = _binding_rows_to_record(rows, term, flavour, layer_order)
+            except R.RemapEncodeError:
+                rec = None
             if rec is not None:
                 d.layers[idx][pos] = rec
             else:
@@ -279,7 +285,10 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
                     "effect": "this key keeps whatever the keyboard already had on it",
                 })
             # double-tap / tap+hold are a second hold-tap record at pos + 0x52
-            second = _second_bank_record(rows, term, flavour)
+            try:
+                second = _second_bank_record(rows, term, flavour)
+            except R.RemapEncodeError:
+                second = None
             if second is not None:
                 d.layers[idx][pos + SECOND_BANK] = second
         for pos, hexc in colors.items():
@@ -311,7 +320,29 @@ _DROP_REASONS = {
 _LAYER_TYPES_WITH_ENCODERS = ("layer_polite_hold", "layer_rude_toggle", "layer_polite_toggle")
 
 
+def _keypress(action_type: str | None, code: str | None) -> bytes:
+    """The 4-byte keypress for one binding slot.
+
+    EMPTY_KEYPRESS is the DECODER'S NAME for an all-zero keypress record -- a key that
+    presses nothing, which the board really does carry (a hold-tap whose hold slot is
+    unset, and the Tune gestures NayaFlow labels LED Brightness). Reading one and then
+    refusing to write it back is not a safety property, it is a failed round trip: the
+    bytes are known exactly, because the name is ours and means those bytes.
+
+    Without this a single such key aborted the whole flash preview before anything was
+    sent, so nothing else on the board could be flashed either (SCRUM-95).
+    """
+    if code == R.EMPTY_KEYPRESS:
+        return bytes(4)
+    return R.encode_keypress(action_type, code)
+
+
 def _drop_reason(action_type: str | None, code: str | None) -> str:
+    if (code or "").startswith("RAW_"):
+        # The decoder could not name what the board holds here. EMPTY_KEYPRESS is handled
+        # (see _keypress); anything else RAW_ is bytes we have never seen.
+        return ("The keyboard holds a record here that OpenFlow cannot name yet, so it "
+                "cannot be written back.")
     base = _DROP_REASONS.get(action_type or "")
     if base:
         return base
@@ -342,12 +373,12 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
         # body, but the type encodes intent and 0x10 is what NayaFlow writes for a user-created
         # tap+hold -- it is what sits on the board, and what the secondary bank uses. Emitting
         # 0x03 here made a re-flash of a profile READ FROM the device rewrite those two keys.
-        tap_kp = R.encode_keypress(at, code)
-        hold_kp = R.encode_keypress(hold["at"], hold["ac"])
+        tap_kp = _keypress(at, code)
+        hold_kp = _keypress(hold["at"], hold["ac"])
         return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
 
     if at in ("key", "modifier", *R.CHORD_ACTION_TYPES):
-        return R.KEY_PRESS, R.encode_keypress(at, code)
+        return R.KEY_PRESS, _keypress(at, code)
     if at == "none":
         # DISABLE -> the NONE record, empty param. Better evidenced than anything else here:
         # ~220 of these come back in every board read, and NayaCore has been captured writing
@@ -433,8 +464,8 @@ def _second_bank_record(rows: list, term: int, flavour: int) -> tuple[int, bytes
     if dt is None and th is None:
         return None
     empty = bytes(4)
-    tap_kp = R.encode_keypress(dt["at"], dt["ac"]) if dt is not None else empty
-    hold_kp = R.encode_keypress(th["at"], th["ac"]) if th is not None else empty
+    tap_kp = _keypress(dt["at"], dt["ac"]) if dt is not None else empty
+    hold_kp = _keypress(th["at"], th["ac"]) if th is not None else empty
     return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
 
 
