@@ -30,6 +30,9 @@ export default function ModuleProfileList({ bays, boardKnown = false }) {
         const sel = bays.selectedFor(s.type, s.side);
         const entry = sel && sel !== "disabled" ? bays.profilesFor(s.type, s.side).find((p) => p.id === sel) : null;
         const inherited = bays.inheritedFor(s.type, s.side);
+        // The left and right bays disagree, which one row cannot show. Saying it beats
+        // picking a side silently, because the next pick writes to both (SCRUM-92).
+        const split = bays.splitFor?.(s.type, s.side) || false;
         const name = sel === "disabled" ? "Disabled" : entry ? entry.name : sel ? "Unknown profile" : "Not set";
         const unset = !entry;
         // Only once the board has been read can "not on it" mean anything.
@@ -39,7 +42,7 @@ export default function ModuleProfileList({ bays, boardKnown = false }) {
             key={s.label}
             type="button"
             className={"modprof-row" + (entry?.onBoard ? " live" : "") + (pending ? " pending" : "")}
-            title={`${s.label}: ${name}.${pending ? " Not on the board yet: the next flash writes it." : ""} Open on the Modules page.`}
+            title={`${s.label}: ${name}.${pending ? " Not on the board yet: the next flash writes it." : ""}${split ? " The left and right bays currently differ; choosing here sets both." : ""} Open on the Modules page.`}
             onClick={() => bays.onManage(s.type, s.side)}
           >
             <img className="modprof-img" src={moduleImg(s.type, s.side)} alt="" />
@@ -50,6 +53,7 @@ export default function ModuleProfileList({ bays, boardKnown = false }) {
                   {inherited && <span className="modprof-inherit" title="From the base layer"> · base</span>}
                 </span>
                 {entry?.onBoard && <Badge tone="ok" size="xs">live</Badge>}
+                {split && <Badge tone="warn" size="xs">sides differ</Badge>}
               </span>
               <span className={"modprof-name" + (unset ? " unset" : "")}>{name}</span>
             </span>

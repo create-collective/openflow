@@ -140,7 +140,11 @@ export default function Bindings() {
     if (!profile || !catalog) return null;
     const cur = profile.layers.find((l) => l.id === ed.activeLayerId);
     const base = profile.layers.find((l) => l.orderId === 0) || profile.layers[0];
-    const key = (type, side) => `${type}:keyboard_${side || "left"}`;
+    const key = (type, side) => `${type}:keyboard_${side}`;
+    // A control with no side is SYMMETRIC: it governs both bays, and a write with no side
+    // sets both (db.userdata.set_layer_bay). Reading only the left was the bug -- a Touch
+    // assigned to the right bay alone read as Disabled (SCRUM-92).
+    const sidesOf = (side) => (side ? [side] : ["left", "right"]);
     const layerLabel = cur ? `Layer ${cur.orderId}${cur.name ? ` ${cur.name}` : ""}` : null;
     const liveIds = new Set(
       Object.values(deviceRead || {}).map((e) => e.matched).filter(Boolean));
@@ -154,13 +158,28 @@ export default function Bindings() {
     // (a read once stored a Track id in a Tune bay) is unset, and the layer follows the base
     // layer. The backend applies the same rule when it flashes.
     const typeOf = (id) => (moduleProfiles || []).find((m) => m.id === id)?.type;
-    const ownFor = (l, type, side) => {
+    const oneBay = (l, type, side) => {
       const v = l?.bays?.[key(type, side)];
       if (!v || v === "transparent") return null;
       if (v === "disabled") return v;
       return typeOf(v) === type.toUpperCase() ? v : null;
     };
+    // An assigned bay is the truthful answer for a symmetric control: "disabled on the
+    // left, running a profile on the right" is a board that HAS that profile.
+    const ownFor = (l, type, side) => {
+      const vals = sidesOf(side).map((s) => oneBay(l, type, s));
+      return vals.find((v) => v && v !== "disabled") ?? vals.find((v) => v) ?? null;
+    };
     const selectedFor = (type, side) => ownFor(cur, type, side) ?? ownFor(base, type, side) ?? null;
+    // The two bays of a symmetric control holding different things. Nothing we write can
+    // produce it; a profile configured in NayaFlow can. Worth saying out loud, because one
+    // control cannot express it and the next pick will flatten it onto both sides.
+    const splitFor = (type, side) => {
+      if (side) return false;
+      const l = oneBay(cur, type, "left") ?? oneBay(base, type, "left");
+      const r = oneBay(cur, type, "right") ?? oneBay(base, type, "right");
+      return l !== r;
+    };
 
     return {
       layerLabel,
@@ -177,6 +196,7 @@ export default function Bindings() {
                          onBoard: liveIds.has(m.id) }));
       },
       selectedFor,
+      splitFor,
       // True when the layer follows the base layer here: it says nothing, or it says the
       // same thing (the owner's rule: base is whatever equals layer 0).
       inheritedFor: (type, side) => {
