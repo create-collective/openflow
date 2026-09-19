@@ -440,6 +440,34 @@ CHUNK_MAX = 242
 CAT_REMAP = 0x30
 READ_LAYER_LIST, READ_LAYER_DATA, READ_LED_MAP = 0x1001, 0x1003, 0x100D
 
+# Response flags, established on a donor board running Create 3.28.7 (SCRUM-94). Probing
+# alone could not separate the last two; WRITING a map to the layer did, because the very
+# same read then returned real records with 0x01/0x00.
+RESP_LAST, RESP_MORE = 0x00, 0x01
+RESP_UNIMPLEMENTED = 0x11           # macros, and an opcode invented as a control
+RESP_NO_DATA = (0x16, 0x18)         # "nothing stored for this layer", 0x18 on continuation
+
+
+def chunk_status(body: bytes, flag: int | None) -> str:
+    """Why a read came back with nothing, which is not the same as THAT it did.
+
+    Reporting "empty" for a response we do not understand is how a board that answered in
+    an unfamiliar shape looked identical to one that genuinely stores nothing. The caller
+    can then decide -- and a flash, which uses this read to preserve LEDs it has no model
+    for, very much needs to know the difference.
+    """
+    if body:
+        return "ok"
+    if flag is None:
+        return "silent"                 # no valid frame at all
+    if flag in RESP_NO_DATA:
+        return "empty"                  # the board said so, and we believe it
+    if flag == RESP_UNIMPLEMENTED:
+        return "unsupported"
+    if flag in (RESP_LAST, RESP_MORE):
+        return "empty"
+    return f"unknown:0x{flag:02x}"      # answered in a form we cannot read; say so
+
 
 def _build(dest: int, sub: int, payload: bytes = b"", flags: int = 0x00) -> bytes:
     dr = bytes([(sub >> 8) & 0xFF, sub & 0xFF, flags]) + payload
@@ -480,30 +508,40 @@ def read_keymap(transport, dest: int) -> dict:
         return [r for r in transport._send_raw(_build(dest, sub, payload, flags), timeout) if r.valid]
 
     def read_full(sub, layer):
-        parts, first = [], True
+        """(body, last flag seen). The flag is what tells an empty answer from an
+        unreadable one; without it every non-0x01 response looked like a clean end."""
+        parts, first, flag = [], True, None
         while True:
             r = send(sub, bytes([layer]), flags=0x00 if first else 0x01)
             if not r:
                 break
             resp = r[0]
+            flag = resp.flags
             p = bytes(resp.payload)
             parts.append(p if first else p[1:])
             first = False
-            if resp.flags != 0x01 or len(p) < CHUNK_MAX:
+            if resp.flags != RESP_MORE or len(p) < CHUNK_MAX:
                 break
         stitched = b"".join(parts)
-        return stitched[1:] if stitched[:1] == bytes([layer]) else stitched
+        body = stitched[1:] if stitched[:1] == bytes([layer]) else stitched
+        return body, flag
 
     r = send(READ_LAYER_LIST)
     llp = bytes(r[0].payload) if r else b""
     layer_idxs, layer_uuids, layer_animations = parse_layer_list(llp)
 
-    layers, led = {}, {}
+    layers, led, led_status = {}, {}, {}
     for li in layer_idxs:
-        layers[li] = parse_records(read_full(READ_LAYER_DATA, li))
-        led[li] = parse_led_map(read_full(READ_LED_MAP, li))
+        body, _flag = read_full(READ_LAYER_DATA, li)
+        layers[li] = parse_records(body)
+        body, flag = read_full(READ_LED_MAP, li)
+        led[li] = parse_led_map(body)
+        # "empty" and "unsupported" are both legitimate answers; anything else means the
+        # board said something we do not understand, and an empty map must NOT be taken as
+        # fact from it -- a flash preserves unmodelled LEDs from exactly this reading.
+        led_status[li] = chunk_status(body, flag)
     return {"layers": layers, "led": led, "layer_uuids": layer_uuids,
-            "layer_animations": layer_animations,
+            "layer_animations": layer_animations, "led_status": led_status,
             "bays": {li: decode_bays(recs) for li, recs in layers.items()}}
 
 
