@@ -11,13 +11,29 @@
 //
 //     node scripts/publish-beta.mjs --run <actions-run-id> [--prefix <existing>] [--dry-run]
 //
-// Needs: gh (authenticated), and CLOUDFLARE_API_TOKEN + R2_BUCKET + R2_PUBLIC_BASE in the
-// environment. wrangler is fetched by npx, so there is nothing to install.
+// Needs: gh (authenticated), and CLOUDFLARE_API_TOKEN + R2_BUCKET + R2_PUBLIC_BASE, from
+// openflow/.env (gitignored; see .env.example) or the real environment. wrangler is
+// fetched by npx, so there is nothing to install.
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, readdirSync, statSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, statSync, rmSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, basename } from "node:path";
+import { join, basename, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Credentials come from openflow/.env, which is gitignored. Parsed here rather than with
+// a dependency: it is six lines, and adding a package to read a token is not a trade
+// worth making. Real environment variables win, so CI can pass them without a file.
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const ENV_FILE = resolve(ROOT, ".env");
+if (existsSync(ENV_FILE)) {
+  for (const line of readFileSync(ENV_FILE, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+    if (!m || line.trimStart().startsWith("#")) continue;
+    const value = m[2].trim().replace(/^(["'])(.*)\1$/, "$2");
+    if (!(m[1] in process.env)) process.env[m[1]] = value;
+  }
+}
 
 const args = process.argv.slice(2);
 const flag = (name, fallback = null) => {
