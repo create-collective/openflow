@@ -77,6 +77,10 @@ def as_module_actions(group: str | None = None) -> list[dict]:
             "name": s["name"],
             "chord": s["chord"],
             "icon": s.get("icon"),
+            # Naya's own icon for this chord, where the dictionary names one. The palette draws
+            # these; without it a chord NayaFlow has never heard of (Ctrl+W, Win+L) reaches the
+            # Shortcuts tab with no glyph beside it.
+            "nayaIcon": s.get("nayaAction"),
             "platform": s.get("platform", "any"),
             "actionType": "shortcut_alias",
             "group": s.get("group", "Shortcuts"),

@@ -226,10 +226,15 @@ def test_clearing_a_split_half_cannot_delete_the_gesture():
     print("  clearing a half restores the motion default instead of deleting the gesture")
 
 
-def test_the_module_tab_is_module_only_and_carries_the_gesture_vocabulary():
-    """The 102 module actions were reachable only through the per-gesture dropdown: one flat
-    list, no grouping. They now have a palette tab -- and it must NOT appear on Bindings, since
-    a keycap has no field for a scroll pair or an LED action."""
+def test_the_module_tab_holds_only_what_a_keycap_cannot():
+    """The module actions were reachable only through the per-gesture dropdown: one flat list,
+    no grouping. They now have a palette tab -- and it must NOT appear on Bindings, since a
+    keycap has no field for a scroll pair or an LED action.
+
+    The chord groups that used to sit here moved to the Shortcuts tab, which serves both
+    contexts: they are ordinary chords, and leaving them here meant "Close tab" could be bound
+    to a Tune swipe but not to a key (the gap found while fixing SCRUM-83).
+    """
     cat = ac.get_catalog()
     tab = next((t for t in cat["tabs"] if t["id"] == "module"), None)
     assert tab is not None, "no module tab in the catalog"
@@ -239,20 +244,44 @@ def test_the_module_tab_is_module_only_and_carries_the_gesture_vocabulary():
 
     from openflow_backend.device.module_actions import MODULE_ACTIONS
     in_tab = {a["code"] for c in tab["categories"] for a in c["actions"]}
-    expected = {a["code"] for a in MODULE_ACTIONS if a.get("code")}
-    assert in_tab == expected, "every module action with a code should be reachable"
+    device_only = {a["code"] for a in MODULE_ACTIONS
+                   if a.get("code") and a.get("actionType") != "shortcut_alias"}
+    assert in_tab == device_only, "the module tab is exactly what only a module can hold"
     assert "" not in in_tab, "the None entry is the row's own control, not a palette button"
     print(f"  module tab: {len(tab['categories'])} groups, {len(in_tab)} actions, module-only")
 
 
+def test_every_module_action_is_still_reachable_somewhere():
+    """Splitting the tab must not drop anything: what left went to Shortcuts, not nowhere."""
+    cat = ac.get_catalog()
+    from openflow_backend.device.module_actions import MODULE_ACTIONS
+    reachable = {a["code"] for t in cat["tabs"] if "module" in (t.get("contexts") or [])
+                 for c in (t.get("categories") or []) for a in (c.get("actions") or [])}
+    expected = {a["code"] for a in MODULE_ACTIONS if a.get("code")}
+    assert expected <= reachable, sorted(expected - reachable)
+    print(f"  all {len(expected)} module actions still reachable from a gesture")
+
+
+def test_a_chord_can_be_bound_to_a_key_as_well_as_a_gesture():
+    """The gap this closed: our shortcut dictionary lived in the module-only tab."""
+    cat = ac.get_catalog()
+    tab = next(t for t in cat["tabs"] if t["id"] == "shortcuts")
+    assert "key" in tab["contexts"] and "module" in tab["contexts"]
+    groups = {c["name"] for c in tab["categories"]}
+    assert {"Tabs & browser", "Caret & selection", "Windows & desktops"} <= groups, groups
+    codes = {a["code"] for c in tab["categories"] for a in c["actions"]}
+    assert "LCTRL + W" in codes, "Close tab must be bindable to a key"
+    print(f"  shortcuts tab: {len(tab['categories'])} groups, reachable from a key and a gesture")
+
+
 def test_the_module_groups_lead_with_what_a_gesture_is_usually_bound_to():
-    """13 groups sorted alphabetically buries Clicks and Scroll under 'App navigation'."""
+    """Groups sorted alphabetically would bury Clicks and Scroll."""
     tab = next(t for t in ac.get_catalog()["tabs"] if t["id"] == "module")
     names = [c["name"] for c in tab["categories"]]
     assert names[0] == "Clicks", names
-    assert names.index("Cursor") < names.index("Caret & selection"), names
+    assert names.index("Cursor") < names.index("Media"), names
     assert len(names) == len(set(names)), "a group must not appear twice"
-    print(f"  group order: {', '.join(names[:4])}...")
+    print(f"  group order: {', '.join(names)}")
 
 
 def test_the_apps_tab_carries_no_categories_and_that_is_deliberate():

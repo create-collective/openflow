@@ -393,13 +393,23 @@ _MODULE_GROUP_ORDER = [
 ]
 
 
-def _module_categories():
+# Our shortcut dictionary, as it arrives inside MODULE_ACTIONS. These are plain chords -- a
+# keycap can hold one exactly as a gesture can -- so they belong in the Shortcuts tab, which
+# serves both contexts. They sat in the module-only tab, which meant "Close tab" could be bound
+# to a Tune swipe but not to a key.
+_CHORD_GROUPS = {"App navigation", "Caret & selection", "Clipboard & text", "Find",
+                 "Function keys", "Tabs & browser", "Windows & desktops"}
+
+
+def _module_categories(chords: bool = False):
     """The module action vocabulary, bucketed by the group each action already carries.
 
-    These 102 actions were only ever reachable through the per-gesture dropdown -- one flat
-    list, no grouping, no tooltips. They are the vocabulary that is actually about a module
-    (scroll, cursor, media, window management), so they belong in the palette beside the
-    keyboard tabs rather than hidden in a select.
+    These actions were only ever reachable through the per-gesture dropdown -- one flat list,
+    no grouping, no tooltips -- so they belong in the palette beside the keyboard tabs.
+
+    `chords` picks which half: False gives what only a MODULE can hold (cursor and scroll
+    direction pairs, clicks, media, the LED keys), True gives the chord groups, which any
+    keycap can hold too.
     """
     from .module_actions import MODULE_ACTIONS
 
@@ -407,9 +417,14 @@ def _module_categories():
     for a in MODULE_ACTIONS:
         if not a.get("code"):
             continue                        # the "None" entry: the row's own control clears it
-        buckets.setdefault(a.get("group") or "Other", []).append(
-            {"code": a["code"], "label": a["label"], "actionType": a["actionType"],
-             "name": a.get("name") or a["label"]})
+        group = a.get("group") or "Other"
+        if (group in _CHORD_GROUPS) != chords:
+            continue
+        entry = {"code": a["code"], "label": a["label"], "actionType": a["actionType"],
+                 "name": a.get("name") or a["label"]}
+        if a.get("nayaIcon"):
+            entry["icon"] = a["nayaIcon"]   # NayaFlow's own name for this code wins in _describe
+        buckets.setdefault(group, []).append(entry)
     ordered = [g for g in _MODULE_GROUP_ORDER if g in buckets]
     ordered += sorted(g for g in buckets if g not in _MODULE_GROUP_ORDER)
     return [{"name": g, "actions": buckets[g]} for g in ordered]
@@ -469,7 +484,10 @@ def _tabs():
         {"id": "layers", "label": "✦", "title": "Layers", "contexts": [KEY],
          "categories": []},
         {"id": "shortcuts", "label": "↗", "title": "Shortcuts", "contexts": [KEY, MODULE],
-         "categories": [
+         # Ours first: hand-written, platform-tagged and grouped by what the chord DOES. The
+         # four below are NayaFlow's presets, kept verbatim and grouped by the platform they
+         # were written for.
+         "categories": _module_categories(chords=True) + [
             {"name": "MacOS", "actions": _shortcuts(_MAC)},
             {"name": "Windows", "actions": _shortcuts(_WIN)},
             {"name": "VS Code Presets", "actions": _shortcuts(_VSCODE)},

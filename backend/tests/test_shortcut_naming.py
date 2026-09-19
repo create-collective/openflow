@@ -52,7 +52,7 @@ def test_a_chord_is_named_for_the_category_it_is_listed_under():
 
 
 def test_our_dictionary_name_wins_where_we_have_one():
-    a = _one("LCTRL + UP", "module", "Caret & selection")
+    a = _one("LCTRL + UP", "shortcuts", "Caret & selection")
     assert a["name"] == "Scroll up one line", "our platform-tagged name leads"
     assert a["alias"] == "Mission Control", "what it displaced stays searchable"
     print("  our dictionary leads and keeps the displaced name as an alias")
@@ -76,14 +76,14 @@ def test_a_displaced_tooltip_travels_with_its_own_name():
 
 
 def test_task_view_is_not_called_switch_to_previous_app():
-    a = _one("LGUI + TAB", "module", "Windows & desktops")
+    a = _one("LGUI + TAB", "shortcuts", "Windows & desktops")
     assert a["name"] == "Task view" and a["alias"] == "Switch to Previous App"
     print("  Win+Tab reads as Task view")
 
 
 def test_a_function_key_keeps_its_meaning():
     """NayaFlow names F11 "F11", which tells you nothing you cannot see on the key."""
-    a = _one("F11", "module", "Tabs & browser")
+    a = _one("F11", "shortcuts", "Tabs & browser")
     assert a["name"] == "Full screen"
     print("  F11 means Full screen, not F11")
 

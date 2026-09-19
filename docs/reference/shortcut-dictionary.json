@@ -478,7 +478,9 @@
    "group": "Clipboard & text",
    "platform": "win",
    "bytes": "13000701",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "PRINT",
+   "iconPath": "assets/icons/action/PRINT.svg"
   },
   {
    "code": "LCTRL + S",
@@ -488,7 +490,9 @@
    "group": "Clipboard & text",
    "platform": "win",
    "bytes": "16000701",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "SAVE",
+   "iconPath": "assets/icons/action/SAVE.svg"
   },
   {
    "code": "LCTRL + LSHIFT + V",
@@ -700,7 +704,9 @@
    "group": "Tabs & browser",
    "platform": "any",
    "bytes": "15000701",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "REFRESH_TAB",
+   "iconPath": "assets/icons/action/REFRESH_TAB.svg"
   },
   {
    "code": "LCTRL + LSHIFT + I",
@@ -710,7 +716,9 @@
    "group": "Tabs & browser",
    "platform": "any",
    "bytes": "0c000703",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "SHOW_REFERENCES",
+   "iconPath": "assets/icons/action/SHOW_REFERENCES.svg"
   },
   {
    "code": "LCTRL + LSHIFT + R",
@@ -720,7 +728,9 @@
    "group": "Tabs & browser",
    "platform": "any",
    "bytes": "15000703",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "REFRESH_WINDOW",
+   "iconPath": "assets/icons/action/REFRESH_WINDOW.svg"
   },
   {
    "code": "LCTRL + LSHIFT + T",
@@ -730,7 +740,9 @@
    "group": "Tabs & browser",
    "platform": "win",
    "bytes": "17000703",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "NEW_TAB",
+   "iconPath": "assets/icons/action/NEW_TAB.svg"
   },
   {
    "code": "LCTRL + LSHIFT + TAB",
@@ -776,7 +788,9 @@
    "group": "Tabs & browser",
    "platform": "win",
    "bytes": "1a000701",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "CLOSE_TAB",
+   "iconPath": "assets/icons/action/CLOSE_TAB.svg"
   },
   {
    "code": "F11",
@@ -875,7 +889,9 @@
    "group": "Windows & desktops",
    "platform": "win",
    "bytes": "3d000704",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "CLOSE_WINDOW",
+   "iconPath": "assets/icons/action/CLOSE_WINDOW.svg"
   },
   {
    "code": "LALT + F8",
@@ -929,7 +945,9 @@
    "group": "Windows & desktops",
    "platform": "win",
    "bytes": "11000701",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "NEW_WINDOW",
+   "iconPath": "assets/icons/action/NEW_WINDOW.svg"
   },
   {
    "code": "LCTRL + LSHIFT + ESC",
@@ -949,7 +967,9 @@
    "group": "Windows & desktops",
    "platform": "win",
    "bytes": "11000703",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "NEW_FOLDER",
+   "iconPath": "assets/icons/action/NEW_FOLDER.svg"
   },
   {
    "code": "LGUI + LCTRL + D",
@@ -1007,7 +1027,9 @@
    "group": "Windows & desktops",
    "platform": "win",
    "bytes": "07000708",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "SHOW_DESKTOP",
+   "iconPath": "assets/icons/action/SHOW_DESKTOP.svg"
   },
   {
    "code": "LGUI + E",
@@ -1017,7 +1039,9 @@
    "group": "Windows & desktops",
    "platform": "win",
    "bytes": "08000708",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "SHOW_EXPLORER",
+   "iconPath": "assets/icons/action/SHOW_EXPLORER.svg"
   },
   {
    "code": "LGUI + I",
@@ -1039,7 +1063,9 @@
    "group": "Windows & desktops",
    "platform": "win",
    "bytes": "0f000708",
-   "source": "computed"
+   "source": "computed",
+   "nayaAction": "LOCK_SCREEN",
+   "iconPath": "assets/icons/action/LOCK_SCREEN.svg"
   },
   {
    "code": "LGUI + TAB",
