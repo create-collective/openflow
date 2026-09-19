@@ -896,7 +896,9 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
         ops.append(WriteOp(SYS_SET_TIMEOUTS, R.encode_timeouts(*desired.timeouts), "timeouts", cat=CAT_SYSTEM))
     # --- last: the full layer list, which is what puts the lighting back --------------------
     ops.extend(_lighting_restore_ops(desired, ops))
-    return ops
+    # Applied to the FINISHED plan so every op is covered however it was built, and so the
+    # preview the user confirms is the list of writes that will actually be sent.
+    return [part for op in ops for part in split_for_two_frames(op)]
 
 
 LIGHTING_RESTORE_LABEL = "layer list (restore lighting)"
@@ -935,6 +937,65 @@ def _list_differs(desired: DesiredState, current: DesiredState | None) -> bool:
     if current is None or current.module_list is None:
         return True
     return desired.module_list != current.module_list
+
+
+# Two CDC frames carry this many payload bytes: the first holds CHUNK_MAX, and every
+# continuation re-sends the leading index byte, so it holds CHUNK_MAX - 1.
+MAX_WRITE_PAYLOAD = R.CHUNK_MAX * 2 - 1
+
+
+def _record_offsets(sub: int, body: bytes) -> list[int] | None:
+    """Byte offsets in `body` where a record starts, plus its end. None if unsure.
+
+    Returning None is the safe answer and the caller then leaves the payload alone: a
+    split at the wrong offset would tear a record in half and write nonsense to a
+    keyboard, which is far worse than the hang this is avoiding.
+    """
+    if sub == R.WRITE_LED_MAP_DATA:
+        return list(range(0, len(body) + 1, 4)) if len(body) % 4 == 0 else None
+    if sub == R.WRITE_LAYER_DATA:
+        # The walker every read uses, so the boundaries cannot drift from the ones the
+        # device itself produces.
+        offsets, i = [0], 0
+        for _idx, _typ, param in keymap_read.parse_records(body):
+            i += 3 + len(param)
+            offsets.append(i)
+        return offsets if i == len(body) else None   # trailing bytes mean we misread it
+    return None
+
+
+def split_for_two_frames(op: WriteOp) -> list[WriteOp]:
+    """One write, or several that each fit in two CDC frames.
+
+    A third frame hangs firmware 3.28.7 until it is power-cycled (SCRUM-100). Writes apply
+    by record index -- proved on hardware by sending records 120-135 as their own write and
+    watching them land exactly there -- so several smaller writes are equivalent to one
+    large one, and cost a board that could have taken the large one nothing.
+
+    Payloads we cannot parse into records are returned untouched. That leaves the layer
+    list and the module config as they are; both are far below the limit in practice, and
+    guessing at their boundaries to save a frame is not a trade worth making.
+    """
+    if len(op.payload) <= MAX_WRITE_PAYLOAD:
+        return [op]
+    index, body = op.payload[:1], op.payload[1:]
+    offsets = _record_offsets(op.sub, body)
+    if not offsets:
+        return [op]
+
+    parts, start = [], 0
+    for k in range(1, len(offsets)):
+        # Every part re-sends the index byte, so the budget for records is one less.
+        if offsets[k] - start > MAX_WRITE_PAYLOAD - 1:
+            parts.append((start, offsets[k - 1]))
+            start = offsets[k - 1]
+    parts.append((start, offsets[-1]))
+    parts = [(a, b) for a, b in parts if b > a]
+    if len(parts) < 2:
+        return [op]                      # one record is already too big; nothing to gain
+    return [WriteOp(op.sub, index + body[a:b],
+                    f"{op.label} (part {n} of {len(parts)})", cat=op.cat)
+            for n, (a, b) in enumerate(parts, 1)]
 
 
 def render_frames(plan: list[WriteOp], dest: int = 0x50) -> list[tuple[str, list[bytes]]]:

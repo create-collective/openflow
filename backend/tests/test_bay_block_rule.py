@@ -72,8 +72,11 @@ def _board():
 
 def _written(desired, current):
     plan = F.compute_plan(desired, current, full=True)
-    payload = next(op.payload for op in plan if op.sub == R.WRITE_LED_MAP_DATA)
-    body = payload[1:]
+    # The full 136-record map is two writes now (SCRUM-100); read every part of the first
+    # layer, not just the first write.
+    ops = [op for op in plan if op.sub == R.WRITE_LED_MAP_DATA]
+    layer = ops[0].payload[0]
+    body = b"".join(op.payload[1:] for op in ops if op.payload[0] == layer)
     return {body[i]: (body[i + 1] | (body[i + 2] << 8), body[i + 3]) for i in range(0, len(body), 4)}
 
 

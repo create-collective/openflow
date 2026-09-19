@@ -47,8 +47,13 @@ def _device() -> F.DesiredState:
 
 
 def _written(plan) -> dict[int, tuple[int, bytes]]:
-    payload = next(op.payload for op in plan if op.sub == R.WRITE_LAYER_DATA)
-    return {p: (t, v) for p, t, v in kr.parse_records(payload[1:])}
+    # A layer larger than two CDC frames is written in parts (SCRUM-100), so the records
+    # are spread across several ops. Still exactly one layer: the parts all carry the same
+    # leading index byte, and only that layer is collected.
+    ops = [op for op in plan if op.sub == R.WRITE_LAYER_DATA]
+    layer = ops[0].payload[0]
+    body = b"".join(op.payload[1:] for op in ops if op.payload[0] == layer)
+    return {p: (t, v) for p, t, v in kr.parse_records(body)}
 
 
 def test_tap_only_key_blanks_its_shadow():

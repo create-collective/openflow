@@ -78,12 +78,16 @@ def test_full_flash_roundtrip() -> None:
         assert _stitch(grp) == op.payload, f"stitched payload != op payload for {op.label}"
         idx += n
         # (2) content: parse each write back into records/leds
+        # update, not assign: one layer arrives as several writes when it is too big for
+        # two CDC frames (SCRUM-100), and each part carries a slice of the same layer.
         if op.sub == F.R.WRITE_LAYER_DATA:
             li = op.payload[0]
-            parsed_layers[li] = {p: (t, prm) for p, t, prm in kr.parse_records(op.payload[1:])}
+            parsed_layers.setdefault(li, {}).update(
+                {p: (t, prm) for p, t, prm in kr.parse_records(op.payload[1:])})
         elif op.sub == F.R.WRITE_LED_MAP_DATA:
             li = op.payload[0]
-            parsed_leds[li] = {i: (h, v) for i, h, v in kr.parse_led_map(op.payload[1:])}
+            parsed_leds.setdefault(li, {}).update(
+                {i: (h, v) for i, h, v in kr.parse_led_map(op.payload[1:])})
     assert idx == len(frames), "leftover frames not accounted for"
 
     # every desired binding survives the round-trip, byte-identical
@@ -119,7 +123,12 @@ def test_diff_plan_is_sparse() -> None:
     # complete identity table, and this fixture is a read from before uuids were captured, so
     # it carries none. Either way, everything before it must be exactly the one changed layer.
     tail = [F.LIGHTING_RESTORE_LABEL] if desired.layer_uuids else []
-    assert labels == [f"layer {li}"] + tail, f"expected only the changed layer, got {labels}"
+    # A layer is written in parts when it exceeds two CDC frames (SCRUM-100). The point of
+    # this test is WHICH layer is written and that nothing else is, so the part suffix is
+    # dropped and repeats collapsed -- several parts of one layer are still one layer.
+    base = [lbl.split(" (part ")[0] for lbl in labels]
+    deduped = [lbl for n, lbl in enumerate(base) if n == 0 or lbl != base[n - 1]]
+    assert deduped == [f"layer {li}"] + tail, f"expected only the changed layer, got {labels}"
     print(f"Diff plan OK: one-key change -> {labels}")
 
 
