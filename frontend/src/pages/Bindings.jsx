@@ -77,8 +77,12 @@ export default function Bindings() {
   // port can still be busy and the status comes back with no halves at all; painting THAT
   // blanked both bays and, since the backend keeps the last status, blanked them on the next
   // load too. An empty answer is "unknown", not "nothing docked".
+  // `b` is null when the keyboard told us nothing (nothing read yet, or a read that
+  // failed); then the board keeps what it had. Anything else is an answer and gets
+  // painted, INCLUDING two empty bays -- this used to require at least one bay to be
+  // filled, so unplugging the last module left it on screen.
   function paintBays(b) {
-    if (b && (b.left || b.right)) setAssign(b);
+    if (b) setAssign(b);
   }
 
   // After a read, ask the board what is docked. Best effort: the keymap read has already

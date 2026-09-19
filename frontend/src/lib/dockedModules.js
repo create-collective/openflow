@@ -20,10 +20,18 @@
 // empty rather than guessing at a picture.
 const TYPE_TO_ART = { Track: "track", Touch: "touch", Tune: "tune" };
 
-/** { left, right } with an art key or null per bay, from a list of half snapshots. */
+/**
+ * { left, right } with an art key or null per bay, from a list of half snapshots.
+ *
+ * Returns NULL when there are no halves to reason about, which is a different answer from
+ * "both bays are empty" and has to stay distinguishable: the caller leaves the board alone
+ * when told nothing, and repaints when told something. An EMPTY array is being told
+ * something -- no keyboard on USB means no modules docked.
+ */
 export function baysFromHalves(halves) {
+  if (!halves) return null;
   const bays = { left: null, right: null };
-  for (const half of halves || []) {
+  for (const half of halves) {
     const module = half.module;
     if (!module) continue;
     // Prefer the side the address reports over which port answered. They agree on healthy
