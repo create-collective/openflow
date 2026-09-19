@@ -1,7 +1,7 @@
 {
   "name": "openflow",
   "productName": "OpenFlow",
-  "version": "0.2.0",
+  "version": "0.3.0-beta.1",
   "private": true,
   "description": "OpenFlow desktop app: the Electron shell around the frozen Python backend and the built renderer.",
   "homepage": "https://github.com/traviswye/NayaOS/tree/master/openflow",
