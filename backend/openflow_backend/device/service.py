@@ -327,9 +327,8 @@ class DeviceService:
         that failed at the driver, or a port that is not open). A timeout is not: the command may
         have landed, and re-sending it is the caller's decision."""
         with self._lock:
-            dev = self._require_side(side)
+            dev, t = self._connect_side(side)
             dest = self._dest_for_side(dev.side)
-            t = self._transport_for(dev.port, dest)
             try:
                 return fn(t, dest, dev)
             except TransportError as e:
@@ -558,9 +557,14 @@ class DeviceService:
         with self._lock:
             for dev, others in self.halves_seen():
                 entry: dict = {
-                    # Ports of this same half we are not using: a re-enumeration leaves the
-                    # old one behind, and saying so beats pretending it is not there.
-                    "stalePorts": others,
+                    # Ports of this same half we are not using. Only the ones we PROVED
+                    # dead: a half can expose several live CDC interfaces at once (two per
+                    # half on 3.28.7), and calling the sibling a leftover warned about
+                    # every healthy board on that firmware and offered to ignore a port
+                    # that works (SCRUM-90). A genuine ghost still reports, because the
+                    # ghost-ahead-of-the-live-one case from SCRUM-82 is exactly the one
+                    # where the dead port gets tried and fails.
+                    "stalePorts": self._proved_dead(others),
                     "port": dev.port,
                     "side": dev.side,
                     "description": dev.description,
@@ -573,8 +577,15 @@ class DeviceService:
                     "connected": False,
                 }
                 try:
+                    # May settle on a different interface of the SAME half; see
+                    # _open_with_siblings. Both fields below are then restated against the
+                    # port we actually reached it on, because reporting the port we failed
+                    # on next to "connected": true would be a lie in the payload.
+                    dev, t = self._open_with_siblings(dev)
                     dest = self._dest_for_side(dev.side)
-                    t = self._transport_for(dev.port, dest)
+                    entry["port"] = dev.port
+                    entry["stalePorts"] = self._proved_dead(
+                        [d.port for d in self._siblings_of(dev)])
                     entry.update(self._query_half(t, dest, deep=verbose,
                                                   owner=dev.serial_number or dev.side))
                     entry["connected"] = True
@@ -999,6 +1010,16 @@ class DeviceService:
     def _note_port(self, port: str, ok: bool) -> None:
         self._port_health[port] = {"ok": ok, "at": time.time()}
 
+    def _proved_dead(self, ports: list[str]) -> list[str]:
+        """Of these ports, the ones something actually tried and that actually failed.
+
+        Evidence, not inference. A port nobody has opened says nothing about itself, and
+        on a keyboard whose half exposes two live interfaces the unused one is not a
+        leftover -- it answers perfectly well, we simply are not using it.
+        """
+        return [p for p in ports
+                if self._port_health.get(p, {}).get("ok") is False]
+
     def _rank(self, dev) -> tuple:
         """Best port first: one that answered, then one never tried, then one that failed --
         oldest failure first, so a port that has since recovered gets another go rather than
@@ -1058,8 +1079,8 @@ class DeviceService:
             _save_ignored(self._ignored)
         return {"ignored": self.ignored_ports()}
 
-    def _require_side(self, side: str):
-        """The port to talk to for this side.
+    def _ranked_for_side(self, side: str) -> list:
+        """Every port for this side, best first.
 
         Prefers one that has answered. It used to take the first match and stop, which is how
         a ghost port ahead of the live one broke every read and flash in the app (SCRUM-82).
@@ -1072,4 +1093,69 @@ class DeviceService:
             seen = {d.side for d in self.visible_ports()}
             extra = f" Connected: {', '.join(sorted(seen))}." if seen else ""
             raise TransportError(f"No {side} device found. Is it connected via USB?{extra}")
-        return sorted(cands, key=self._rank)[0]
+        return sorted(cands, key=self._rank)
+
+    def _require_side(self, side: str):
+        """The single best port for this side."""
+        return self._ranked_for_side(side)[0]
+
+    def _siblings_of(self, dev) -> list:
+        """The other ports that are provably the SAME PHYSICAL HALF as `dev`, best first.
+
+        Same serial number, nothing looser. Two Creates attached means two devices that
+        both call themselves "left", and falling through to the other one would read the
+        wrong keyboard -- or, on a flash, write to it. A half that reports no serial
+        (older firmware does exist) gets no siblings, because then nothing proves the two
+        ports belong to the same unit and a guess here is not worth the failure mode.
+
+        Returns [] rather than raising when there is nothing to enumerate: this runs on a
+        path that could not fail before, and it must not start failing there.
+        """
+        sn = getattr(dev, "serial_number", None)
+        if not sn:
+            return []
+        same = [d for d in self.visible_ports()
+                if d.port != dev.port and d.side == dev.side
+                and getattr(d, "serial_number", None) == sn]
+        return sorted(same, key=self._rank)
+
+    def _connect_side(self, side: str):
+        """(device, transport) for this side, trying sibling interfaces before giving up.
+
+        A half can present several CDC interfaces at once and only one of them answers;
+        which one is not predictable (on 3.28.7 the right half answers MI_02 and the left
+        MI_03, neither MI_00). Until _port_health has learned better, _rank leaves them
+        tied and the COM NAME decides, so a cold start can pick the interface that does not
+        answer and fail an operation on a healthy board (SCRUM-90).
+
+        Trying the sibling costs nothing where there is none, which is every half on 3.41,
+        so the supported baseline is unaffected. Each attempt records the port's health, so
+        the fallback happens once and later calls go straight to the interface that works.
+        """
+        # _require_side stays the ONE place a side becomes a port. Going around it would
+        # bypass the seam the rest of the service and its tests are built on.
+        return self._open_with_siblings(self._require_side(side))
+
+    def _open_with_siblings(self, primary):
+        """(device, transport), trying this half's other interfaces before giving up.
+
+        Shared by _connect_side and status_all so the Devices page and every command agree
+        about which port reaches a half. They did not before: status_all opened the port
+        halves_seen guessed and reported the half DISCONNECTED when that guess was the deaf
+        interface, on a board that was working perfectly.
+
+        The error raised when everything fails is the FIRST one, which is the primary's, so
+        a half with no siblings reports exactly what it always did.
+        """
+        first_error = None
+        for dev in [primary, *self._siblings_of(primary)]:
+            try:
+                return dev, self._transport_for(dev.port, self._dest_for_side(dev.side))
+            except port_access.PortAccessDenied:
+                raise          # a permissions problem is identical on every sibling
+            except TransportError as e:
+                if str(e) == self.RELEASED_ERROR:
+                    raise      # released is a decision of ours, not a port that is deaf
+                if first_error is None:
+                    first_error = e
+        raise first_error
