@@ -14,7 +14,7 @@
 // Needs: gh (authenticated), and CLOUDFLARE_API_TOKEN + R2_BUCKET + R2_PUBLIC_BASE, from
 // openflow/.env (gitignored; see .env.example) or the real environment. wrangler is
 // fetched by npx, so there is nothing to install.
-import { execFileSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdtempSync, readdirSync, statSync, rmSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -49,8 +49,11 @@ if (!RUN) {
   console.error("usage: node scripts/publish-beta.mjs --run <actions-run-id> [--prefix <p>] [--dry-run]");
   process.exit(1);
 }
-for (const [name, value] of [["R2_BUCKET", BUCKET], ["R2_PUBLIC_BASE", PUBLIC_BASE],
-                             ["CLOUDFLARE_API_TOKEN", process.env.CLOUDFLARE_API_TOKEN]]) {
+// CLOUDFLARE_API_TOKEN is deliberately NOT required. `wrangler login` leaves an OAuth session
+// that wrangler picks up on its own, which means the usual setup stores no long-lived
+// credential on disk at all. The token is only worth setting for an unattended run, where
+// there is no browser to complete a login.
+for (const [name, value] of [["R2_BUCKET", BUCKET], ["R2_PUBLIC_BASE", PUBLIC_BASE]]) {
   if (!value && !DRY) {
     console.error(`publish-beta: ${name} is not set. See the header of this file.`);
     process.exit(1);
@@ -61,6 +64,16 @@ for (const [name, value] of [["R2_BUCKET", BUCKET], ["R2_PUBLIC_BASE", PUBLIC_BA
 const GH = process.env.GH_PATH || "gh";
 const sh = (cmd, cmdArgs, opts = {}) =>
   execFileSync(cmd, cmdArgs, { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], ...opts });
+
+// npx on Windows is a .cmd shim. execFileSync cannot find it under a bare name, and since the
+// Node 18/20 fix for CVE-2024-27980 it refuses to spawn one directly at all, so it has to go
+// through a shell. Arguments are quoted because the artifact paths are under a temp directory
+// whose name can contain spaces.
+const npx = (cmdArgs) => {
+  if (process.platform !== "win32") return sh("npx", cmdArgs, { stdio: "inherit" });
+  const line = cmdArgs.map((a) => `"${String(a).replace(/"/g, '\\"')}"`).join(" ");
+  return execSync(`npx ${line}`, { stdio: "inherit" });
+};
 
 // The prefix is what makes the link unguessable. Reuse one to republish the same version
 // without invalidating links already sent out; omit it for a fresh, unrelated URL.
@@ -100,8 +113,8 @@ try {
       console.log(`  would upload  ${basename(f).padEnd(52)} ${mb.padStart(7)} MB`);
     } else {
       console.log(`  uploading     ${basename(f).padEnd(52)} ${mb.padStart(7)} MB`);
-      sh("npx", ["--yes", "wrangler", "r2", "object", "put", `${BUCKET}/${key}`,
-                 "--file", f, "--remote"], { stdio: "inherit" });
+      npx(["--yes", "wrangler", "r2", "object", "put", `${BUCKET}/${key}`,
+           "--file", f, "--remote"]);
     }
     links.push(`${PUBLIC_BASE}/${key}`);
   }
