@@ -67,10 +67,28 @@ export default function BleSlots({ side = "left" }) {
     <div>
       <div className="btn-row" style={{ alignItems: "center", marginBottom: 8 }}>
         <Button onClick={load} busy={busy}>{busy ? "Reading…" : "Refresh"}</Button>
-        {data && <span className="saved-note ok">Active slot: {data.activeProfile}</span>}
+        {data && data.activeProfile != null && (
+          <span className="saved-note ok">Active slot: {data.activeProfile}</span>
+        )}
       </div>
       {err && <Notice tone="err">{err}</Notice>}
       {!data && !err && <div className="empty">Reading Bluetooth status…</div>}
+
+      {/* The half answered, but its firmware has no BLE_GET_STATUS, so which slot is
+          active and which hold a bond is genuinely unknowable here (SCRUM-91). This used
+          to be an error and a blank page. A limitation gets a quiet notice, and what the
+          keyboard DID tell us is worth showing: it is most of what this page is for. */}
+      {data && data.slotsAvailable === false && (
+        <>
+          <Notice title="Bluetooth slots need newer firmware">
+            {data.unavailableReason}
+          </Notice>
+          <KVRow k="This half's address" v={data.localAddress || "unknown"} />
+          {data.name && <KVRow k="Name" v={data.name} />}
+          <KVRow k="Paired with"
+            v={(data.pairedPeers || []).join(", ") || data.pairAddress || "nothing"} />
+        </>
+      )}
       {data && (data.slots || []).map((s) => (
         <KVRow key={s.index} style={{ alignItems: "center" }}
           k={s.reserved ? "Slot 0 — reserved (dongle)" : `Slot ${s.index} (BT ${s.index})`}>

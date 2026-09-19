@@ -866,7 +866,9 @@ class DeviceService:
         def go(t, dest, dev):
             p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_STATUS))
             if p is None:
-                raise TransportError(f"the {dev.side} half returned no Bluetooth status")
+                # Not a fault. Older firmware simply does not implement this command, and
+                # a keyboard that pairs perfectly well must not be presented as broken.
+                return self._ble_identity_only(t, dest, dev)
             d = ble_status.decode(p)
             slots = [{"index": pr["index"], "active": bool(pr["isActive"]),
                       "bonded": bool(pr.get("bonded") or pr["hasPeerData"]),
@@ -875,10 +877,61 @@ class DeviceService:
                       "reserved": pr["index"] == self.BLE_RESERVED_SLOT,
                       "flags": pr["activeFlags"]}
                      for pr in d.get("profiles") or []]
-            return {"ok": True, "side": dev.side, "activeProfile": d.get("activeProfile"),
+            return {"ok": True, "side": dev.side, "slotsAvailable": True,
+                    "activeProfile": d.get("activeProfile"),
                     "hostConnected": bool(d.get("hostConnected")),
                     "slots": slots, "localAddress": d.get("localAddress"), "statusRaw": p.hex()}
         return self._with_transport(side, go)
+
+    @staticmethod
+    def _ble_identity_only(t, dest, dev) -> dict:
+        """What a half can still tell us with no BLE_GET_STATUS.
+
+        On Create 3.28.7 every BLE opcode from 0x100C up goes unanswered -- GET_STATUS,
+        GET_DONGLE_ADDR, GET_SLOTX_ADDR, GET_FW_VERSION -- while everything below answers
+        normally, so the firmware predates them rather than being broken.
+
+        Which slot is active and which hold a bond lives only in GET_STATUS, so the slot
+        view cannot be reconstructed and is reported as unavailable rather than guessed.
+        The identity behind it does survive, and it is most of what the page is for.
+
+        Keyed on the command going unanswered, never on a version number, so a firmware we
+        have not seen is judged by what it actually does.
+        """
+        def mac(payload):
+            return ":".join(f"{b:02X}" for b in payload[:6]) if payload and len(payload) >= 6 \
+                else None
+
+        local = mac(_first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_ADDRESS)))
+        bonded = mac(_first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_PAIR_ADDRESS)))
+
+        # [count][addr x count]: the peers this half holds a bond with, which on a split
+        # keyboard is normally just the other half.
+        peers, raw = [], _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_ALL_PAIRS))
+        if raw and len(raw) >= 1:
+            for k in range(raw[0]):
+                got = mac(raw[1 + k * 6:7 + k * 6])
+                if got:
+                    peers.append(got)
+
+        # A half with no name answers flags 0xff and an empty payload rather than an empty
+        # string, so "no name set" and "could not ask" look the same here; neither is an
+        # error worth reporting.
+        name, np = None, _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_NAME))
+        if np and len(np) > 1:
+            try:
+                name = np[1:1 + np[0]].decode("utf-8") or None
+            except (UnicodeDecodeError, ValueError):
+                name = None
+
+        return {"ok": True, "side": dev.side, "slotsAvailable": False, "slots": [],
+                "activeProfile": None, "hostConnected": None,
+                "localAddress": local, "pairAddress": bonded, "pairedPeers": peers,
+                "name": name,
+                "unavailableReason": "This keyboard's firmware does not report Bluetooth "
+                                     "slot status, so which slot is active and which are "
+                                     "paired cannot be shown. Everything else here was read "
+                                     "from the keyboard normally."}
 
     def select_ble_profile(self, side: str, index: int, allow_reserved: bool = False) -> dict:
         """Make slot `index` the active one -- what the BT_DEVICE_n key does. Read back after."""
