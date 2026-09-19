@@ -67,8 +67,14 @@ def test_our_own_sentence_case_name_survives_as_an_alias():
 def test_every_entry_has_a_name_and_nayaflow_entries_have_a_tooltip():
     names = json.loads(NAMES.read_text(encoding="utf-8"))
     # SEMICOLON is the one code NayaFlow ships without a tooltip; only what the scrape has is owed.
+    #
+    # A chord we renamed is the exception, and deliberately so (SCRUM-83): NayaFlow's tooltip
+    # describes NayaFlow's reading of that chord, so under the Windows preset for Ctrl+Up it
+    # said "Open Mission Control." beneath "Move to previous paragraph". It moves to
+    # `aliasTooltip` with the name it belongs to rather than sitting under a name it contradicts.
     missing_tip = [a["code"] for _t, a in _actions()
-                   if names.get(a["code"], {}).get("tooltip") and not a.get("tooltip")]
+                   if names.get(a["code"], {}).get("tooltip")
+                   and not a.get("tooltip") and not a.get("aliasTooltip")]
     assert not missing_tip, missing_tip
     no_name = [a["code"] for _t, a in _actions() if not a.get("name")]
     assert not no_name, no_name

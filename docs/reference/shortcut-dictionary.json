@@ -11,111 +11,11 @@
    "bytes": "the 4-byte KEY_PRESS param: [usage lo][usage hi][page][mods]",
    "capturedBytes": "present only when NayaFlow sent something different"
   },
-  "nayaActionNames": "nayaAction / iconPath reference NayaFlow's own 860-name action vocabulary, read from its asar icon registry. Names only -- no SVG is copied into this repo."
+  "nayaActionNames": "nayaAction / iconPath reference NayaFlow's own 860-name action vocabulary, read from its asar icon registry. Names only -- no SVG is copied into this repo.",
+  "updated": "2026-09-18",
+  "updateNote": "2026-09-18 (SCRUM-83): semantic pass over every chord. Four names corrected where ours described a different action than the chord performs (Shift+F5, Shift+F8, Shift+Alt+I, Ctrl+F4); Shift+F11 regrouped; 13 everyday Windows chords added, their bytes computed by remap.encode_keypress, which reproduces all captured chords byte-for-byte."
  },
  "shortcuts": [
-  {
-   "code": "END",
-   "name": "End of line",
-   "chord": "End",
-   "icon": "⇥",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4d000700",
-   "source": "capture",
-   "nayaAction": "LINE_END",
-   "iconPath": "assets/icons/action/LINE_END.svg"
-  },
-  {
-   "code": "F10",
-   "name": "Menu bar / step over",
-   "chord": "F10",
-   "icon": "☰",
-   "group": "Function keys",
-   "platform": "any",
-   "bytes": "43000700",
-   "source": "capture"
-  },
-  {
-   "code": "F11",
-   "name": "Full screen",
-   "chord": "F11",
-   "icon": "⛶",
-   "group": "Tabs & browser",
-   "platform": "any",
-   "bytes": "44000700",
-   "source": "capture",
-   "nayaAction": "FULLSCREEN",
-   "iconPath": "assets/icons/action/FULLSCREEN.svg"
-  },
-  {
-   "code": "F12",
-   "name": "Go to definition",
-   "chord": "F12",
-   "icon": "→",
-   "group": "Function keys",
-   "platform": "any",
-   "bytes": "45000700",
-   "source": "capture",
-   "nayaAction": "GO_TO_DEFINITION",
-   "iconPath": "assets/icons/action/GO_TO_DEFINITION.svg"
-  },
-  {
-   "code": "F2",
-   "name": "Rename",
-   "chord": "F2",
-   "icon": "✎",
-   "group": "Function keys",
-   "platform": "any",
-   "bytes": "3b000700",
-   "source": "capture",
-   "nayaAction": "RENAME",
-   "iconPath": "assets/icons/action/RENAME.svg"
-  },
-  {
-   "code": "F5",
-   "name": "Refresh",
-   "chord": "F5",
-   "icon": "⟳",
-   "group": "Tabs & browser",
-   "platform": "any",
-   "bytes": "3e000700",
-   "source": "capture"
-  },
-  {
-   "code": "F8",
-   "name": "Step over (debugger)",
-   "chord": "F8",
-   "icon": "⤵",
-   "group": "Function keys",
-   "platform": "any",
-   "bytes": "41000700",
-   "source": "capture"
-  },
-  {
-   "code": "F9",
-   "name": "Toggle breakpoint",
-   "chord": "F9",
-   "icon": "●",
-   "group": "Function keys",
-   "platform": "any",
-   "bytes": "42000700",
-   "source": "capture",
-   "nayaAction": "TOGGLE_BREAKPOINT",
-   "iconPath": "assets/icons/action/TOGGLE_BREAKPOINT.svg"
-  },
-  {
-   "code": "HOME",
-   "name": "Start of line",
-   "chord": "Home",
-   "icon": "⇤",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4a000700",
-   "source": "capture",
-   "nayaAction": "LINE_START",
-   "iconPath": "assets/icons/action/LINE_START.svg"
-  },
   {
    "code": "LALT + A",
    "name": "Open the App menu",
@@ -124,16 +24,6 @@
    "group": "App navigation",
    "platform": "any",
    "bytes": "04000704",
-   "source": "capture"
-  },
-  {
-   "code": "LALT + CLICK",
-   "name": "Hold Alt (then click)",
-   "chord": "Alt + Click",
-   "icon": "🖱",
-   "group": "Windows & desktops",
-   "platform": "any",
-   "bytes": "00000004",
    "source": "capture"
   },
   {
@@ -147,41 +37,6 @@
    "source": "capture"
   },
   {
-   "code": "LALT + ENTER",
-   "name": "Properties",
-   "chord": "Alt + Enter",
-   "icon": "ⓘ",
-   "group": "Windows & desktops",
-   "platform": "win",
-   "bytes": "28000704",
-   "source": "encoder (capture differs)",
-   "capturedBytes": "00000004"
-  },
-  {
-   "code": "LALT + ESC",
-   "name": "Cycle windows",
-   "chord": "Alt + Esc",
-   "icon": "⇄",
-   "group": "Windows & desktops",
-   "platform": "win",
-   "bytes": "29000704",
-   "source": "capture",
-   "nayaAction": "CYCLE_WINDOWS",
-   "iconPath": "assets/icons/action/CYCLE_WINDOWS.svg"
-  },
-  {
-   "code": "LALT + F8",
-   "name": "Show password",
-   "chord": "Alt + F8",
-   "icon": "👁",
-   "group": "Windows & desktops",
-   "platform": "win",
-   "bytes": "41000704",
-   "source": "capture",
-   "nayaAction": "SHOW_PASSWORD",
-   "iconPath": "assets/icons/action/SHOW_PASSWORD.svg"
-  },
-  {
    "code": "LALT + LEFT",
    "name": "Back",
    "chord": "Alt + Left",
@@ -192,18 +47,6 @@
    "source": "capture",
    "nayaAction": "BACK",
    "iconPath": "assets/icons/action/BACK.svg"
-  },
-  {
-   "code": "LALT + LSHIFT + ESC",
-   "name": "Cycle windows backwards",
-   "chord": "Alt + Shift + Esc",
-   "icon": "⇄",
-   "group": "Windows & desktops",
-   "platform": "win",
-   "bytes": "29000706",
-   "source": "capture",
-   "nayaAction": "CYCLE_WINDOWS",
-   "iconPath": "assets/icons/action/CYCLE_WINDOWS.svg"
   },
   {
    "code": "LALT + PG_DN",
@@ -238,26 +81,6 @@
    "iconPath": "assets/icons/action/FORWARD.svg"
   },
   {
-   "code": "LALT + SPACE",
-   "name": "Window menu",
-   "chord": "Alt + Space",
-   "icon": "☰",
-   "group": "Windows & desktops",
-   "platform": "win",
-   "bytes": "2c000704",
-   "source": "capture"
-  },
-  {
-   "code": "LALT + TAB",
-   "name": "Switch window (Alt held)",
-   "chord": "Alt + Tab",
-   "icon": "⇄",
-   "group": "Windows & desktops",
-   "platform": "win",
-   "bytes": "2b000704",
-   "source": "encoder"
-  },
-  {
    "code": "LALT + UP",
    "name": "Up one folder",
    "chord": "Alt + Up",
@@ -265,6 +88,308 @@
    "group": "App navigation",
    "platform": "win",
    "bytes": "52000704",
+   "source": "capture"
+  },
+  {
+   "code": "LCTRL + LSHIFT + GRAVE",
+   "name": "New terminal",
+   "chord": "Ctrl + Shift + `",
+   "icon": "＋",
+   "group": "App navigation",
+   "platform": "any",
+   "bytes": "35000703",
+   "source": "capture",
+   "nayaAction": "NEW_TERMINAL",
+   "iconPath": "assets/icons/action/NEW_TERMINAL.svg"
+  },
+  {
+   "code": "LCTRL + GRAVE",
+   "name": "Toggle terminal panel",
+   "chord": "Ctrl + `",
+   "icon": "▭",
+   "group": "App navigation",
+   "platform": "any",
+   "bytes": "35000701",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + LALT + I",
+   "name": "Add cursor to line ends",
+   "chord": "Shift + Alt + I",
+   "icon": "🔍",
+   "group": "App navigation",
+   "platform": "any",
+   "bytes": "0c000706",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + LALT + LEFT",
+   "name": "Shrink selection",
+   "chord": "Shift + Alt + Left",
+   "icon": "⇤",
+   "group": "App navigation",
+   "platform": "any",
+   "bytes": "50000706",
+   "source": "capture",
+   "nayaAction": "SHRINK_SELECTION",
+   "iconPath": "assets/icons/action/SHRINK_SELECTION.svg"
+  },
+  {
+   "code": "LSHIFT + LALT + RIGHT",
+   "name": "Expand selection",
+   "chord": "Shift + Alt + Right",
+   "icon": "⇥",
+   "group": "App navigation",
+   "platform": "any",
+   "bytes": "4f000706",
+   "source": "capture",
+   "nayaAction": "EXPAND_SELECTION",
+   "iconPath": "assets/icons/action/EXPAND_SELECTION.svg"
+  },
+  {
+   "code": "LSHIFT + LALT + UP",
+   "name": "Copy line up",
+   "chord": "Shift + Alt + Up",
+   "icon": "↑",
+   "group": "App navigation",
+   "platform": "any",
+   "bytes": "52000706",
+   "source": "capture",
+   "nayaAction": "COPY_LINE_UP",
+   "iconPath": "assets/icons/action/COPY_LINE_UP.svg"
+  },
+  {
+   "code": "LCTRL + DOWN",
+   "name": "Scroll down one line",
+   "chord": "Ctrl + Down",
+   "icon": "↓",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "51000701",
+   "source": "capture"
+  },
+  {
+   "code": "LCTRL + END",
+   "name": "End of document",
+   "chord": "Ctrl + End",
+   "icon": "⇲",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4d000701",
+   "source": "capture",
+   "nayaAction": "DOC_END",
+   "iconPath": "assets/icons/action/DOC_END.svg"
+  },
+  {
+   "code": "LCTRL + HOME",
+   "name": "Start of document",
+   "chord": "Ctrl + Home",
+   "icon": "⇱",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4a000701",
+   "source": "capture",
+   "nayaAction": "DOC_START",
+   "iconPath": "assets/icons/action/DOC_START.svg"
+  },
+  {
+   "code": "LCTRL + LEFT",
+   "name": "Previous word",
+   "chord": "Ctrl + Left",
+   "icon": "⇠",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "50000701",
+   "source": "capture",
+   "nayaAction": "PREV_WORD",
+   "iconPath": "assets/icons/action/PREV_WORD.svg"
+  },
+  {
+   "code": "LCTRL + RIGHT",
+   "name": "Next word",
+   "chord": "Ctrl + Right",
+   "icon": "⇢",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4f000701",
+   "source": "capture",
+   "nayaAction": "NEXT_WORD",
+   "iconPath": "assets/icons/action/NEXT_WORD.svg"
+  },
+  {
+   "code": "LCTRL + UP",
+   "name": "Scroll up one line",
+   "chord": "Ctrl + Up",
+   "icon": "↑",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "52000701",
+   "source": "capture"
+  },
+  {
+   "code": "END",
+   "name": "End of line",
+   "chord": "End",
+   "icon": "⇥",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4d000700",
+   "source": "capture",
+   "nayaAction": "LINE_END",
+   "iconPath": "assets/icons/action/LINE_END.svg"
+  },
+  {
+   "code": "HOME",
+   "name": "Start of line",
+   "chord": "Home",
+   "icon": "⇤",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4a000700",
+   "source": "capture",
+   "nayaAction": "LINE_START",
+   "iconPath": "assets/icons/action/LINE_START.svg"
+  },
+  {
+   "code": "LSHIFT + LCTRL + DOWN",
+   "name": "Select to paragraph below",
+   "chord": "Shift + Ctrl + Down",
+   "icon": "↓",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "51000703",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + LCTRL + END",
+   "name": "Select to end of document",
+   "chord": "Shift + Ctrl + End",
+   "icon": "⇲",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4d000703",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + LCTRL + HOME",
+   "name": "Select to start of document",
+   "chord": "Shift + Ctrl + Home",
+   "icon": "⇱",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4a000703",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + LCTRL + LEFT",
+   "name": "Select previous word",
+   "chord": "Shift + Ctrl + Left",
+   "icon": "⇠",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "50000703",
+   "source": "encoder"
+  },
+  {
+   "code": "LSHIFT + LCTRL + RIGHT",
+   "name": "Select next word",
+   "chord": "Shift + Ctrl + Right",
+   "icon": "⇢",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4f000703",
+   "source": "capture",
+   "nayaAction": "SELECT_NEXT_WORD",
+   "iconPath": "assets/icons/action/SELECT_NEXT_WORD.svg"
+  },
+  {
+   "code": "LSHIFT + LCTRL + UP",
+   "name": "Select to paragraph above",
+   "chord": "Shift + Ctrl + Up",
+   "icon": "↑",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "52000703",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + DOWN",
+   "name": "Select down a line",
+   "chord": "Shift + Down",
+   "icon": "↓",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "51000702",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + END",
+   "name": "Select to end of line",
+   "chord": "Shift + End",
+   "icon": "⇥",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4d000702",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + HOME",
+   "name": "Select to start of line",
+   "chord": "Shift + Home",
+   "icon": "⇤",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4a000702",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + LEFT",
+   "name": "Select left",
+   "chord": "Shift + Left",
+   "icon": "⇤",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "50000702",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + PG_DN",
+   "name": "Select down a page",
+   "chord": "Shift + Page Down",
+   "icon": "⇟",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4e000702",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + PG_UP",
+   "name": "Select up a page",
+   "chord": "Shift + Page Up",
+   "icon": "⇞",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4b000702",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + RIGHT",
+   "name": "Select right",
+   "chord": "Shift + Right",
+   "icon": "⇥",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "4f000702",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + UP",
+   "name": "Select up a line",
+   "chord": "Shift + Up",
+   "icon": "↑",
+   "group": "Caret & selection",
+   "platform": "any",
+   "bytes": "52000702",
    "source": "capture"
   },
   {
@@ -334,84 +459,6 @@
    "source": "capture"
   },
   {
-   "code": "LCTRL + DOWN",
-   "name": "Scroll down one line",
-   "chord": "Ctrl + Down",
-   "icon": "↓",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "51000701",
-   "source": "capture"
-  },
-  {
-   "code": "LCTRL + END",
-   "name": "End of document",
-   "chord": "Ctrl + End",
-   "icon": "⇲",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4d000701",
-   "source": "capture",
-   "nayaAction": "DOC_END",
-   "iconPath": "assets/icons/action/DOC_END.svg"
-  },
-  {
-   "code": "LCTRL + F",
-   "name": "Find",
-   "chord": "Ctrl + F",
-   "icon": "🔍",
-   "group": "Find",
-   "platform": "any",
-   "bytes": "09000701",
-   "source": "capture",
-   "nayaAction": "FIND",
-   "iconPath": "assets/icons/action/FIND.svg"
-  },
-  {
-   "code": "LCTRL + F4",
-   "name": "Close tab",
-   "chord": "Ctrl + F4",
-   "icon": "✕",
-   "group": "Tabs & browser",
-   "platform": "win",
-   "bytes": "3d000701",
-   "source": "capture",
-   "nayaAction": "CLOSE_TAB",
-   "iconPath": "assets/icons/action/CLOSE_TAB.svg"
-  },
-  {
-   "code": "LCTRL + GRAVE",
-   "name": "Toggle terminal panel",
-   "chord": "Ctrl + `",
-   "icon": "▭",
-   "group": "App navigation",
-   "platform": "any",
-   "bytes": "35000701",
-   "source": "capture"
-  },
-  {
-   "code": "LCTRL + H",
-   "name": "Replace",
-   "chord": "Ctrl + H",
-   "icon": "⇄",
-   "group": "Find",
-   "platform": "win",
-   "bytes": "0b000701",
-   "source": "capture"
-  },
-  {
-   "code": "LCTRL + HOME",
-   "name": "Start of document",
-   "chord": "Ctrl + Home",
-   "icon": "⇱",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4a000701",
-   "source": "capture",
-   "nayaAction": "DOC_START",
-   "iconPath": "assets/icons/action/DOC_START.svg"
-  },
-  {
    "code": "LCTRL + I",
    "name": "Italic",
    "chord": "Ctrl + I",
@@ -424,60 +471,24 @@
    "iconPath": "assets/icons/action/ITALIC.svg"
   },
   {
-   "code": "LCTRL + L",
-   "name": "Focus address bar",
-   "chord": "Ctrl + L",
-   "icon": "🔗",
-   "group": "Tabs & browser",
-   "platform": "any",
-   "bytes": "0f000701",
-   "source": "capture"
-  },
-  {
-   "code": "LCTRL + LEFT",
-   "name": "Previous word",
-   "chord": "Ctrl + Left",
-   "icon": "⇠",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "50000701",
-   "source": "capture",
-   "nayaAction": "PREV_WORD",
-   "iconPath": "assets/icons/action/PREV_WORD.svg"
-  },
-  {
-   "code": "LCTRL + LSHIFT + ESC",
-   "name": "Task Manager",
-   "chord": "Ctrl + Shift + Esc",
-   "icon": "📊",
-   "group": "Windows & desktops",
+   "code": "LCTRL + P",
+   "name": "Print",
+   "chord": "Ctrl + P",
+   "icon": "",
+   "group": "Clipboard & text",
    "platform": "win",
-   "bytes": "29000703",
-   "source": "capture"
+   "bytes": "13000701",
+   "source": "computed"
   },
   {
-   "code": "LCTRL + LSHIFT + GRAVE",
-   "name": "New terminal",
-   "chord": "Ctrl + Shift + `",
-   "icon": "＋",
-   "group": "App navigation",
-   "platform": "any",
-   "bytes": "35000703",
-   "source": "capture",
-   "nayaAction": "NEW_TERMINAL",
-   "iconPath": "assets/icons/action/NEW_TERMINAL.svg"
-  },
-  {
-   "code": "LCTRL + LSHIFT + TAB",
-   "name": "Previous tab",
-   "chord": "Ctrl + Shift + Tab",
-   "icon": "⭾",
-   "group": "Tabs & browser",
-   "platform": "any",
-   "bytes": "2b000703",
-   "source": "capture",
-   "nayaAction": "PREV_TAB",
-   "iconPath": "assets/icons/action/PREV_TAB.svg"
+   "code": "LCTRL + S",
+   "name": "Save",
+   "chord": "Ctrl + S",
+   "icon": "",
+   "group": "Clipboard & text",
+   "platform": "win",
+   "bytes": "16000701",
+   "source": "computed"
   },
   {
    "code": "LCTRL + LSHIFT + V",
@@ -492,42 +503,6 @@
    "iconPath": "assets/icons/action/PASTE_PLAIN.svg"
   },
   {
-   "code": "LCTRL + RIGHT",
-   "name": "Next word",
-   "chord": "Ctrl + Right",
-   "icon": "⇢",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4f000701",
-   "source": "capture",
-   "nayaAction": "NEXT_WORD",
-   "iconPath": "assets/icons/action/NEXT_WORD.svg"
-  },
-  {
-   "code": "LCTRL + T",
-   "name": "New tab",
-   "chord": "Ctrl + T",
-   "icon": "＋",
-   "group": "Tabs & browser",
-   "platform": "any",
-   "bytes": "17000701",
-   "source": "capture",
-   "nayaAction": "NEW_TAB",
-   "iconPath": "assets/icons/action/NEW_TAB.svg"
-  },
-  {
-   "code": "LCTRL + TAB",
-   "name": "Next tab",
-   "chord": "Ctrl + Tab",
-   "icon": "⭾",
-   "group": "Tabs & browser",
-   "platform": "any",
-   "bytes": "2b000701",
-   "source": "capture",
-   "nayaAction": "NEXT_TAB",
-   "iconPath": "assets/icons/action/NEXT_TAB.svg"
-  },
-  {
    "code": "LCTRL + U",
    "name": "Underline",
    "chord": "Ctrl + U",
@@ -538,16 +513,6 @@
    "source": "capture",
    "nayaAction": "UNDERLINE",
    "iconPath": "assets/icons/action/UNDERLINE.svg"
-  },
-  {
-   "code": "LCTRL + UP",
-   "name": "Scroll up one line",
-   "chord": "Ctrl + Up",
-   "icon": "↑",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "52000701",
-   "source": "capture"
   },
   {
    "code": "LCTRL + V",
@@ -598,16 +563,393 @@
    "iconPath": "assets/icons/action/UNDO.svg"
   },
   {
-   "code": "LGUI + I",
-   "name": "Settings",
-   "chord": "Win + I",
-   "icon": "⚙",
+   "code": "LCTRL + F",
+   "name": "Find",
+   "chord": "Ctrl + F",
+   "icon": "🔍",
+   "group": "Find",
+   "platform": "any",
+   "bytes": "09000701",
+   "source": "capture",
+   "nayaAction": "FIND",
+   "iconPath": "assets/icons/action/FIND.svg"
+  },
+  {
+   "code": "LCTRL + H",
+   "name": "Replace",
+   "chord": "Ctrl + H",
+   "icon": "⇄",
+   "group": "Find",
+   "platform": "win",
+   "bytes": "0b000701",
+   "source": "capture"
+  },
+  {
+   "code": "F10",
+   "name": "Menu bar / step over",
+   "chord": "F10",
+   "icon": "☰",
+   "group": "Function keys",
+   "platform": "any",
+   "bytes": "43000700",
+   "source": "capture"
+  },
+  {
+   "code": "F12",
+   "name": "Go to definition",
+   "chord": "F12",
+   "icon": "→",
+   "group": "Function keys",
+   "platform": "any",
+   "bytes": "45000700",
+   "source": "capture",
+   "nayaAction": "GO_TO_DEFINITION",
+   "iconPath": "assets/icons/action/GO_TO_DEFINITION.svg"
+  },
+  {
+   "code": "F2",
+   "name": "Rename",
+   "chord": "F2",
+   "icon": "✎",
+   "group": "Function keys",
+   "platform": "any",
+   "bytes": "3b000700",
+   "source": "capture",
+   "nayaAction": "RENAME",
+   "iconPath": "assets/icons/action/RENAME.svg"
+  },
+  {
+   "code": "F8",
+   "name": "Step over (debugger)",
+   "chord": "F8",
+   "icon": "⤵",
+   "group": "Function keys",
+   "platform": "any",
+   "bytes": "41000700",
+   "source": "capture"
+  },
+  {
+   "code": "F9",
+   "name": "Toggle breakpoint",
+   "chord": "F9",
+   "icon": "●",
+   "group": "Function keys",
+   "platform": "any",
+   "bytes": "42000700",
+   "source": "capture",
+   "nayaAction": "TOGGLE_BREAKPOINT",
+   "iconPath": "assets/icons/action/TOGGLE_BREAKPOINT.svg"
+  },
+  {
+   "code": "LSHIFT + F11",
+   "name": "Step out (debugger)",
+   "chord": "Shift + F11",
+   "icon": "⤴",
+   "group": "Function keys",
+   "platform": "any",
+   "bytes": "44000702",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + F12",
+   "name": "Find all references",
+   "chord": "Shift + F12",
+   "icon": "⇉",
+   "group": "Function keys",
+   "platform": "any",
+   "bytes": "45000702",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + F8",
+   "name": "Previous problem",
+   "chord": "Shift + F8",
+   "icon": "⤴",
+   "group": "Function keys",
+   "platform": "any",
+   "bytes": "41000702",
+   "source": "capture"
+  },
+  {
+   "code": "LCTRL + F4",
+   "name": "Close document",
+   "chord": "Ctrl + F4",
+   "icon": "✕",
+   "group": "Tabs & browser",
+   "platform": "win",
+   "bytes": "3d000701",
+   "source": "capture",
+   "nayaAction": "CLOSE_TAB",
+   "iconPath": "assets/icons/action/CLOSE_TAB.svg"
+  },
+  {
+   "code": "LCTRL + L",
+   "name": "Focus address bar",
+   "chord": "Ctrl + L",
+   "icon": "🔗",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "0f000701",
+   "source": "capture"
+  },
+  {
+   "code": "LCTRL + R",
+   "name": "Reload",
+   "chord": "Ctrl + R",
+   "icon": "",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "15000701",
+   "source": "computed"
+  },
+  {
+   "code": "LCTRL + LSHIFT + I",
+   "name": "Developer tools",
+   "chord": "Ctrl + Shift + I",
+   "icon": "",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "0c000703",
+   "source": "computed"
+  },
+  {
+   "code": "LCTRL + LSHIFT + R",
+   "name": "Hard refresh",
+   "chord": "Ctrl + Shift + R",
+   "icon": "",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "15000703",
+   "source": "computed"
+  },
+  {
+   "code": "LCTRL + LSHIFT + T",
+   "name": "Reopen closed tab",
+   "chord": "Ctrl + Shift + T",
+   "icon": "",
+   "group": "Tabs & browser",
+   "platform": "win",
+   "bytes": "17000703",
+   "source": "computed"
+  },
+  {
+   "code": "LCTRL + LSHIFT + TAB",
+   "name": "Previous tab",
+   "chord": "Ctrl + Shift + Tab",
+   "icon": "⭾",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "2b000703",
+   "source": "capture",
+   "nayaAction": "PREV_TAB",
+   "iconPath": "assets/icons/action/PREV_TAB.svg"
+  },
+  {
+   "code": "LCTRL + T",
+   "name": "New tab",
+   "chord": "Ctrl + T",
+   "icon": "＋",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "17000701",
+   "source": "capture",
+   "nayaAction": "NEW_TAB",
+   "iconPath": "assets/icons/action/NEW_TAB.svg"
+  },
+  {
+   "code": "LCTRL + TAB",
+   "name": "Next tab",
+   "chord": "Ctrl + Tab",
+   "icon": "⭾",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "2b000701",
+   "source": "capture",
+   "nayaAction": "NEXT_TAB",
+   "iconPath": "assets/icons/action/NEXT_TAB.svg"
+  },
+  {
+   "code": "LCTRL + W",
+   "name": "Close tab",
+   "chord": "Ctrl + W",
+   "icon": "",
+   "group": "Tabs & browser",
+   "platform": "win",
+   "bytes": "1a000701",
+   "source": "computed"
+  },
+  {
+   "code": "F11",
+   "name": "Full screen",
+   "chord": "F11",
+   "icon": "⛶",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "44000700",
+   "source": "capture",
+   "nayaAction": "FULLSCREEN",
+   "iconPath": "assets/icons/action/FULLSCREEN.svg"
+  },
+  {
+   "code": "F5",
+   "name": "Refresh",
+   "chord": "F5",
+   "icon": "⟳",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "3e000700",
+   "source": "capture"
+  },
+  {
+   "code": "LSHIFT + F5",
+   "name": "Stop debugging",
+   "chord": "Shift + F5",
+   "icon": "⟳",
+   "group": "Tabs & browser",
+   "platform": "any",
+   "bytes": "3e000702",
+   "source": "capture"
+  },
+  {
+   "code": "[LALT] + LSHIFT + TAB",
+   "name": "Switch window backwards",
+   "chord": "(Alt) + Shift + Tab",
+   "icon": "⇄",
    "group": "Windows & desktops",
    "platform": "win",
-   "bytes": "0c000708",
+   "bytes": "2b000702",
    "source": "capture",
-   "nayaAction": "SETTINGS",
-   "iconPath": "assets/icons/action/SETTINGS.svg"
+   "nayaAction": "CYCLE_APPS_ALT",
+   "iconPath": "assets/icons/action/CYCLE_APPS_ALT.svg"
+  },
+  {
+   "code": "[LALT] + TAB",
+   "name": "Switch window",
+   "chord": "(Alt) + Tab",
+   "icon": "⇄",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "2b000700",
+   "source": "capture",
+   "nayaAction": "CYCLE_APPS",
+   "iconPath": "assets/icons/action/CYCLE_APPS.svg"
+  },
+  {
+   "code": "LALT + CLICK",
+   "name": "Hold Alt (then click)",
+   "chord": "Alt + Click",
+   "icon": "🖱",
+   "group": "Windows & desktops",
+   "platform": "any",
+   "bytes": "00000004",
+   "source": "capture"
+  },
+  {
+   "code": "LALT + ENTER",
+   "name": "Properties",
+   "chord": "Alt + Enter",
+   "icon": "ⓘ",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "28000704",
+   "source": "encoder (capture differs)",
+   "capturedBytes": "00000004"
+  },
+  {
+   "code": "LALT + ESC",
+   "name": "Cycle windows",
+   "chord": "Alt + Esc",
+   "icon": "⇄",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "29000704",
+   "source": "capture",
+   "nayaAction": "CYCLE_WINDOWS",
+   "iconPath": "assets/icons/action/CYCLE_WINDOWS.svg"
+  },
+  {
+   "code": "LALT + F4",
+   "name": "Close window",
+   "chord": "Alt + F4",
+   "icon": "",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "3d000704",
+   "source": "computed"
+  },
+  {
+   "code": "LALT + F8",
+   "name": "Show password",
+   "chord": "Alt + F8",
+   "icon": "👁",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "41000704",
+   "source": "capture",
+   "nayaAction": "SHOW_PASSWORD",
+   "iconPath": "assets/icons/action/SHOW_PASSWORD.svg"
+  },
+  {
+   "code": "LALT + LSHIFT + ESC",
+   "name": "Cycle windows backwards",
+   "chord": "Alt + Shift + Esc",
+   "icon": "⇄",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "29000706",
+   "source": "capture",
+   "nayaAction": "CYCLE_WINDOWS",
+   "iconPath": "assets/icons/action/CYCLE_WINDOWS.svg"
+  },
+  {
+   "code": "LALT + SPACE",
+   "name": "Window menu",
+   "chord": "Alt + Space",
+   "icon": "☰",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "2c000704",
+   "source": "capture"
+  },
+  {
+   "code": "LALT + TAB",
+   "name": "Switch window (Alt held)",
+   "chord": "Alt + Tab",
+   "icon": "⇄",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "2b000704",
+   "source": "encoder"
+  },
+  {
+   "code": "LCTRL + N",
+   "name": "New window",
+   "chord": "Ctrl + N",
+   "icon": "",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "11000701",
+   "source": "computed"
+  },
+  {
+   "code": "LCTRL + LSHIFT + ESC",
+   "name": "Task Manager",
+   "chord": "Ctrl + Shift + Esc",
+   "icon": "📊",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "29000703",
+   "source": "capture"
+  },
+  {
+   "code": "LCTRL + LSHIFT + N",
+   "name": "New folder",
+   "chord": "Ctrl + Shift + N",
+   "icon": "",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "11000703",
+   "source": "computed"
   },
   {
    "code": "LGUI + LCTRL + D",
@@ -658,6 +1000,48 @@
    "iconPath": "assets/icons/action/RIGHT_DESKTOP.svg"
   },
   {
+   "code": "LGUI + D",
+   "name": "Show desktop",
+   "chord": "Win + D",
+   "icon": "",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "07000708",
+   "source": "computed"
+  },
+  {
+   "code": "LGUI + E",
+   "name": "File Explorer",
+   "chord": "Win + E",
+   "icon": "",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "08000708",
+   "source": "computed"
+  },
+  {
+   "code": "LGUI + I",
+   "name": "Settings",
+   "chord": "Win + I",
+   "icon": "⚙",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "0c000708",
+   "source": "capture",
+   "nayaAction": "SETTINGS",
+   "iconPath": "assets/icons/action/SETTINGS.svg"
+  },
+  {
+   "code": "LGUI + L",
+   "name": "Lock the computer",
+   "chord": "Win + L",
+   "icon": "",
+   "group": "Windows & desktops",
+   "platform": "win",
+   "bytes": "0f000708",
+   "source": "computed"
+  },
+  {
    "code": "LGUI + TAB",
    "name": "Task view",
    "chord": "Win + Tab",
@@ -668,258 +1052,6 @@
    "source": "capture",
    "nayaAction": "TASK_VIEW",
    "iconPath": "assets/icons/action/TASK_VIEW.svg"
-  },
-  {
-   "code": "LSHIFT + DOWN",
-   "name": "Select down a line",
-   "chord": "Shift + Down",
-   "icon": "↓",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "51000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + END",
-   "name": "Select to end of line",
-   "chord": "Shift + End",
-   "icon": "⇥",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4d000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + F11",
-   "name": "Step out (debugger)",
-   "chord": "Shift + F11",
-   "icon": "⤴",
-   "group": "Tabs & browser",
-   "platform": "any",
-   "bytes": "44000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + F12",
-   "name": "Find all references",
-   "chord": "Shift + F12",
-   "icon": "⇉",
-   "group": "Function keys",
-   "platform": "any",
-   "bytes": "45000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + F5",
-   "name": "Hard refresh",
-   "chord": "Shift + F5",
-   "icon": "⟳",
-   "group": "Tabs & browser",
-   "platform": "any",
-   "bytes": "3e000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + F8",
-   "name": "Step back (debugger)",
-   "chord": "Shift + F8",
-   "icon": "⤴",
-   "group": "Function keys",
-   "platform": "any",
-   "bytes": "41000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + HOME",
-   "name": "Select to start of line",
-   "chord": "Shift + Home",
-   "icon": "⇤",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4a000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + LALT + I",
-   "name": "Toggle inspector",
-   "chord": "Shift + Alt + I",
-   "icon": "🔍",
-   "group": "App navigation",
-   "platform": "any",
-   "bytes": "0c000706",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + LALT + LEFT",
-   "name": "Shrink selection",
-   "chord": "Shift + Alt + Left",
-   "icon": "⇤",
-   "group": "App navigation",
-   "platform": "any",
-   "bytes": "50000706",
-   "source": "capture",
-   "nayaAction": "SHRINK_SELECTION",
-   "iconPath": "assets/icons/action/SHRINK_SELECTION.svg"
-  },
-  {
-   "code": "LSHIFT + LALT + RIGHT",
-   "name": "Expand selection",
-   "chord": "Shift + Alt + Right",
-   "icon": "⇥",
-   "group": "App navigation",
-   "platform": "any",
-   "bytes": "4f000706",
-   "source": "capture",
-   "nayaAction": "EXPAND_SELECTION",
-   "iconPath": "assets/icons/action/EXPAND_SELECTION.svg"
-  },
-  {
-   "code": "LSHIFT + LALT + UP",
-   "name": "Copy line up",
-   "chord": "Shift + Alt + Up",
-   "icon": "↑",
-   "group": "App navigation",
-   "platform": "any",
-   "bytes": "52000706",
-   "source": "capture",
-   "nayaAction": "COPY_LINE_UP",
-   "iconPath": "assets/icons/action/COPY_LINE_UP.svg"
-  },
-  {
-   "code": "LSHIFT + LCTRL + DOWN",
-   "name": "Select to paragraph below",
-   "chord": "Shift + Ctrl + Down",
-   "icon": "↓",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "51000703",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + LCTRL + END",
-   "name": "Select to end of document",
-   "chord": "Shift + Ctrl + End",
-   "icon": "⇲",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4d000703",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + LCTRL + HOME",
-   "name": "Select to start of document",
-   "chord": "Shift + Ctrl + Home",
-   "icon": "⇱",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4a000703",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + LCTRL + LEFT",
-   "name": "Select previous word",
-   "chord": "Shift + Ctrl + Left",
-   "icon": "⇠",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "50000703",
-   "source": "encoder"
-  },
-  {
-   "code": "LSHIFT + LCTRL + RIGHT",
-   "name": "Select next word",
-   "chord": "Shift + Ctrl + Right",
-   "icon": "⇢",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4f000703",
-   "source": "capture",
-   "nayaAction": "SELECT_NEXT_WORD",
-   "iconPath": "assets/icons/action/SELECT_NEXT_WORD.svg"
-  },
-  {
-   "code": "LSHIFT + LCTRL + UP",
-   "name": "Select to paragraph above",
-   "chord": "Shift + Ctrl + Up",
-   "icon": "↑",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "52000703",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + LEFT",
-   "name": "Select left",
-   "chord": "Shift + Left",
-   "icon": "⇤",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "50000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + PG_DN",
-   "name": "Select down a page",
-   "chord": "Shift + Page Down",
-   "icon": "⇟",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4e000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + PG_UP",
-   "name": "Select up a page",
-   "chord": "Shift + Page Up",
-   "icon": "⇞",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4b000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + RIGHT",
-   "name": "Select right",
-   "chord": "Shift + Right",
-   "icon": "⇥",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "4f000702",
-   "source": "capture"
-  },
-  {
-   "code": "LSHIFT + UP",
-   "name": "Select up a line",
-   "chord": "Shift + Up",
-   "icon": "↑",
-   "group": "Caret & selection",
-   "platform": "any",
-   "bytes": "52000702",
-   "source": "capture"
-  },
-  {
-   "code": "[LALT] + LSHIFT + TAB",
-   "name": "Switch window backwards",
-   "chord": "(Alt) + Shift + Tab",
-   "icon": "⇄",
-   "group": "Windows & desktops",
-   "platform": "win",
-   "bytes": "2b000702",
-   "source": "capture",
-   "nayaAction": "CYCLE_APPS_ALT",
-   "iconPath": "assets/icons/action/CYCLE_APPS_ALT.svg"
-  },
-  {
-   "code": "[LALT] + TAB",
-   "name": "Switch window",
-   "chord": "(Alt) + Tab",
-   "icon": "⇄",
-   "group": "Windows & desktops",
-   "platform": "win",
-   "bytes": "2b000700",
-   "source": "capture",
-   "nayaAction": "CYCLE_APPS",
-   "iconPath": "assets/icons/action/CYCLE_APPS.svg"
   }
  ]
 }

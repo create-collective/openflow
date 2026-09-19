@@ -504,21 +504,57 @@ def _describe(action: dict, names: dict) -> dict:
     if action["code"] in _ICON_OVERRIDES:
         out["icon"] = _ICON_OVERRIDES[action["code"]]
     nf = names.get(action["code"])
-    if nf:
-        if nf.get("name") and nf["name"].strip().lower() != (action.get("name") or "").strip().lower():
-            if action.get("name") and action["name"] != action["label"]:
-                out["alias"] = action["name"]
-            out["name"] = nf["name"]
-        elif not out.get("name"):
-            out["name"] = nf.get("name") or action["label"]
+    if not nf:
+        if not out.get("name"):
+            out["name"] = action["label"]
+        return out
+
+    # Whose name this entry carries, most specific source first. NayaFlow's vocabulary is one
+    # GLOBAL name per chord and it is macOS- and editor-flavoured, so letting it win relabelled
+    # things it knows nothing about: Ctrl+Up read as "Mission Control" (a macOS action; the
+    # chord scrolls a line on Windows), Win+Tab as "Switch to Previous App" rather than Task
+    # view, Alt+Tab's next and previous swapped, F11 reduced to "F11" -- and, worst of all, the
+    # SAME name on all three preset categories, so one chord appeared three times as "Mission
+    # Control" in a Windows search. The palette search ranks and displays this name, which is
+    # how a tester searched for a macOS action and bound a Windows chord that scrolls
+    # (SCRUM-83).
+    #
+    #   1. a name the entry set itself -- our shortcut dictionary, hand-written and
+    #      platform-tagged;
+    #   2. a shortcut preset's own label, which is written for ITS category ("Move to previous
+    #      paragraph" under Windows, "Scroll Line Up" under VS Code);
+    #   3. NayaFlow's global name, for everything else.
+    # SCOPED TO SHORTCUT CHORDS. For device vocabulary -- LED effects, the Bluetooth keys, mouse
+    # buttons -- NayaFlow's names are the better ones and win as they always have: "Bluetooth
+    # Clear and Pair" says more than our "Clear the Bluetooth pairing". The platform problem is
+    # specific to CHORDS, where one global name is applied to a Windows, a macOS and a VS Code
+    # reading of the same keystroke.
+    theirs = (nf.get("name") or "").strip()
+    own = (action.get("name") or "").strip()
+    is_chord = action.get("actionType") == "shortcut_alias"
+    # What this entry calls itself: the name our dictionary gave it, or, for a preset with no
+    # name of its own, its label -- which is already written for its category.
+    ours = own or ((action.get("label") or "").strip() if is_chord else "")
+
+    if is_chord and ours and theirs and theirs.lower() != ours.lower():
+        out["name"] = ours
+        out["alias"] = theirs
+        # Their tooltip describes THEIR action ("Open Mission Control." under a scroll
+        # command), so it travels with the name it belongs to rather than contradicting ours.
+        if nf.get("tooltip"):
+            out["aliasTooltip"] = nf["tooltip"]
+    else:
+        # Device vocabulary, unchanged: theirs leads and ours is kept as the alias.
+        if theirs and own and theirs.lower() != own.lower():
+            out["alias"] = own
+        out["name"] = theirs or own or action["label"]
         if nf.get("tooltip"):
             out["tooltip"] = nf["tooltip"]
-        if nf.get("category"):
-            out["nayaflowCategory"] = nf["category"]
-        if nf.get("icon"):
-            out["icon"] = nf["icon"]
-    elif not out.get("name"):
-        out["name"] = action["label"]
+
+    if nf.get("category"):
+        out["nayaflowCategory"] = nf["category"]
+    if nf.get("icon"):
+        out["icon"] = nf["icon"]
     return out
 
 
@@ -533,7 +569,7 @@ def get_catalog() -> dict:
         for c in t.get("categories") or []:
             actions = [_describe(a, names) for a in c.get("actions") or []]
             for a in actions:
-                flat.setdefault(a["code"], {k: a[k] for k in ("label", "name", "tooltip", "alias", "icon")
+                flat.setdefault(a["code"], {k: a[k] for k in ("label", "name", "tooltip", "alias", "aliasTooltip", "icon")
                                             if k in a})
             cats.append({**c, "actions": actions})
         tabs.append({**t, "categories": cats})
