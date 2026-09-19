@@ -217,6 +217,9 @@ class DeviceService:
         # A docked module's firmware, read once per docking (side, address); it cannot change
         # while docked, and the poll should not spend a round trip on it every tick.
         self._module_fw: dict = {}
+        # Which battery command each docked module answers: 'precise' or 'legacy'. Probed
+        # once per docking; see _module_voltage. Keyed like _module_fw.
+        self._module_batt: dict = {}
         self._samples: dict[str, list] = {}
         # port -> {"ok": bool, "at": float}: did this port last answer a handshake? Windows
         # keeps enumerating a port whose device detached uncleanly, and such a ghost is
@@ -366,6 +369,54 @@ class DeviceService:
     # The full status read (status_all) stays as it is for the Information page.
     TICK_SAMPLES = 5          # ticks folded into the reported battery; nayactl samples 5 per read
 
+    # The two ways a module reports its cell voltage. PRECISE answers in millivolts and is
+    # absent on older module firmware (2.1.2 measured: no payload, 1.09 s of timeout every
+    # time it is asked). LEGACY answers in 0.1 mV and is present on both. _to_millivolts
+    # sniffs the unit by magnitude, so either lands correctly without a version check.
+    #
+    # Payload shapes differ and neither is guessed: PRECISE is [voltage hi][lo][status],
+    # status 0 meaning valid; LEGACY is [_][batt hi][batt lo][usb hi][usb lo]. Both are the
+    # decodes nayactl uses (cli/status.py), which were measured against real modules.
+    @staticmethod
+    def _decode_precise(p) -> int | None:
+        if p is None or len(p) < 2:
+            return None
+        if len(p) >= 3 and p[2] != 0:
+            return None                      # the module said the reading is not valid
+        raw = (p[0] << 8) | p[1]
+        return _to_millivolts(raw) if raw > 0 else None
+
+    @staticmethod
+    def _decode_legacy(p) -> int | None:
+        if p is None or len(p) < 3:
+            return None
+        raw = (p[1] << 8) | p[2]             # bytes 3 and 4 are the USB/charger voltage
+        return _to_millivolts(raw) if raw > 0 else None
+
+    def _module_voltage(self, t, dest, key) -> int | None:
+        """A docked module's cell voltage in mV, asking only what it answers.
+
+        Which command a module speaks is a property of that module, so it is probed once
+        per docking and remembered. Without that, a module that does not implement PRECISE
+        costs a full timeout on every single tick, forever, for nothing.
+        """
+        PRECISE, LEGACY = "precise", "legacy"
+        known = self._module_batt.get(key)
+        order = ([(PRECISE, C.MOD_GET_PRECISE_BATTERY, self._decode_precise)]
+                 if known == PRECISE else
+                 [(LEGACY, C.MOD_GET_BATTERY, self._decode_legacy)]
+                 if known == LEGACY else
+                 [(PRECISE, C.MOD_GET_PRECISE_BATTERY, self._decode_precise),
+                  (LEGACY, C.MOD_GET_BATTERY, self._decode_legacy)])
+        for name, sub, decode in order:
+            mv = decode(_first_payload(t.send_command(dest, C.CAT_MODULE, sub, timeout=1.5)))
+            if mv is not None:
+                self._module_batt[key] = name
+                return mv
+        # Neither answered. Deliberately NOT remembered: a module that is charging from flat
+        # can start reporting later, and pinning it now would mean never asking again.
+        return None
+
     def _fold(self, key: str, mv: int | None) -> int | None:
         """A rolling median over the last TICK_SAMPLES readings, one reading per tick."""
         if mv is None:
@@ -451,14 +502,8 @@ class DeviceService:
                         self._module_fw[fw_key] = format_fw_version(fp) if fp is not None else None
                     if self._module_fw.get(fw_key):
                         module["firmwareVersion"] = self._module_fw[fw_key]
-                    mp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_PRECISE_BATTERY))
-                    mmv = None
-                    if mp is not None and len(mp) >= 2:
-                        voltage = (mp[0] << 8) | mp[1]
-                        valid = (mp[2] == 0) if len(mp) >= 3 else True
-                        if valid and voltage > 0:
-                            mmv = _to_millivolts(voltage)
-                    mmv = self._fold(f"{dev.side}:module", mmv)
+                    mmv = self._fold(f"{dev.side}:module",
+                                     self._module_voltage(t, dest, fw_key))
                     if mmv is not None:
                         module["batteryMillivolts"] = mmv
                         module["batteryPercent"] = _battery_percent(mmv)
@@ -470,6 +515,8 @@ class DeviceService:
                     owner = dev.serial_number or dev.side
                     for k in [k for k in self._module_fw if k[0] == owner]:
                         self._module_fw.pop(k, None)
+                    for k in [k for k in self._module_batt if k[0] == owner]:
+                        self._module_batt.pop(k, None)
                 snap["module"] = module
                 snap["at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
                 self._live[dev.side] = snap
@@ -528,7 +575,8 @@ class DeviceService:
                 try:
                     dest = self._dest_for_side(dev.side)
                     t = self._transport_for(dev.port, dest)
-                    entry.update(self._query_half(t, dest, deep=verbose))
+                    entry.update(self._query_half(t, dest, deep=verbose,
+                                                  owner=dev.serial_number or dev.side))
                     entry["connected"] = True
                 except TransportError as e:
                     entry["error"] = str(e)
@@ -538,7 +586,8 @@ class DeviceService:
                 out.append(entry)
         return out
 
-    def _query_half(self, t: SerialTransport, dest: int, deep: bool = False) -> dict:
+    def _query_half(self, t: SerialTransport, dest: int, deep: bool = False,
+                    owner: str | None = None) -> dict:
         info: dict = {}
 
         payload = _first_payload(t.send_command(dest, C.CAT_SYSTEM, C.SYS_GET_FW_VERSION))
@@ -627,15 +676,14 @@ class DeviceService:
             mp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_FW_VERSION))
             if mp is not None:
                 module["firmwareVersion"] = format_fw_version(mp)
-            mp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_PRECISE_BATTERY))
-            if mp is not None and len(mp) >= 2:
-                voltage = (mp[0] << 8) | mp[1]
-                valid = (mp[2] == 0) if len(mp) >= 3 else True
-                if valid and voltage > 0:
-                    mv = _to_millivolts(voltage)
-                    module["voltage"] = voltage          # raw, exactly as the device reported it
-                    module["batteryMillivolts"] = mv
-                    module["batteryPercent"] = _battery_percent(mv)
+            #  identifies the HALF this module is docked on, so the battery-command
+            # cache is shared with the poll instead of each path probing separately. It is
+            # passed in because this method sees only a transport: the caller has the device.
+            mv = self._module_voltage(t, dest, (owner, addr))
+            if mv is not None:
+                module["voltage"] = mv
+                module["batteryMillivolts"] = mv
+                module["batteryPercent"] = _battery_percent(mv)
             info["module"] = module
 
         return info
