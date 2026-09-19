@@ -410,6 +410,33 @@ async def status(verbose: bool = False) -> dict:
     return out
 
 
+def _cache_matches_attached(cached: dict):
+    """Does a cached status describe the keyboard that is attached NOW?
+
+    True / False / None, where None means we cannot tell -- no serial on one side or the
+    other, which is a real state on older firmware and must not be reported as a mismatch.
+
+    Compared by SERIAL against USB enumeration. That needs no serial I/O, so the answer
+    costs nothing and cannot disturb a port; asking the keyboard would defeat the point of
+    a cache that exists to avoid exactly that.
+
+    A PARTIAL overlap counts as matching: swapping one half leaves the other genuinely
+    described, and calling that "a different keyboard" would be the more misleading answer.
+    """
+    have = {h.get("serialNumber") for h in (cached.get("halves") or [])}
+    have.discard(None)
+    if not have:
+        return None
+    try:
+        now = {d.serial_number for d in get_service().visible_ports()}
+    except Exception:
+        return None                # enumeration failed: say nothing rather than guess
+    now.discard(None)
+    if not now:
+        return None                # nothing on USB: the cache is old, not WRONG
+    return bool(have & now)
+
+
 @router.get("/api/status/last")
 async def status_last(deep: bool = False) -> dict:
     """The last half status we read, and when. Touches no hardware.
@@ -420,6 +447,7 @@ async def status_last(deep: bool = False) -> dict:
     """
     got = await run_in_threadpool(dstate.load_status, deep)
     got["released"] = get_service().released
+    got["describesAttached"] = await run_in_threadpool(_cache_matches_attached, got)
     # Recomputed from the cached halves rather than persisted: it is derived, and storing a
     # derived verdict is how a stale one outlives the data it came from.
     if deep and got.get("halves"):

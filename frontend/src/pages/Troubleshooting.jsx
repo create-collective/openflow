@@ -137,6 +137,9 @@ function HalfCard({ h, reference, onIgnorePort }) {
 
 export default function Troubleshooting() {
   const [halves, setHalves] = useState([]);
+  // null = we cannot tell (no serial on one side or the other, real on older firmware).
+  // false = the cached reading belongs to a keyboard that is not on USB now.
+  const [describesAttached, setDescribesAttached] = useState(null);
   const [pairing, setPairing] = useState(null);
   const [recovery, setRecovery] = useState([]);
   const [sys, setSys] = useState(null);
@@ -202,6 +205,7 @@ export default function Troubleshooting() {
     try {
       const r = await api.statusDeep();
       setHalves(r.halves || []);
+      setDescribesAttached(true);   // just read it; it is the attached board by definition
       setPairing(r.pairing || null);
       setRecovery(r.recovery || []);
       setAt(r.at ? new Date(r.at + "Z") : new Date());
@@ -223,6 +227,7 @@ export default function Troubleshooting() {
         const last = await api.statusLastDeep();
         if (cancelled || !last?.halves?.length) return;
         setHalves(last.halves);
+        setDescribesAttached(last.describesAttached ?? null);
         setPairing(last.pairing || null);
         setAt(last.at ? new Date(last.at + "Z") : null);
       } catch { /* nothing cached yet: the Read button is right there */ }
@@ -341,7 +346,21 @@ export default function Troubleshooting() {
               </div>
             </div>
           )}
-          {stale && halves.length > 0 && (
+          {/* A DIFFERENT keyboard, not merely an old reading. Everything below -- ports,
+              serials, BLE addresses, docked modules -- belongs to hardware that is not on
+              USB now. Kept rather than hidden: it is the last good reading, which is what
+              someone chasing an intermittent board wants, and hiding it silently would be
+              the same mistake in the other direction. Said plainly, with the fix offered. */}
+          {describesAttached === false && halves.length > 0 && (
+            <Notice size="sm" tone="err" className="info-stale-note"
+              title="This describes a keyboard that is no longer connected"
+              action={<Button size="sm" onClick={refresh} busy={loading}>Read the attached one</Button>}>
+              It was read {ageText} from a different board, and nothing below has been
+              re-checked since: the ports, serial numbers, addresses and modules are all that
+              keyboard's. The bar at the top of the window is current.
+            </Notice>
+          )}
+          {describesAttached !== false && stale && halves.length > 0 && (
             <Notice size="sm" tone="warn" className="info-stale-note">
               This reading is {ageText}. Firmware and addresses will not have changed, but battery
               and pairing may have — read again for those.
