@@ -429,7 +429,11 @@ export default function Troubleshooting() {
             <Card className="info-card" ruled title="Bluetooth slots">
               {/* Which of the five slots the keyboard sends to, and what each holds. A state of
                   the keyboard, not a preference of the app, which is why it is here. */}
-              <BleSlots />
+              {/* Fed from the reading this page already holds, so the tab costs nothing to
+                  open and carries the same "as of" stamp and the same warnings as the Device
+                  tab beside it (SCRUM-91). */}
+              <BleSlots half={halves.find((h) => h.side === "left")}
+                onRefresh={refresh} loading={loading} />
             </Card>
             {halves.filter((h) => h.side === "dongle").length > 0
               ? halves.filter((h) => h.side === "dongle").map((h) => (

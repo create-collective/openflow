@@ -100,3 +100,44 @@ def test_a_half_that_answers_status_still_gets_the_full_view(monkeypatch):
     assert got["slotsAvailable"] is True
     assert got["activeProfile"] == 2
     assert len(got["slots"]) == 1
+
+
+# --- one slot view, shared by the live read and the cached one -----------------------------
+
+def test_slot_view_is_the_single_place_the_reserved_rule_lives():
+    """Connections paints from the cached deep read now, so the shaping must not be duplicated.
+
+    Slot 0 is never offered by NayaFlow's keys and is most likely the dongle's, so it is shown
+    but not selectable. A second copy of that judgement in the frontend would be one too many.
+    """
+    decoded = {"profiles": [
+        {"index": 0, "isActive": False, "hasPeerData": True, "activeFlags": 0},
+        {"index": 1, "isActive": True, "hasPeerData": True, "connected": True,
+         "peerAddress": "AA:BB:CC:DD:EE:FF", "activeFlags": 3},
+        {"index": 2, "isActive": False, "hasPeerData": False, "activeFlags": 0},
+    ]}
+    slots = DeviceService.slot_view(decoded)
+    assert [s["index"] for s in slots] == [0, 1, 2]
+    assert [s["reserved"] for s in slots] == [True, False, False]
+    assert slots[1]["active"] and slots[1]["connected"] and slots[1]["bonded"]
+    assert slots[1]["peerAddress"] == "AA:BB:CC:DD:EE:FF"
+    assert not slots[2]["bonded"], "nothing paired there"
+
+
+def test_the_live_read_and_the_shared_shaper_agree(monkeypatch):
+    """ble_profiles must go through slot_view, not keep a copy of it."""
+    import openflow_backend.device.ble_status as ble_status
+
+    decoded = {"activeProfile": 1, "hostConnected": True, "localAddress": "AA:BB:CC:DD:EE:FF",
+               "profiles": [{"index": 0, "isActive": False, "hasPeerData": False,
+                             "activeFlags": 0}]}
+
+    class New(Old):
+        def send_command(self, dest, category, subcmd, payload=b"", timeout=2.5):
+            if subcmd == C.BLE_GET_STATUS:
+                return [Frame(b"\x01" * 40)]
+            return super().send_command(dest, category, subcmd, payload, timeout)
+
+    monkeypatch.setattr(ble_status, "decode", lambda raw: decoded)
+    got = _svc(monkeypatch, New()).ble_profiles("left")
+    assert got["slots"] == DeviceService.slot_view(decoded)

@@ -220,6 +220,10 @@ class DeviceService:
         # Which battery command each docked module answers: 'precise' or 'legacy'. Probed
         # once per docking; see _module_voltage. Keyed like _module_fw.
         self._module_batt: dict = {}
+        # Which BLE reads a half actually answers: {(owner, firmware): {subcmd: bool}}.
+        # See _ble_ask. Keyed by firmware so a version bump re-probes rather than
+        # inheriting an older build's answer.
+        self._ble_caps: dict = {}
         self._samples: dict[str, list] = {}
         # port -> {"ok": bool, "at": float}: did this port last answer a handshake? Windows
         # keeps enumerating a port whose device detached uncleanly, and such a ghost is
@@ -415,6 +419,26 @@ class DeviceService:
         # Neither answered. Deliberately NOT remembered: a module that is charging from flat
         # can start reporting later, and pinning it now would mean never asking again.
         return None
+
+    def _ble_ask(self, t, dest, sub, key, timeout: float = 2.0):
+        """A BLE read, skipped entirely if this half has shown it does not answer it.
+
+        Create 3.28.7 implements no BLE opcode from 0x100C up (GET_STATUS,
+        GET_DONGLE_ADDR, GET_SLOTX_ADDR, GET_FW_VERSION) while answering everything below
+        normally, so it predates them rather than being faulty. Asking anyway costs a full
+        timeout per command per read and can never succeed.
+
+        What is remembered is what HAPPENED, not what firmware it was: a command that did
+        not answer is not asked again, one that did is always asked. `key` carries the
+        firmware version, so flashing a newer build re-probes instead of inheriting this
+        answer.
+        """
+        caps = self._ble_caps.setdefault(key, {})
+        if caps.get(sub) is False:
+            return None
+        payload = _first_payload(t.send_command(dest, C.CAT_BLE, sub, timeout=timeout))
+        caps[sub] = payload is not None
+        return payload
 
     def _fold(self, key: str, mv: int | None) -> int | None:
         """A rolling median over the last TICK_SAMPLES readings, one reading per tick."""
@@ -639,22 +663,30 @@ class DeviceService:
         # project has been wrong before.
         if deep:
             ble: dict = {}
-            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_NAME))
+            # One key per physical half per firmware build; see _ble_ask. The firmware was
+            # read at the top of this function, so it costs nothing extra here.
+            caps_key = (owner or "?", info.get("firmwareVersion"))
+            p = self._ble_ask(t, dest, C.BLE_GET_NAME, caps_key)
             if p is not None:
+                # [length][name]. The old decode took the whole payload and leant on strip()
+                # to lose the prefix, which worked only because the lengths we happened to see
+                # (0x0b for "DefaultName") are whitespace in Python. A five-character name
+                # would have kept a literal 0x05 on the front.
                 try:
-                    ble["name"] = p.decode("ascii").rstrip("\x00").strip()
+                    ble["name"] = (p[1:1 + p[0]].decode("ascii").strip()
+                                   if len(p) > 1 else None) or None
                 except (UnicodeDecodeError, ValueError):
                     ble["name"] = hexline(p)
-            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_PAIR_ADDRESS))
+            p = self._ble_ask(t, dest, C.BLE_GET_PAIR_ADDRESS, caps_key)
             if p is not None and len(p) >= 6:
                 ble["pairAddress"] = ":".join(f"{b:02X}" for b in p[:6])
-            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_DONGLE_ADDR))
+            p = self._ble_ask(t, dest, C.BLE_GET_DONGLE_ADDR, caps_key)
             if p is not None and len(p) >= 6:
                 ble["dongleAddress"] = ":".join(f"{b:02X}" for b in p[:6])
-            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_FW_VERSION))
+            p = self._ble_ask(t, dest, C.BLE_GET_FW_VERSION, caps_key)
             if p is not None:
                 ble["firmwareVersion"] = format_fw_version(p)
-            p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_STATUS))
+            p = self._ble_ask(t, dest, C.BLE_GET_STATUS, caps_key)
             if p is not None:
                 # statusRaw stays, always: `status` is a decode, and a decode can be wrong in a
                 # way the bytes cannot. See device/ble_status.py for what is confirmed and what
@@ -664,7 +696,19 @@ class DeviceService:
                 decoded = ble_status.decode(p)
                 decoded.pop("raw", None)
                 ble["status"] = decoded
+                # The same shaping the live read produces, carried in the cached row so
+                # Connections can paint from it instead of asking the keyboard again on
+                # every navigation.
+                ble["slots"] = self.slot_view(decoded)
+                ble["activeProfile"] = decoded.get("activeProfile")
+                ble["hostConnected"] = bool(decoded.get("hostConnected"))
             if ble:
+                # False only when the half was asked and did not answer: older firmware has no
+                # BLE_GET_STATUS at all (SCRUM-91), and an absent key would read as "unknown"
+                # rather than "this keyboard cannot tell us". Set INSIDE the guard so a half
+                # with no Bluetooth information at all still emits no block, rather than an
+                # empty one that pages would start drawing.
+                ble["slotsAvailable"] = "slots" in ble
                 info["ble"] = ble
 
         # Module detection. Type is DERIVED FROM THE ADDRESS, not from MODULE_DETECT (which
@@ -870,13 +914,7 @@ class DeviceService:
                 # a keyboard that pairs perfectly well must not be presented as broken.
                 return self._ble_identity_only(t, dest, dev)
             d = ble_status.decode(p)
-            slots = [{"index": pr["index"], "active": bool(pr["isActive"]),
-                      "bonded": bool(pr.get("bonded") or pr["hasPeerData"]),
-                      "connected": bool(pr.get("connected")),
-                      "peerAddress": pr.get("peerAddress"),
-                      "reserved": pr["index"] == self.BLE_RESERVED_SLOT,
-                      "flags": pr["activeFlags"]}
-                     for pr in d.get("profiles") or []]
+            slots = self.slot_view(d)
             return {"ok": True, "side": dev.side, "slotsAvailable": True,
                     "activeProfile": d.get("activeProfile"),
                     "hostConnected": bool(d.get("hostConnected")),
@@ -932,6 +970,24 @@ class DeviceService:
                                      "slot status, so which slot is active and which are "
                                      "paired cannot be shown. Everything else here was read "
                                      "from the keyboard normally."}
+
+    @classmethod
+    def slot_view(cls, decoded: dict) -> list[dict]:
+        """Decoded BLE status -> the five slots as the page draws them.
+
+        Shared by the live read and by the deep read whose result Connections paints from
+        cache, so the two cannot drift. The reserved-slot rule in particular lives here and
+        nowhere else: slot 0 is never offered by NayaFlow's keys and is most likely the
+        dongle's, so it is shown but not selectable, and a second copy of that judgement
+        in the frontend would be one too many.
+        """
+        return [{"index": pr["index"], "active": bool(pr["isActive"]),
+                 "bonded": bool(pr.get("bonded") or pr["hasPeerData"]),
+                 "connected": bool(pr.get("connected")),
+                 "peerAddress": pr.get("peerAddress"),
+                 "reserved": pr["index"] == cls.BLE_RESERVED_SLOT,
+                 "flags": pr["activeFlags"]}
+                for pr in decoded.get("profiles") or []]
 
     def select_ble_profile(self, side: str, index: int, allow_reserved: bool = False) -> dict:
         """Make slot `index` the active one -- what the BT_DEVICE_n key does. Read back after."""
