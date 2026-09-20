@@ -237,6 +237,87 @@ async def flash_firmware(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/rpc/flash-procedure")
+async def flash_procedure_run(body: dict = Body(...)) -> dict:
+    """Run the whole flashing PROCEDURE: back up, flash the chosen half or halves, verify against
+    the backup, and write an audit log the user can read and export (SCRUM-108).
+
+    This is the endpoint a user's "flash my keyboard" reaches. `/rpc/flash-firmware` above remains
+    the single-step primitive for our own testing; this one is the supervised sequence, and the
+    only path that produces a log. Same gate: refused while FIRMWARE_FLASH_ENABLED is False.
+
+    Body: {"targets": {"left": "kb_fwl.bin", "right": "kb_fwr.bin"}, "allow_older": false}
+    Either side may be omitted. A downgrade needs allow_older, as it does everywhere else.
+    """
+    if not FIRMWARE_FLASH_ENABLED:
+        raise HTTPException(status_code=400, detail=(
+            "Firmware flashing is wired but disabled until it is verified on a donor unit. "
+            "Nothing was sent."))
+    import os
+    from pathlib import Path as _P
+    from ..device import flash_procedure as proc
+    targets = body.get("targets") or {}
+    if not isinstance(targets, dict) or not targets:
+        raise HTTPException(status_code=400,
+                            detail='pass {"targets": {"left": "<image>", "right": "<image>"}} '
+                                   "with at least one side.")
+    d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
+    resolved = {}
+    for side, name in targets.items():
+        if side not in ("left", "right"):
+            raise HTTPException(status_code=400, detail=f"unknown side: {side}")
+        path = _P(str(name))
+        resolved[side] = _P(d) / str(name) if d and not path.is_absolute() else path
+    try:
+        return await run_in_threadpool(
+            proc.run, get_service(), resolved, _firmware_catalog_raw(),
+            allow_older=bool(body.get("allow_older", False)))
+    except (TransportError, ValueError, KeyError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/flash-logs")
+async def flash_logs() -> dict:
+    """Past flash runs, newest first. The log is the user's evidence, so it must be findable
+    after the fact, not only while the run is on screen."""
+    from ..config import logs_dir
+    runs = []
+    try:
+        for d in sorted(logs_dir().glob("flash-*"), reverse=True):
+            f = d / "run.log"
+            if f.is_file():
+                runs.append({"id": d.name, "at": d.name.removeprefix("flash-"),
+                             "bytes": f.stat().st_size})
+    except Exception:                       # noqa: BLE001 -- an unreadable dir means no history
+        pass
+    return {"runs": runs}
+
+
+@router.get("/api/flash-logs/{run_id}")
+async def flash_log(run_id: str, fmt: str = "text") -> dict:
+    """One run's log, as readable text by default or as the raw structured events.
+
+    `fmt=text` is what the user copies and sends to us; `fmt=json` is what the UI renders.
+    """
+    from ..config import logs_dir
+    from ..device import flash_procedure as proc
+    if "/" in run_id or "\\" in run_id or run_id.startswith("."):
+        raise HTTPException(status_code=400, detail="bad run id")
+    f = logs_dir() / run_id / "run.log"
+    if not f.is_file():
+        raise HTTPException(status_code=404, detail=f"no such flash run: {run_id}")
+    events = []
+    for line in f.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            try:
+                events.append(json.loads(line))
+            except ValueError:
+                pass
+    if fmt == "json":
+        return {"id": run_id, "events": events}
+    return {"id": run_id, "text": proc.render_events(events)}
+
+
 @router.post("/rpc/flash-module-firmware")
 async def flash_module_firmware(body: dict = Body(...)) -> dict:
     """Upload a catalogued module bundle (FlashMemory.bin) into the left half's modules slot and

@@ -65,4 +65,25 @@ def test_the_endpoint_refuses_while_the_gate_is_shut(monkeypatch):
             r = c.post(route, json={"image": "kb_fwl.bin", "arm": "x"})
             assert r.status_code == 400, route
             assert "Nothing was sent" in r.json()["detail"], route
+        # The supervised procedure (SCRUM-108) is the path a USER reaches, so it is the one that
+        # most needs the gate. It must refuse before a backup is taken, let alone a byte written.
+        r = c.post("/rpc/flash-procedure",
+                   json={"targets": {"left": "kb_fwl.bin", "right": "kb_fwr.bin"}})
+        assert r.status_code == 400
+        assert "Nothing was sent" in r.json()["detail"]
     assert HTTPException  # imported for the reader: the refusal is an HTTP 400, not a crash
+
+
+def test_the_procedure_validates_its_targets_before_the_gate_is_ever_relevant(monkeypatch):
+    """An empty or malformed target set is refused as a bad request, not as a gate failure, so
+    the message a developer gets says what is actually wrong."""
+    monkeypatch.setenv(VAR, "1")
+    importlib.reload(rest)
+    from fastapi.testclient import TestClient
+    from openflow_backend.app import create_app
+
+    with TestClient(create_app()) as c:
+        for body in ({}, {"targets": {}}, {"targets": {"middle": "x.bin"}}):
+            r = c.post("/rpc/flash-procedure", json=body)
+            assert r.status_code == 400, body
+            assert "Nothing was sent" not in r.json()["detail"], body

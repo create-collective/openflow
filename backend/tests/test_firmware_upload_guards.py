@@ -146,15 +146,26 @@ def test_upload_is_wired_only_through_the_gated_endpoint():
     until a donor test flips the gate. If any other module starts importing firmware_upload, or the
     gate default drifts to True, this fails."""
     root = _BACKEND / "openflow_backend"
-    callers = []
-    for f in root.rglob("*.py"):
-        if f.name == "firmware_upload.py" or "_vendor" in f.parts:
-            continue
-        text = f.read_text(encoding="utf-8", errors="ignore")
-        if "firmware_upload" in text:
-            callers.append(f.relative_to(root).as_posix())
-    assert callers == ["api/rest.py"], (
-        f"firmware_upload must be referenced only by api/rest.py; found {callers}")
+
+    def referrers(name):
+        out = []
+        for f in root.rglob("*.py"):
+            if f.name == f"{name}.py" or "_vendor" in f.parts:
+                continue
+            if name in f.read_text(encoding="utf-8", errors="ignore"):
+                out.append(f.relative_to(root).as_posix())
+        return sorted(out)
+
+    # device/flash_procedure.py is the ONLY module besides the endpoint allowed to reach the
+    # uploader: it is the logged, verified procedure (SCRUM-108) and it drives flash() directly.
+    # The gate is preserved by the second assertion -- the procedure itself is reachable only
+    # through api/rest.py, so there is still exactly one gated way in.
+    assert referrers("firmware_upload") == ["api/rest.py", "device/flash_procedure.py"], (
+        "firmware_upload must be referenced only by api/rest.py and device/flash_procedure.py; "
+        f"found {referrers('firmware_upload')}")
+    assert referrers("flash_procedure") == ["api/rest.py"], (
+        "flash_procedure must be reachable only through the gated endpoint; "
+        f"found {referrers('flash_procedure')}")
     rest = (root / "api" / "rest.py").read_text(encoding="utf-8")
     # The gate is driven by the environment, so it cannot be committed on by accident the way an
     # edited `= True` can. What matters here is that it is never UNCONDITIONALLY open; that it is
