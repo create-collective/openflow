@@ -6,6 +6,7 @@ import { hydrateDeviceState, invalidateDeviceState } from "../../lib/deviceState
 import { useDeviceStream } from "../../lib/deviceStream";
 import { keyboardChoices, setTargetKeyboard, targetSerialFor, useTargetKeyboard }
   from "../../lib/targetKeyboard";
+import { useShowAllKeyboards, visibleHalves } from "../../lib/showAllKeyboards";
 import useProfileEditor from "../../lib/useProfileEditor";
 import DeviceChip from "../DeviceChip";
 import FlashButton from "../FlashButton";
@@ -42,7 +43,9 @@ export default function ProfileBar() {
   // With one keyboard there is nothing to choose and nothing is shown. With several, the
   // backend refuses to guess which to read or flash, so the choice has to be made here
   // (SCRUM-86). Default to the first so the actions are never dead, but say which it is.
-  const halves = data?.status?.halves || [];
+  // Only keyboards actually connected, so unplugging one takes the picker away with it.
+  const showAllKb = useShowAllKeyboards();
+  const halves = visibleHalves(data?.status?.halves || [], showAllKb);
   const choices = halves.length > 2 ? keyboardChoices(halves) : [];
   const target = useTargetKeyboard();
   useEffect(() => {

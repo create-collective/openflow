@@ -5,6 +5,7 @@ import { api } from "../lib/api.js";
 import { getActiveProfileId } from "../lib/activeProfile";
 import { hasReadDevice } from "../lib/deviceActions";
 import { useDeviceStream } from "../lib/deviceStream";
+import { getShowAllKeyboards, visibleHalves } from "../lib/showAllKeyboards";
 import { targetSerialFor } from "../lib/targetKeyboard";
 import Button from "./ui/Button";
 import Modal from "./ui/Modal";
@@ -83,7 +84,8 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
   // disambiguate; with several and no target it refuses rather than writing to whichever ranked
   // first, which is how a flash lands on the wrong board (SCRUM-86).
   const targetBody = () => {
-    const s = targetSerialFor(data?.status?.halves, "left");
+    const s = targetSerialFor(
+      visibleHalves(data?.status?.halves || [], getShowAllKeyboards()), "left");
     return s ? { target: s } : {};
   };
   const [collectOrphans, setCollectOrphans] = useState(false);

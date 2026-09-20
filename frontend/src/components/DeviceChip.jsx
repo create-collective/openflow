@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { NavLink } from "react-router-dom";
+import { useShowAllKeyboards, visibleHalves } from "../lib/showAllKeyboards";
 import StatusBox from "./ui/StatusBox";
 
 // The status chip NayaFlow keeps in its top-left corner, rebuilt in the profile bar: one
@@ -26,7 +27,10 @@ function detailsFor(h) {
 }
 
 export default function DeviceChip({ status }) {
-  const halves = status?.halves || [];
+  // A keyboard that has been unplugged lingers in the backend's live map as disconnected --
+  // right when it is the only one, a ghost pair when another is still attached (SCRUM-86).
+  const showAll = useShowAllKeyboards();
+  const halves = visibleHalves(status?.halves || [], showAll);
   // A poll now and then answers with the module but no battery for it. The device does report
   // it the next time round, so rather than flashing a dash for six seconds the box keeps the
   // last figure it had for that module in that bay.

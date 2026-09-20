@@ -12,6 +12,7 @@ import Card from "../components/ui/Card";
 import { KVRow } from "../components/ui/KV";
 import Notice from "../components/ui/Notice";
 import Tabs from "../components/ui/Tabs";
+import { setShowAllKeyboards, useShowAllKeyboards } from "../lib/showAllKeyboards";
 import { THEME_PREFERENCES, setThemePreference, useThemePreference } from "../lib/theme";
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
 import { REPOS, checkRelease } from "../lib/updates";
@@ -151,6 +152,7 @@ export default function Settings() {
   // not in the backend's settings: it is a property of the screen in front of you, like the
   // window size, and it must be right before the backend has answered.
   const themePref = useThemePreference();
+  const showAllKb = useShowAllKeyboards();
   const appearanceGroups = [{
     group: "Appearance",
     desc: "How OpenFlow looks on this computer.",
@@ -158,6 +160,16 @@ export default function Settings() {
       id: "theme", label: "Theme", kind: "select", options: THEME_PREFERENCES,
       value: themePref, default: "system", provenance: "app",
       desc: "System follows the operating system's light or dark setting.",
+    }, {
+      // A troubleshooting aid for working on the multi-keyboard handling, not something a
+      // user has a reason to turn on: normally the app simply shows what is connected, and
+      // an unplugged keyboard stops being drawn as soon as another one is still there.
+      id: "showAllKeyboards", label: "Keep disconnected keyboards on screen", kind: "toggle",
+      value: showAllKb, default: false, provenance: "app",
+      desc: "Off: only keyboards that are connected are shown, and the keyboard picker "
+            + "appears only when there is genuinely more than one. On: every keyboard seen "
+            + "since launch stays visible, which is for troubleshooting the multi-keyboard "
+            + "handling itself.",
     }],
   }];
 
@@ -186,7 +198,9 @@ export default function Settings() {
               {tab === "behavior" && <SettingsGroups groups={behaviorGroups} onChange={setSetting} />}
               {tab === "interface" && (
                 <SettingsGroups groups={[...appearanceGroups, ...interfaceGroups]}
-                  onChange={(id, v) => (id === "theme" ? setThemePreference(v) : setSetting(id, v))} />
+                  onChange={(id, v) => (id === "theme" ? setThemePreference(v)
+                    : id === "showAllKeyboards" ? setShowAllKeyboards(v)
+                      : setSetting(id, v))} />
               )}
 
               {tab === "backup" && (

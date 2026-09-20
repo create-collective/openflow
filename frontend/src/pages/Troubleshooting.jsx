@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import BleSlots from "../components/BleSlots";
+import { useShowAllKeyboards, visibleHalves } from "../lib/showAllKeyboards";
 import useRunLog from "../lib/useRunLog";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
@@ -274,8 +275,12 @@ export default function Troubleshooting() {
 
   // Halves grouped into the keyboards they belong to. keyboardId is the backend's join by BLE
   // identity; the fallback of 0 keeps a single keyboard working if the field is ever absent.
+  // A keyboard with nothing connected is dropped while another one IS connected: it has been
+  // unplugged, and a ghost row helps nobody. The last keyboard standing always stays on screen
+  // even when it goes, because "your keyboard is not answering" is the thing to show (SCRUM-86).
+  const showAllKb = useShowAllKeyboards();
   const boards = [];
-  for (const h of halves.filter((x) => x.side !== "dongle")) {
+  for (const h of visibleHalves(halves, showAllKb).filter((x) => x.side !== "dongle")) {
     const id = h.keyboardId ?? 0;
     let b = boards.find((x) => x.id === id);
     if (!b) { b = { id, halves: [] }; boards.push(b); }
