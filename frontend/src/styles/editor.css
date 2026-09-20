@@ -2041,6 +2041,10 @@ textarea.report-input { resize: vertical; line-height: 1.5; font-family: inherit
   margin-bottom: 16px;
 }
 .info-halves > .ui-card { margin-bottom: 0; }
+/* Pinned by side rather than left to grid fill, so a keyboard missing its right half still
+   draws the left one on the left instead of sliding across (SCRUM-86). */
+.info-halves > .info-col-left { grid-column: 1; }
+.info-halves > .info-col-right { grid-column: 2; }
 .info-card { display: flex; flex-direction: column; align-items: stretch; }
 /* .info-card is a flex column, so a lone button or the segmented control would stretch to the
    full card width and stop reading as a control. Rows and dividers still span. */
@@ -2148,6 +2152,10 @@ textarea.report-input { resize: vertical; line-height: 1.5; font-family: inherit
 
 @media (max-width: 1100px) {
   .info-halves { grid-template-columns: minmax(0, 1fr); }
+  /* One column here, so the side pinning must be released: grid-column 2 would otherwise
+     create a phantom second column and push the right half off on its own. */
+  .info-halves > .info-col-left,
+  .info-halves > .info-col-right { grid-column: auto; }
 }
 
 /* An explanation inside a palette category -- why a whole tab is inert, as opposed to

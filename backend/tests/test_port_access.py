@@ -154,7 +154,9 @@ def test_the_full_status_carries_the_fix(linux_refusing):
 
 def test_an_ordinary_disconnect_has_no_fix():
     svc = DeviceService()
-    snap = svc._mark_disconnected("left", None, "no longer on the USB bus")
+    # (half key, side, port, why): the key is the physical half, because two keyboards have
+    # two left halves and the side alone cannot tell them apart (SCRUM-86).
+    snap = svc._mark_disconnected("B269FA744772B9E1", "left", None, "no longer on the USB bus")
     assert "fix" not in snap
 
 

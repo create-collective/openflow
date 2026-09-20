@@ -135,12 +135,36 @@ def _link_views(halves: list[dict]) -> dict:
 
 
 def pairing_report(halves: list[dict]) -> dict:
-    """Bond verdict plus, where the device told us, per-half link quality."""
-    report = _pairing_verdict(halves)
-    links = _link_views(halves)
-    if links:
-        report["links"] = links
-    return report
+    """Bond verdict plus, where the device told us, per-half link quality.
+
+    Split by KEYBOARD before judging anything. The verdict is a cross-comparison of one left
+    against one right, and `_pairing_verdict` picks those with a by-side dict that keeps only
+    the LAST of each -- so with two keyboards attached it would happily compare a left from one
+    board against a right from the other and call a healthy pair broken, or hide a real break
+    (SCRUM-86). On a tab whose job is diagnosing split links that is worse than saying nothing.
+
+    `keyboards` carries one verdict per keyboard. The top level keeps the first keyboard's
+    verdict so every existing caller reads the same shape it always did.
+    """
+    groups: dict = {}
+    for h in halves:
+        kid = h.get("keyboardId")
+        groups.setdefault(0 if kid is None else kid, []).append(h)
+
+    per = []
+    for kid in sorted(groups):
+        report = _pairing_verdict(groups[kid])
+        links = _link_views(groups[kid])
+        if links:
+            report["links"] = links
+        report["keyboardId"] = kid
+        per.append(report)
+
+    if not per:
+        return {"state": "incomplete", "detail": "no halves connected over USB.", "keyboards": []}
+    out = dict(per[0])
+    out["keyboards"] = per
+    return out
 
 
 def _pairing_verdict(halves: list[dict]) -> dict:
@@ -172,7 +196,11 @@ def _pairing_verdict(halves: list[dict]) -> dict:
         return (h.get("bleAddress") or "").upper()
 
     def paired_to(h):
-        return ((h.get("ble") or {}).get("pairAddress") or "").upper()
+        # Top level on a cheap poll, inside the ble block on a deep read. Reading only the
+        # nested form made the verdict "unknown" on poll data, which group_into_keyboards
+        # groups happily -- the two must not disagree about what a pair address is.
+        v = h.get("pairAddress") or (h.get("ble") or {}).get("pairAddress")
+        return (v or "").upper()
 
     l_ok = paired_to(left) and paired_to(left) == addr(right)
     r_ok = paired_to(right) and paired_to(right) == addr(left)
@@ -274,9 +302,10 @@ class DeviceService:
             self._released = True
             for port in list(self._transports):
                 self._drop(port)
-            for side, snap in list(self._live.items()):
+            for key, snap in list(self._live.items()):
                 if snap.get("connected"):
-                    self._mark_disconnected(side, snap.get("port"), self.RELEASED_REASON)
+                    self._mark_disconnected(key, snap.get("side"), snap.get("port"),
+                                            self.RELEASED_REASON)
         return {"released": True}
 
     def reconnect(self) -> dict:
@@ -449,19 +478,30 @@ class DeviceService:
         del buf[:-self.TICK_SAMPLES]
         return sorted(buf)[len(buf) // 2]
 
-    def _mark_disconnected(self, side: str, port: str | None, why: str,
+    @staticmethod
+    def _half_key(dev) -> str:
+        """One physical half.
+
+        The SIDE is not an identity. Two keyboards have two left halves, and keying the
+        poll's state on the side made them overwrite each other every tick. The serial is
+        what tells them apart; a half reporting none falls back to its port, which is at
+        least unique among what is attached right now.
+        """
+        return getattr(dev, "serial_number", None) or dev.port
+
+    def _mark_disconnected(self, key: str, side: str, port: str | None, why: str,
                            fix: dict | None = None) -> dict:
         from datetime import datetime, timezone
         if port:
             self._drop(port)
             self._identity.pop(port, None)
-        for k in [k for k in self._samples if k == side or k.startswith(side + ":")]:
+        for k in [k for k in self._samples if k == key or k.startswith(key + ":")]:
             self._samples.pop(k, None)
         snap = {"side": side, "port": port, "connected": False, "error": why,
                 "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         if fix:
             snap["fix"] = fix       # what the page shows to put it right (port_access)
-        self._live[side] = snap
+        self._live[key] = snap
         return snap
 
     def tick(self, dev) -> dict:
@@ -486,12 +526,19 @@ class DeviceService:
                     p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_ADDRESS))
                     if p is not None and len(p) >= 6:
                         ident["bleAddress"] = ":".join(f"{b:02X}" for b in p[:6])
+                    # Who this half is bonded to -- the other half of its own keyboard.
+                    # Read here, in the per-PORT identity cache, so grouping costs one
+                    # extra command per docking rather than one on every six-second tick.
+                    p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_PAIR_ADDRESS))
+                    if p is not None and len(p) >= 6:
+                        ident["pairAddress"] = ":".join(f"{b:02X}" for b in p[:6])
                     self._identity[dev.port] = ident
 
                 snap: dict = {"side": dev.side, "port": dev.port, "description": dev.description,
                               "serialNumber": dev.serial_number, "connected": True, **ident}
                 p = _first_payload(t.send_command(dest, C.CAT_SYSTEM, C.SYS_GET_KB_BATTERY_LEVEL, timeout=0.5))
-                mv = self._fold(dev.side, _to_millivolts((p[0] << 8) | p[1]) if p is not None and len(p) >= 2 else None)
+                half = self._half_key(dev)
+                mv = self._fold(half, _to_millivolts((p[0] << 8) | p[1]) if p is not None and len(p) >= 2 else None)
                 if mv is not None:
                     snap["batteryMillivolts"] = mv
                     snap["batteryPercent"] = _battery_percent(mv)
@@ -525,13 +572,13 @@ class DeviceService:
                         self._module_fw[fw_key] = format_fw_version(fp) if fp is not None else None
                     if self._module_fw.get(fw_key):
                         module["firmwareVersion"] = self._module_fw[fw_key]
-                    mmv = self._fold(f"{dev.side}:module",
+                    mmv = self._fold(f"{half}:module",
                                      self._module_voltage(t, dest, fw_key))
                     if mmv is not None:
                         module["batteryMillivolts"] = mmv
                         module["batteryPercent"] = _battery_percent(mmv)
                 else:
-                    self._samples.pop(f"{dev.side}:module", None)
+                    self._samples.pop(f"{half}:module", None)
                     # Undocked: forget its firmware, so a swap is read fresh. Cleared by the
                     # same key shape the entries are written under -- matching on the side
                     # alone stopped clearing anything once the key became the serial.
@@ -542,11 +589,11 @@ class DeviceService:
                         self._module_batt.pop(k, None)
                 snap["module"] = module
                 snap["at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-                self._live[dev.side] = snap
+                self._live[half] = snap
                 return snap
             except TransportError as e:
-                return self._mark_disconnected(dev.side, dev.port, str(e),
-                                               fix=getattr(e, "fix", None))
+                return self._mark_disconnected(self._half_key(dev), dev.side, dev.port,
+                                               str(e), fix=getattr(e, "fix", None))
 
     def tick_all(self) -> dict:
         """Tick every enumerated half; a half that is no longer enumerated is marked gone."""
@@ -554,19 +601,25 @@ class DeviceService:
             return self.snapshot()      # released: touch nothing, and do not reopen the ports
         seen = set()
         for dev, _others in self.halves_seen():
-            seen.add(dev.side)
+            seen.add(self._half_key(dev))
             self.tick(dev)
         with self._lock:
-            for side, snap in list(self._live.items()):
-                if side not in seen and snap.get("connected"):
-                    self._mark_disconnected(side, snap.get("port"), "no longer on the USB bus")
+            # By HALF. Built from sides, unplugging one keyboard while the other stayed
+            # attached left its side still "seen", so the disconnect went unnoticed.
+            for key, snap in list(self._live.items()):
+                if key not in seen and snap.get("connected"):
+                    self._mark_disconnected(key, snap.get("side"), snap.get("port"),
+                                            "no longer on the USB bus")
         return self.snapshot()
 
     def snapshot(self) -> dict:
         """The last tick's view of every half. In-memory; no device I/O."""
         with self._lock:
             halves = [dict(v) for _k, v in sorted(self._live.items())]
-        return {"halves": halves, "released": self._released}
+        # Grouped here too, not only in status_all: the status bar is fed from this, and it
+        # is where two keyboards used to arrive as four loose halves in an order that
+        # depended on nothing meaningful.
+        return {"halves": self.group_into_keyboards(halves), "released": self._released}
 
     # --- status ----------------------------------------------------------------
 
@@ -579,7 +632,12 @@ class DeviceService:
         """
         out: list[dict] = []
         with self._lock:
-            for dev, others in self.halves_seen():
+            seen = self.halves_seen()
+            # Only worth asking who a half is paired with when more than one keyboard is
+            # present. One keyboard needs no telling apart, and this is the six-second
+            # poll: it should cost nothing in the case that is almost always true.
+            need_grouping = len(seen) > 2
+            for dev, others in seen:
                 entry: dict = {
                     # Ports of this same half we are not using. Only the ones we PROVED
                     # dead: a half can expose several live CDC interfaces at once (two per
@@ -613,12 +671,81 @@ class DeviceService:
                     entry.update(self._query_half(t, dest, deep=verbose,
                                                   owner=dev.serial_number or dev.side))
                     entry["connected"] = True
+                    if need_grouping and not entry.get("pairAddress"):
+                        # The deep read already has this inside its ble block; the cheap
+                        # poll does not, and grouping is exactly what the cheap poll needs.
+                        pa = self._ble_ask(
+                            t, dest, C.BLE_GET_PAIR_ADDRESS,
+                            (dev.serial_number or dev.side, entry.get("firmwareVersion")))
+                        if pa is not None and len(pa) >= 6:
+                            entry["pairAddress"] = ":".join(f"{b:02X}" for b in pa[:6])
                 except TransportError as e:
                     entry["error"] = str(e)
                     if getattr(e, "fix", None):
                         entry["fix"] = e.fix
                     self._drop(dev.port)
                 out.append(entry)
+        return self.group_into_keyboards(out)
+
+    @staticmethod
+    def group_into_keyboards(halves: list[dict]) -> list[dict]:
+        """Tag each half with the keyboard it belongs to, and order them by keyboard.
+
+        `keyboardId` is a small stable integer per physical keyboard, and `keyboardCount`
+        says how many were found, so a view can tell "one keyboard" from "several" without
+        counting for itself.
+
+        Joined on the BLE identity -- a half whose pairAddress is the other's own
+        bleAddress -- which survives even when the halves cannot actually talk: a board
+        whose two halves are on mismatched firmware still has the pairing RECORD on both
+        sides, and that is what is being read here.
+
+        A half we cannot join to anything keeps its own id rather than being dropped or
+        guessed at, because a half nobody can place is exactly what someone chasing a
+        broken keyboard needs to see.
+
+        The ORDER is left before right within a keyboard, keyboards in a stable order, so
+        every view draws the same pairs the same way round without sorting for itself.
+        """
+        def addr(h, key):
+            # The pair address lives at the top level on a cheap poll and inside the ble block
+            # on a deep read. Both are accepted so a reading CACHED before halves carried a
+            # keyboard can still be grouped, rather than needing the user to read again.
+            v = h.get(key) or (h.get("ble") or {}).get(key)
+            return (v or "").upper() or None
+
+        by_own = {}
+        for h in halves:
+            a = addr(h, "bleAddress")
+            if a:
+                by_own.setdefault(a, h)
+
+        groups: list[list[dict]] = []
+        placed: set[int] = set()
+        for h in halves:
+            if id(h) in placed:
+                continue
+            partner = by_own.get(addr(h, "pairAddress") or "")
+            # A partner only counts if it points BACK at us. A one-sided claim is not a
+            # keyboard, and pairing two halves on one half's say-so is how a flash could
+            # be aimed at the wrong board.
+            mutual = (partner is not None and id(partner) not in placed
+                      and partner is not h
+                      and addr(partner, "pairAddress") == addr(h, "bleAddress"))
+            if mutual:
+                placed.add(id(h)); placed.add(id(partner))
+                groups.append(sorted([h, partner],
+                                     key=lambda x: _SIDE_ORDER.get(x.get("side"), 9)))
+            else:
+                placed.add(id(h))
+                groups.append([h])
+
+        out = []
+        for idx, group in enumerate(groups):
+            for h in group:
+                h["keyboardId"] = idx
+                h["keyboardCount"] = len(groups)
+                out.append(h)
         return out
 
     def _query_half(self, t: SerialTransport, dest: int, deep: bool = False,

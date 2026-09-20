@@ -36,7 +36,8 @@ from ..device import (actions_catalog, flash as flash_mod, gesture_presets, keym
                       module_layout, remap)
 from ..device.commands import CommandError, dispatch
 from ..device import recovery as recovery_mod
-from ..device.service import DangerousCommandError, TransportError, pairing_report
+from ..device.service import (DangerousCommandError, DeviceService, TransportError,
+                             pairing_report)
 from .state import get_service
 
 log = logging.getLogger("openflow.api")
@@ -456,6 +457,13 @@ async def status_last(deep: bool = False) -> dict:
     got = await run_in_threadpool(dstate.load_status, deep)
     got["released"] = get_service().released
     got["describesAttached"] = await run_in_threadpool(_cache_matches_attached, got)
+    # Grouped on the way out rather than as it was stored, so a reading cached BEFORE halves
+    # carried a keyboard still draws as keyboards. It is derived from the addresses already in
+    # the row, so nothing has to be re-read from the hardware to get it (SCRUM-86).
+    if got.get("halves"):
+        # On the class, not the live service: it is a pure function of the halves given to it
+        # and needs no device, no lock and no ports.
+        got["halves"] = DeviceService.group_into_keyboards(got["halves"])
     # Recomputed from the cached halves rather than persisted: it is derived, and storing a
     # derived verdict is how a stale one outlives the data it came from.
     if deep and got.get("halves"):

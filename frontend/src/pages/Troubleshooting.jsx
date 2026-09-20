@@ -70,12 +70,12 @@ const PAIRING = {
   unknown: { tone: "warn", text: "No pair address" },
 };
 
-function HalfCard({ h, reference, onIgnorePort }) {
+function HalfCard({ h, reference, onIgnorePort, className = "" }) {
   const m = h.module;
   const behind = reference && h.firmwareVersion && h.firmwareVersion !== reference.createFirmware;
   const modBehind = reference && m?.firmwareVersion && m.firmwareVersion !== reference.moduleFirmware;
   return (
-    <Card className="info-card" head={<span className={"dot " + (h.connected ? "ok" : "err")} />}
+    <Card className={"info-card " + className} head={<span className={"dot " + (h.connected ? "ok" : "err")} />}
       title={h.description || h.side}
       actions={<Badge className="ui-badge-plain">{h.side === "dongle" ? "Dongle" : `${h.side[0].toUpperCase()}${h.side.slice(1)} half`}</Badge>}>
       {h.error && <Notice tone="err">{h.error}</Notice>}
@@ -271,6 +271,24 @@ export default function Troubleshooting() {
     : `${Math.floor(ageMs / 86400000)} d ago`;
 
   const connectedSides = halves.filter((h) => h.connected).map((h) => h.side);
+
+  // Halves grouped into the keyboards they belong to. keyboardId is the backend's join by BLE
+  // identity; the fallback of 0 keeps a single keyboard working if the field is ever absent.
+  const boards = [];
+  for (const h of halves.filter((x) => x.side !== "dongle")) {
+    const id = h.keyboardId ?? 0;
+    let b = boards.find((x) => x.id === id);
+    if (!b) { b = { id, halves: [] }; boards.push(b); }
+    b.halves.push(h);
+  }
+  for (const b of boards) {
+    const fw = {};
+    for (const h of b.halves) if (h.side === "left" || h.side === "right") fw[h.side] = h.firmwareVersion;
+    b.fw = fw;
+    // Both halves present, both reporting, and disagreeing. Not flagged when one is unknown:
+    // "we could not read one of them" is a different statement from "they disagree".
+    b.mismatch = !!(fw.left && fw.right && fw.left !== fw.right);
+  }
   const p = pairing && PAIRING[pairing.state];
 
   return (
@@ -391,50 +409,99 @@ export default function Troubleshooting() {
               and pairing may have — read again for those.
             </Notice>
           )}
-          {halves.filter((h) => h.side !== "dongle").length > 0 && (
-            <div className="info-halves">
-              {halves.filter((h) => h.side !== "dongle").map((h) => (
-                <HalfCard key={h.port} h={h} reference={sys?.reference} onIgnorePort={ignorePort} />
-              ))}
+          {/* One grid per physical KEYBOARD, not one grid of loose halves. With two Creates
+              attached this used to fill left, left, right, right -- two lefts side by side on
+              the top row -- because nothing said which halves belonged together. `keyboardId`
+              comes from the backend, which joins them by BLE identity (SCRUM-86).
+
+              The column is pinned by side rather than left to grid fill, so a keyboard whose
+              right half is missing still draws its left on the left instead of sliding over. */}
+          {boards.map((b, n) => (
+            <div key={b.id}>
+              {boards.length > 1 && (
+                <div className="info-sub">
+                  Keyboard {n + 1} of {boards.length}
+                  {b.halves[0]?.serialNumber ? ` · ${b.halves[0].serialNumber}` : ""}
+                </div>
+              )}
+              {b.mismatch && (
+                <Notice tone="warn" title="This keyboard's halves are running different firmware">
+                  The left half reports {b.fw.left} and the right reports {b.fw.right}. The halves
+                  talk to each other over their own link, and a mismatch is known to break it, so
+                  one half can stop responding while both still work over USB.
+                </Notice>
+              )}
+              <div className="info-halves">
+                {b.halves.map((h) => (
+                  <HalfCard key={h.port} h={h} reference={sys?.reference} onIgnorePort={ignorePort}
+                    className={h.keyboardId == null ? ""
+                      : h.side === "right" ? "info-col-right" : "info-col-left"} />
+                ))}
+              </div>
             </div>
-          )}
+          ))}
         </>
       )}
 
       {tab === "connections" && (
         <>
-          {pairing && (
-            <div className={"info-banner " + (p ? p.tone : "")}>
+          {/* One banner per KEYBOARD. The verdict is a cross-comparison of one left against
+              one right, so with two attached a single banner was judging halves that were
+              never a pair (SCRUM-86). */}
+          {(pairing?.keyboards?.length ? pairing.keyboards : pairing ? [pairing] : []).map((kb, n, all) => {
+            const kp = PAIRING[kb.state];
+            const board = boards.find((b) => b.id === kb.keyboardId);
+            return (
+            <div key={kb.keyboardId ?? n} className={"info-banner " + (kp ? kp.tone : "")}>
               <div className="info-banner-title">
                 Split link
-                {p && <Badge className="ui-badge-plain" tone={p.tone}>{p.text}</Badge>}
+                {all.length > 1 && ` — keyboard ${n + 1}`}
+                {all.length > 1 && board?.halves[0]?.serialNumber ? ` · ${board.halves[0].serialNumber}` : ""}
+                {kp && <Badge className="ui-badge-plain" tone={kp.tone}>{kp.text}</Badge>}
               </div>
-              <div className="info-banner-detail">{pairing.detail}</div>
-              {pairing.state !== "paired" && pairing.state !== "incomplete" && (
+              <div className="info-banner-detail">{kb.detail}</div>
+              {kb.state !== "paired" && kb.state !== "incomplete" && (
                 <div className="info-banner-help">
                   Both halves are talking to this computer over USB, so neither is dead — they are
                   just not bonded to each other. Re-pairing is the repair here, not a firmware update.
                 </div>
               )}
-              {pairing.state === "incomplete" && connectedSides.length > 0 && (
+              {kb.state === "incomplete" && connectedSides.length > 0 && (
                 <div className="info-banner-help">
                   Only the {connectedSides.join(" and ")} half answered over USB. Connect the missing
                   half directly with its own USB-C cable and read again — each half enumerates on its
                   own, so one can be reached even when the other cannot see it.
                 </div>
               )}
+              {board?.mismatch && (
+                <div className="info-banner-help">
+                  This keyboard&rsquo;s halves are on different firmware ({board.fw.left} and{" "}
+                  {board.fw.right}), which is known to break the link between them even when the
+                  bond itself is still recorded on both sides.
+                </div>
+              )}
             </div>
-          )}
+            );
+          })}
           <div className="info-halves">
-            <Card className="info-card" ruled title="Bluetooth slots">
-              {/* Which of the five slots the keyboard sends to, and what each holds. A state of
-                  the keyboard, not a preference of the app, which is why it is here. */}
-              {/* Fed from the reading this page already holds, so the tab costs nothing to
-                  open and carries the same "as of" stamp and the same warnings as the Device
-                  tab beside it (SCRUM-91). */}
-              <BleSlots half={halves.find((h) => h.side === "left")}
-                onRefresh={refresh} loading={loading} />
-            </Card>
+            {/* One card per KEYBOARD. It used to render a single card fed by the first left
+                half it could find, so with two Creates attached the second one simply did not
+                appear (SCRUM-86).
+
+                Which of the five slots the keyboard sends to, and what each holds. A state of
+                the keyboard, not a preference of the app, which is why it is here. Fed from
+                the reading this page already holds, so the tab costs nothing to open and
+                carries the same "as of" stamp and warnings as the Device tab (SCRUM-91). */}
+            {boards.map((b, n) => (
+              <Card key={b.id} className="info-card" ruled
+                title={boards.length > 1 ? `Bluetooth slots — keyboard ${n + 1}` : "Bluetooth slots"}
+                actions={boards.length > 1 && b.halves[0]?.serialNumber
+                  ? <Badge className="ui-badge-plain">{b.halves[0].serialNumber}</Badge> : undefined}
+                actionsAlign="end">
+                <BleSlots half={b.halves.find((h) => h.side === "left") || b.halves[0]}
+                  onRefresh={refresh} loading={loading} />
+              </Card>
+            ))}
             {halves.filter((h) => h.side === "dongle").length > 0
               ? halves.filter((h) => h.side === "dongle").map((h) => (
                   <HalfCard key={h.port} h={h} reference={sys?.reference} />
