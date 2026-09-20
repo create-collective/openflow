@@ -157,11 +157,15 @@ def test_a_clean_both_halves_run_succeeds_and_writes_one_readable_log(wired):
         "no power cycle is needed", "")
 
 
-def test_the_peripheral_is_flashed_before_the_central(wired):
+def test_the_central_is_flashed_before_the_peripheral(wired):
+    """Between the two flashes one half is verified on its OWN port, and the only mismatched
+    configuration anyone has measured is a newer central with an older peripheral -- there the
+    central reads perfectly and the peripheral's port goes hollow (SCRUM-107). Central-first
+    verifies the half we know answers; peripheral-first would verify one nobody has observed."""
     r = _run(wired, {"left": "kb_fwl.bin", "right": "kb_fwr.bin"})
     lines = [json.loads(x) for x in Path(r["log"]).read_text(encoding="utf-8").splitlines() if x]
     order = [x["side"] for x in lines if x["step"] == "mcuboot.enter" and x["phase"] == "start"]
-    assert order == ["right", "left"], "the half that goes dark while mismatched goes first"
+    assert order == ["left", "right"]
 
 
 def test_the_preflight_backup_is_written_and_verified_before_anything_is_sent(wired):
@@ -307,3 +311,35 @@ def test_every_line_is_flushed_as_it_is_written(tmp_path):
     on_disk = [json.loads(x) for x in (tmp_path / "r.log").read_text(encoding="utf-8").splitlines() if x]
     assert [e["step"] for e in on_disk] == ["run.start", "upload"], (
         "the events must already be on disk before the next one is written")
+
+
+def test_the_service_lock_is_held_for_the_whole_run(wired):
+    """The live-status tick runs under this lock. If it can take it mid-procedure it can put
+    commands on a port between our frames, which is what cost a keymap flash an ack in 2026-09.
+    """
+    import threading
+    svc = wired["svc"]
+    svc._lock = threading.RLock()
+    taken_by_other_thread = []
+
+    def watcher():
+        # A different thread, as the tick is. It must NOT get the lock while the run is going.
+        if svc._lock.acquire(blocking=False):
+            taken_by_other_thread.append(True)
+            svc._lock.release()
+
+    original = P.capture_preflight
+
+    def capture_then_probe(*a, **k):
+        t = threading.Thread(target=watcher)
+        t.start()
+        t.join()
+        return original(*a, **k)
+
+    P.capture_preflight = capture_then_probe
+    try:
+        r = _run(wired, {"left": "kb_fwl.bin"})
+    finally:
+        P.capture_preflight = original
+    assert r["ok"] is True
+    assert not taken_by_other_thread, "another thread took the service lock during the procedure"

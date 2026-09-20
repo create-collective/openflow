@@ -457,11 +457,19 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
         log_dir: Path | None = None, flash_fn=None) -> dict:
     """The whole procedure. `targets` maps side -> image path, one or both halves.
 
-    Order: the PERIPHERAL (right) first when both are asked for. While the halves are mismatched
-    it is the peripheral whose LEDs go dark and whose own USB port goes hollow, so doing it first
-    puts the visibly odd interval before the central's flash and ends fully consistent.
+    Order: the CENTRAL (left) first when both are asked for, so the run only ever passes through
+    a state we have measured.
+
+    The tempting alternative is peripheral-first, on the grounds that the peripheral is the half
+    that goes dark while the versions differ, so doing it first gets the ugly interval over with.
+    That reasoning optimises cosmetics and ignores the thing that can actually derail a run.
+    Between the two flashes one half is verified on its own port, and what we measured on
+    2026-09-20 is a NEWER CENTRAL with an older peripheral: there the central reads perfectly and
+    it is the peripheral's port that goes hollow (SCRUM-107). Peripheral-first would instead
+    produce a newer peripheral with an older central and then read the peripheral -- a
+    configuration nobody has observed. Central-first verifies the half we know answers.
     """
-    sides = tuple(s for s in ("right", "left") if s in targets)
+    sides = tuple(s for s in ("left", "right") if s in targets)
     if not sides:
         raise ValueError("no side to flash: pass {'left': image} and/or {'right': image}")
 
@@ -473,6 +481,18 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
                  {"sides": list(sides), "images": {k: str(v) for k, v in targets.items()},
                   "allowOlder": allow_older})
 
+    # Hold the service lock for the WHOLE procedure, not just the reads inside it.
+    #
+    # The live-status tick runs under this lock every few seconds per half. On 2026-09-16 a tick
+    # slipped four commands onto a port between two frames of a chunked keymap write and cost it
+    # an ack (see test_flash_holds_the_service_lock). The upload itself is safe from that -- a
+    # half in MCUboot enumerates as an unrecognised product id and the poll loop cannot see it --
+    # but the entry, the identity reads and the post-flash comparison all talk to a half the tick
+    # IS watching. Taking the lock once, for the duration, means nothing else touches either port
+    # between "Go" and the verdict. It is an RLock and _with_transport re-enters it on this same
+    # thread, so the steps below still work normally.
+    lock = getattr(svc, "_lock", None)
+    held = lock.acquire() is not False if lock is not None else False
     try:
         with log.step("preflight.capture"):
             before = capture_preflight(svc, sides, log, run_dir)
@@ -510,6 +530,9 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
             compare_preflight(before, after, version_changed=changed, log=log)
     except Exception as e:                          # noqa: BLE001 -- the verdict is the product
         return log.finish(False, f"{type(e).__name__}: {e}")
+    finally:
+        if held:
+            lock.release()                          # the tick may resume, whatever happened
 
     if log.failures:
         return log.finish(False, f"the firmware was written, but {len(log.failures)} thing(s) "
