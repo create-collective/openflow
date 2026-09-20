@@ -24,6 +24,7 @@ implemented here rather than pulling in an async SMP stack for two read commands
 from __future__ import annotations
 
 import base64
+import contextlib
 import struct
 from dataclasses import dataclass, field
 
@@ -83,6 +84,16 @@ SMP_ID_IMAGE_STATE = 0
 # answer and is reported as such rather than raised.
 SMP_ID_IMAGE_SLOT_INFO = 6
 SMP_ERR_ENOTSUP = 8
+
+# After the first bytes of a reply arrive, how long to wait for the rest. A multi-line SMP
+# response comes back-to-back over USB, so this only has to outlast the gap between packets.
+# Measured: a complete reply lands 35 ms after its first byte.
+RESPONSE_GRACE = 0.03
+
+# How long to let a freshly opened port settle before the first request. Measured: the first
+# request after an open often gets no answer at all, while the second and third are fine. Paid
+# once per session instead of once per request, which is the whole point of session().
+SETTLE_AFTER_OPEN = 0.25
 
 
 @dataclass
@@ -306,25 +317,89 @@ def _talk(port: str, frame: bytes, timeout: float = 2.0) -> dict:
         for _ in range(3):
             if not ser.read(256):
                 break
-        ser.timeout = timeout
         ser.write(frame)
         ser.flush()
-        raw = b""
-        deadline_reads = 0
-        while deadline_reads < 40:
-            chunk = ser.read(256)
-            if chunk:
-                raw += chunk
-                if b"\n" in raw and (raw.count(b"\n") >= 1 and raw.strip().endswith(b"=")
-                                     or raw.count(b"\n") > 1):
-                    break
-            else:
-                deadline_reads += 1
-                if raw:
-                    break
-        if not raw:
-            raise TimeoutError(f"no SMP response on {port}")
-        return decode_response(raw)
+        # Take what the device actually sent, rather than predicting the shape of the reply.
+        #
+        # This used to be `ser.read(256)` in a loop with a terminator check, and it cost a FULL
+        # TIMEOUT on every request, for two reasons that compounded. read(n) blocks until it has
+        # n bytes or times out, and the bootloader answers with 31 -- so we waited out the
+        # timeout and then took bytes that had been in the buffer since millisecond one. And the
+        # terminator check required the base64 to end with "=" PADDING, which a reply whose
+        # length needs none does not, so a COMPLETE response failed the check and sent the loop
+        # round for one more full-timeout read.
+        #
+        # Measured on a live bootloader: the reply to `os echo` lands in 5 ms, 31 bytes, ending
+        # in a newline. The old path took 5.000 s for it, to the millisecond, because that was
+        # the timeout. A 648 KiB firmware upload ran at 5.06 s per 512-byte chunk -- 1h50 for
+        # something NayaCore does in about two minutes over the identical protocol.
+        #
+        # A silent port still costs the full timeout, which is right: that is the real question
+        # being asked of it.
+        return _exchange(ser, frame, timeout, port)
+
+
+def _exchange(ser, frame: bytes, timeout: float, port: str = "") -> dict:
+    """One request and its reply on an ALREADY OPEN port.
+
+    Split out of _talk so a bulk transfer can hold one port open across many requests; see
+    session(). The reading is deliberately "take what arrived" rather than "read n bytes" or
+    "read to a terminator": read(n) blocks until it has n bytes or times out, and a terminator
+    check that expected base64 "=" padding failed on complete replies whose length needs none.
+    Each of those cost a full timeout per request.
+    """
+    import time as _time
+    ser.write(frame)
+    ser.flush()
+    raw = b""
+    deadline = _time.monotonic() + timeout
+    while _time.monotonic() < deadline:
+        waiting = ser.in_waiting
+        if waiting:
+            raw += ser.read(waiting)
+            # A multi-line response arrives back-to-back; give the rest a moment to land.
+            _time.sleep(RESPONSE_GRACE)
+            if not ser.in_waiting:
+                break
+        else:
+            _time.sleep(0.005)
+    if not raw:
+        raise TimeoutError(f"no SMP response on {port or ser.port}")
+    return decode_response(raw)
+
+
+@contextlib.contextmanager
+def session(port: str, timeout: float = 5.0):
+    """Hold ONE port open and yield `send(frame) -> dict` for many requests.
+
+    For bulk transfer. `_talk` reopens the port per request, which is right for probes -- several
+    of them reset the half, and a fresh handle is how that is told apart from a dead port -- and
+    wrong for an upload: the bootloader's CDC endpoint needs a moment to settle after an open, so
+    reopening 1296 times pays that 1296 times. Measured: the first request after an open often
+    times out entirely, while a warm port answers in 78 ms.
+
+    This is the shape the vendor uses ("Open the serial port ... chunked via uploadImageChunk").
+    """
+    import time as _time
+    import serial
+    ser = serial.Serial(port=port, baudrate=115200, bytesize=serial.EIGHTBITS,
+                        parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
+                        timeout=0.1, dsrdtr=False, write_timeout=timeout)
+    try:
+        ser.dtr = True
+        ser.rts = True
+        # Let the endpoint settle once, here, instead of once per request.
+        _time.sleep(SETTLE_AFTER_OPEN)
+        ser.timeout = 0.02
+        for _ in range(3):
+            if not ser.read(256):
+                break
+        yield lambda frame, _t=timeout: _exchange(ser, frame, _t, port)
+    finally:
+        try:
+            ser.close()
+        except Exception:      # noqa: BLE001 -- closing a port that already went away
+            pass
 
 
 def echo(port: str, text: str = "openflow") -> dict:

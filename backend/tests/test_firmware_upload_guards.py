@@ -133,7 +133,7 @@ def test_upload_refuses_without_the_device_specific_arm_token(images, monkeypatc
     cannot be reused on the next one by accident."""
     def boom(*a, **k):
         raise AssertionError("a frame was sent despite the arm check failing")
-    monkeypatch.setattr(fw.rec, "_talk", boom)
+    _patch_transport(monkeypatch, boom)
     for bad in ("", "true", "yes", "0" * 64):
         with pytest.raises(fw.UploadRefused, match="not armed"):
             fw.upload(images / "kb_fwl.bin", CATALOG, arm=bad, state=state_ok())
@@ -239,6 +239,24 @@ def test_reset_is_an_os_reset_write_with_an_empty_map():
     assert _decode_request(f) == {}
 
 
+
+def _patch_transport(monkeypatch, talk):
+    """Stub BOTH transport seams from one fake.
+
+    rec._talk is the per-request path used by probes; rec.session is the one-open-port path a
+    bulk upload uses. A test that stubs only the first would let _send_chunks reach for a real
+    serial port.
+    """
+    import contextlib as _contextlib
+    monkeypatch.setattr(fw.rec, "_talk", talk)
+
+    @_contextlib.contextmanager
+    def _fake_session(port, timeout=5.0):
+        yield lambda frame, _t=timeout: talk(port, frame, timeout=_t)
+
+    monkeypatch.setattr(fw.rec, "session", _fake_session)
+
+
 def _fake_bootloader(landed_hash_hex: str, log: list):
     """Answers like MCUboot: a chunk -> the next offset; a state read -> slot 1 holds
     `landed_hash_hex`; anything else -> rc 0. Records (header, body) of every frame."""
@@ -260,7 +278,7 @@ def _kinds(log):
 
 def test_flash_is_slot_map_then_upload_then_slot_check_then_mark_then_reset(images, monkeypatch):
     log = []
-    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
     r = fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(), chunk=1024)
     assert _kinds(log)[0] == (1, 6, 0)                              # slot map read first
     assert _kinds(log)[1:5] == [(1, 1, 2)] * 4                      # 4096 B / 1024 = 4 chunks
@@ -271,7 +289,7 @@ def test_flash_is_slot_map_then_upload_then_slot_check_then_mark_then_reset(imag
 
 def test_flash_confirm_true_marks_permanent(images, monkeypatch):
     log = []
-    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
     r = fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(),
                  chunk=1024, confirm=True)
     assert log[6][1]["confirm"] is True and r["swap"] == "permanent"
@@ -281,7 +299,7 @@ def test_flash_never_marks_a_slot_whose_hash_is_not_the_target(images, monkeypat
     """The upload landed, but the slot does not read back as the image we meant. Stop dead:
     no mark, no reset, primary untouched."""
     log = []
-    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader("ab" * 32, log))
+    _patch_transport(monkeypatch, _fake_bootloader("ab" * 32, log))
     with pytest.raises(fw.UploadRefused, match="Nothing is scheduled"):
         fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(), chunk=1024)
     assert _kinds(log)[-1] == (1, 0, 0), "must stop right after the slot read"
@@ -292,7 +310,7 @@ def test_flash_never_marks_an_image_with_no_catalogued_plaintext_hash(images, mo
     """kb_fwl_old.bin carries a stub hash. Without a full one the slot cannot be verified, so
     nothing after the upload is sent -- not even the state read."""
     log = []
-    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
     with pytest.raises(fw.UploadRefused, match="no catalogued plaintext hash"):
         fw.flash(images / "kb_fwl_old.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(),
                  chunk=1024, allow_older=True)
@@ -302,7 +320,7 @@ def test_flash_never_marks_an_image_with_no_catalogued_plaintext_hash(images, mo
 def test_flash_refuses_without_the_arm_token_before_sending_anything(images, monkeypatch):
     def boom(*a, **k):
         raise AssertionError("a frame was sent despite the arm check failing")
-    monkeypatch.setattr(fw.rec, "_talk", boom)
+    _patch_transport(monkeypatch, boom)
     with pytest.raises(fw.UploadRefused, match="not armed"):
         fw.flash(images / "kb_fwl.bin", CATALOG, arm="", state=state_ok())
 
@@ -424,7 +442,7 @@ def test_default_flash_uploads_only_the_image_and_schedules_after_the_check(tmp_
     res, n = _mcuboot_resource()
     (tmp_path / "kb_fwl.bin").write_bytes(res)
     log = []
-    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
     r = fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok())
     chunks = [b for h, b in log if h == {"op": 2, "group": 1, "id": 1}]
     assert chunks[0]["len"] == n and sum(len(c["data"]) for c in chunks) == n < len(res)
@@ -438,7 +456,7 @@ def test_vendor_trailer_uploads_the_whole_resource_and_writes_no_image_state(tmp
     res, n = _mcuboot_resource()
     (tmp_path / "kb_fwl.bin").write_bytes(res)
     log = []
-    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
     p = fw.plan(tmp_path / "kb_fwl.bin", _resource_catalog(res), state=state_ok(), vendor_trailer=True)
     assert p.arms_on_upload and p.total_bytes == len(res) and "as NayaCore does" in p.describe()
     r = fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok(),
@@ -454,7 +472,7 @@ def test_a_mismatch_after_a_vendor_trailer_upload_says_what_is_armed(tmp_path, m
     res, _n = _mcuboot_resource()
     (tmp_path / "kb_fwl.bin").write_bytes(res)
     log = []
-    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader("ab" * 32, log))
+    _patch_transport(monkeypatch, _fake_bootloader("ab" * 32, log))
     with pytest.raises(fw.UploadRefused, match="swap IS scheduled"):
         fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok(),
                  vendor_trailer=True)
@@ -478,7 +496,7 @@ def test_a_bootloader_that_reports_not_pending_after_the_write_stops_before_rese
             return {"images": [{"slot": 1, "hash": bytes.fromhex(RUNNING_HASH), "pending": False,
                                 "confirmed": False, "active": False}]}
         return {"rc": 0}
-    monkeypatch.setattr(fw.rec, "_talk", talk)
+    _patch_transport(monkeypatch, talk)
     with pytest.raises(fw.UploadRefused, match="not pending"):
         fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok())
     assert (0, 5, 2) not in _kinds(log)
@@ -528,7 +546,7 @@ def test_an_image_larger_than_its_slot_is_refused_before_anything_is_sent(images
 
 def test_upload_frames_carry_the_resolved_image_id(images, monkeypatch):
     log = []
-    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
     nine = {"supported": True, "slots": [{"image": 0, "slot": 1, "size": 663552, "uploadImageId": 9}]}
     fw.flash(images / "kb_fwl.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(), chunk=1024,
              slot_info=nine)
@@ -667,7 +685,7 @@ def test_a_withheld_bundle_is_refused(bundle):
 def test_flash_module_bundle_is_chunks_then_reset_and_nothing_else(bundle, monkeypatch):
     """No mark-pending and no slot re-read: the bundle is a filesystem, not an MCUboot image."""
     log = []
-    monkeypatch.setattr(fw.rec, "_talk", _fake_bootloader(RUNNING_HASH, log))
+    _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
     r = fw.flash_module_bundle(bundle, MODULE_CATALOG, arm=RUNNING_HASH, state=state_ok(),
                                slot_info=MODULE_MAP, chunk=BIG_CHUNK)
     assert _kinds(log) == [(1, 1, 2)] * BUNDLE_CHUNKS + [(0, 5, 2)]
@@ -680,7 +698,7 @@ def test_flash_module_bundle_is_chunks_then_reset_and_nothing_else(bundle, monke
 def test_flash_module_bundle_refuses_without_the_arm_token(bundle, monkeypatch):
     def boom(*a, **k):
         raise AssertionError("a frame was sent despite the arm check failing")
-    monkeypatch.setattr(fw.rec, "_talk", boom)
+    _patch_transport(monkeypatch, boom)
     with pytest.raises(fw.UploadRefused, match="not armed"):
         fw.flash_module_bundle(bundle, MODULE_CATALOG, arm="", state=state_ok(), slot_info=MODULE_MAP)
 
@@ -694,7 +712,7 @@ def test_flash_module_bundle_stops_without_reset_if_the_bootloader_rejects_a_chu
         if h == {"op": 2, "group": 1, "id": 1}:
             return {"rc": 3} if b["off"] >= 524288 else {"rc": 0, "off": b["off"] + len(b["data"])}
         return {"rc": 0}
-    monkeypatch.setattr(fw.rec, "_talk", talk)
+    _patch_transport(monkeypatch, talk)
     with pytest.raises(fw.UploadRefused, match="rejected the chunk at offset 524288"):
         fw.flash_module_bundle(bundle, MODULE_CATALOG, arm=RUNNING_HASH, state=state_ok(),
                                slot_info=MODULE_MAP, chunk=BIG_CHUNK)

@@ -648,10 +648,13 @@ class DeviceService:
         out: list[dict] = []
         with self._lock:
             seen = self.halves_seen()
-            # Only worth asking who a half is paired with when more than one keyboard is
-            # present. One keyboard needs no telling apart, and this is the six-second
-            # poll: it should cost nothing in the case that is almost always true.
-            need_grouping = len(seen) > 2
+            # Always. Making this conditional on "more than one keyboard attached" was wrong in
+            # both directions: status_all is the EXPLICIT read, not the six-second poll, so the
+            # one extra command per half costs nothing anyone notices -- and without it a single
+            # keyboard's two halves never join, so they reported as TWO keyboards and anything
+            # per-keyboard (the firmware-mismatch warning) could not fire at all. tick() already
+            # reads it unconditionally into the identity cache, so the two paths now agree.
+            need_grouping = True
             for dev, others in seen:
                 entry: dict = {
                     # Ports of this same half we are not using. Only the ones we PROVED

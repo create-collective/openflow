@@ -39,11 +39,21 @@ def _svc(devices, answers, monkeypatch):
     monkeypatch.setattr(svc, "visible_ports", lambda: list(devices))
     opened = []
 
+    class FakeTransport:
+        """Enough of a transport to be talked to. It used to be a bare string, which only held
+        up because status_all did not ask a single keyboard for its pair address."""
+
+        def __init__(self, port):
+            self.port = port
+
+        def send_command(self, dest, category, subcmd, payload=b"", timeout=2.5):
+            return []          # answers nothing; the tests here are about port choice
+
     def fake_transport_for(port, dest):
         opened.append(port)
         if port in answers:
             svc._note_port(port, True)
-            return f"transport:{port}"
+            return FakeTransport(port)
         svc._note_port(port, False)
         raise TransportError("Keyboard did not respond to handshake. "
                              "Is it connected and powered on?")
@@ -59,7 +69,7 @@ def test_falls_through_to_the_sibling_that_answers(monkeypatch):
     svc, opened = _svc(DONOR, ANSWERS, monkeypatch)
     dev, t = svc._connect_side("right")
     assert opened == ["COM21", "COM22"], "should try the dead one, then its sibling"
-    assert (dev.port, t) == ("COM22", "transport:COM22")
+    assert (dev.port, t.port) == ("COM22", "COM22")
 
 
 def test_the_half_that_already_sorts_right_opens_nothing_extra(monkeypatch):

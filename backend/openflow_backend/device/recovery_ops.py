@@ -23,6 +23,7 @@ op below.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -183,6 +184,27 @@ REGISTRY: tuple[RecoveryOp, ...] = (
 )
 
 BY_ID = {op.id: op for op in REGISTRY}
+
+# Individual ops may be enabled for ONE SESSION by naming them:
+#
+#     OPENFLOW_ENABLE_RECOVERY_OPS=ble_set_pair_address,ble_unpair_all
+#
+# A LIST, deliberately, not a boolean. These ops sit in one registry with erase_chip and
+# format_partition, and "enable recovery ops" as a single switch would arm those too. Each one
+# has to be named by whoever is running the session, and nothing is enabled by default.
+#
+# Set at import from the environment, so it cannot be committed on the way an edited
+# `enabled=True` can.
+# RecoveryOp is frozen, so an enabled copy replaces the entry rather than being mutated in
+# place: REGISTRY keeps the shipped definitions, and only the lookup a caller goes through is
+# swapped. dataclasses.replace also means a typo in the field name is an error, not a silent
+# no-op the way setattr on a non-frozen class would be.
+import dataclasses as _dc
+
+for _name in (os.environ.get("OPENFLOW_ENABLE_RECOVERY_OPS") or "").split(","):
+    _name = _name.strip()
+    if _name and _name in BY_ID:
+        BY_ID[_name] = _dc.replace(BY_ID[_name], enabled=True)
 
 
 def public_list() -> list[dict]:

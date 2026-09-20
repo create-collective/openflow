@@ -48,13 +48,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from . import recovery_ops as ro
 
-PAIRING_REPAIR_ENABLED = False      # flip only after the sequence is watched on a spare pair
+PAIRING_REPAIR_ENABLED = os.environ.get("OPENFLOW_ENABLE_PAIRING_REPAIR") == "1"
+# Driven by the environment rather than edited to True for a session, so it cannot be
+# committed on by accident. Unset, or anything but "1", is off. The per-op gates in
+# recovery_ops still apply underneath: this one alone sends nothing.
 
 WAIT_AFTER_SET_PAIR_MS = 300        # NayaCore: wait_300ms
 WAIT_AFTER_UNPAIR_MS = 1000         # NayaCore: wait_1000ms

@@ -528,12 +528,23 @@ def _send_chunks(port: str, image_id: int, raw: bytes, *, chunk: int, progress=N
     the number of bytes the DEVICE acknowledged."""
     sha = hashlib.sha256(raw).digest()
     sent, seq = 0, 0
+    # ONE open port for the whole transfer, as NayaCore does ("Open the serial port ... chunked
+    # via uploadImageChunk"). This used to call rec._talk per chunk, which reopens the port every
+    # time -- and the bootloader's CDC endpoint needs a moment to settle after an open, so a
+    # 1296-chunk upload paid that 1296 times. Measured: 5.06 s per chunk that way, 1h50 for an
+    # image the vendor writes in about two minutes; a warm port answers in 78 ms.
+    with rec.session(port, timeout=5.0) as send:
+        return _stream_chunks(send, image_id, raw, sha, chunk, progress, untouched)
+
+
+def _stream_chunks(send, image_id, raw, sha, chunk, progress, untouched) -> int:
+    sent, seq = 0, 0
     while sent < len(raw):
         piece = raw[sent:sent + chunk]
         frame = build_chunk_request(image_id, sent, piece,
                                     total=len(raw) if sent == 0 else None,
                                     sha=sha if sent == 0 else None, seq=seq & 0xFF)
-        reply = rec._talk(port, frame, timeout=5.0)
+        reply = send(frame)
         rc = reply.get("rc", 0)
         if rc:
             raise UploadRefused(f"the bootloader rejected the chunk at offset {sent} (rc={rc}). "
