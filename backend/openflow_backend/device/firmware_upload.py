@@ -71,6 +71,7 @@ from __future__ import annotations
 
 import hashlib
 import struct
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -522,6 +523,12 @@ def build_chunk_request(image_id: int, offset: int, data: bytes, *, total: int |
                               payload=payload, seq=seq)
 
 
+# A warm port answers a chunk in tens of milliseconds; the generous value is for a stalled
+# device, not a busy one. ERASE_TIMEOUT covers the secondary-slot erase the first chunk triggers.
+CHUNK_TIMEOUT = 5.0
+ERASE_TIMEOUT = 90.0
+
+
 def _send_chunks(port: str, image_id: int, raw: bytes, *, chunk: int, progress=None,
                  untouched: str = "the primary image is untouched") -> int:
     """Stream one image to the bootloader, chunk by chunk, stopping on the first refusal. Returns
@@ -533,7 +540,7 @@ def _send_chunks(port: str, image_id: int, raw: bytes, *, chunk: int, progress=N
     # time -- and the bootloader's CDC endpoint needs a moment to settle after an open, so a
     # 1296-chunk upload paid that 1296 times. Measured: 5.06 s per chunk that way, 1h50 for an
     # image the vendor writes in about two minutes; a warm port answers in 78 ms.
-    with rec.session(port, timeout=5.0) as send:
+    with rec.session(port, timeout=CHUNK_TIMEOUT) as send:
         return _stream_chunks(send, image_id, raw, sha, chunk, progress, untouched)
 
 
@@ -544,7 +551,13 @@ def _stream_chunks(send, image_id, raw, sha, chunk, progress, untouched) -> int:
         frame = build_chunk_request(image_id, sent, piece,
                                     total=len(raw) if sent == 0 else None,
                                     sha=sha if sent == 0 else None, seq=seq & 0xFF)
-        reply = send(frame)
+        # The FIRST chunk makes the bootloader erase the whole secondary slot before it answers,
+        # and 648 KiB of internal flash takes far longer than a normal round trip -- measured on
+        # 2026-09-20: the device went silent right after chunk one and was answering again, with
+        # slot 1 gone, when probed later. A 5 s timeout called that a dead device and aborted an
+        # upload that was working. Every later chunk writes into already-erased flash and comes
+        # back in tens of milliseconds, so only offset 0 needs the long wait.
+        reply = send(frame, ERASE_TIMEOUT if sent == 0 else CHUNK_TIMEOUT)
         rc = reply.get("rc", 0)
         if rc:
             raise UploadRefused(f"the bootloader rejected the chunk at offset {sent} (rc={rc}). "
@@ -648,6 +661,41 @@ def _slot_flags(images: list | None, slot: int) -> dict | None:
     return {k: bool(row.get(k)) for k in ("pending", "permanent", "confirmed", "active")}
 
 
+def _settled_image_state(port: str, side: str | None = None, timeout: float = 90.0):
+    """Read the slot table AFTER an upload, waiting out the bootloader's post-upload silence.
+
+    Measured on both halves, 2026-09-20: the last chunk is acknowledged and the port then throws
+    (`ClearCommError failed`) or times out for tens of seconds while MCUboot acts on the trailer
+    the resource just armed. A single read here failed on both of two completely successful
+    flashes, which raised UploadRefused and -- far worse -- skipped the reset, leaving the half
+    stranded in the bootloader. The device also re-enumerates, so the answering port is looked up
+    again rather than assumed. Returns (state, port_that_answered).
+    """
+    deadline = time.monotonic() + timeout
+    last: Exception | None = None
+    while True:
+        tried = {port}
+        try:
+            return rec.image_state(port), port
+        except Exception as e:                       # noqa: BLE001 -- retried until the deadline
+            last = e
+        for d in rec.find_recovery_ports():
+            if (side and d.side != side) or d.port in tried:
+                continue
+            tried.add(d.port)
+            try:
+                return rec.image_state(d.port), d.port
+            except Exception as e:                   # noqa: BLE001 -- retried until the deadline
+                last = e
+        if time.monotonic() >= deadline:
+            raise UploadRefused(
+                f"the upload completed but the bootloader did not answer for {timeout:.0f}s "
+                f"afterwards ({type(last).__name__ if last else 'no reply'}), so what landed "
+                "could not be checked and no reset was sent. The half is still in the bootloader "
+                "and can be read or re-uploaded.") from last
+        time.sleep(2.0)
+
+
 def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
           chunk: int = DEFAULT_CHUNK, allow_older: bool = False, confirm: bool = False,
           progress=None, state: dict | None = None, slot_info: dict | None = None,
@@ -691,10 +739,24 @@ def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
             "cannot be checked. " + ("The resource's own trailer has already scheduled a "
             f"{p.trailer.get('swap')} swap; MCUboot will validate the image before swapping."
             if armed else "Nothing is scheduled; the primary image is untouched."))
-    after = rec.image_state(p.port)
-    landed = next((i for i in after.get("images") or [] if i.get("slot") == slot), None)
+    after, read_port = _settled_image_state(p.port, side=(state or {}).get("pidSide"))
+    images = after.get("images") or []
+    landed = next((i for i in images if i.get("slot") == slot), None)
     got = _hex(landed.get("hash")) if landed else ""
-    if got != want:
+    # A vendor resource arms a PERMANENT swap the instant its trailer lands, and MCUboot can have
+    # carried that swap out before this read -- measured on both halves, 2026-09-20: the new image
+    # was already in slot 0 with the OLD one moved down to slot 1. Checking only the secondary
+    # slot then reads the image we replaced and calls a perfect flash corrupt. The half is still
+    # in the bootloader either way, so the reset below is still what boots the new image.
+    primary = next((i for i in images if i.get("slot") == 0), None)
+    # The signature of a swap that has ALREADY happened is precise: the image we just wrote is in
+    # the primary slot AND the one we replaced (the arm token, which is by definition what was
+    # running) has been moved down into the secondary. Both halves, and only when the two differ
+    # -- flashing the version already installed makes them identical, and then there is nothing
+    # to tell apart and the ordinary check below passes anyway.
+    swapped = bool(armed and primary is not None and _hex(arm) != want
+                   and _hex(primary.get("hash")) == want and got == _hex(arm))
+    if not swapped and got != want:
         raise UploadRefused(
             f"after upload, slot {slot} reports {got or 'no image'} but {p.image_path.name} "
             f"should read {want}. " + ("The bytes uploaded include the resource's trailer, so a "
@@ -703,7 +765,9 @@ def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
             "to replace it." if armed else
             "Nothing is scheduled; the primary image is untouched."))
 
-    if armed:
+    if armed and swapped:
+        marked = f"{p.trailer.get('swap')} (already carried out by the bootloader)"
+    elif armed:
         flags = _slot_flags(after.get("images"), slot)
         if flags is not None and not flags["pending"]:
             raise UploadRefused(
@@ -711,8 +775,9 @@ def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
                 f"slot {slot} not pending ({flags}). Not resetting.")
         marked = f"{p.trailer.get('swap')} (by the resource's own trailer)"
     else:
-        reply = rec._talk(p.port, build_set_pending_request(bytes.fromhex(want), confirm=confirm,
-                                                            seq=1), timeout=5.0)
+        reply = rec._talk(read_port, build_set_pending_request(bytes.fromhex(want),
+                                                               confirm=confirm, seq=1),
+                          timeout=5.0)
         if reply.get("rc", 0):
             raise UploadRefused(
                 f"the bootloader refused to schedule slot {slot} (rc={reply['rc']}). Nothing "
@@ -726,11 +791,17 @@ def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
         marked = "permanent" if confirm else "test"
     # The device reboots while answering this, so a short or missing reply is the expected
     # outcome of a reset that worked, not an error to surface.
+    # It must go to the port that ANSWERS SMP. Each half in recovery presents two CDC ports and
+    # the other one is a log port: it accepts the open, swallows the frame and reports nothing,
+    # so a reset addressed there looks sent and does nothing. Sending to the first port in the
+    # list is what produced "a power cycle is required" -- on the answering port the half boots
+    # into the application in about 8 seconds (measured 2026-09-20, both halves).
     try:
-        rec._talk(p.port, build_reset_request(seq=2), timeout=2.0)
+        rec._talk(read_port, build_reset_request(seq=2), timeout=2.0)
     except Exception:      # noqa: BLE001 -- see above
         pass
-    result.update({"swap": marked, "hash": want, "reset": True, "trailer": p.trailer})
+    result.update({"swap": marked, "hash": want, "reset": True, "trailer": p.trailer,
+                   "port": read_port})
     return result
 
 

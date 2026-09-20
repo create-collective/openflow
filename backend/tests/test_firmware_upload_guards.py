@@ -717,3 +717,92 @@ def test_flash_module_bundle_stops_without_reset_if_the_bootloader_rejects_a_chu
         fw.flash_module_bundle(bundle, MODULE_CATALOG, arm=RUNNING_HASH, state=state_ok(),
                                slot_info=MODULE_MAP, chunk=BIG_CHUNK)
     assert (0, 5, 2) not in _kinds(log), "no reset after a refused chunk"
+
+
+# --- what the first two real flashes taught us, 2026-09-20 ---------------------------------- #
+# Both halves of a warranty board went 3.35.4 <-> 3.41.0 through this module. Two things the
+# bench had never shown, each of which made flash() refuse a flash that had worked:
+
+TARGET_HASH = "2abb2695b9b6e948" + "cd" * 24          # != RUNNING_HASH, so a swap is detectable
+
+
+def _post_swap_bootloader(log: list, *, fail_reads: int = 0):
+    """MCUboot AFTER it has already carried out the swap the resource's trailer armed.
+
+    The image just written is in slot 0 and the one it replaced has been moved down to slot 1 --
+    the exact layout both real flashes reported. Optionally throws on the first `fail_reads`
+    state reads, the way the port does while the bootloader is busy acting on the trailer.
+    """
+    state = {"n": 0}
+
+    def talk(port, frame, timeout=2.0):
+        h, body = _decode_header(frame), _decode_request(frame)
+        log.append((h, body))
+        if h == {"op": 2, "group": 1, "id": 1}:
+            return {"rc": 0, "off": body["off"] + len(body["data"])}
+        if h == {"op": 0, "group": 1, "id": 0}:
+            state["n"] += 1
+            if state["n"] <= fail_reads:
+                raise OSError("ClearCommError failed (the device does not recognize the command)")
+            return {"images": [{"slot": 0, "hash": bytes.fromhex(TARGET_HASH)},
+                               {"slot": 1, "hash": bytes.fromhex(RUNNING_HASH)}]}
+        return {"rc": 0}
+    return talk
+
+
+def _target_catalog(res):
+    return [{"file": "kb_fwl.bin", "side": "left", "generation": "A", "createFirmware": "3.41.0",
+             "plaintextSha256": TARGET_HASH, "blobSha256": _sha(res), "flashable": True,
+             "withheldBecause": []}]
+
+
+def test_a_swap_already_carried_out_is_a_success_not_a_corrupt_upload(tmp_path, monkeypatch):
+    """A vendor resource arms a PERMANENT swap the moment its trailer lands, and MCUboot can act
+    on it before we get to look. Checking only the secondary slot then finds the image we just
+    REPLACED and calls a perfect flash corrupt -- and, far worse, skips the reset, leaving the
+    half stranded in the bootloader. Measured on both halves of a real board."""
+    res, _n = _mcuboot_resource()
+    (tmp_path / "kb_fwl.bin").write_bytes(res)
+    log = []
+    _patch_transport(monkeypatch, _post_swap_bootloader(log))
+    r = fw.flash(tmp_path / "kb_fwl.bin", _target_catalog(res), arm=RUNNING_HASH,
+                 state=state_ok(), vendor_trailer=True)
+    assert "already carried out" in r["swap"] and r["reset"] is True
+    assert _kinds(log)[-1] == (0, 5, 2), "the reset must still be sent"
+    assert (1, 0, 2) not in _kinds(log), "no image state write: the trailer scheduled it"
+
+
+def test_the_post_upload_read_waits_the_bootloader_out(tmp_path, monkeypatch):
+    """The last chunk is acknowledged and the port then throws for tens of seconds while MCUboot
+    acts on the trailer. A single read there failed on both real flashes."""
+    res, _n = _mcuboot_resource()
+    (tmp_path / "kb_fwl.bin").write_bytes(res)
+    log = []
+    _patch_transport(monkeypatch, _post_swap_bootloader(log, fail_reads=3))
+    monkeypatch.setattr(fw.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(fw.rec, "find_recovery_ports", lambda: [])
+    r = fw.flash(tmp_path / "kb_fwl.bin", _target_catalog(res), arm=RUNNING_HASH,
+                 state=state_ok(), vendor_trailer=True)
+    assert r["reset"] is True and _kinds(log)[-1] == (0, 5, 2)
+
+
+def test_a_bootloader_that_never_answers_after_the_upload_does_not_reset(tmp_path, monkeypatch):
+    """Patience is not credulity: if it never comes back, say so and send no reset."""
+    res, _n = _mcuboot_resource()
+    (tmp_path / "kb_fwl.bin").write_bytes(res)
+    log = []
+
+    def _dead(port, frame, timeout=2.0):
+        h, body = _decode_header(frame), _decode_request(frame)
+        log.append((h, body))
+        if h == {"op": 2, "group": 1, "id": 1}:
+            return {"rc": 0, "off": body["off"] + len(body["data"])}
+        raise OSError("no SMP response")
+
+    _patch_transport(monkeypatch, _dead)
+    monkeypatch.setattr(fw.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(fw.rec, "find_recovery_ports", lambda: [])
+    with pytest.raises(fw.UploadRefused, match="did not answer"):
+        fw.flash(tmp_path / "kb_fwl.bin", _target_catalog(res), arm=RUNNING_HASH,
+                 state=state_ok(), vendor_trailer=True)
+    assert (0, 5, 2) not in _kinds(log), "no reset when what landed could not be checked"
