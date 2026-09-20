@@ -10,6 +10,7 @@ not-implemented status rather than 404 so the UI can surface state cleanly.
 from __future__ import annotations
 
 import logging
+import os
 import sqlite3
 import json
 import io
@@ -188,9 +189,17 @@ async def open_logs_folder(body: dict = Body(default={})) -> dict:
 
 
 # Firmware flashing is wired but GATED at the module level, exactly like the recovery ops: even
-# with an arm token and force, the endpoint refuses while this is False, so it ships visible-but-
-# inert until it is tested on a donor unit. Flip to True (per target) only after that test.
-FIRMWARE_FLASH_ENABLED = False
+# with an arm token and force, the endpoint refuses while this is off, so it ships visible-but-
+# inert.
+#
+# Driven by the ENVIRONMENT rather than edited to True for a test, so enabling it is a property
+# of the session doing the flashing and cannot be committed on by accident: an edited constant is
+# one forgotten revert away from shipping a build whose firmware endpoint is live. Unset, or set
+# to anything but "1", is off; tests/test_firmware_gate.py pins that.
+#
+# Read once at import. The gate is a decision made before the process starts, not something that
+# should change under a server that is mid-upload.
+FIRMWARE_FLASH_ENABLED = os.environ.get("OPENFLOW_ENABLE_FIRMWARE_FLASH") == "1"
 
 
 @router.post("/rpc/flash-firmware")

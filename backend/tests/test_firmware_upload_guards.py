@@ -156,8 +156,13 @@ def test_upload_is_wired_only_through_the_gated_endpoint():
     assert callers == ["api/rest.py"], (
         f"firmware_upload must be referenced only by api/rest.py; found {callers}")
     rest = (root / "api" / "rest.py").read_text(encoding="utf-8")
-    assert "FIRMWARE_FLASH_ENABLED = False" in rest, (
-        "the flasher gate must default to False -- it is wired but disabled until a donor test")
+    # The gate is driven by the environment, so it cannot be committed on by accident the way an
+    # edited `= True` can. What matters here is that it is never UNCONDITIONALLY open; that it is
+    # off by default, and open only for the exact value "1", is checked by behaviour in
+    # tests/test_firmware_gate.py rather than by reading the source.
+    assert 'FIRMWARE_FLASH_ENABLED = os.environ.get("OPENFLOW_ENABLE_FIRMWARE_FLASH") == "1"' in rest, (
+        "the flasher gate must be the environment read -- never a hardcoded value")
+    assert "FIRMWARE_FLASH_ENABLED = True" not in rest
     # the gate must actually guard the endpoint, not merely be defined
     assert "if not FIRMWARE_FLASH_ENABLED:" in rest
 
