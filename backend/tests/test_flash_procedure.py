@@ -343,3 +343,16 @@ def test_the_service_lock_is_held_for_the_whole_run(wired):
         P.capture_preflight = original
     assert r["ok"] is True
     assert not taken_by_other_thread, "another thread took the service lock during the procedure"
+
+
+def test_cached_transports_are_dropped_when_a_half_comes_back(wired):
+    """A half that has been through the bootloader re-enumerates and may return on a different
+    COM port. A stale cached handle is the likeliest reason a run would need a restart to see
+    the board again, which would count as going off-script."""
+    svc = wired["svc"]
+    svc._transports = {"COM30": object(), "COM29": object()}
+    dropped = []
+    svc._drop = lambda port: dropped.append(port)
+    r = _run(wired, {"left": "kb_fwl.bin"})
+    assert r["ok"] is True
+    assert "COM30" in dropped and "COM29" in dropped

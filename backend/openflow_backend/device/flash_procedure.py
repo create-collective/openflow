@@ -412,11 +412,31 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
     return result
 
 
+def _forget_cached_transports(svc) -> None:
+    """Drop the service's cached handles.
+
+    A half that has been through the bootloader re-enumerates, and may come back on a different
+    COM port. The service caches an open transport per port and only reopens when a failure is
+    recognisable as a dead handle; anything else propagates and would abort the run at
+    `version.confirm` on a flash that worked. Dropping the cache costs one reconnect and removes
+    a whole class of "it needed a restart to see the board again".
+    """
+    for port in list(getattr(svc, "_transports", {}) or {}):
+        try:
+            svc._drop(port)
+        except Exception:                           # noqa: BLE001 -- best effort by design
+            pass
+
+
 def _await_application(svc, side: str, timeout: float = 45.0) -> str | None:
     """Wait for the half to leave the bootloader and report its version. ~8 s in practice."""
     deadline = time.monotonic() + timeout
+    forgotten = False
     while True:
         if not [d for d in rec.find_recovery_ports() if d.side == side]:
+            if not forgotten:
+                _forget_cached_transports(svc)      # it may be back on a different port
+                forgotten = True
             try:
                 return _identity(svc, side).get("firmwareVersion")
             except Exception:                       # noqa: BLE001 -- still re-enumerating
