@@ -59,7 +59,7 @@ def svc(monkeypatch):
     class Dev:
         side, port = "left", "COM-TEST"
 
-    monkeypatch.setattr(s, "_require_side", lambda side: Dev())
+    monkeypatch.setattr(s, "_require_side", lambda side, serial=None: Dev())
     monkeypatch.setattr(s, "_transport_for", lambda port, dest: rec)
     s._recorder = rec
     return s

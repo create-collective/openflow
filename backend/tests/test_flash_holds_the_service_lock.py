@@ -34,14 +34,14 @@ class FakeService:
         self._lock = threading.RLock()
         self.calls = []
 
-    def read_keymap(self, side):
+    def read_keymap(self, side, serial=None):
         self.calls.append("read_keymap")
         return {"layers": {}, "led": {}, "layer_uuids": {}}
 
-    def read_module_configs(self, side):
+    def read_module_configs(self, side, serial=None):
         return None                                # no module list: no layout, no follow-up read
 
-    def _require_side(self, side):
+    def _require_side(self, side, serial=None):
         return types.SimpleNamespace(port="COM0", side=side)
 
     def _dest_for_side(self, side):

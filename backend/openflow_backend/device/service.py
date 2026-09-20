@@ -134,6 +134,21 @@ def _link_views(halves: list[dict]) -> dict:
     return out
 
 
+class AmbiguousKeyboard(TransportError):
+    """Several keyboards are attached and nothing said which one to act on.
+
+    A TransportError subclass so every existing handler still catches it, exactly as
+    PortAccessDenied is. `serials` lets a caller offer the choice rather than only
+    reporting the problem.
+    """
+
+    def __init__(self, side: str, serials: list[str]):
+        self.side, self.serials = side, serials
+        super().__init__(
+            f"More than one keyboard is connected, so it is not clear which {side} half to "
+            "use. Disconnect the others, or pick which keyboard this should act on.")
+
+
 def pairing_report(halves: list[dict]) -> dict:
     """Bond verdict plus, where the device told us, per-half link quality.
 
@@ -354,13 +369,13 @@ class DeviceService:
             except Exception:
                 pass
 
-    def _with_transport(self, side: str, fn):
+    def _with_transport(self, side: str, fn, serial: str | None = None):
         """Run fn(transport, dest, dev) under the lock; once more on a fresh handle if the cached
         one turns out to be dead. Only a failure that means NOTHING WAS SENT is retried (a write
         that failed at the driver, or a port that is not open). A timeout is not: the command may
         have landed, and re-sending it is the caller's decision."""
         with self._lock:
-            dev, t = self._connect_side(side)
+            dev, t = self._connect_side(side, serial)
             dest = self._dest_for_side(dev.side)
             try:
                 return fn(t, dest, dev)
@@ -1160,16 +1175,17 @@ class DeviceService:
 
     # --- keymap read (REMAP) ---------------------------------------------------
 
-    def read_keymap(self, side: str = "left") -> dict:
+    def read_keymap(self, side: str = "left", serial: str | None = None) -> dict:
         """Read the full board keymap (bindings + LED colours) off a connected half.
 
         The central/left half holds the whole-board map, so default to it. Returns
         the raw read for db.keymap_import to translate + persist. Read-only."""
         from . import keymap_read
 
-        return self._with_transport(side, lambda t, dest, dev: keymap_read.read_keymap(t, dest))
+        return self._with_transport(side, lambda t, dest, dev: keymap_read.read_keymap(t, dest),
+                                    serial=serial)
 
-    def read_module_configs(self, side: str = "left") -> dict:
+    def read_module_configs(self, side: str = "left", serial: str | None = None) -> dict:
         """Read the module config list + every non-empty slot. Read-only.
 
         Module configs live on the central/left half regardless of which half a module is
@@ -1181,7 +1197,9 @@ class DeviceService:
         from . import keymap_read
         from . import flash as F
 
-        read = self._with_transport(side, lambda t, dest, dev: keymap_read.read_module_configs(t, dest))
+        read = self._with_transport(side,
+                                    lambda t, dest, dev: keymap_read.read_module_configs(t, dest),
+                                    serial=serial)
         return {
             "list": read["list"].hex(),
             "by_uuid": F.slot_map_for(read["list"]),
@@ -1331,9 +1349,29 @@ class DeviceService:
             raise TransportError(f"No {side} device found. Is it connected via USB?{extra}")
         return sorted(cands, key=self._rank)
 
-    def _require_side(self, side: str):
-        """The single best port for this side."""
-        return self._ranked_for_side(side)[0]
+    def _require_side(self, side: str, serial: str | None = None):
+        """The port for this side, refusing to GUESS which keyboard when there are several.
+
+        `serial` names the half to talk to. Without it, and with more than one keyboard
+        attached, this raises rather than picking: a flash goes to the left half, and
+        silently choosing between two of them is how it lands on the wrong keyboard.
+        """
+        cands = self._ranked_for_side(side)
+        if serial:
+            want = serial.strip().upper()
+            picked = [d for d in cands
+                      if (getattr(d, "serial_number", None) or "").upper() == want]
+            if not picked:
+                have = sorted({(getattr(d, "serial_number", None) or "?") for d in cands})
+                raise TransportError(
+                    f"No {side} half with serial {serial} is connected. "
+                    f"Connected {side} half/halves: {', '.join(have)}.")
+            return picked[0]
+        serials = {(getattr(d, "serial_number", None) or "").upper() for d in cands}
+        serials.discard("")
+        if len(serials) > 1:
+            raise AmbiguousKeyboard(side, sorted(serials))
+        return cands[0]
 
     def _siblings_of(self, dev) -> list:
         """The other ports that are provably the SAME PHYSICAL HALF as `dev`, best first.
@@ -1355,7 +1393,7 @@ class DeviceService:
                 and getattr(d, "serial_number", None) == sn]
         return sorted(same, key=self._rank)
 
-    def _connect_side(self, side: str):
+    def _connect_side(self, side: str, serial: str | None = None):
         """(device, transport) for this side, trying sibling interfaces before giving up.
 
         A half can present several CDC interfaces at once and only one of them answers;
@@ -1370,7 +1408,7 @@ class DeviceService:
         """
         # _require_side stays the ONE place a side becomes a port. Going around it would
         # bypass the seam the rest of the service and its tests are built on.
-        return self._open_with_siblings(self._require_side(side))
+        return self._open_with_siblings(self._require_side(side, serial))
 
     def _open_with_siblings(self, primary):
         """(device, transport), trying this half's other interfaces before giving up.

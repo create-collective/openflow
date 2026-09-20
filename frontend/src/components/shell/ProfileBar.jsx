@@ -4,6 +4,8 @@ import { api } from "../../lib/api";
 import { backupNow, clearDeviceError, readKeyboard, useDeviceActions } from "../../lib/deviceActions";
 import { hydrateDeviceState, invalidateDeviceState } from "../../lib/deviceState";
 import { useDeviceStream } from "../../lib/deviceStream";
+import { keyboardChoices, setTargetKeyboard, targetSerialFor, useTargetKeyboard }
+  from "../../lib/targetKeyboard";
 import useProfileEditor from "../../lib/useProfileEditor";
 import DeviceChip from "../DeviceChip";
 import FlashButton from "../FlashButton";
@@ -37,6 +39,19 @@ export default function ProfileBar() {
 
   const err = dev.err || ed.error;
 
+  // With one keyboard there is nothing to choose and nothing is shown. With several, the
+  // backend refuses to guess which to read or flash, so the choice has to be made here
+  // (SCRUM-86). Default to the first so the actions are never dead, but say which it is.
+  const halves = data?.status?.halves || [];
+  const choices = halves.length > 2 ? keyboardChoices(halves) : [];
+  const target = useTargetKeyboard();
+  useEffect(() => {
+    if (!choices.length) return;
+    if (!choices.some((c) => c.serial && c.serial === target)) {
+      setTargetKeyboard(choices[0].serial);   // the chosen board was unplugged, or none yet
+    }
+  }, [choices.map((c) => c.serial).join(","), target]);
+
   return (
     <div className="shell-bar" role="region" aria-label="Keyboard profile and actions">
       <div className="shell-bar-profile">
@@ -68,6 +83,20 @@ export default function ProfileBar() {
         )}
       </div>
 
+      {choices.length > 1 && (
+        <div className="shell-bar-target" title="Which keyboard Read and Flash act on">
+          <label htmlFor="target-keyboard">Acting on</label>
+          <select id="target-keyboard" value={target || ""}
+            onChange={(e) => setTargetKeyboard(e.target.value)}>
+            {choices.map((c) => (
+              <option key={c.id} value={c.serial || ""}>
+                {c.label}{c.firmware ? ` · ${c.firmware}` : ""}{c.serial ? ` · ${c.serial.slice(-6)}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="shell-bar-status">
         {connected ? (
           <DeviceChip status={data?.status} />
@@ -83,7 +112,7 @@ export default function ProfileBar() {
         <Button
           variant="primary"
           done={dev.justRead}
-          onClick={readKeyboard}
+          onClick={() => readKeyboard(targetSerialFor(halves, "left"))}
           disabled={!!dev.busy}
           title="Read the map currently on the connected keyboard into a profile"
         >

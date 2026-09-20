@@ -43,7 +43,7 @@ class Old:
 
 def _svc(monkeypatch, transport):
     svc = DeviceService()
-    monkeypatch.setattr(svc, "_connect_side", lambda side: (Old(), transport))
+    monkeypatch.setattr(svc, "_connect_side", lambda side, serial=None: (Old(), transport))
     monkeypatch.setattr(svc, "_dest_for_side", lambda side: 0x50)
     return svc
 

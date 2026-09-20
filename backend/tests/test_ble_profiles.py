@@ -66,7 +66,7 @@ def svc(monkeypatch):
         pytest.skip("the 2026-09-10 capture is not on disk")
     monkeypatch.setattr(S, "SerialTransport", FakeTransport)
     s = S.DeviceService()
-    monkeypatch.setattr(s, "_require_side", lambda side: Dev())
+    monkeypatch.setattr(s, "_require_side", lambda side, serial=None: Dev())
     return s
 
 
@@ -81,7 +81,7 @@ def test_the_slots_read_matches_the_board():
         if not BLOB:
             pytest.skip("capture missing")
         monkey.setattr(S, "SerialTransport", FakeTransport)
-        s = S.DeviceService(); monkey.setattr(s, "_require_side", lambda side: Dev())
+        s = S.DeviceService(); monkey.setattr(s, "_require_side", lambda side, serial=None: Dev())
         out = s.ble_profiles("left")
         assert out["activeProfile"] == 1 and len(out["slots"]) == 5
         assert [x["active"] for x in out["slots"]] == [False, True, False, False, False]

@@ -73,7 +73,7 @@ def svc(monkeypatch):
     FakeTransport.fail_next.clear()
     monkeypatch.setattr(S, "SerialTransport", FakeTransport)
     s = S.DeviceService()
-    monkeypatch.setattr(s, "_require_side", lambda side: Dev())
+    monkeypatch.setattr(s, "_require_side", lambda side, serial=None: Dev())
     return s
 
 
@@ -96,7 +96,7 @@ def test_a_timeout_is_not_retried():
     orig = S2.SerialTransport
     S2.SerialTransport = FakeTransport
     try:
-        s = S2.DeviceService(); s._require_side = lambda side: Dev()
+        s = S2.DeviceService(); s._require_side = lambda side, serial=None: Dev()
         with pytest.raises(S.TransportError, match="No response"):
             s.led("left", "effect", 1)
         assert len(FakeTransport.instances) == 1

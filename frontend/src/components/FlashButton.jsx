@@ -4,6 +4,8 @@ import useDoneFlag from "../lib/useDoneFlag";
 import { api } from "../lib/api.js";
 import { getActiveProfileId } from "../lib/activeProfile";
 import { hasReadDevice } from "../lib/deviceActions";
+import { useDeviceStream } from "../lib/deviceStream";
+import { targetSerialFor } from "../lib/targetKeyboard";
 import Button from "./ui/Button";
 import Modal from "./ui/Modal";
 import Notice from "./ui/Notice";
@@ -74,6 +76,16 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
   const [error, setError] = useState("");
   const [recovery, setRecovery] = useState(false);
   const [wrote, setWrote] = useState(false);   // did this attempt reach the device?
+  const { data } = useDeviceStream();
+
+  // Which keyboard to write to, when more than one is attached. A flash goes to the LEFT half,
+  // so that is the half named. Null with a single keyboard, and the backend then has nothing to
+  // disambiguate; with several and no target it refuses rather than writing to whichever ranked
+  // first, which is how a flash lands on the wrong board (SCRUM-86).
+  const targetBody = () => {
+    const s = targetSerialFor(data?.status?.halves, "left");
+    return s ? { target: s } : {};
+  };
   const [collectOrphans, setCollectOrphans] = useState(false);
   // Bindings the plan could not encode. Declared here because it was NOT: setDropped was called
   // in the flash handler and `dropped` read in the result panel, with no useState between them,
@@ -101,7 +113,7 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
     setWrote(false);
     setCollectOrphans(false);      // never carried over from a previous preview
     try {
-      const res = await api.flashPreview({ profileId: activeProfileId() });
+      const res = await api.flashPreview({ profileId: activeProfileId(), ...targetBody() });
       setPreview(res);
       setState("preview");
     } catch (e) {
@@ -119,8 +131,9 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
       invalidateDeviceState("flash");
       const res = await api.flash(
         recovery
-          ? { mode: "recovery", acknowledgeRecovery: true, profileId: activeProfileId() }
-          : { full: false, profileId: activeProfileId(), collectOrphans });
+          ? { mode: "recovery", acknowledgeRecovery: true, profileId: activeProfileId(),
+              ...targetBody() }
+          : { full: false, profileId: activeProfileId(), collectOrphans, ...targetBody() });
       setResult(res);
       // The flash reads the modules back on success, so publish that rather than making the
       // user read again to see the result of a write we just checked. If the follow-up read

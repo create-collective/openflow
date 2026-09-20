@@ -86,12 +86,43 @@ def test_a_lone_port_behaves_exactly_as_before(monkeypatch):
 
 
 def test_never_crosses_to_a_different_keyboard(monkeypatch):
-    """Two Creates attached: both have a 'left'. A fallback must not reach the other one."""
+    """Two Creates attached: both have a 'left'. It refuses to pick rather than guessing.
+
+    Stronger than the sibling rule alone. This used to open the first-ranked left and simply
+    decline to fall through to the other keyboard; now it opens NOTHING, because silently
+    choosing between two keyboards is how a flash lands on the wrong one (SCRUM-86).
+    """
+    from openflow_backend.device.service import AmbiguousKeyboard
     other = FakeDev("COM31", "left", "OTHERKEYBOARD0001")
     svc, opened = _svc([FakeDev("COM30", "left", LEFT_SN), other], {"COM31"}, monkeypatch)
-    with pytest.raises(TransportError):
+    with pytest.raises(AmbiguousKeyboard) as ei:
         svc._connect_side("left")
-    assert opened == ["COM30"], "a different serial is a different keyboard, never a sibling"
+    assert isinstance(ei.value, TransportError), "every existing handler still catches it"
+    assert sorted(ei.value.serials) == sorted([LEFT_SN, "OTHERKEYBOARD0001"]),         "the caller is told which keyboards it could choose between"
+    assert opened == [], "nothing is opened when we do not know which keyboard is meant"
+
+
+def test_naming_the_keyboard_targets_exactly_that_half(monkeypatch):
+    """The other half of the rule: a caller that knows which keyboard says so and gets it."""
+    other = FakeDev("COM31", "left", "OTHERKEYBOARD0001")
+    svc, opened = _svc([FakeDev("COM30", "left", LEFT_SN), other], {"COM30", "COM31"}, monkeypatch)
+    dev, _t = svc._connect_side("left", serial="OTHERKEYBOARD0001")
+    assert dev.port == "COM31"
+    assert opened == ["COM31"], "the keyboard that was asked for, and no other"
+
+
+def test_an_unknown_serial_says_what_is_connected(monkeypatch):
+    svc, opened = _svc([FakeDev("COM30", "left", LEFT_SN)], {"COM30"}, monkeypatch)
+    with pytest.raises(TransportError, match="No left half with serial"):
+        svc._connect_side("left", serial="NOTATTACHED0001")
+    assert opened == []
+
+
+def test_one_keyboard_still_needs_no_target(monkeypatch):
+    """The single-keyboard case is untouched: nothing to disambiguate, nothing to pass."""
+    svc, opened = _svc(DONOR, ANSWERS, monkeypatch)
+    dev, _t = svc._connect_side("left")
+    assert dev.port == "COM23"
 
 
 def test_no_serial_means_no_fallback(monkeypatch):

@@ -122,7 +122,7 @@ def test_the_service_reads_the_list_and_writes_it_straight_back(monkeypatch):
 
     class Dev:
         port, side = "COM9", "left"
-    monkeypatch.setattr(svc, "_require_side", lambda side: Dev())
+    monkeypatch.setattr(svc, "_require_side", lambda side, serial=None: Dev())
     out = svc.restore_lighting("left")
     assert out["ok"] and out["layers"] == 3
     assert out["animations"] == {0: "solid", 1: "breathe", 2: "swirl"}

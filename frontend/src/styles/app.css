@@ -548,6 +548,24 @@ img:not([draggable="true"]) {
 /* Hover highlights the KEYBOARD, not every box in the bar. With two attached, lighting all
    four said the wrong thing: these are two devices, and the pair is the unit. */
 .device-chip-board:hover .ui-statusbox { border-color: var(--accent); }
+/* Only present when more than one keyboard is attached, which is rare: it is the answer to
+   "which one does Read and Flash act on", and the backend refuses to guess (SCRUM-86). */
+.shell-bar-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.shell-bar-target select {
+  background: var(--bg-panel);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  font-size: var(--fs-xs);
+}
 .device-chip-empty {
   padding: 12px 14px;
   border: 1px dashed var(--border-strong);

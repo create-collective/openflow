@@ -482,11 +482,14 @@ async def read_keyboard(body: dict = Body(default={})) -> dict:
     """
     svc = get_service()
     side = body.get("side", "left")
+    # Which keyboard, when more than one is attached. Without it the service refuses rather
+    # than guessing, and the refusal says so (SCRUM-86).
+    target = body.get("target") or None
     try:
-        read = await run_in_threadpool(svc.read_keymap, side)
+        read = await run_in_threadpool(svc.read_keymap, side, target)
         slot_uuid, mod_read = {}, None
         try:
-            mod_read = await run_in_threadpool(svc.read_module_configs, side)
+            mod_read = await run_in_threadpool(svc.read_module_configs, side, target)
             slot_uuid = {slot: uuid for uuid, slot in (mod_read.get("by_uuid") or {}).items()}
         except Exception:
             pass    # a keymap read is still worth having if the module list is unreadable
@@ -1686,13 +1689,14 @@ def _device_slots(mod_read) -> set | None:
     return {int(s) for s in (mod_read.get("slots") or {})}
 
 
-def _flash_preview(profile_id: str | None = None, side: str = "left") -> dict:
+def _flash_preview(profile_id: str | None = None, side: str = "left",
+                   target: str | None = None) -> dict:
     # The module layout needs to know what the board already carries -- which profiles have
     # slots and what a new slot can be templated from. Without that read the preview can still
     # show the keymap, but it must not invent a module plan.
     mod_read = None
     try:
-        mod_read = get_service().read_module_configs(side)
+        mod_read = get_service().read_module_configs(side, target)
     except Exception:
         pass
     conn = db_connect()
@@ -1822,7 +1826,10 @@ async def flash_write(body: dict = Body(default={})) -> dict:
                 + ". Pick a profile (or 'disabled') for each on the Bindings board, or pass "
                   "allowBaseBayGaps=true to flash anyway."))
 
-        dev = svc._require_side(side)
+        # The target keyboard, when several are attached. _require_side refuses to guess
+        # between them, so an untargeted flash with two boards is stopped rather than landing
+        # on whichever ranked first (SCRUM-86).
+        dev = svc._require_side(side, body.get("target") or None)
         dest = svc._dest_for_side(dev.side)
         transport = svc._transport_for(dev.port, dest)
         result = flash_mod.flash(
@@ -1836,7 +1843,8 @@ async def flash_write(body: dict = Body(default={})) -> dict:
             # A recovery flash targets a board we could not read, so do not claim a verify we
             # cannot trust; report it as sent-unverified and let the caller re-read if it can.
             reader=(None if mode == "recovery"
-                    else lambda: flash_mod.desired_from_device_read(svc.read_keymap(side))),
+                    else lambda: flash_mod.desired_from_device_read(
+                        svc.read_keymap(side, body.get("target") or None))),
         )
         result["mode"] = mode
         result["profileId"] = desired.profile_id
@@ -1899,7 +1907,8 @@ async def flash_preview(body: dict = Body(default={})) -> dict:
     so the preview shows the plan that Confirm would actually send."""
     try:
         result = await run_in_threadpool(_flash_preview, body.get("profileId"),
-                                         body.get("side", "left"))
+                                         body.get("side", "left"),
+                                         body.get("target") or None)
     except Exception as e:  # DB/encode errors surface cleanly to the UI
         # The UI gets a short message; the log gets the stack. Without this a report of
         # "flash preview failed: <something>" cannot be located at all -- the whole

@@ -52,12 +52,17 @@ function markRead() {
   doneTimer = setTimeout(() => set({ justRead: false }), DONE_MS);
 }
 
-/** Read the map on the connected keyboard into a profile and make that profile the active one. */
-export async function readKeyboard() {
+/** Read the map on the connected keyboard into a profile and make that profile the active one.
+ *
+ * `target` is a half's serial, naming WHICH keyboard when more than one is attached. Passed in
+ * by the caller, which already has the half list, rather than reached for from here. Omit it
+ * with one keyboard: the backend then has nothing to disambiguate, and with several it refuses
+ * rather than guessing (SCRUM-86). */
+export async function readKeyboard(target = null) {
   if (state.busy) return null;
   set({ busy: "read", err: null, readNote: null });
   try {
-    const r = await api.readKeyboard();
+    const r = await api.readKeyboard(target ? { target } : {});
     // The read may have produced a new profile: the list first, then the switch, so the
     // profile a page is asked to show is one it can find.
     await reloadProfiles();
