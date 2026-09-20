@@ -523,9 +523,18 @@ def build_chunk_request(image_id: int, offset: int, data: bytes, *, total: int |
                               payload=payload, seq=seq)
 
 
-# A warm port answers a chunk in tens of milliseconds; the generous value is for a stalled
-# device, not a busy one. ERASE_TIMEOUT covers the secondary-slot erase the first chunk triggers.
-CHUNK_TIMEOUT = 5.0
+# A warm port answers a chunk in tens of milliseconds; these generous values are for a BUSY
+# device, not a stalled one, and a genuinely dead device still fails -- just later.
+#
+# ERASE_TIMEOUT covers the secondary-slot erase the first chunk triggers. CHUNK_TIMEOUT was 5.0
+# and that was too tight: the erase is NOT finished when the first chunk is acknowledged, and a
+# chunk shortly afterwards can block for longer than five seconds while the bootloader catches
+# up. A real downgrade run died exactly there on 2026-09-20, nineteen seconds into an upload that
+# was working. The earlier upgrade survived the same behaviour only by luck -- its post-erase
+# stall was seventeen seconds spread across a hundred and thirty chunks, so no single chunk
+# exceeded the limit. Bounded patience is the whole trade: at ~11 KB/s a healthy upload is done
+# in about a minute, so a twenty-second ceiling costs nothing when things are fine.
+CHUNK_TIMEOUT = 20.0
 ERASE_TIMEOUT = 90.0
 
 

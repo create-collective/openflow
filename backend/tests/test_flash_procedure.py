@@ -356,3 +356,79 @@ def test_cached_transports_are_dropped_when_a_half_comes_back(wired):
     r = _run(wired, {"left": "kb_fwl.bin"})
     assert r["ok"] is True
     assert "COM30" in dropped and "COM29" in dropped
+
+
+def test_identify_retries_instead_of_probing_the_port_twice(monkeypatch):
+    """The first real run died here. A separate port probe followed by read_running_image opened
+    the bootloader's port twice within milliseconds, and Windows refuses the second open right
+    after the bootloader enumerates. One mechanism, retried."""
+    calls = {"n": 0}
+
+    def flaky(catalog=None):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            return {"state": "error", "detail": "neither port answered SMP"}
+        return {"state": "ok", "pidSide": "left", "port": "COM27",
+                "images": [{"slot": 0, "hash": "arm"}]}
+
+    monkeypatch.setattr(P.rec, "read_running_image", flaky)
+    monkeypatch.setattr(P.time, "sleep", lambda _s: None)
+    state = P._identify_in_bootloader("left", [])
+    assert state["port"] == "COM27" and calls["n"] == 3
+
+
+def test_identify_refuses_when_the_bootloader_reports_the_other_side(monkeypatch):
+    monkeypatch.setattr(P.rec, "read_running_image",
+                        lambda catalog=None: {"state": "ok", "pidSide": "right", "port": "COM27"})
+    monkeypatch.setattr(P.time, "sleep", lambda _s: None)
+    with pytest.raises(P.fw.UploadRefused, match="reports itself as right"):
+        P._identify_in_bootloader("left", [])
+
+
+def test_a_failed_run_does_not_leave_a_half_stranded_in_the_bootloader(wired, monkeypatch):
+    """A half left in MCUboot does not type and shows no lights, which to a user looks exactly
+    like a brick. The first real run left one there and it had to be recovered by hand."""
+    reset = []
+    monkeypatch.setattr(P.rec, "os_reset", lambda port: reset.append(port))
+    monkeypatch.setattr(P, "_answering_recovery_port", lambda side, timeout=30.0: "COM27")
+    # Still in the bootloader when the failure lands.
+    monkeypatch.setattr(P.rec, "find_recovery_ports", lambda: [_Dev("left")])
+
+    def exploding(image, catalog, *, arm, progress=None, **kw):
+        raise OSError("something went wrong mid-write")
+    wired["flash"] = exploding
+
+    r = _run(wired, {"left": "kb_fwl.bin"})
+    assert r["ok"] is False
+    assert reset == ["COM27"], "the stranded half must be reset back to the application"
+    text = Path(r["log"]).read_text(encoding="utf-8")
+    assert "should return to normal on its own" in text
+
+
+def test_the_wait_for_the_half_to_come_back_re_sends_the_reset(monkeypatch):
+    """A reset sent right after an upload often does not take -- the bootloader is still busy
+    with what the trailer armed. Measured on a real downgrade: the half ignored the first reset,
+    was still in MCUboot 45 s later, and returned minutes after a second one, running the new
+    firmware correctly the whole time. Waiting passively on one reset is what turned that perfect
+    flash into a reported failure.
+
+    Real clock, tiny values: patching time.monotonic would patch it for the whole process.
+    """
+    resets = []
+    monkeypatch.setattr(P.rec, "find_recovery_ports",
+                        lambda: ([] if resets else [_Dev("left")]))
+    monkeypatch.setattr(P, "_answering_recovery_port", lambda side, timeout=10.0: "COM27")
+    monkeypatch.setattr(P.rec, "os_reset", lambda port: resets.append(port))
+    monkeypatch.setattr(P, "_identity", lambda svc, side: {"firmwareVersion": "3.35.4"})
+
+    got = P._await_application(object(), "left", None, timeout=30.0, resend_every=0.0)
+    assert got == "3.35.4"
+    assert resets == ["COM27"], "the reset must be re-sent, not merely waited on"
+
+
+def test_the_wait_gives_up_eventually_rather_than_hanging(monkeypatch):
+    """Patience is not credulity. It must return None, not spin forever."""
+    monkeypatch.setattr(P.rec, "find_recovery_ports", lambda: [_Dev("left")])
+    monkeypatch.setattr(P, "_answering_recovery_port",
+                        lambda side, timeout=10.0: (_ for _ in ()).throw(OSError("no port")))
+    assert P._await_application(object(), "left", None, timeout=0.1) is None

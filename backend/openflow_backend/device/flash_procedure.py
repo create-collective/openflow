@@ -61,7 +61,7 @@ STEP_LABELS = {
     "upload": "Writing the firmware",
     "swap.verify": "Checking what landed",
     "mcuboot.exit": "Restarting the half",
-    "version.confirm": "Confirming the new version",
+    "version.confirm": "Restarting and confirming the new version (can take a few minutes)",
     "brightness.restore": "Restoring LED brightness",
     "verify.compare": "Comparing the keyboard against the backup",
     "run.end": "Finished",
@@ -335,6 +335,41 @@ def _answering_recovery_port(side: str, timeout: float = 30.0) -> str:
         time.sleep(0.5)
 
 
+def _identify_in_bootloader(side: str, catalog: list, timeout: float = 90.0) -> dict:
+    """Find the half in recovery and read what it runs. ONE discovery mechanism, retried.
+
+    This used to be a port probe followed by `read_running_image`, which does its own discovery --
+    so the bootloader's port was opened twice within milliseconds. The second open is refused:
+    `_talk`'s own header records that Windows can refuse the port for a moment right after the
+    bootloader enumerates. The first real run of this procedure died exactly there, having just
+    logged "bootloader answering on COM27" and then been told a moment later that neither port
+    answered. One mechanism, retried patiently. There is no hurry: a half sits in MCUboot
+    indefinitely and was measured still answering minutes later.
+    """
+    deadline = time.monotonic() + timeout
+    last: str | None = None
+    while True:
+        try:
+            state = rec.read_running_image(catalog)
+            if state.get("state") == "ok":
+                seen = state.get("pidSide")
+                if seen not in (None, side):
+                    raise fw.UploadRefused(
+                        f"the half in the bootloader reports itself as {seen}, not {side}. "
+                        "Nothing was written.")
+                return state
+            last = str(state.get("detail"))
+        except fw.UploadRefused:
+            raise
+        except Exception as e:                      # noqa: BLE001 -- retried until the deadline
+            last = f"{type(e).__name__}: {e}"
+        if time.monotonic() >= deadline:
+            raise fw.UploadRefused(
+                f"could not identify the {side} half within {timeout:.0f}s ({last}). "
+                "Nothing was written.")
+        time.sleep(2.0)
+
+
 def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
                    allow_older: bool = False, flash_fn=None) -> dict:
     """Enter the bootloader, write, come back, confirm. One half, fully logged.
@@ -356,14 +391,10 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
             return True
         svc._with_transport(side, go)
 
-    with log.step("mcuboot.port", side=side):
-        port = _answering_recovery_port(side)
-        log.event("mcuboot.port", "ok", side=side, detail=f"bootloader answering on {port}")
-
     with log.step("identify", side=side):
-        state = rec.read_running_image(catalog)
-        if state.get("state") != "ok":
-            raise fw.UploadRefused(f"could not identify the {side} half: {state.get('detail')}")
+        state = _identify_in_bootloader(side, catalog)
+        log.event("mcuboot.port", "ok", side=side,
+                  detail=f"bootloader answering on {state.get('port')}")
         running = next((i for i in state.get("images") or [] if i.get("slot") == 0), {})
         arm = running.get("hash")
         log.event("identify", "ok", side=side,
@@ -403,7 +434,7 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
 
     with log.step("version.confirm", side=side):
         want = plan.target.get("createFirmware")
-        got = _await_application(svc, side)
+        got = _await_application(svc, side, log)
         log.event("version.confirm", "ok", side=side, expected=want, got=got)
         if got != want:
             raise fw.UploadRefused(
@@ -428,12 +459,27 @@ def _forget_cached_transports(svc) -> None:
             pass
 
 
-def _await_application(svc, side: str, timeout: float = 45.0) -> str | None:
-    """Wait for the half to leave the bootloader and report its version. ~8 s in practice."""
+def _await_application(svc, side: str, log: RunLog | None = None,
+                       timeout: float = 300.0, resend_every: float = 30.0) -> str | None:
+    """Wait for the half to leave the bootloader and report its version, re-sending the reset.
+
+    This is slow and it is not a fault. A reset sent immediately after an upload often does not
+    take: the bootloader is still busy with what the resource's trailer armed. Measured on a real
+    downgrade, 2026-09-20 -- the half ignored the reset that followed the upload, was still in
+    MCUboot 45 s later, and came back to the application minutes after a second reset. It was
+    running the new firmware correctly the whole time; only our patience was wrong, and a 45 s
+    limit turned a perfect flash into a reported failure.
+
+    So: wait minutes, not seconds, and re-send the reset periodically rather than waiting on one
+    that may have been dropped. The reset must go to the port that ANSWERS SMP; the other accepts
+    the open and reports nothing.
+    """
     deadline = time.monotonic() + timeout
+    next_resend = time.monotonic() + resend_every
     forgotten = False
     while True:
-        if not [d for d in rec.find_recovery_ports() if d.side == side]:
+        still = [d for d in rec.find_recovery_ports() if d.side == side]
+        if not still:
             if not forgotten:
                 _forget_cached_transports(svc)      # it may be back on a different port
                 forgotten = True
@@ -441,9 +487,24 @@ def _await_application(svc, side: str, timeout: float = 45.0) -> str | None:
                 return _identity(svc, side).get("firmwareVersion")
             except Exception:                       # noqa: BLE001 -- still re-enumerating
                 pass
+        elif time.monotonic() >= next_resend:
+            next_resend = time.monotonic() + resend_every
+            forgotten = False
+            try:
+                port = _answering_recovery_port(side, timeout=10.0)
+                try:
+                    rec.os_reset(port)
+                except Exception:                   # noqa: BLE001 -- it reboots mid-reply
+                    pass
+                if log:
+                    log.event("mcuboot.exit", "start", side=side,
+                              detail=f"still in the bootloader; reset re-sent on {port}. "
+                                     "This can take a few minutes after a write.")
+            except Exception:                       # noqa: BLE001 -- try again next time round
+                pass
         if time.monotonic() >= deadline:
             return None
-        time.sleep(1.5)
+        time.sleep(2.0)
 
 
 def restore_brightness(svc, sides: tuple[str, ...], log: RunLog) -> None:
@@ -471,6 +532,34 @@ def restore_brightness(svc, sides: tuple[str, ...], log: RunLog) -> None:
         except Exception as e:                      # noqa: BLE001 -- cosmetic, never fatal
             log.event("brightness.restore", "fail", side=side,
                       detail=f"{type(e).__name__}: {e} (the flash itself is unaffected)")
+
+
+def _recover_stranded_halves(svc, log: RunLog) -> None:
+    """Put any half still sitting in the bootloader back into the application.
+
+    Called only after a failure. A half left in MCUboot does not type and shows no lights, which
+    to a user is indistinguishable from a brick -- and the primary image is untouched, so it is
+    nothing of the sort. `os reset` must go to the port that ANSWERS SMP; the other one accepts
+    the open, swallows the frame and reports nothing.
+    """
+    for side in ("left", "right"):
+        if not [d for d in rec.find_recovery_ports() if d.side == side]:
+            continue
+        try:
+            port = _answering_recovery_port(side, timeout=30.0)
+            try:
+                rec.os_reset(port)
+            except Exception:                       # noqa: BLE001 -- it reboots mid-reply
+                pass
+            log.event("mcuboot.exit", "ok", side=side,
+                      detail=f"the run failed with this half in the bootloader; it was reset "
+                             f"on {port} and should return to normal on its own")
+            _forget_cached_transports(svc)
+        except Exception as e:                      # noqa: BLE001 -- say so, never hide it
+            log.event("mcuboot.exit", "fail", side=side,
+                      detail=f"this half is still in the bootloader and could not be reset "
+                             f"({type(e).__name__}: {e}). Its firmware is untouched; a power "
+                             "cycle will bring it back.")
 
 
 def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
@@ -549,6 +638,12 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
                           for s in ("left", "right"))
             compare_preflight(before, after, version_changed=changed, log=log)
     except Exception as e:                          # noqa: BLE001 -- the verdict is the product
+        # A failed run must not walk away leaving a half dark. Whatever went wrong, if a half is
+        # still in the bootloader it is not a keyboard, and the user is left with hardware that
+        # looks bricked. Put it back before reporting. The first real run failed at identify and
+        # left the left half in MCUboot; recovering it by hand is exactly the off-script step
+        # this procedure exists to make unnecessary.
+        _recover_stranded_halves(svc, log)
         return log.finish(False, f"{type(e).__name__}: {e}")
     finally:
         if held:
