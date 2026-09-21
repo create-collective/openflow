@@ -38,7 +38,7 @@ const PLAN = {
 // downloaded it. Not an error -- a button.
 const NOT_DOWNLOADED = {
   ...PLAN,
-  source: { url: "https://example.test/fw", authenticated: false, private: true },
+  source: { url: "https://example.test/fw", authenticated: false },
   targets: {
     left: { side: "left", image: "v1.25.1/kb_fwl.bin", file: "kb_fwl.bin", generation: "A",
             version: "3.41.0", present: false, fetchable: true, currentVersion: "3.35.4",
@@ -193,12 +193,10 @@ describe("FirmwareUpdate", () => {
     await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
     await screen.findByText(/^3\.41\.0 has not been downloaded yet$/);
     expect(screen.getByLabelText(/Left half/i)).toBeDisabled();
-    // The archive is private today, so the dialog says so before the button is pressed.
-    expect(screen.getByText(/OPENFLOW_FIRMWARE_TOKEN/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /download 3\.41\.0/i }));
     await waitFor(() => expect(screen.getByLabelText(/Left half/i)).toBeEnabled());
-    expect(fetchSpy).toHaveBeenCalledWith(["3.41.0"]);
+    expect(fetchSpy).toHaveBeenCalledWith({ versions: ["3.41.0"] });
     expect(screen.queryByText(/^3\.41\.0 has not been downloaded yet$/)).not.toBeInTheDocument();
   });
 

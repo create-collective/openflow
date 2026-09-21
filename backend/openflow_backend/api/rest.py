@@ -136,7 +136,11 @@ def _firmware_catalog() -> list[dict]:
             "lastSeen": img.get("lastSeen"),
             "releaseOrder": img.get("releaseOrder"),       # chronological; newest first in the UI
             "era": img.get("era"),
-            "historyPath": img.get("historyPath"),         # where it sits in nayaHistory/firmware-history
+            # Where it sits in nayaHistory/firmware-history. Also the id the page joins on: the
+            # library endpoint reports what is held BY PATH, and an entry with none is one that
+            # has no file of its own (a .sfb userapp inside FlashMemory.bin) and so can never be
+            # downloaded on its own.
+            "historyPath": img.get("historyPath"),
             "flashable": img.get("flashable", False),
             "withheldBecause": img.get("withheldBecause") or [],
             "note": img.get("note"),

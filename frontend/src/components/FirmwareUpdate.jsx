@@ -156,7 +156,7 @@ export default function FirmwareUpdate({ connected }) {
     setFetching(true);
     setFetchError("");
     try {
-      const r = await api.fetchFirmware([version]);
+      const r = await api.fetchFirmware({ versions: [version] });
       const p = await load(version);
       setChosen(defaultChoice(p));
       if (r.failed) {
@@ -330,12 +330,6 @@ export default function FirmwareUpdate({ connected }) {
                     + " generations — and checks each one against the catalogue before keeping it."
                   : ` The catalogue lists ${version}, but there is no record of where to fetch it`
                     + " from, so it cannot be downloaded here."}
-                {plan.source?.private && fetchable && (
-                  <div className="fw-source-note">
-                    The archive it comes from is private today, so this will fail unless
-                    OPENFLOW_FIRMWARE_TOKEN is set to a token that can read it.
-                  </div>
-                )}
               </Notice>
             )}
             {fetchError && <Notice tone="err" title="The download did not finish">{fetchError}</Notice>}

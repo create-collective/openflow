@@ -3,38 +3,44 @@ import { api } from "../lib/api.js";
 import Button from "./ui/Button";
 import Notice from "./ui/Notice";
 
-// The firmware catalogue, and what of it this machine actually holds.
+// The firmware catalogue, and what of it this machine holds.
 //
 // OpenFlow ships the catalogue -- every image it has classified, by what it targets and which
 // NayaFlow release bundled it -- and none of the images. They are Naya's binaries and they would
-// put fifteen megabytes of someone else's copyright in the installer. So the list has always
-// been able to name a version nobody could flash, and the only way out was an environment
-// variable pointing at a tree you had to obtain yourself.
+// put fifteen megabytes of someone else's copyright in the installer. So each version is fetched
+// on demand from the archive and checked against the catalogue's own sha256 before anything is
+// written (backend device/firmware_fetch.py).
 //
-// Now each version can be fetched: its files are downloaded from the archive and verified
-// against the catalogue's own sha256 before anything is written (backend
-// device/firmware_fetch.py). A version is downloaded WHOLE -- both sides, both flash generations
-// -- because which of the four a half needs is decided from its product id at flash time, and
-// holding three of them is how that decision fails later.
+// A version downloads WHOLE -- both sides, both flash generations -- because which of the four a
+// half needs is decided from its product id at flash time, and holding three of them is how that
+// decision fails later.
 //
-// There is no picker dialog. The catalogue list is already grouped by version and already on
-// screen, so the button belongs on the group it downloads; "Download all" sits at the top for
-// the everything case. A modal listing the same versions a second time would be a worse way to
-// say the same thing.
+// DOWNLOADABLE IS NOT FLASHABLE, and conflating them hid most of the archive. The module bundles
+// and the dongle image are withheld from FLASHING until that path is proven on a donor unit; two
+// pre-production keyboard images are withheld because nobody can say which side they are. None
+// of that is a reason to refuse someone a copy of the file. Every entry with a file of its own
+// can be downloaded; whether it can then be written to a keyboard is the badge on its row.
+//
+// Entries with no file of their own -- the .sfb userapps extracted from FlashMemory.bin -- get no
+// button, because there is nothing to fetch separately. Downloading the bundle is how you get
+// them, and the row already says which bundle it came out of.
+//
+// There is no picker dialog: the list is already grouped by version and already on screen, so
+// the button belongs on the group it downloads, with "Download all" at the top for everything.
 
-function versionOf(im) {
-  return im.versionConfidence === "declared" ? (im.version || im.versionLabel) : null;
-}
-
-/** held/total per firmware version, from the backend's join of catalogue against disk. */
-export function heldByVersion(images) {
+/** held/total/bytes per version label, keyed the way the catalogue names versions. */
+export function heldByLabel(catalogue, present) {
   const out = {};
-  for (const im of images || []) {
-    if (!im.version) continue;
-    const e = (out[im.version] ||= { held: 0, total: 0, bytes: 0 });
+  for (const im of catalogue || []) {
+    if (!im.historyPath) continue;          // lives inside a container; nothing to fetch
+    const label = im.versionLabel || im.version || im.bundle || "(unknown)";
+    const e = (out[label] ||= { held: 0, total: 0, bytes: 0, paths: [], missing: [] });
     e.total += 1;
-    e.bytes += im.bytes || 0;
-    if (im.present) e.held += 1;
+    const row = present?.[im.historyPath];
+    e.bytes += row?.bytes || 0;
+    e.paths.push(im.historyPath);
+    if (row?.present) e.held += 1;
+    else e.missing.push(im.historyPath);
   }
   return out;
 }
@@ -43,9 +49,9 @@ export function megabytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function FirmwareLibrary({ images, onChanged }) {
+export default function FirmwareLibrary({ images }) {
   const [library, setLibrary] = useState(null);
-  const [busy, setBusy] = useState(null);         // the version being fetched, or "all"
+  const [busy, setBusy] = useState(null);         // the label being fetched, or "all"
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
@@ -58,25 +64,27 @@ export default function FirmwareLibrary({ images, onChanged }) {
   }, []);
   useEffect(() => { reload(); }, [reload]);
 
-  const held = heldByVersion(library?.images);
-  const missing = Object.entries(held).filter(([, e]) => e.held < e.total);
-  const missingBytes = missing.reduce((n, [, e]) => n + e.bytes, 0);
   // "We have not been told yet" is not "there is nothing to download". Without this the button
   // read "All versions downloaded" whenever the backend could not answer -- the most confident
   // possible claim made from no information at all.
   const known = !!library?.images;
+  const present = {};
+  for (const row of library?.images || []) present[row.path] = row;
 
-  async function download(versions, tag) {
+  const imgs = images || [];
+  const held = heldByLabel(imgs, present);
+  const missingPaths = Object.values(held).flatMap((e) => e.missing);
+  const missingLabels = Object.values(held).filter((e) => e.missing.length);
+  const missingBytes = missingLabels.reduce(
+    (n, e) => n + e.missing.reduce((m, p) => m + (present[p]?.bytes || 0), 0), 0);
+
+  async function download(paths, tag) {
     setBusy(tag);
     setError("");
     setResult(null);
     try {
-      const r = await api.fetchFirmware(versions);
-      setResult(r);
+      setResult(await api.fetchFirmware({ paths }));
       await reload();
-      // The update dialog resolves against the same directory, so what it can offer just
-      // changed.
-      onChanged?.();
     } catch (e) {
       setError(e.message || String(e));
     } finally {
@@ -84,7 +92,6 @@ export default function FirmwareLibrary({ images, onChanged }) {
     }
   }
 
-  const imgs = images || [];
   // One group per distinct firmware: its version number when a NayaFlow release declared one,
   // else the release span that shipped it (the catalogue's versionLabel). Keyboard first,
   // newest release first.
@@ -112,38 +119,29 @@ export default function FirmwareLibrary({ images, onChanged }) {
         Every firmware image OpenFlow has classified, by what it targets and which NayaFlow
         release bundled it — so a specific version can be picked for an up/downgrade. This is the
         catalogue, not the flasher: use “Update firmware” above, which backs the keyboard up,
-        writes one half at a time and verifies the result.
+        writes one half at a time and verifies the result. Images are downloaded on demand and
+        checked against the hash recorded here before they are kept.
       </p>
 
-      {/* The images are not shipped, so the honest thing is to say where they come from and
-          whether that will work from here, next to the button that tries it. */}
       <div className="fw-lib-bar">
         <Button
-          onClick={() => download(missing.map(([v]) => v), "all")}
-          disabled={!!busy || !known || missing.length === 0}
+          onClick={() => download(missingPaths, "all")}
+          disabled={!!busy || !known || missingPaths.length === 0}
           busy={busy === "all"}
           title={!known
             ? "Still finding out which images are on this machine"
-            : missing.length === 0
-            ? "Every catalogued version is already on this machine"
-            : `Downloads ${missing.length} version(s) — about ${megabytes(missingBytes)}`}
+            : missingPaths.length === 0
+            ? "Every image in the catalogue is already on this machine"
+            : `Downloads ${missingPaths.length} file(s) — about ${megabytes(missingBytes)}`}
         >
           {busy === "all" ? "Downloading…"
             : !known ? "Checking what is downloaded…"
-            : missing.length === 0 ? "All versions downloaded"
-            : `Download all (${missing.length} versions, ${megabytes(missingBytes)})`}
+            : missingPaths.length === 0 ? "Everything downloaded"
+            : `Download all (${missingLabels.length} versions, ${megabytes(missingBytes)})`}
         </Button>
         {library?.dir && <span className="fw-lib-dir">{library.dir}</span>}
       </div>
 
-      {library?.source?.private && (
-        <Notice title="The firmware archive is private">
-          Images are downloaded from <code>{library.source.url}</code>, which is not public yet,
-          so a download will fail unless <code>OPENFLOW_FIRMWARE_TOKEN</code> is set to a token
-          that can read it. Every download is checked against the catalogue’s own hash before it
-          is kept, wherever it came from.
-        </Notice>
-      )}
       {error && <Notice tone="err" title="Download failed" onDismiss={() => setError("")}>{error}</Notice>}
       {result && (
         <Notice
@@ -170,21 +168,20 @@ export default function FirmwareLibrary({ images, onChanged }) {
         const kind = first.target === "module" ? "Module" : "Keyboard";
         const title = declared ? `${kind} firmware ${label(first)}` : `${kind} firmware shipped in ${label(first)}`;
         const sub = declared ? shippedIn(first) : "no release declared a version number";
-        const v = versionOf(first);
-        const h = v ? held[v] : null;
+        const h = held[label(first)];
         return (
           <div key={g} className="fw-lib-group">
             <div className="info-sub fw-lib-head">
               <span>{title} <span className="fw-lib-sub">· {sub}</span></span>
-              {h && (h.held < h.total ? (
+              {h && (h.missing.length ? (
                 <Button
                   size="sm"
-                  onClick={() => download([v], v)}
-                  disabled={!!busy}
-                  busy={busy === v}
-                  title={`Downloads all ${h.total} files for ${v} — about ${megabytes(h.bytes)}`}
+                  onClick={() => download(h.missing, label(first))}
+                  disabled={!!busy || !known}
+                  busy={busy === label(first)}
+                  title={`Downloads ${h.missing.length} file(s) for this version`}
                 >
-                  {busy === v ? "Downloading…" : `Download (${megabytes(h.bytes)})`}
+                  {busy === label(first) ? "Downloading…" : `Download (${megabytes(h.bytes)})`}
                 </Button>
               ) : (
                 <span className="fw-lib-held" title="Every file for this version is on this machine">
@@ -195,7 +192,16 @@ export default function FirmwareLibrary({ images, onChanged }) {
             {ims.map((im) => (
               <div className="skp-row fw-lib-row" key={`${im.file}-${im.sha256}`} title={im.note || ""}>
                 <span className="skp-beh">{im.component || "?"}{im.generation ? ` · gen ${im.generation}` : ""}</span>
-                <span className="skp-act fw-lib-file">{im.file}{im.container ? ` in ${im.container}` : ""}</span>
+                <span className="skp-act fw-lib-file">
+                  {im.file}
+                  {im.container ? ` in ${im.container}` : ""}
+                  {/* No file of its own: it is extracted from the bundle above, so there is
+                      nothing separate to fetch and no button pretends otherwise. */}
+                  {!im.historyPath && im.container && <span className="fw-lib-sub"> · extracted</span>}
+                  {im.historyPath && present[im.historyPath]?.present && (
+                    <span className="fw-lib-held"> · on this machine</span>
+                  )}
+                </span>
                 <span className="v fw-lib-hash">{im.sha256 ? im.sha256 + "…" : "encrypted"}</span>
                 <Button
                   disabled

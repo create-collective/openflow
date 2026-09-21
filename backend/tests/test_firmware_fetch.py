@@ -118,7 +118,10 @@ def test_a_version_pulls_every_image_that_version_needs(tmp_path):
         entry(file="kb_fwr.bin", historyPath="v1.21.0/kb_fwr.bin", side="right", generation="A"),
         entry(file="kb_fwr_64.bin", historyPath="v1.21.0/kb_fwr_64.bin", side="right", generation="B"),
         entry(file="kb_fwl.bin", historyPath="v1.25.1/kb_fwl.bin", createFirmware="3.41.0"),
-        entry(file="withheld.bin", historyPath="v1.17.3/kb_fwl.bin", flashable=False),
+        # Another version entirely, and withheld from flashing besides: neither is asked for
+        # here. Whether a withheld image can be DOWNLOADED has its own test below.
+        entry(file="kb_fwl.bin", historyPath="v1.17.3/kb_fwl.bin", createFirmware="3.31.1",
+              flashable=False),
     ]
     r = F.fetch(catalog, tmp_path, versions=["3.35.4"], opener=opener_for())
     assert r["requested"] == 4 and r["fetched"] == 4 and r["failed"] == 0
@@ -163,12 +166,15 @@ def test_a_token_is_sent_only_when_one_is_configured(tmp_path, monkeypatch):
     calls = []
     F.fetch_one(entry(), tmp_path, opener=opener_for(calls=calls))
     assert calls[0]["auth"] is None
-    assert F.source_info()["private"] is True       # the default archive, with no token
+    assert F.source_info() == {"url": F.SOURCE_DEFAULT, "authenticated": False}
 
+    # The archive is public, so no token is needed or shipped. The capability stays for a source
+    # that is not -- a private repository of custom firmware, say -- and is read from the
+    # environment, never bundled.
     monkeypatch.setenv("OPENFLOW_FIRMWARE_TOKEN", "a-token")
     F.fetch_one(entry(), tmp_path, opener=opener_for(calls=calls), force=True)
     assert calls[1]["auth"] == "Bearer a-token"
-    assert F.source_info() == {"url": F.SOURCE_DEFAULT, "authenticated": True, "private": False}
+    assert F.source_info() == {"url": F.SOURCE_DEFAULT, "authenticated": True}
 
 
 def test_the_source_is_configurable(tmp_path, monkeypatch):
@@ -181,9 +187,48 @@ def test_the_source_is_configurable(tmp_path, monkeypatch):
 
 
 def test_holdings_says_what_this_machine_has(tmp_path):
-    catalog = [entry(), entry(historyPath="v1.25.1/kb_fwl.bin", createFirmware="3.41.0"),
-               entry(historyPath="v1.17.3/kb_fwl.bin", flashable=False)]
+    catalog = [entry(), entry(historyPath="v1.25.1/kb_fwl.bin", createFirmware="3.41.0")]
     F.fetch_one(catalog[0], tmp_path, opener=opener_for())
     rows = F.holdings(catalog, tmp_path)
-    assert [r["present"] for r in rows] == [True, False]     # the withheld image is not listed
+    assert [r["present"] for r in rows] == [True, False]
     assert rows[0]["version"] == "3.35.4" and rows[0]["bytes"] == len(IMAGE)
+
+
+def test_an_image_withheld_from_FLASHING_can_still_be_downloaded(tmp_path):
+    """Two different questions, and they were answered with one flag.
+
+    The module bundles and the dongle image are withheld until the write path is proven on a
+    donor unit; two pre-production keyboard images are withheld because nobody can say which side
+    they are. None of that is a reason to refuse someone a copy of a file. Filtering the library
+    on `flashable` left nine of the archive's files unobtainable with no explanation on screen.
+    """
+    bundle = entry(file="FlashMemory.bin", historyPath="v1.21.0/module/FlashMemory.bin",
+                   target="module", flashable=False, moduleFirmware="2.3.3", createFirmware=None)
+    rows = F.holdings([bundle], tmp_path)
+    assert len(rows) == 1 and rows[0]["flashable"] is False
+    r = F.fetch([bundle], tmp_path, versions=["2.3.3"], opener=opener_for())
+    assert r["fetched"] == 1
+    assert (tmp_path / "v1.21.0" / "module" / "FlashMemory.bin").is_file()
+
+
+def test_an_image_whose_release_declared_no_version_is_still_offered(tmp_path):
+    """Everything before 1.14.5 shipped in releases that declared no firmware version, so the
+    catalogue labels those by the release span that carried them. Keying on the version number
+    alone silently dropped every one of them from the library."""
+    old_image = entry(createFirmware=None, versionLabel="NayaFlow 1.3.8 to 1.6.10",
+                      historyPath="v1.6.10/kb_fwl.bin")
+    rows = F.holdings([old_image], tmp_path)
+    assert rows[0]["version"] is None
+    assert rows[0]["label"] == "NayaFlow 1.3.8 to 1.6.10", "it must still have a name"
+
+    r = F.fetch([old_image], tmp_path, versions=["NayaFlow 1.3.8 to 1.6.10"], opener=opener_for())
+    assert r["fetched"] == 1
+    assert (tmp_path / "v1.6.10" / "kb_fwl.bin").is_file()
+
+
+def test_an_entry_with_no_file_of_its_own_is_never_offered(tmp_path):
+    """The .sfb userapps live inside FlashMemory.bin and are extracted from it. Offering one
+    would be a button that could not work."""
+    inside = {"file": "touch.sfb", "container": "FlashMemory.bin", "target": "module",
+              "blobSha256": SHA, "flashable": False}
+    assert F.holdings([inside], tmp_path) == []

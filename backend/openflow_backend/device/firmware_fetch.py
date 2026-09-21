@@ -60,12 +60,14 @@ def _token() -> str | None:
 
 
 def source_info() -> dict:
-    """What the UI needs to explain a failure before it happens."""
-    url = source_url()
-    return {"url": url, "authenticated": _token() is not None,
-            # Said plainly, because "private" is the difference between "try again later" and
-            # "this will never work for you without a token".
-            "private": "nayaHistory" in url and _token() is None}
+    """Where images come from, and whether this process has a credential for it.
+
+    There is deliberately no "is it private" guess here. The archive went public on 2026-09-21
+    and a hardcoded assumption about one URL would have gone stale that day, warning every user
+    about a token nobody needs. Whether a source will answer is a fact about the moment the
+    request is made, so it is reported by the failure that actually happens, not predicted.
+    """
+    return {"url": source_url(), "authenticated": _token() is not None}
 
 
 def _entry_path(entry: dict) -> str | None:
@@ -79,22 +81,44 @@ def _entry_path(entry: dict) -> str | None:
 
 
 def holdings(catalog: list, dest: Path) -> list[dict]:
-    """Every flashable catalogued image, and whether this machine has it."""
+    """Every catalogued image that IS a file, and whether this machine has it.
+
+    Downloadable is not the same question as flashable, and conflating them was wrong twice over.
+    The module bundles and the dongle image are withheld from FLASHING until the path is proven on
+    a donor unit -- that is a statement about writing to a keyboard, not about keeping a copy of a
+    file -- and two pre-production keyboard images are withheld because nobody can say which side
+    or generation they are. All of them are part of the archive this library exists to mirror, and
+    refusing to download them left "a ton of firmware history" on screen with nine of its files
+    unobtainable and no reason given. `flashable` is carried per row instead, so the page can say
+    which is which.
+
+    `label` is how a version is NAMED, and it is not always a version number: images from before
+    1.14.5 shipped in releases that declared none, and the catalogue labels those by the release
+    span that carried them ("NayaFlow 1.3.8 to 1.6.10"). Keying on the version number alone
+    dropped every one of them -- the second half of the same bug.
+
+    Entries with no file of their own are not here at all: the .sfb userapps live INSIDE
+    FlashMemory.bin and are extracted from it, so there is nothing to download for them
+    separately, and offering one would be a button that could not work.
+    """
     out = []
     for im in catalog:
         rel = _entry_path(im)
-        if not rel or not im.get("flashable"):
+        if not rel:
             continue
         p = dest / rel
+        version = im.get("createFirmware") or im.get("moduleFirmware")
         out.append({
             "path": rel,
             "file": im.get("file"),
             "target": im.get("target"),
             "side": im.get("side"),
             "generation": im.get("generation"),
-            "version": im.get("createFirmware") or im.get("moduleFirmware"),
+            "version": version,
+            "label": im.get("versionLabel") or version or im.get("bundle"),
             "bundle": im.get("bundle"),
-            "bytes": im.get("resourceSize") or im.get("imageSize"),
+            "flashable": bool(im.get("flashable")),
+            "bytes": im.get("resourceSize") or im.get("imageSize") or im.get("blobSize"),
             "present": p.is_file(),
         })
     return out
@@ -177,20 +201,22 @@ def fetch(catalog: list, dest: Path, *, versions: list | None = None, paths: lis
           opener=None, force: bool = False) -> dict:
     """Fetch a set of catalogued images: whole versions, or named catalogue paths.
 
-    `versions` names firmware versions ("3.35.4") and takes every flashable keyboard image for
+    `versions` names firmware versions ("3.35.4") or the labels the catalogue uses for images
+    whose release declared no number ("NayaFlow 1.3.8 to 1.6.10"), and takes every image under
     each -- both sides, both flash generations, because which one a half needs is decided from
     its product id at flash time and holding three of the four is how that decision fails later.
+    `paths` names catalogue paths outright, which is what a page that already listed them sends.
     """
     wanted = []
     for im in catalog:
-        if not im.get("flashable"):
-            continue
         rel = _entry_path(im)
         if not rel:
             continue
         if paths is not None and rel in paths:
             wanted.append(im)
-        elif versions is not None and (im.get("createFirmware") or im.get("moduleFirmware")) in versions:
+        elif versions is not None and (
+                (im.get("createFirmware") or im.get("moduleFirmware")) in versions
+                or im.get("versionLabel") in versions):
             wanted.append(im)
     if not wanted:
         raise FetchRefused("nothing in the catalogue matches that request")

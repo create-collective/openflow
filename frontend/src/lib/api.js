@@ -56,7 +56,9 @@ export const api = {
   // Images are not shipped with OpenFlow; each one is verified against the catalogue's sha256
   // before it is kept.
   firmwareLibrary: () => req("GET", "/api/firmware-library"),
-  fetchFirmware: (versions, force = false) => req("POST", "/rpc/fetch-firmware", { versions, force }),
+  // Either whole versions (what the update dialog asks for) or exact catalogue paths (what the
+  // library sends, having just listed them). Nothing outside the catalogue can be named.
+  fetchFirmware: (body) => req("POST", "/rpc/fetch-firmware", body),
   flashLogs: () => req("GET", "/api/flash-logs"),
   flashLog: (id) => req("GET", `/api/flash-logs/${encodeURIComponent(id)}`),
   deviceLog: (limit = 200) => req("GET", `/api/device-log?limit=${limit}`),
