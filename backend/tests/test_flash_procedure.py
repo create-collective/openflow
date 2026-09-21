@@ -157,6 +157,41 @@ def test_a_clean_both_halves_run_succeeds_and_writes_one_readable_log(wired):
         "no power cycle is needed", "")
 
 
+def test_the_upload_records_how_its_chunks_behaved(wired, monkeypatch):
+    """The first supervised runs uploaded in 206 s and 124 s what had been hand-measured at 57 s
+    and 78 s. A wider per-chunk timeout cannot cost time on a chunk that answers quickly, so the
+    difference is the device stalling -- but "a few long pauses" and "everything slower" want
+    different explanations, and nothing in the log could tell them apart. One summary line per
+    upload, so the next real run answers it instead of the next argument.
+    """
+    clock = {"t": 0.0}
+    monkeypatch.setattr(P.time, "monotonic", lambda: clock["t"])
+
+    def slow_flash(image, catalog, *, arm, progress=None, **kw):
+        side = wired["in_boot"]["side"]
+        clock["t"] += 9.0                               # the slot erase, before chunk one
+        progress(512, 663552)
+        for i in range(2, 12):                          # ten ordinary chunks at 40 ms
+            clock["t"] += 0.04
+            progress(512 * i, 663552)
+        clock["t"] += 7.5                               # and one long stall
+        progress(663552, 663552)
+        wired["svc"].halves[side]["firmwareVersion"] = "3.41.0"
+        wired["in_boot"]["side"] = None
+        return {"written": 663552, "swap": "permanent", "hash": "target-hash"}
+
+    wired["flash"] = slow_flash
+    r = _run(wired, {"left": "kb_fwl.bin"})
+    assert r["ok"] is True
+    lines = [json.loads(x) for x in Path(r["log"]).read_text(encoding="utf-8").splitlines() if x]
+    note = next(x for x in lines if x["step"] == "upload" and x["phase"] == "note")
+    assert note["chunks"] == 11                         # the erase is not one of them
+    assert note["medianMs"] == 40
+    assert note["over"] == 1 and note["stallMs"] == 7500
+    assert note["slowest"] == [{"offset": 663552, "ms": 7500}]
+    assert "1 over 1 s, 8 s of the upload spent waiting on them" in note["detail"]
+
+
 def test_the_central_is_flashed_before_the_peripheral(wired):
     """Between the two flashes one half is verified on its OWN port, and the only mismatched
     configuration anyone has measured is a newer central with an older peripheral -- there the

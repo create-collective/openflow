@@ -420,12 +420,36 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
     # counter frozen at zero -- which is precisely when a user pulls the cable.
     erase = {"done": False}
     last_pct = {"v": -1}
+    # Per-chunk timing, kept in memory and logged ONCE as a summary when the upload ends.
+    #
+    # The first supervised runs took 206 s and 124 s to upload halves that had been measured by
+    # hand at 57 s and 78 s. The wider per-chunk timeout is not the cause -- a ceiling costs
+    # nothing on a chunk that answers in 40 ms -- so the extra time is the device stalling, and
+    # before the ceiling was raised a stall past 5 s simply aborted the run. What we do NOT know
+    # is the shape of it: a few long stalls, or everything uniformly slower. Those need different
+    # explanations, and the answer is a measurement rather than a rewrite. Summarised rather than
+    # logged per chunk: 1296 lines would bury the log the user is meant to be able to read.
+    timing: dict = {"at": None, "ms": [], "slowest": [], "over": 0, "stallMs": 0.0}
+    STALL_MS = 1000.0            # a chunk this slow is not a round trip, it is the flash pausing
 
     def progress(sent: int, total: int) -> None:
+        now = time.monotonic()
         if not erase["done"]:
             erase["done"] = True
+            # The erase is its own step and its own number; chunk timing starts after it, or
+            # every summary would carry one 6-17 s outlier that is not a stall at all.
+            timing["at"] = now
             log.event("slot.erase", "ok", side=side,
                       detail="the bootloader erased the slot and accepted the first block")
+        else:
+            took = (now - timing["at"]) * 1000
+            timing["at"] = now
+            timing["ms"].append(took)
+            if took >= STALL_MS:
+                timing["over"] += 1
+                timing["stallMs"] += took
+                if len(timing["slowest"]) < 20:
+                    timing["slowest"].append({"offset": sent, "ms": int(took)})
         pct = int(sent * 100 / total) if total else 0
         if pct != last_pct["v"] and pct % 5 == 0:
             last_pct["v"] = pct
@@ -437,6 +461,7 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
                       state=state, progress=progress)
     log.event("upload", "ok", side=side, took_ms=int((time.monotonic() - t0) * 1000),
               written=result.get("written"), swap=result.get("swap"))
+    _log_chunk_timing(log, side, timing, STALL_MS)
     log.event("swap.verify", "ok", side=side, detail=str(result.get("swap")),
               hash=result.get("hash"))
     log.event("mcuboot.exit", "ok", side=side,
@@ -451,6 +476,28 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
                 f"the {side} half came back on {got}, not {want}. The write is recorded above; "
                 "the half is running whatever this says and can be flashed again.")
     return result
+
+
+def _log_chunk_timing(log: RunLog, side: str, timing: dict, stall_ms: float) -> None:
+    """One line that says whether an upload was uniformly slow or stalled in a few places.
+
+    Written after every upload, so the question the first runs raised -- where did the extra two
+    and a half minutes go -- is answered by the next run rather than argued about. A healthy
+    chunk answers in tens of milliseconds; the median says whether that still holds, and the
+    stall total says how much of the wall clock was the device pausing.
+    """
+    ms = sorted(timing["ms"])
+    if not ms:
+        return
+    at = lambda q: round(ms[min(len(ms) - 1, int(len(ms) * q))])        # noqa: E731
+    stall_s = timing["stallMs"] / 1000
+    log.event(
+        "upload", "note", side=side,
+        detail=(f"{len(ms)} chunks: median {at(0.5)} ms, p90 {at(0.9)} ms, slowest "
+                f"{round(ms[-1])} ms. {timing['over']} over {stall_ms / 1000:g} s, "
+                f"{stall_s:.0f} s of the upload spent waiting on them."),
+        chunks=len(ms), medianMs=at(0.5), p90Ms=at(0.9), maxMs=round(ms[-1]),
+        over=timing["over"], stallMs=round(timing["stallMs"]), slowest=timing["slowest"])
 
 
 def _forget_cached_transports(svc) -> None:
