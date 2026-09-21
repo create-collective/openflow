@@ -229,17 +229,17 @@ export default function FirmwareUpdate({ connected }) {
         onClick={openDialog}
         disabled={!connected}
         title={connected
-          ? "Update the keyboard's own firmware"
+          ? "Update the firmware the keyboard halves run"
           : "Connect the keyboard first"}
       >
-        Update firmware…
+        Update keyboard firmware…
       </Button>
 
       <Modal
         open={open}
-        title={running ? "Updating firmware…"
-          : verdict ? (verdict.ok ? "Firmware updated ✓" : "The firmware run did not finish")
-          : "Update firmware"}
+        title={running ? "Updating keyboard firmware…"
+          : verdict ? (verdict.ok ? "Keyboard firmware updated ✓" : "The firmware run did not finish")
+          : "Update keyboard firmware"}
         subtitle={!running && !verdict
           ? "Nothing is written until you start, and the keyboard is backed up first."
           : undefined}
@@ -264,9 +264,15 @@ export default function FirmwareUpdate({ connected }) {
             <label className="fw-version">
               <span>Firmware version</span>
               <select value={version} onChange={(e) => chooseVersion(e.target.value)}>
+                {/* Most images carry a firmware version number. Everything before NayaFlow
+                    1.14.5 does not -- those releases declared none -- so the catalogue names
+                    them by the release span that shipped them, and saying "shipped in" after
+                    one of those would repeat itself. */}
                 {(plan.versions || []).map((v) => (
                   <option key={v.version} value={v.version}>
-                    {v.version}{v.bundle ? ` · shipped in ${v.bundle}` : ""}
+                    {v.declared
+                      ? `${v.version}${v.bundle ? ` · shipped in ${v.bundle}` : ""}`
+                      : `${v.version} · no version number declared`}
                   </option>
                 ))}
               </select>

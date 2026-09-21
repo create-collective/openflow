@@ -53,7 +53,7 @@ async function openFirmwareTab() {
 describe("Settings → Firmware", () => {
   it("offers nothing to flash while no half is connected", async () => {
     await openFirmwareTab();
-    const btn = await screen.findByRole("button", { name: /update firmware/i });
+    const btn = await screen.findByRole("button", { name: /update keyboard firmware/i });
     expect(btn).toBeDisabled();
     expect(screen.getByText(/Connect the keyboard to read device firmware versions/i)).toBeInTheDocument();
   });
@@ -62,16 +62,16 @@ describe("Settings → Firmware", () => {
     const { rerender } = render(<Settings />);
     await screen.findByRole("tab", { name: /firmware/i });
     await userEvent.click(screen.getByRole("tab", { name: /firmware/i }));
-    expect(await screen.findByRole("button", { name: /update firmware/i })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: /update keyboard firmware/i })).toBeDisabled();
 
     // The keyboard is plugged in while the tab sits open: the next tick of the stream carries it.
     stream.data = { status: { halves: [half()] } };
     rerender(<Settings />);
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /update firmware/i })).toBeEnabled());
-    expect(screen.getByRole("button", { name: /update firmware/i }))
-      .toHaveAttribute("title", "Update the keyboard's own firmware");
+      expect(screen.getByRole("button", { name: /update keyboard firmware/i })).toBeEnabled());
+    expect(screen.getByRole("button", { name: /update keyboard firmware/i }))
+      .toHaveAttribute("title", "Update the firmware the keyboard halves run");
     // And the half it found is named, with what it runs.
     expect(screen.getByText("Create Left firmware")).toBeInTheDocument();
   });

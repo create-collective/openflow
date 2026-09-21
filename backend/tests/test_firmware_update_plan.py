@@ -138,15 +138,40 @@ def test_a_half_already_in_the_bootloader_is_not_given_a_target(images):
     assert plan["targets"] == {}
 
 
-def test_the_versions_offered_are_flashable_keyboard_images_newest_first(images):
+def test_every_flashable_keyboard_image_is_offered_declared_or_not(images):
+    """Six of the eleven were missing.
+
+    Everything before NayaFlow 1.14.5 shipped in releases that declared no firmware version, so
+    the catalogue names those by the release span that carried them. The picker keyed on the
+    version NUMBER, so those six were silently absent while the library listed them right below.
+    Declared numbers come first, newest first, so it still opens on something with a number.
+    """
     plan = _plan(Svc([], {}))
-    versions = [v["version"] for v in plan["versions"]]
-    assert versions == sorted(versions, key=lambda s: tuple(int(x) for x in s.split(".")),
+    declared = [v["version"] for v in plan["versions"] if v["declared"]]
+    labelled = [v["version"] for v in plan["versions"] if not v["declared"]]
+
+    assert declared == sorted(declared, key=lambda s: tuple(int(x) for x in s.split(".")),
                               reverse=True)
-    assert versions[0] == "3.41.0"
+    assert declared[0] == "3.41.0"
+    assert labelled, "the images from before 1.14.5 are flashable and must be offered"
+    assert all("NayaFlow" in v for v in labelled)
+    assert [v["version"] for v in plan["versions"]] == declared + labelled
+
     # Every offered version can actually be written to a half of each side.
     for v in plan["versions"]:
-        assert v["sides"] == ["left", "right"]
+        assert v["sides"] == ["left", "right"], v["version"]
+
+
+def test_going_back_to_an_image_with_no_version_number_is_still_named_a_downgrade(images):
+    """The interlock falls back to release order when the numbers are unknown; so does this.
+
+    Without it the screen called an older image an ordinary update, sent no allow_older, and let
+    plan() refuse the run at a point where the half is already sitting in its bootloader.
+    """
+    svc = Svc([{"port": "COM30", "pid": PID_LEFT_A, "side": "left"}], {"COM30": "3.41.0"})
+    t = _plan(svc, "?version=NayaFlow 1.3.8 to 1.6.10")["targets"]["left"]
+    assert t["downgrade"] is True
+    assert t["unchanged"] is False
 
 
 def test_the_gate_is_reported_so_the_page_can_say_wired_but_off(images):

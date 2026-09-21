@@ -5,6 +5,7 @@ import { applyInterfaceScaling } from "../lib/scaling";
 import { pickFile, downloadJSON, safeName } from "../lib/files";
 import FirmwareLibrary from "../components/FirmwareLibrary";
 import FirmwareUpdate from "../components/FirmwareUpdate";
+import ModuleFirmwareUpdate from "../components/ModuleFirmwareUpdate";
 import SettingField from "../components/SettingField";
 import SettingRow from "../components/ui/SettingRow";
 import useRunLog from "../lib/useRunLog";
@@ -404,9 +405,21 @@ export default function Settings() {
                   {/* The supervised procedure: back up, flash one half at a time, verify against
                       the backup, keep the log (SCRUM-104). The per-image buttons in the library
                       below stay inert -- that list is the catalogue, and a flash is not a thing
-                      to start from a row in a reference table. */}
+                      to start from a row in a reference table.
+
+                      Keyboard and module are two buttons because they are two procedures: one
+                      swaps an MCUboot slot and can be rolled back, the other writes a filesystem
+                      and cannot. The module one has never been run on hardware and says so
+                      rather than offering to. */}
                   <div className="btn-row">
                     <FirmwareUpdate connected={firmwareConnected} />
+                    <ModuleFirmwareUpdate
+                      modules={liveHalves.filter((h) => h.module).map((h) => ({
+                        side: h.side, type: h.module.type,
+                        firmwareVersion: h.module.firmwareVersion,
+                      }))}
+                      reference={firmware?.reference?.moduleFirmware}
+                    />
                   </div>
 
                   <h3 className="settings-section tight">Firmware library</h3>

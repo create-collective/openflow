@@ -21,8 +21,10 @@ const PLAN = {
     { side: "right", port: "COM29", mode: "app", generation: "A", currentVersion: "3.41.0" },
   ],
   versions: [
-    { version: "3.41.0", bundle: "NayaFlow 1.25.1", sides: ["left", "right"] },
-    { version: "3.35.4", bundle: "NayaFlow 1.21.0", sides: ["left", "right"] },
+    { version: "3.41.0", declared: true, bundle: "NayaFlow 1.25.1", sides: ["left", "right"] },
+    { version: "3.35.4", declared: true, bundle: "NayaFlow 1.21.0", sides: ["left", "right"] },
+    { version: "NayaFlow 1.3.8 to 1.6.10", declared: false, bundle: "NayaFlow 1.6.10",
+      sides: ["left", "right"] },
   ],
   targets: {
     left: { side: "left", image: "v1.25.1/kb_fwl.bin", file: "kb_fwl.bin", generation: "A",
@@ -148,12 +150,12 @@ describe("stepRows", () => {
 describe("FirmwareUpdate", () => {
   it("is disabled until a keyboard is connected", () => {
     render(<FirmwareUpdate connected={false} />);
-    expect(screen.getByRole("button", { name: /update firmware/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /update keyboard firmware/i })).toBeDisabled();
   });
 
   it("names the file each half would take, and how long the whole thing takes", async () => {
     render(<FirmwareUpdate connected />);
-    await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
     await screen.findByText("Left half");
     expect(screen.getByText("kb_fwl.bin")).toBeInTheDocument();
     expect(screen.getByText("kb_fwr.bin")).toBeInTheDocument();
@@ -168,7 +170,7 @@ describe("FirmwareUpdate", () => {
     // into "one downgrade we can do, one image we do not have".
     api.firmwareUpdatePlan.mockImplementation(async (v) => (v === "3.35.4" ? OLDER : PLAN));
     render(<FirmwareUpdate connected />);
-    await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
     await screen.findByText("Left half");
     await userEvent.selectOptions(screen.getByRole("combobox"), "3.35.4");
     await screen.findByText(/writes an older firmware/i);
@@ -190,7 +192,7 @@ describe("FirmwareUpdate", () => {
     });
 
     render(<FirmwareUpdate connected />);
-    await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
     await screen.findByText(/^3\.41\.0 has not been downloaded yet$/);
     expect(screen.getByLabelText(/Left half/i)).toBeDisabled();
 
@@ -209,7 +211,7 @@ describe("FirmwareUpdate", () => {
     });
 
     render(<FirmwareUpdate connected />);
-    await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
     await screen.findByText(/^3\.41\.0 has not been downloaded yet$/);
     await userEvent.click(screen.getByRole("button", { name: /download 3\.41\.0/i }));
     expect(await screen.findByText(/1 of 2 file\(s\) did not arrive/i)).toBeInTheDocument();
@@ -218,7 +220,7 @@ describe("FirmwareUpdate", () => {
 
   it("cannot be dismissed while the flash runs, and shows the steps as they arrive", async () => {
     render(<FirmwareUpdate connected />);
-    await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
     await screen.findByText("Left half");
 
     act(() => seedFlashProgress({
@@ -228,7 +230,7 @@ describe("FirmwareUpdate", () => {
       verdict: null,
     }));
 
-    expect(await screen.findByText("Updating firmware…")).toBeInTheDocument();
+    expect(await screen.findByText("Updating keyboard firmware…")).toBeInTheDocument();
     expect(screen.getByText("Backing up what is on the keyboard")).toBeInTheDocument();
     // Twice, deliberately: as the headline of what is happening now, and as a row in the list.
     expect(screen.getAllByText(/Preparing the flash/)).toHaveLength(2);
@@ -236,13 +238,13 @@ describe("FirmwareUpdate", () => {
     // Escape does nothing: there is nothing to go back to, and hiding the run is the worst
     // thing this dialog could do.
     await userEvent.keyboard("{Escape}");
-    expect(screen.getByText("Updating firmware…")).toBeInTheDocument();
+    expect(screen.getByText("Updating keyboard firmware…")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /cancel/i })).not.toBeInTheDocument();
   });
 
   it("ends with a verdict that names the log", async () => {
     render(<FirmwareUpdate connected />);
-    await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
     await screen.findByText("Left half");
 
     act(() => seedFlashProgress({
@@ -252,14 +254,14 @@ describe("FirmwareUpdate", () => {
                  failures: [], advisories: [] },
     }));
 
-    expect(await screen.findByText("Firmware updated ✓")).toBeInTheDocument();
+    expect(await screen.findByText("Keyboard firmware updated ✓")).toBeInTheDocument();
     expect(screen.getByText(/matches its backup/)).toBeInTheDocument();
     expect(screen.getByText("flash-20260921-101500")).toBeInTheDocument();
   });
 
   it("a failure says the keyboard is probably fine and points at the log", async () => {
     render(<FirmwareUpdate connected />);
-    await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
     await screen.findByText("Left half");
 
     act(() => seedFlashProgress({

@@ -584,19 +584,32 @@ async def firmware_update_plan(version: str = "") -> dict:
             "currentVersion": (live.get(dev.get("port")) or {}).get("firmwareVersion"),
         })
 
-    # One entry per keyboard firmware version we hold a flashable image for, newest first.
+    # One entry per keyboard firmware we hold a flashable image for, newest first.
+    #
+    # Keyed by LABEL, not by version number. Everything before 1.14.5 shipped in releases that
+    # declared no firmware version, and the catalogue names those by the release span that
+    # carried them ("NayaFlow 1.3.8 to 1.6.10"). Keying on the number dropped all six of them --
+    # they are flashable, their side and generation are confirmed, and they were simply missing
+    # from the picker with nothing to indicate it. The list beside this one was already showing
+    # them by label, which is how it was noticed.
     by_version: dict[str, dict] = {}
     for im in _firmware_catalog_raw():
         if im.get("target") != "keyboard" or not im.get("flashable"):
             continue
-        v = im.get("createFirmware")
-        if not v:
+        key = im.get("createFirmware") or im.get("versionLabel")
+        if not key:
             continue
-        entry = by_version.setdefault(v, {"version": v, "releaseOrder": im.get("releaseOrder"),
-                                          "bundle": im.get("bundle"), "images": []})
+        entry = by_version.setdefault(key, {
+            "version": key,
+            "declared": bool(im.get("createFirmware")),
+            "releaseOrder": im.get("releaseOrder"),
+            "bundle": im.get("bundle"), "images": []})
         entry["images"].append(im)
+    # Declared version numbers first, newest first; then the labelled ones by release order, so
+    # the picker opens on something with a number on it.
     versions = sorted(by_version.values(),
-                      key=lambda e: (fw._version_tuple(e["version"]) or (0,), e["releaseOrder"] or 0),
+                      key=lambda e: (e["declared"], fw._version_tuple(e["version"]) or (0,),
+                                     e["releaseOrder"] or 0),
                       reverse=True)
 
     def resolve(side: str, generation: str | None, want: str) -> dict:
@@ -624,8 +637,17 @@ async def firmware_update_plan(version: str = "") -> dict:
         return {"side": side, "reason": (
             f"no {want} image for the {side} half at flash generation {generation or 'unknown'}")}
 
+    def release_order_of(version_string: str | None) -> int | None:
+        """When a release first shipped the firmware a half is running now."""
+        if not version_string:
+            return None
+        return next((im.get("releaseOrder") for im in _firmware_catalog_raw()
+                     if im.get("createFirmware") == version_string), None)
+
     targets: dict[str, dict] = {}
     if version:
+        entry = by_version.get(version) or {}
+        want_order = entry.get("releaseOrder")
         for h in halves:
             if h["side"] not in ("left", "right") or h["mode"] not in (None, "app"):
                 continue
@@ -635,7 +657,18 @@ async def firmware_update_plan(version: str = "") -> dict:
             t["currentVersion"] = h.get("currentVersion")
             # A downgrade is a legitimate repair -- it is how two halves that stopped talking to
             # each other are brought back to a common version -- but it is never done silently.
-            t["downgrade"] = bool(have and want and want < have)
+            #
+            # Version numbers when both are known, otherwise the chronological order of the
+            # releases, which is exactly what firmware_upload._is_downgrade falls back to. The
+            # UI used to compare numbers only, so picking an image from before 1.14.5 -- which
+            # declares none -- looked like an ordinary update, sent no allow_older, and was
+            # refused by plan() at a point where the half is ALREADY IN ITS BOOTLOADER. The
+            # screen has to know what the interlock knows, or it walks the user into it.
+            have_order = release_order_of(h.get("currentVersion"))
+            older_by_number = bool(have and want and want < have)
+            older_by_release = bool(have_order is not None and want_order is not None
+                                    and not (have and want) and want_order < have_order)
+            t["downgrade"] = older_by_number or older_by_release
             t["unchanged"] = bool(have and want and want == have)
             targets[h["side"]] = t
 
@@ -643,7 +676,7 @@ async def firmware_update_plan(version: str = "") -> dict:
             "imagesDir": str(images_dir),
             "source": ffetch.source_info(),
             "halves": halves,
-            "versions": [{k: e[k] for k in ("version", "releaseOrder", "bundle")}
+            "versions": [{k: e[k] for k in ("version", "declared", "releaseOrder", "bundle")}
                          | {"sides": sorted({im.get("side") for im in e["images"] if im.get("side")})}
                          for e in versions],
             "targets": targets}

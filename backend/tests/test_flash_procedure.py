@@ -192,6 +192,31 @@ def test_the_upload_records_how_its_chunks_behaved(wired, monkeypatch):
     assert "1 over 1 s, 8 s of the upload spent waiting on them" in note["detail"]
 
 
+def test_an_image_whose_release_declared_no_version_still_finishes_clean(wired, monkeypatch):
+    """Everything before NayaFlow 1.14.5 shipped without a declared firmware version.
+
+    The final step compared what the half reports against the image's expected version number.
+    With no expected number, that comparison failed for EVERY such image -- after a write already
+    verified by hash -- and reported a failed run on a keyboard running the new firmware
+    perfectly. Reporting failure on a flash that landed is the precise thing this procedure was
+    built to stop doing, so there is nothing to compare against, it says so and the run passes.
+    """
+    class _Plan:
+        target = {"createFirmware": None, "versionLabel": "NayaFlow 1.3.8 to 1.6.10"}
+        total_bytes, chunks, upload_image_id = 663552, 1296, 1
+
+    monkeypatch.setattr(P.fw, "plan", lambda *a, **k: _Plan())
+    r = _run(wired, {"left": "kb_fwl.bin"})
+
+    assert r["ok"] is True, r["summary"]
+    assert not r["failures"]
+    assert any("declared no firmware version" in a for a in r["advisories"])
+    lines = [json.loads(x) for x in Path(r["log"]).read_text(encoding="utf-8").splitlines() if x]
+    confirm = [x for x in lines if x["step"] == "version.confirm"]
+    assert any(x["phase"] == "note" for x in confirm), "the note belongs on the step it is about"
+    assert not any(x["phase"] == "fail" for x in confirm)
+
+
 def test_the_central_is_flashed_before_the_peripheral(wired):
     """Between the two flashes one half is verified on its OWN port, and the only mismatched
     configuration anyone has measured is a newer central with an older peripheral -- there the

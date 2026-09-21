@@ -136,10 +136,15 @@ class RunLog:
         self.failures.append(what)
         self.event("verify.compare", "fail", detail=what)
 
-    def advise(self, what: str) -> None:
-        """A difference that is EXPECTED and must not fail the run -- see compare_preflight."""
+    def advise(self, what: str, step: str = "verify.compare") -> None:
+        """Something the user should be told that must NOT fail the run -- see compare_preflight.
+
+        `step` is which line of the procedure it belongs to. It was fixed at verify.compare,
+        which was right while comparisons were the only source of advisories and wrong as soon
+        as another step had something to say that is not a failure.
+        """
         self.advisories.append(what)
-        self.event("verify.compare", "note", detail=what)
+        self.event(step, "note", detail=what)
 
     def finish(self, ok: bool, summary: str) -> dict:
         verdict = {"ok": ok, "summary": summary, "failures": list(self.failures),
@@ -470,11 +475,25 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
     with log.step("version.confirm", side=side):
         want = plan.target.get("createFirmware")
         got = _await_application(svc, side, log)
-        log.event("version.confirm", "ok", side=side, expected=want, got=got)
-        if got != want:
+        log.event("version.confirm", "ok", side=side, expected=want, got=got,
+                  label=plan.target.get("versionLabel"))
+        if want and got != want:
             raise fw.UploadRefused(
                 f"the {side} half came back on {got}, not {want}. The write is recorded above; "
                 "the half is running whatever this says and can be flashed again.")
+        if not want:
+            # The image's release never declared a firmware version, which is true of everything
+            # before NayaFlow 1.14.5. There is nothing to compare against, and comparing anyway
+            # would fail EVERY such flash at the last step, after a write already verified by
+            # hash -- reporting failure on a keyboard that is running the new firmware perfectly
+            # is the exact thing this procedure exists to prevent. What can be checked has been:
+            # the slot's hash matched the catalogue before the swap, and the half came back to
+            # the application on its own. What it reports now is recorded rather than judged.
+            log.advise(f"the {side} half came back on {got}. "
+                       f"{plan.target.get('versionLabel') or 'This image'} shipped in a release "
+                       "that declared no firmware version, so there is no expected number to "
+                       "check that against; the write itself was verified by hash.",
+                       step="version.confirm")
     return result
 
 
