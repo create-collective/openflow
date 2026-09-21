@@ -719,3 +719,7 @@ img:not([draggable="true"]) {
 .fw-lib-hash { font-family: var(--font-mono); opacity: 0.6; }
 .fw-lib-flag { margin-left: var(--sp-2); }
 .fw-source-note { margin-top: var(--sp-2); color: var(--text-muted); font-size: var(--fs-sm); }
+/* The two flash buttons act on the versions listed directly above them, and with no gap they
+   read as another row of that table rather than as the actions under it. A modifier, not a
+   change to .btn-row: that class is shared with rows whose spacing is already right. */
+.fw-actions { margin-top: var(--sp-3); }

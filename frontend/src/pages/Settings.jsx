@@ -411,7 +411,7 @@ export default function Settings() {
                       swaps an MCUboot slot and can be rolled back, the other writes a filesystem
                       and cannot. The module one has never been run on hardware and says so
                       rather than offering to. */}
-                  <div className="btn-row">
+                  <div className="btn-row fw-actions">
                     <FirmwareUpdate connected={firmwareConnected} />
                     <ModuleFirmwareUpdate
                       modules={liveHalves.filter((h) => h.module).map((h) => ({
