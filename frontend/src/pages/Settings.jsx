@@ -13,6 +13,7 @@ import Card from "../components/ui/Card";
 import { KVRow } from "../components/ui/KV";
 import Notice from "../components/ui/Notice";
 import Tabs from "../components/ui/Tabs";
+import { useDeviceStream } from "../lib/deviceStream";
 import { setShowAllKeyboards, useShowAllKeyboards } from "../lib/showAllKeyboards";
 import { THEME_PREFERENCES, setThemePreference, useThemePreference } from "../lib/theme";
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
@@ -26,7 +27,9 @@ const GLYPH = {
   backup: <><ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v6a8 3 0 0 0 16 0V6" /><path d="M4 12v6a8 3 0 0 0 16 0v-6" /></>,
   troubleshooting: <path d="M7 10h3v-3l-3.5-3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8l3.5 3.5" />,
   logging: <><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z" /><path d="M9 9h1M9 13h6M9 17h6" /></>,
-  software: <><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></>,
+  // firmware: a chip, as the board's own software; about: the info circle.
+  firmware: <><rect x="7" y="7" width="10" height="10" rx="1.5" /><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4" /></>,
+  about: <><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></>,
 };
 function RailGlyph({ id }) {
   return (
@@ -44,7 +47,12 @@ const SECTIONS = [
   { id: "backup", label: "Backup", badge: "app only", sub: "Snapshots of your data, and NayaFlow imports." },
   { id: "troubleshooting", label: "Troubleshooting", badge: "destructive", sub: "Restart and recover your keyboard." },
   { id: "logging", label: "Logging", sub: "Diagnostics, and everything exchanged with the keyboard." },
-  { id: "software", label: "Software", sub: "Versions, update checks and the firmware library." },
+  // Firmware is the keyboard's own software and nothing else: what each half runs, what can be
+  // written to it, and the library of images it could be written from. Everything about
+  // OpenFlow itself -- its version, its update checks, where to find it -- moved to About, so
+  // this tab is only ever about the board in front of you (owner, 2026-09-21).
+  { id: "firmware", label: "Firmware", badge: "device", sub: "What your keyboard runs, and what you can put on it." },
+  { id: "about", label: "About", sub: "OpenFlow's own version, update checks and links." },
 ];
 const TABS = SECTIONS.map((s) => ({ id: s.id, label: s.label, icon: <RailGlyph id={s.id} /> }));
 
@@ -100,6 +108,7 @@ export default function Settings() {
   const [pairPlan, setPairPlan] = useState(null);
   const { out, busy, run } = useRunLog();
   const [err, setErr] = useState(null);
+  const { data: stream } = useDeviceStream();
 
   const load = useCallback(async () => {
     try {
@@ -116,7 +125,10 @@ export default function Settings() {
     // Troubleshooting gates its buttons on `connected`, which only the Software tab used to
     // fetch, so with a keyboard plugged in every device button here stayed disabled.
     if (tab === "troubleshooting") { api.recoveryOps().then((r) => setRecovery(r.ops || [])).catch(() => {}); api.status().then((r) => setStatus(r.halves || [])).catch(() => {}); }
-    if (tab === "software") { api.status().then((r) => setStatus(r.halves || [])).catch(() => {}); api.firmwareCatalog().then(setFirmware).catch(() => {}); }
+    // The firmware tab does NOT read the keyboard on open. It paints from the poll's live
+    // snapshot instead (see liveHalves below), so plugging a half in while the tab is open is
+    // noticed. The catalogue is a file on disk and never changes under us.
+    if (tab === "firmware") api.firmwareCatalog().then(setFirmware).catch(() => {});
   }, [tab]);
 
   async function setSetting(key, value) {
@@ -137,7 +149,17 @@ export default function Settings() {
     }
   }
 
+  // Troubleshooting's buttons gate on the reading IT took when the tab opened; the firmware tab
+  // gates on the live poll instead.
+  //
+  // It used to share that one-shot fetch, which ran only when the tab changed. Open the tab,
+  // then plug the keyboard in, and nothing refetched: the halves stayed absent and "Update
+  // firmware" stayed disabled saying "Connect the keyboard first" with the keyboard connected
+  // (owner, 2026-09-21). The device stream is already open for the whole app and says so within
+  // a tick, so the tab is live and costs no read of its own.
   const connected = status.some((h) => h.connected);
+  const liveHalves = (stream?.status?.halves || []).filter((h) => h.connected);
+  const firmwareConnected = liveHalves.length > 0;
 
   // One opt-in release check (lib/updates), reused for OpenFlow and Create Companion -- no
   // forced updater.
@@ -365,33 +387,16 @@ export default function Settings() {
                 </Card>
               )}
 
-              {tab === "software" && (
-                <Card className="settings-pane" title="Software & firmware">
+              {tab === "firmware" && (
+                <Card className="settings-pane" title="Device firmware">
 
-                  <KVRow k="OpenFlow" v={sys?.backendVersion} />
-                  <KVRow k="OS" v={sys ? `${sys.os} ${sys.arch}` : null} />
-                  <div className="btn-row" style={{ margin: "10px 0" }}>
-                    <Button onClick={checkUpdate}>Check OpenFlow for updates</Button>
-                    <Button onClick={checkCompanion}>Check Create Companion</Button>
-                  </div>
-                  {update?.checking && <div className="page-sub">Checking OpenFlow…</div>}
-                  {update?.error && <Notice tone="err">OpenFlow: {update.error}</Notice>}
-                  {update?.latest && <KVRow k="OpenFlow latest" v={`${update.latest}${update.ahead ? " (update available)" : " (up to date)"}`} />}
-                  {companion?.checking && <div className="page-sub">Checking Create Companion…</div>}
-                  {companion?.error && <Notice tone="err">Create Companion: {companion.error}</Notice>}
-                  {companion?.latest && <KVRow k="Create Companion latest" v={companion.latest} />}
-                  <p className="page-sub" style={{ marginTop: 4 }}>
-                    Opt-in checks against GitHub Releases. OpenFlow has no forced updater.
-                  </p>
-
-                  <h3 className="settings-section tight">Device firmware</h3>
-                  {status.filter((h) => h.connected).map((h) => (
+                  {liveHalves.map((h) => (
                     <div key={h.port}>
                       <KVRow k={`${h.description} firmware`} v={h.firmwareVersion || "—"} />
                       {h.module?.firmwareVersion && <KVRow k={`${h.module.type} module firmware`} v={h.module.firmwareVersion} />}
                     </div>
                   ))}
-                  {!connected && <p className="page-sub">Connect the keyboard to read device firmware versions.</p>}
+                  {!firmwareConnected && <p className="page-sub">Connect the keyboard to read device firmware versions.</p>}
                   {firmware?.reference && (
                     <KVRow k="Naya ships (reference)" v={`Create ${firmware.reference.createFirmware} · module ${firmware.reference.moduleFirmware}`} />
                   )}
@@ -400,7 +405,7 @@ export default function Settings() {
                       below stay inert -- that list is the catalogue, and a flash is not a thing
                       to start from a row in a reference table. */}
                   <div className="btn-row">
-                    <FirmwareUpdate connected={connected} />
+                    <FirmwareUpdate connected={firmwareConnected} />
                   </div>
 
                   <h3 className="settings-section tight">Firmware library</h3>
@@ -459,7 +464,31 @@ export default function Settings() {
                     });
                   })()}
 
-                  <div className="settings-links" style={{ marginTop: 16 }}>
+                </Card>
+              )}
+
+              {tab === "about" && (
+                <Card className="settings-pane" title="About OpenFlow">
+                  <KVRow k="OpenFlow" v={sys?.backendVersion} />
+                  <KVRow k="OS" v={sys ? `${sys.os} ${sys.arch}` : null} />
+                  <div className="btn-row" style={{ margin: "10px 0" }}>
+                    <Button onClick={checkUpdate}>Check OpenFlow for updates</Button>
+                    <Button onClick={checkCompanion}>Check Create Companion</Button>
+                  </div>
+                  {update?.checking && <div className="page-sub">Checking OpenFlow…</div>}
+                  {update?.error && <Notice tone="err">OpenFlow: {update.error}</Notice>}
+                  {update?.latest && <KVRow k="OpenFlow latest" v={`${update.latest}${update.ahead ? " (update available)" : " (up to date)"}`} />}
+                  {companion?.checking && <div className="page-sub">Checking Create Companion…</div>}
+                  {companion?.error && <Notice tone="err">Create Companion: {companion.error}</Notice>}
+                  {companion?.latest && <KVRow k="Create Companion latest" v={companion.latest} />}
+                  <p className="page-sub" style={{ marginTop: 4 }}>
+                    Opt-in checks against GitHub Releases. OpenFlow has no forced updater. These
+                    are checks on OpenFlow itself — your keyboard&rsquo;s own firmware lives on
+                    the Firmware tab.
+                  </p>
+
+                  <h3 className="settings-section tight">Source</h3>
+                  <div className="settings-links">
                     <a href={`https://github.com/${REPOS.app}`} target="_blank" rel="noreferrer">OpenFlow ↗</a>
                     <a href={`https://github.com/${REPOS.companion}`} target="_blank" rel="noreferrer">Create Companion ↗</a>
                     <a href={`https://github.com/${REPOS.firmware}`} target="_blank" rel="noreferrer">Firmware ↗</a>
