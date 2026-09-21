@@ -685,3 +685,37 @@ img:not([draggable="true"]) {
   color: var(--text-muted);
   white-space: pre-wrap;
 }
+
+/* Firmware library (components/FirmwareLibrary.jsx): the catalogue, and what of it is on this
+   machine. The download control sits on the version it downloads, so "have it / can get it" is
+   read in one place rather than in a second list. */
+.fw-lib-intro { margin-bottom: var(--sp-3); }
+.fw-lib-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.fw-lib-dir {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fw-lib-failures { margin: var(--sp-2) 0 0; padding-left: var(--sp-5); }
+.fw-lib-group { margin-bottom: var(--sp-4); }
+.fw-lib-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.fw-lib-sub { opacity: 0.5; font-weight: 400; }
+.fw-lib-held { color: var(--ok); font-size: var(--fs-xs); }
+.fw-lib-row { cursor: default; }
+.fw-lib-file { flex: 1; }
+.fw-lib-hash { font-family: var(--font-mono); opacity: 0.6; }
+.fw-lib-flag { margin-left: var(--sp-2); }
+.fw-source-note { margin-top: var(--sp-2); color: var(--text-muted); font-size: var(--fs-sm); }

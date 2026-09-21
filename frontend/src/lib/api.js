@@ -52,6 +52,11 @@ export const api = {
   flashFirmware: (targets, allowOlder = false) =>
     req("POST", "/rpc/flash-procedure", { targets, allow_older: allowOlder }),
   flashRun: (since = 0) => req("GET", `/api/flash-runs/current?since=${since}`),
+  // The catalogue joined against what this machine holds, and the download that closes the gap.
+  // Images are not shipped with OpenFlow; each one is verified against the catalogue's sha256
+  // before it is kept.
+  firmwareLibrary: () => req("GET", "/api/firmware-library"),
+  fetchFirmware: (versions, force = false) => req("POST", "/rpc/fetch-firmware", { versions, force }),
   flashLogs: () => req("GET", "/api/flash-logs"),
   flashLog: (id) => req("GET", `/api/flash-logs/${encodeURIComponent(id)}`),
   deviceLog: (limit = 200) => req("GET", `/api/device-log?limit=${limit}`),

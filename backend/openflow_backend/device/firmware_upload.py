@@ -351,7 +351,18 @@ def _match_catalog(path: Path, raw: bytes, catalog: list) -> dict:
     image kb_fwl.bin, so the catalogue built from all 25 releases holds a dozen entries with that
     name and the name alone cannot say which one a file is. The hash of the file decides; the name
     is a fallback only for a catalogue that carries no blob hashes at all (hand-written ones, and
-    the test fixtures), and then only when it is unambiguous."""
+    the test fixtures), and then only when it is unambiguous.
+
+    CUSTOM FIRMWARE. This is the check that stands between the flasher and an image nobody has
+    identified, and it is why OpenFlow cannot be pointed at a firmware of your own today. That is
+    not the real obstacle: the device's bootloader verifies Naya's signature, so an image built
+    elsewhere is refused by MCUboot even if this function let it past, and writing one would
+    achieve nothing but a wasted slot. The plan is a community-signed bootloader with an open
+    firmware to go with it. What changes here when that exists is a SECOND trust root beside the
+    catalogue -- a signature we can verify, with its own provenance -- not the removal of this
+    one. An "allow unsigned" switch would make every protection in this file optional at exactly
+    the moment a user is least able to judge the risk.
+    """
     blob = hashlib.sha256(raw).hexdigest()
     by_hash = [e for e in catalog or [] if e.get("blobSha256") == blob]
     if len(by_hash) == 1:

@@ -80,6 +80,8 @@ export default function FirmwareUpdate({ connected }) {
   const [chosen, setChosen] = useState({});
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState("");
   const [logText, setLogText] = useState("");
   const { run, events } = useFlashProgress();
 
@@ -148,6 +150,26 @@ export default function FirmwareUpdate({ connected }) {
     api.flashRun(0).then((r) => { if (r.run) seedFlashProgress(r.run); }).catch(() => {});
   }, [open, run]);
 
+  // Fetch the chosen version, then re-resolve: the same plan call decides all over again what
+  // each half can take, so a successful download turns the checkboxes on by itself.
+  async function fetchVersion() {
+    setFetching(true);
+    setFetchError("");
+    try {
+      const r = await api.fetchFirmware([version]);
+      const p = await load(version);
+      setChosen(defaultChoice(p));
+      if (r.failed) {
+        const first = r.images.find((i) => !i.ok);
+        setFetchError(`${r.failed} of ${r.requested} file(s) did not arrive. ${first?.reason || ""}`);
+      }
+    } catch (e) {
+      setFetchError(e.message || String(e));
+    } finally {
+      setFetching(false);
+    }
+  }
+
   async function showLog() {
     if (!run?.id) return;
     try {
@@ -160,6 +182,9 @@ export default function FirmwareUpdate({ connected }) {
 
   const targets = plan?.targets || {};
   const pickable = Object.values(targets).filter((t) => t.image && t.present);
+  // Missing because it has not been downloaded, as opposed to missing because the catalogue has
+  // no way to get it. The first is a button; the second is a fact.
+  const fetchable = Object.values(targets).some((t) => t.fetchable);
   const anyChosen = Object.entries(chosen).some(([side, on]) => on && targets[side]?.present);
   const downgrading = Object.entries(chosen)
     .some(([side, on]) => on && targets[side]?.downgrade);
@@ -285,14 +310,35 @@ export default function FirmwareUpdate({ connected }) {
               })}
             </ul>
 
+            {/* The images are not shipped with OpenFlow -- they are Naya's binaries -- so the
+                usual reason a version cannot be flashed is simply that it has not been
+                downloaded. That is a button, not an explanation. Every file is checked against
+                the catalogue's own hash before it is kept (backend device/firmware_fetch.py).  */}
             {pickable.length === 0 && (plan.halves || []).length > 0 && (
-              <Notice tone="warn" title={`No image for ${version} is on this machine`}>
-                {plan.imagesDir
-                  ? `The catalogue lists it, but the file is not under ${plan.imagesDir}.`
-                  : "Firmware images are vendor material and are not shipped with OpenFlow. "
-                    + "Point OPENFLOW_FIRMWARE_DIR at the image tree to flash from it."}
+              <Notice
+                tone="warn"
+                title={`${version} has not been downloaded yet`}
+                action={fetchable && (
+                  <Button onClick={fetchVersion} disabled={fetching} busy={fetching}>
+                    {fetching ? "Downloading…" : `Download ${version}`}
+                  </Button>
+                )}
+              >
+                Firmware images are not shipped with OpenFlow.
+                {fetchable
+                  ? " Downloading gets every file this version needs — both halves, both flash"
+                    + " generations — and checks each one against the catalogue before keeping it."
+                  : ` The catalogue lists ${version}, but there is no record of where to fetch it`
+                    + " from, so it cannot be downloaded here."}
+                {plan.source?.private && fetchable && (
+                  <div className="fw-source-note">
+                    The archive it comes from is private today, so this will fail unless
+                    OPENFLOW_FIRMWARE_TOKEN is set to a token that can read it.
+                  </div>
+                )}
               </Notice>
             )}
+            {fetchError && <Notice tone="err" title="The download did not finish">{fetchError}</Notice>}
 
             {downgrading && (
               <Notice tone="warn" title="This writes an older firmware than the half runs now">

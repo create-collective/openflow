@@ -219,11 +219,11 @@ async def flash_firmware(body: dict = Body(...)) -> dict:
         name = str(body["image"])
         path = _P(name)
         if not path.is_absolute():
-            # The images are vendor material and live outside the repo; OPENFLOW_FIRMWARE_DIR
-            # says where. A bare catalogue filename with no dir set fails plan()'s "no such
-            # image" check.
-            d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
-            path = _P(d) / name if d else path
+            # The images are vendor material and are not shipped with OpenFlow; config's
+            # firmware_dir() is where a fetched or pointed-at tree lives. A bare catalogue
+            # filename with nothing under that directory fails plan()'s "no such image" check.
+            from ..config import firmware_dir
+            path = firmware_dir() / name
         # flash() = upload -> re-read slot -> schedule the swap -> reset. vendor_trailer defaults
         # to True -- the whole resource as NayaCore uploads it, whose own trailer arms a permanent
         # swap -- because that is the only path that has been run on hardware (SCRUM-106). With
@@ -272,7 +272,8 @@ async def flash_procedure_run(body: dict = Body(...)) -> dict:
         raise HTTPException(status_code=400,
                             detail='pass {"targets": {"left": "<image>", "right": "<image>"}} '
                                    "with at least one side.")
-    d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
+    from ..config import firmware_dir
+    d = firmware_dir()
     resolved = {}
     for side, name in targets.items():
         if side not in ("left", "right"):
@@ -393,8 +394,8 @@ async def flash_module_firmware(body: dict = Body(...)) -> dict:
         name = str(body["image"])
         path = _P(name)
         if not path.is_absolute():
-            d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
-            path = _P(d) / name if d else path
+            from ..config import firmware_dir
+            path = firmware_dir() / name
         return await run_in_threadpool(
             fw.flash_module_bundle, path, _firmware_catalog_raw(), arm=body.get("arm", ""),
             installed_version=body.get("installed_version"),
@@ -497,6 +498,49 @@ async def firmware_catalog() -> dict:
             "releases": _firmware_releases(), "flashEnabled": FIRMWARE_FLASH_ENABLED}
 
 
+@router.get("/api/firmware-library")
+async def firmware_library() -> dict:
+    """Every flashable catalogued image, and whether this machine holds it.
+
+    The catalogue and the images are separate things: one is committed, the other is 15 MB of
+    Naya's binaries that OpenFlow does not ship. This is the join between them, and what the
+    download picker is drawn from.
+    """
+    from ..config import firmware_dir
+    from ..device import firmware_fetch as ffetch
+    d = firmware_dir()
+    return {"dir": str(d), "source": ffetch.source_info(),
+            "images": ffetch.holdings(_firmware_catalog_raw(), d)}
+
+
+@router.post("/rpc/fetch-firmware")
+async def fetch_firmware(body: dict = Body(default={})) -> dict:
+    """Download catalogued firmware images to this machine.
+
+    Body: {"versions": ["3.35.4"]} or {"paths": ["v1.21.0/kb_fwl.bin"]}, and `force` to re-fetch
+    something already held. Nothing outside the catalogue can be named -- the caller chooses
+    WHICH catalogued images, never where they come from -- and every download is verified against
+    the catalogue's sha256 before it is written (device/firmware_fetch.py).
+
+    NOT gated by FIRMWARE_FLASH_ENABLED. Fetching a file is not writing to a keyboard, and a
+    build with the flasher switched off can still hold its images.
+    """
+    from ..config import firmware_dir
+    from ..device import firmware_fetch as ffetch
+    versions = body.get("versions")
+    paths = body.get("paths")
+    if not versions and not paths:
+        raise HTTPException(status_code=400,
+                            detail='pass {"versions": ["3.35.4"]} or {"paths": [...]}')
+    try:
+        return await run_in_threadpool(
+            ffetch.fetch, _firmware_catalog_raw(), firmware_dir(),
+            versions=list(versions) if versions else None,
+            paths=list(paths) if paths else None, force=bool(body.get("force", False)))
+    except ffetch.FetchRefused as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/api/firmware-update-plan")
 async def firmware_update_plan(version: str = "") -> dict:
     """What an update would write, worked out BEFORE anything goes near the bootloader.
@@ -509,21 +553,20 @@ async def firmware_update_plan(version: str = "") -> dict:
     know that kb_fwl.bin and kb_fwl_64.bin both exist.
 
     It also says whether each image is actually ON THIS MACHINE. The catalogue is committed and
-    the images are not -- they are vendor material under OPENFLOW_FIRMWARE_DIR -- so a version can
-    be listed and unobtainable. Better said on the screen that offers it than discovered nine
-    minutes into a run.
+    the images are not -- they are vendor binaries that would put 15 MB of someone else's
+    copyright in the installer -- so a version can be listed and not held. That belongs on the
+    screen that offers it, next to the button that fetches it (device/firmware_fetch.py), rather
+    than being discovered nine minutes into a run.
     """
-    import os
-    from pathlib import Path as _P
-
+    from ..config import firmware_dir
+    from ..device import firmware_fetch as ffetch
     from ..device import firmware_upload as fw
     from ..device import recovery as rec
 
     svc = get_service()
     devices = await run_in_threadpool(svc.list_devices)
     live = {h.get("port"): h for h in (await run_in_threadpool(svc.snapshot)).get("halves", [])}
-    d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
-    images_dir = _P(d) if d else None
+    images_dir = firmware_dir()
 
     halves = []
     for dev in devices:
@@ -565,12 +608,15 @@ async def firmware_update_plan(version: str = "") -> dict:
             if generation and im.get("generation") != generation:
                 continue
             rel = im.get("historyPath") or im.get("file")
-            present = bool(images_dir and (images_dir / rel).is_file())
+            present = (images_dir / rel).is_file()
             return {"side": side, "image": rel, "file": im.get("file"),
                     "generation": im.get("generation"), "version": want, "present": present,
-                    "reason": None if present else (
-                        "the image tree is not on this machine (set OPENFLOW_FIRMWARE_DIR)"
-                        if images_dir is None else f"{rel} is not in the image tree")}
+                    # "fetchable" is the difference between a version this machine cannot have
+                    # and one it has simply not downloaded yet. The UI offers a button for the
+                    # second and an explanation for the first.
+                    "fetchable": not present and bool(im.get("historyPath")
+                                                      and im.get("blobSha256")),
+                    "reason": None if present else f"{rel} has not been downloaded yet"}
         return {"side": side, "reason": (
             f"no {want} image for the {side} half at flash generation {generation or 'unknown'}")}
 
@@ -590,7 +636,8 @@ async def firmware_update_plan(version: str = "") -> dict:
             targets[h["side"]] = t
 
     return {"flashEnabled": FIRMWARE_FLASH_ENABLED,
-            "imagesDir": str(images_dir) if images_dir else None,
+            "imagesDir": str(images_dir),
+            "source": ffetch.source_info(),
             "halves": halves,
             "versions": [{k: e[k] for k in ("version", "releaseOrder", "bundle")}
                          | {"sides": sorted({im.get("side") for im in e["images"] if im.get("side")})}

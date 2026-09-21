@@ -93,21 +93,30 @@ def test_a_generation_b_half_is_not_handed_the_generation_a_binary(images):
     assert t41["generation"] == "B"
 
 
-def test_an_image_we_do_not_hold_says_so_instead_of_being_offered(images):
-    """The catalogue is committed; the image tree is not. 3.41.0 is listed and absent here."""
+def test_an_image_we_do_not_hold_is_reported_as_downloadable(images):
+    """The catalogue is committed; the images are not shipped. 3.41.0 is listed and absent here.
+
+    "We do not have it" is the ordinary state of a fresh install, not a failure, so the plan says
+    it can be fetched and the dialog offers a button rather than an explanation.
+    """
     svc = Svc([{"port": "COM30", "pid": PID_LEFT_A, "side": "left"}], {"COM30": "3.35.4"})
     t = _plan(svc, "?version=3.41.0")["targets"]["left"]
     assert t["image"] == "v1.25.1/kb_fwl.bin"
     assert t["present"] is False
-    assert "not in the image tree" in t["reason"]
+    assert t["fetchable"] is True
+    assert "has not been downloaded yet" in t["reason"]
 
 
-def test_with_no_image_tree_at_all_the_reason_says_what_to_set(monkeypatch):
+def test_there_is_always_somewhere_for_an_image_to_be(monkeypatch):
+    """With no OPENFLOW_FIRMWARE_DIR the plan used to report no directory at all, which left
+    every version unobtainable with nothing the app could do about it. There is a default now,
+    under the app's data directory, and the download writes there."""
     monkeypatch.delenv("OPENFLOW_FIRMWARE_DIR", raising=False)
     svc = Svc([{"port": "COM30", "pid": PID_LEFT_A, "side": "left"}], {"COM30": "3.35.4"})
     plan = _plan(svc, "?version=3.41.0")
-    assert plan["imagesDir"] is None
-    assert "OPENFLOW_FIRMWARE_DIR" in plan["targets"]["left"]["reason"]
+    assert plan["imagesDir"], "the plan must name a directory even when nothing is configured"
+    assert plan["imagesDir"].replace("\\", "/").endswith("/firmware")
+    assert plan["targets"]["left"]["fetchable"] is True
 
 
 def test_a_downgrade_is_named_as_one_and_an_unchanged_version_too(images):

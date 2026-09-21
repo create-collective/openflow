@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { confirmDialog } from "../lib/dialogs";
 import { applyInterfaceScaling } from "../lib/scaling";
 import { pickFile, downloadJSON, safeName } from "../lib/files";
+import FirmwareLibrary from "../components/FirmwareLibrary";
 import FirmwareUpdate from "../components/FirmwareUpdate";
 import SettingField from "../components/SettingField";
 import SettingRow from "../components/ui/SettingRow";
@@ -409,60 +410,9 @@ export default function Settings() {
                   </div>
 
                   <h3 className="settings-section tight">Firmware library</h3>
-                  <p className="page-sub" style={{ marginBottom: 10 }}>
-                    Every firmware image OpenFlow has classified, by what it targets and which
-                    NayaFlow release bundled it — so a specific version can be picked for an
-                    up/downgrade. This is the catalogue, not the flasher: use “Update firmware”
-                    above, which backs the keyboard up, writes one half at a time and verifies
-                    the result. Images are open-sourced as they are dumped/obtained.
-                  </p>
-                  {(() => {
-                    const imgs = firmware?.images || [];
-                    if (!imgs.length) return <div className="empty">No firmware images catalogued.</div>;
-                    // One group per distinct firmware: its version number when a NayaFlow release
-                    // declared one, else the release span that shipped it (the catalogue's
-                    // versionLabel). Keyboard first, newest release first.
-                    const label = (im) => im.versionLabel || im.version || "(unknown version)";
-                    const key = (im) => `${im.target}|${label(im)}`;
-                    const groups = {};
-                    for (const im of imgs) (groups[key(im)] ||= []).push(im);
-                    const order = Object.keys(groups).sort((a, b) => {
-                      const A = groups[a][0], B = groups[b][0];
-                      return (A.target === "module") - (B.target === "module")
-                        || (B.releaseOrder ?? -1) - (A.releaseOrder ?? -1)
-                        || a.localeCompare(b);
-                    });
-                    const ver = (tag) => String(tag || "").replace(/^v/, "");
-                    const shippedIn = (im) => {
-                      const b = im.bundles || [];
-                      if (!b.length) return im.bundle;
-                      if (b.length === 1) return `NayaFlow ${ver(b[0])}`;
-                      return `NayaFlow ${ver(b[0])} to ${ver(b[b.length - 1])}, ${b.length} releases`;
-                    };
-                    return order.map((g) => {
-                      const ims = groups[g];
-                      const first = ims[0];
-                      const declared = first.versionConfidence === "declared";
-                      const kind = first.target === "module" ? "Module" : "Keyboard";
-                      const title = declared ? `${kind} firmware ${label(first)}` : `${kind} firmware shipped in ${label(first)}`;
-                      const sub = declared ? shippedIn(first) : "no release declared a version number";
-                      return (
-                        <div key={g} style={{ marginBottom: 14 }}>
-                          <div className="info-sub">{title} <span style={{ opacity: 0.5, fontWeight: 400 }}>· {sub}</span></div>
-                          {ims.map((im) => (
-                            <div className="skp-row" key={`${im.file}-${im.sha256}`} style={{ cursor: "default" }} title={im.note || ""}>
-                              <span className="skp-beh">{im.component || "?"}{im.generation ? ` · gen ${im.generation}` : ""}</span>
-                              <span className="skp-act" style={{ flex: 1 }}>{im.file}{im.container ? ` in ${im.container}` : ""}</span>
-                              <span className="v" style={{ fontFamily: "var(--font-mono)", opacity: 0.6 }}>{im.sha256 ? im.sha256 + "…" : "encrypted"}</span>
-                              <Button disabled title={im.flashable ? "Flash this version from “Update firmware” above, which backs up and verifies" : (im.withheldBecause || []).join("; ") || "Not a flashable image"} style={{ marginLeft: 8 }}>
-                                {im.flashable ? "Flashable" : "—"}
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    });
-                  })()}
+                  {!firmware?.images?.length
+                    ? <div className="empty">No firmware images catalogued.</div>
+                    : <FirmwareLibrary images={firmware.images} />}
 
                 </Card>
               )}

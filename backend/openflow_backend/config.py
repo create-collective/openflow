@@ -36,6 +36,24 @@ def backups_dir() -> Path:
     return d
 
 
+def firmware_dir() -> Path:
+    """Where firmware images live on this machine.
+
+    The images are not shipped with OpenFlow -- they are vendor binaries, and the installer would
+    carry 15 MB of someone else's copyrighted material -- so a fresh install has none and fetches
+    what it needs (device/firmware_fetch.py). They land here.
+
+    OPENFLOW_FIRMWARE_DIR overrides it, which is how a developer points at a tree they already
+    hold. Before there was a default, an unset variable meant there was nowhere for an image to
+    be, and every version in the picker was unobtainable with no way to fix it from inside the
+    app.
+    """
+    override = os.environ.get("OPENFLOW_FIRMWARE_DIR")
+    d = Path(override) if override else data_dir() / "firmware"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def logs_dir() -> Path:
     d = data_dir() / "logs"
     d.mkdir(parents=True, exist_ok=True)

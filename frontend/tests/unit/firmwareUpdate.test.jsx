@@ -34,6 +34,31 @@ const PLAN = {
   },
 };
 
+// The ordinary state of a fresh install: the catalogue knows the version, the machine has not
+// downloaded it. Not an error -- a button.
+const NOT_DOWNLOADED = {
+  ...PLAN,
+  source: { url: "https://example.test/fw", authenticated: false, private: true },
+  targets: {
+    left: { side: "left", image: "v1.25.1/kb_fwl.bin", file: "kb_fwl.bin", generation: "A",
+            version: "3.41.0", present: false, fetchable: true, currentVersion: "3.35.4",
+            reason: "v1.25.1/kb_fwl.bin has not been downloaded yet", downgrade: false,
+            unchanged: false },
+    right: { side: "right", image: "v1.25.1/kb_fwr.bin", file: "kb_fwr.bin", generation: "A",
+             version: "3.41.0", present: false, fetchable: true, currentVersion: "3.35.4",
+             reason: "v1.25.1/kb_fwr.bin has not been downloaded yet", downgrade: false,
+             unchanged: false },
+  },
+};
+
+const DOWNLOADED = {
+  ...NOT_DOWNLOADED,
+  targets: {
+    left: { ...NOT_DOWNLOADED.targets.left, present: true, fetchable: false, reason: null },
+    right: { ...NOT_DOWNLOADED.targets.right, present: true, fetchable: false, reason: null },
+  },
+};
+
 const OLDER = {
   ...PLAN,
   targets: {
@@ -152,6 +177,45 @@ describe("FirmwareUpdate", () => {
     expect(screen.getByText(/not in the image tree/i)).toBeInTheDocument();
     // The left one is offerable, so the action is live -- and it says it is a downgrade.
     expect(screen.getByRole("button", { name: /downgrade to 3\.35\.4/i })).toBeEnabled();
+  });
+
+  it("offers to download a version this machine does not hold, then lets it be flashed", async () => {
+    // Images are not shipped with OpenFlow, so "we do not have it" is the normal first state and
+    // has to be recoverable from inside the dialog rather than being a dead end.
+    let downloaded = false;
+    api.firmwareUpdatePlan.mockImplementation(async () => (downloaded ? DOWNLOADED : NOT_DOWNLOADED));
+    const fetchSpy = vi.spyOn(api, "fetchFirmware").mockImplementation(async () => {
+      downloaded = true;
+      return { requested: 2, fetched: 2, failed: 0, images: [] };
+    });
+
+    render(<FirmwareUpdate connected />);
+    await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
+    await screen.findByText(/^3\.41\.0 has not been downloaded yet$/);
+    expect(screen.getByLabelText(/Left half/i)).toBeDisabled();
+    // The archive is private today, so the dialog says so before the button is pressed.
+    expect(screen.getByText(/OPENFLOW_FIRMWARE_TOKEN/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /download 3\.41\.0/i }));
+    await waitFor(() => expect(screen.getByLabelText(/Left half/i)).toBeEnabled());
+    expect(fetchSpy).toHaveBeenCalledWith(["3.41.0"]);
+    expect(screen.queryByText(/^3\.41\.0 has not been downloaded yet$/)).not.toBeInTheDocument();
+  });
+
+  it("says which files did not arrive rather than claiming the download worked", async () => {
+    api.firmwareUpdatePlan.mockResolvedValue(NOT_DOWNLOADED);
+    vi.spyOn(api, "fetchFirmware").mockResolvedValue({
+      requested: 2, fetched: 1, failed: 1,
+      images: [{ ok: true, path: "v1.21.0/kb_fwl.bin" },
+               { ok: false, path: "v1.21.0/kb_fwr.bin", reason: "what arrived does not match the catalogue" }],
+    });
+
+    render(<FirmwareUpdate connected />);
+    await userEvent.click(screen.getByRole("button", { name: /update firmware/i }));
+    await screen.findByText(/^3\.41\.0 has not been downloaded yet$/);
+    await userEvent.click(screen.getByRole("button", { name: /download 3\.41\.0/i }));
+    expect(await screen.findByText(/1 of 2 file\(s\) did not arrive/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not match the catalogue/i)).toBeInTheDocument();
   });
 
   it("cannot be dismissed while the flash runs, and shows the steps as they arrive", async () => {
