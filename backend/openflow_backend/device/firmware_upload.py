@@ -1,20 +1,21 @@
 """Writing a firmware image to a half in MCUboot recovery.
 
-NEVER RUN ON HARDWARE. The only route here is /rpc/flash-firmware, which refuses at a
-module-level gate (FIRMWARE_FLASH_ENABLED, ships False) before this file is even imported; and
-`flash()` refuses to run unless the caller passes an explicit arming token that has to be
-computed from the device's own reported state. It exists so the procedure is written down,
-reviewed and interlocked BEFORE the day it is needed, rather than improvised against a keyboard
-that is already broken.
+GATED, and still gated. The only route here is /rpc/flash-firmware and the supervised procedure
+above it, both of which refuse at a module-level gate (FIRMWARE_FLASH_ENABLED, ships False)
+before this file is even imported; and `flash()` refuses to run unless the caller passes an
+explicit arming token computed from the device's own reported state.
 
 THE SEQUENCE is NayaCore's, and it is stock MCUboot/SMP in every release the company shipped
 (nayaHistory/FLASHING-PROCEDURE.md): upload the image to the secondary slot, mark it pending,
 reset so the bootloader swaps. `upload()` is the first step only; `flash()` is all three, with
 a slot re-read between upload and mark so a wrong image is never marked bootable.
 
-It has never been run against hardware. The read path in recovery.py has (2026-09-08, both slot
-hashes matched the catalogue), so the framing, transport and CBOR decoding underneath are
-proven; the upload request shape is not. Treat every claim about it as design, not observation.
+IT HAS NOW BEEN RUN ON HARDWARE (2026-09-20, SCRUM-108). Six full slot writes across both halves
+of the reference board, 3.35.4 and 3.41.0 in both directions, ending in two clean supervised runs
+with the keymap intact and the version confirmed. Every one of those uploads went up as the whole
+vendor resource -- `vendor_trailer=True` -- which is why that is now the default; see the trailer
+note below. The header used to say this file had never touched a board, and that sentence has
+been wrong since Saturday.
 
 WHY IT IS SAFE-ISH BY CONSTRUCTION, and where that stops being true.
 
@@ -31,12 +32,24 @@ written -- `image_ok = 0x01` at 24 bytes from the end and BOOT_MAGIC in the last
 swap table (secondary magic good + image_ok set) that schedules a PERMANENT swap the moment the
 last chunk lands, before anything has been checked, and it makes a later "mark pending" a no-op
 (boot_set_pending_multi returns 0 when the magic is already good). NayaCore uploads the whole
-resource and simply resets. Uploading it that way therefore means: no test mode, and the swap
-armed before the hash check. So by default this file uploads ONLY the MCUboot image (the part
-before the padding; `mcuboot_image_length`), leaves the trailer area erased, verifies the slot,
-and then writes the trailer itself through `image state` with the hash -- test or permanent, our
-decision, after the check. `vendor_trailer=True` does what NayaCore does instead (whole resource,
-no mark, reset) for a donor test that wants the vendor's exact bytes.
+resource and simply resets. Uploading it that way means: no test mode, and the swap armed before
+the hash check.
+
+The alternative, which this file used to default to, is to upload ONLY the MCUboot image (the
+part before the padding; `mcuboot_image_length`), leave the trailer area erased, verify the slot,
+and then write the trailer ourselves through `image state` with the hash -- test or permanent,
+our decision, after the check. On paper it is the better sequence, and on paper is where it has
+stayed: every upload this project has ever put on a board used the vendor's bytes.
+
+So the DEFAULT IS NOW vendor_trailer=True (SCRUM-106), because a default should be the path that
+has been run rather than the one that reads best. `vendor_trailer=False` remains, unchanged and
+still argued for above, as design that has not met hardware; the day it is tried it should be
+tried deliberately, on a board someone is prepared to recover, and not because it was what the
+signature happened to say. What the vendor path costs is real and is not hidden: the swap is
+armed by the last chunk, so there is no test mode and the hash check happens after the point of
+no return -- MCUboot validates the signature before it swaps and refuses a corrupt image, which
+is what makes that survivable, and the procedure above verifies the running version afterwards
+either way.
 
 WHAT "TEST MODE" MEANS HERE. With confirm=False the swap is a TEST swap: the new image boots once
 and, unless it confirms itself from inside the application, MCUboot swaps back on the following
@@ -229,7 +242,7 @@ class UploadPlan:
     upload_id_source: str = ""        # "device slot info" or the assumption, spelled out
     file_bytes: int = 0               # the whole resource on disk
     trailer: dict = field(default_factory=dict)      # image_trailer() of the resource
-    vendor_trailer: bool = False      # True: upload the whole resource, trailer included, no mark
+    vendor_trailer: bool = True      # True: upload the whole resource, trailer included, no mark
 
     @property
     def arms_on_upload(self) -> bool:
@@ -404,16 +417,17 @@ def _is_downgrade(active: dict, target: dict) -> str | None:
 def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
          chunk: int = DEFAULT_CHUNK, allow_older: bool = False,
          state: dict | None = None, slot_info: dict | None = None,
-         vendor_trailer: bool = False) -> UploadPlan:
+         vendor_trailer: bool = True) -> UploadPlan:
     """Run every interlock and return what an upload would do. Writes nothing.
 
     `state` is a recovery.read_running_image() result; it is read from the device when omitted.
     `slot_info` is a recovery.slot_info() result; when omitted the one carried by `state` is used,
     and when there is none the upload id is the documented assumption, labelled as such.
-    `vendor_trailer=False` (default) uploads only the MCUboot image and marks the slot after
-    checking it; True uploads the whole resource as NayaCore does, trailer included, which arms
-    the swap on upload (see the note at the top). Raises UploadRefused with a reason a user can
-    act on.
+    `vendor_trailer=True` (the default, and the only path that has been run on hardware) uploads
+    the whole resource as NayaCore does, trailer included, which arms the swap on upload; False
+    uploads only the MCUboot image and marks the slot after checking it, which is the better
+    sequence on paper and untried (see the note at the top). Raises UploadRefused with a reason a
+    user can act on.
     """
     path = Path(image_path)
     if not path.is_file():
@@ -583,7 +597,7 @@ def _stream_chunks(send, image_id, raw, sha, chunk, progress, untouched) -> int:
 def upload(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
            chunk: int = DEFAULT_CHUNK, allow_older: bool = False, progress=None,
            state: dict | None = None, slot_info: dict | None = None,
-           vendor_trailer: bool = False) -> dict:
+           vendor_trailer: bool = True) -> dict:
     """Write an image to a half in recovery. Called only by flash(); on its own it leaves an
     image in the secondary slot that never boots (unless `vendor_trailer`, whose bytes arm the
     swap by themselves -- see the note at the top).
@@ -592,7 +606,8 @@ def upload(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
     That is deliberately not a boolean: an arming flag can be left switched on, and a token tied
     to one device's current state cannot be reused on the next one by accident.
 
-    Never run against hardware. The read path it sits on is proven; this request shape is not.
+    Run on hardware since 2026-09-20, always with the vendor trailer. The other path through
+    here -- image only, trailer written afterwards -- has not been.
     """
     p = plan(image_path, catalog, slot=slot, chunk=chunk, allow_older=allow_older,
              state=state, slot_info=slot_info, vendor_trailer=vendor_trailer)
@@ -708,27 +723,27 @@ def _settled_image_state(port: str, side: str | None = None, timeout: float = 90
 def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
           chunk: int = DEFAULT_CHUNK, allow_older: bool = False, confirm: bool = False,
           progress=None, state: dict | None = None, slot_info: dict | None = None,
-          vendor_trailer: bool = False) -> dict:
+          vendor_trailer: bool = True) -> dict:
     """The whole sequence: upload -> re-read the slot -> schedule the swap -> reset.
 
     Every upload() interlock applies (it runs first, on one device read shared with the plan).
     Then the slot is re-read and its hash must be the catalogued plaintext hash of the image we
     meant to write.
 
-    Default (vendor_trailer=False): only the MCUboot image was uploaded, so at this point nothing
-    is scheduled yet; a mismatch means nothing further is sent and the primary is untouched. On
-    a match the trailer is written by `image state` with the hash: `confirm=False` = TEST swap
+    Default (vendor_trailer=True): the whole resource went up, trailer included, and that trailer
+    scheduled a permanent swap the moment the upload completed (as it does for NayaCore). No
+    `image state` write is sent; `confirm` is ignored. A hash mismatch here can only mean a
+    corrupt transfer; MCUboot validates the signature before it swaps and refuses a corrupt
+    image, and the message says what is armed. This is the path every real flash has taken.
+
+    vendor_trailer=False: only the MCUboot image is uploaded, so at this point nothing is
+    scheduled yet; a mismatch means nothing further is sent and the primary is untouched. On a
+    match the trailer is written by `image state` with the hash: `confirm=False` = TEST swap
     (boots once, reverts on the next reset unless the application confirms itself; there is no
     later confirm from recovery), `confirm=True` = PERMANENT, which is what NayaCore's resources
-    amount to.
+    amount to. Better on paper, and never yet run on a board.
 
-    vendor_trailer=True: the whole resource went up, trailer included, and that trailer scheduled
-    a permanent swap the moment the upload completed (as it does for NayaCore). No `image state`
-    write is sent; `confirm` is ignored. A hash mismatch here can only mean a corrupt transfer;
-    MCUboot validates the signature before it swaps and refuses a corrupt image, and the message
-    says what is armed.
-
-    GATED: reached only through the FIRMWARE_FLASH_ENABLED endpoint. Never run on hardware.
+    GATED: reached only through the FIRMWARE_FLASH_ENABLED endpoint.
     """
     if state is None:
         state = rec.read_running_image(catalog)      # one read, shared by plan() and upload()

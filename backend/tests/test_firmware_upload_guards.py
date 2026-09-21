@@ -462,12 +462,20 @@ def _resource_catalog(res):
              "withheldBecause": []}]
 
 
-def test_default_flash_uploads_only_the_image_and_schedules_after_the_check(tmp_path, monkeypatch):
+def test_the_image_only_path_uploads_only_the_image_and_schedules_after_the_check(tmp_path, monkeypatch):
+    """vendor_trailer=False: the sequence that is better on paper and has never met a board.
+
+    It was the default until SCRUM-106. A default should be the path that has been run, and
+    every real flash has used the vendor's own bytes -- so this one is now opt-in, to be tried
+    deliberately on a board someone is prepared to recover rather than because a signature said
+    so. It is kept, and kept tested, because the argument for it is unchanged.
+    """
     res, n = _mcuboot_resource()
     (tmp_path / "kb_fwl.bin").write_bytes(res)
     log = []
     _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
-    r = fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok())
+    r = fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok(),
+                 vendor_trailer=False)
     chunks = [b for h, b in log if h == {"op": 2, "group": 1, "id": 1}]
     assert chunks[0]["len"] == n and sum(len(c["data"]) for c in chunks) == n < len(res)
     assert len(chunks) == -(-n // fw.DEFAULT_CHUNK) and fw.DEFAULT_CHUNK == 512
@@ -476,15 +484,19 @@ def test_default_flash_uploads_only_the_image_and_schedules_after_the_check(tmp_
     assert r["written"] == n and r["ofFile"] == len(res)
 
 
-def test_vendor_trailer_uploads_the_whole_resource_and_writes_no_image_state(tmp_path, monkeypatch):
+def test_the_vendor_trailer_is_the_default_and_writes_no_image_state(tmp_path, monkeypatch):
+    """The whole resource, as NayaCore uploads it -- and as every flash this project has run on
+    hardware did (2026-09-20). Called here with no vendor_trailer argument at all, which is the
+    point: the default is the path with evidence behind it (SCRUM-106)."""
     res, n = _mcuboot_resource()
     (tmp_path / "kb_fwl.bin").write_bytes(res)
     log = []
     _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
-    p = fw.plan(tmp_path / "kb_fwl.bin", _resource_catalog(res), state=state_ok(), vendor_trailer=True)
+    p = fw.plan(tmp_path / "kb_fwl.bin", _resource_catalog(res), state=state_ok())
+    assert p.vendor_trailer is True
     assert p.arms_on_upload and p.total_bytes == len(res) and "as NayaCore does" in p.describe()
     r = fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok(),
-                 vendor_trailer=True, confirm=False)
+                 confirm=False)
     chunks = [b for h, b in log if h == {"op": 2, "group": 1, "id": 1}]
     assert chunks[0]["len"] == len(res) and sum(len(c["data"]) for c in chunks) == len(res)
     assert (1, 0, 2) not in _kinds(log), "no image state write: the trailer already scheduled it"
@@ -522,7 +534,9 @@ def test_a_bootloader_that_reports_not_pending_after_the_write_stops_before_rese
         return {"rc": 0}
     _patch_transport(monkeypatch, talk)
     with pytest.raises(fw.UploadRefused, match="not pending"):
-        fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH, state=state_ok())
+        # The image-only path is the one that writes `image state` and can be told "not pending".
+        fw.flash(tmp_path / "kb_fwl.bin", _resource_catalog(res), arm=RUNNING_HASH,
+                 state=state_ok(), vendor_trailer=False)
     assert (0, 5, 2) not in _kinds(log)
 
 

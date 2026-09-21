@@ -224,15 +224,17 @@ async def flash_firmware(body: dict = Body(...)) -> dict:
             # image" check.
             d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
             path = _P(d) / name if d else path
-        # flash() = upload -> re-read slot -> schedule the swap -> reset. Default confirm=False
-        # is a TEST swap (boots once, reverts unless the app confirms itself); confirm=True is
-        # permanent. vendor_trailer=True uploads the whole resource as NayaCore does, which arms
-        # a permanent swap by itself. See firmware_upload.py's note.
+        # flash() = upload -> re-read slot -> schedule the swap -> reset. vendor_trailer defaults
+        # to True -- the whole resource as NayaCore uploads it, whose own trailer arms a permanent
+        # swap -- because that is the only path that has been run on hardware (SCRUM-106). With
+        # it, `confirm` is ignored: the swap is permanent and armed by the last chunk. Pass
+        # vendor_trailer=False for the image-only path, where confirm=False is a TEST swap that
+        # reverts unless the application confirms itself. See firmware_upload.py's note.
         return await run_in_threadpool(
             fw.flash, path, _firmware_catalog_raw(), arm=body.get("arm", ""),
             slot=int(body.get("slot", 1)), allow_older=bool(body.get("allow_older", False)),
             confirm=bool(body.get("confirm", False)),
-            vendor_trailer=bool(body.get("vendor_trailer", False)))
+            vendor_trailer=bool(body.get("vendor_trailer", True)))
     except (fw.UploadRefused, TransportError, ValueError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
