@@ -486,9 +486,114 @@ async def run_recovery_op(body: dict = Body(...)) -> dict:
 @router.get("/api/firmware-catalog")
 async def firmware_catalog() -> dict:
     """Firmware versions bundled/known to OpenFlow, for the Software page's firmware list: one
-    entry per distinct image across every NayaFlow release, plus the release list itself."""
+    entry per distinct image across every NayaFlow release, plus the release list itself.
+
+    `flashEnabled` is the gate as this process read it at start-up. The page has to be able to say
+    "wired but off" rather than offering a button that answers 400.
+    """
     return {"reference": REFERENCE_FIRMWARE, "images": _firmware_catalog(),
-            "releases": _firmware_releases()}
+            "releases": _firmware_releases(), "flashEnabled": FIRMWARE_FLASH_ENABLED}
+
+
+@router.get("/api/firmware-update-plan")
+async def firmware_update_plan(version: str = "") -> dict:
+    """What an update would write, worked out BEFORE anything goes near the bootloader.
+
+    Left and right are different binaries and so are flash generations A and B; `plan()` refuses a
+    mismatch, but it refuses at a point where the half is already in MCUboot -- which to the
+    person holding the keyboard is a half that has gone dark and stopped typing. The product id
+    the half enumerates with says both its side and its generation while it is still running the
+    application, so the choice of binary is made here, from the catalogue, and the UI never has to
+    know that kb_fwl.bin and kb_fwl_64.bin both exist.
+
+    It also says whether each image is actually ON THIS MACHINE. The catalogue is committed and
+    the images are not -- they are vendor material under OPENFLOW_FIRMWARE_DIR -- so a version can
+    be listed and unobtainable. Better said on the screen that offers it than discovered nine
+    minutes into a run.
+    """
+    import os
+    from pathlib import Path as _P
+
+    from ..device import firmware_upload as fw
+    from ..device import recovery as rec
+
+    svc = get_service()
+    devices = await run_in_threadpool(svc.list_devices)
+    live = {h.get("port"): h for h in (await run_in_threadpool(svc.snapshot)).get("halves", [])}
+    d = os.environ.get("OPENFLOW_FIRMWARE_DIR")
+    images_dir = _P(d) if d else None
+
+    halves = []
+    for dev in devices:
+        info = rec.pid_info(dev.get("pid")) or {}
+        side = dev.get("side") or info.get("side")
+        halves.append({
+            "side": side,
+            "port": dev.get("port"),
+            "mode": info.get("mode"),                   # app | mcuboot | dfu, or None if unknown
+            "generation": info.get("generation"),
+            "currentVersion": (live.get(dev.get("port")) or {}).get("firmwareVersion"),
+        })
+
+    # One entry per keyboard firmware version we hold a flashable image for, newest first.
+    by_version: dict[str, dict] = {}
+    for im in _firmware_catalog_raw():
+        if im.get("target") != "keyboard" or not im.get("flashable"):
+            continue
+        v = im.get("createFirmware")
+        if not v:
+            continue
+        entry = by_version.setdefault(v, {"version": v, "releaseOrder": im.get("releaseOrder"),
+                                          "bundle": im.get("bundle"), "images": []})
+        entry["images"].append(im)
+    versions = sorted(by_version.values(),
+                      key=lambda e: (fw._version_tuple(e["version"]) or (0,), e["releaseOrder"] or 0),
+                      reverse=True)
+
+    def resolve(side: str, generation: str | None, want: str) -> dict:
+        """The one image for this half at this version, with every reason it might not be."""
+        entry = by_version.get(want)
+        if entry is None:
+            return {"side": side, "reason": f"no flashable {want} image is catalogued"}
+        for im in entry["images"]:
+            if im.get("side") != side:
+                continue
+            # A half whose generation we could not read is not guessed at. Generation B was added
+            # to the catalogue from NayaCore's table, not from a board we have seen.
+            if generation and im.get("generation") != generation:
+                continue
+            rel = im.get("historyPath") or im.get("file")
+            present = bool(images_dir and (images_dir / rel).is_file())
+            return {"side": side, "image": rel, "file": im.get("file"),
+                    "generation": im.get("generation"), "version": want, "present": present,
+                    "reason": None if present else (
+                        "the image tree is not on this machine (set OPENFLOW_FIRMWARE_DIR)"
+                        if images_dir is None else f"{rel} is not in the image tree")}
+        return {"side": side, "reason": (
+            f"no {want} image for the {side} half at flash generation {generation or 'unknown'}")}
+
+    targets: dict[str, dict] = {}
+    if version:
+        for h in halves:
+            if h["side"] not in ("left", "right") or h["mode"] not in (None, "app"):
+                continue
+            t = resolve(h["side"], h.get("generation"), version)
+            have = fw._version_tuple(h.get("currentVersion"))
+            want = fw._version_tuple(version)
+            t["currentVersion"] = h.get("currentVersion")
+            # A downgrade is a legitimate repair -- it is how two halves that stopped talking to
+            # each other are brought back to a common version -- but it is never done silently.
+            t["downgrade"] = bool(have and want and want < have)
+            t["unchanged"] = bool(have and want and want == have)
+            targets[h["side"]] = t
+
+    return {"flashEnabled": FIRMWARE_FLASH_ENABLED,
+            "imagesDir": str(images_dir) if images_dir else None,
+            "halves": halves,
+            "versions": [{k: e[k] for k in ("version", "releaseOrder", "bundle")}
+                         | {"sides": sorted({im.get("side") for im in e["images"] if im.get("side")})}
+                         for e in versions],
+            "targets": targets}
 
 
 @router.get("/api/ui/state")

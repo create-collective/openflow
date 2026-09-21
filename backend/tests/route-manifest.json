@@ -10,6 +10,7 @@
   "GET /api/export-layer",
   "GET /api/export-profile",
   "GET /api/firmware-catalog",
+  "GET /api/firmware-update-plan",
   "GET /api/flash-logs",
   "GET /api/flash-logs/{run_id}",
   "GET /api/flash-runs/current",

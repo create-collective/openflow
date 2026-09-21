@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { confirmDialog } from "../lib/dialogs";
 import { applyInterfaceScaling } from "../lib/scaling";
 import { pickFile, downloadJSON, safeName } from "../lib/files";
+import FirmwareUpdate from "../components/FirmwareUpdate";
 import SettingField from "../components/SettingField";
 import SettingRow from "../components/ui/SettingRow";
 import useRunLog from "../lib/useRunLog";
@@ -394,13 +395,21 @@ export default function Settings() {
                   {firmware?.reference && (
                     <KVRow k="Naya ships (reference)" v={`Create ${firmware.reference.createFirmware} · module ${firmware.reference.moduleFirmware}`} />
                   )}
+                  {/* The supervised procedure: back up, flash one half at a time, verify against
+                      the backup, keep the log (SCRUM-104). The per-image buttons in the library
+                      below stay inert -- that list is the catalogue, and a flash is not a thing
+                      to start from a row in a reference table. */}
+                  <div className="btn-row">
+                    <FirmwareUpdate connected={connected} />
+                  </div>
 
                   <h3 className="settings-section tight">Firmware library</h3>
                   <p className="page-sub" style={{ marginBottom: 10 }}>
                     Every firmware image OpenFlow has classified, by what it targets and which
                     NayaFlow release bundled it — so a specific version can be picked for an
-                    up/downgrade. Flashing is wired but <strong>disabled</strong> until it is tested
-                    on a donor unit. Images are open-sourced as they are dumped/obtained.
+                    up/downgrade. This is the catalogue, not the flasher: use “Update firmware”
+                    above, which backs the keyboard up, writes one half at a time and verifies
+                    the result. Images are open-sourced as they are dumped/obtained.
                   </p>
                   {(() => {
                     const imgs = firmware?.images || [];
@@ -440,8 +449,8 @@ export default function Settings() {
                               <span className="skp-beh">{im.component || "?"}{im.generation ? ` · gen ${im.generation}` : ""}</span>
                               <span className="skp-act" style={{ flex: 1 }}>{im.file}{im.container ? ` in ${im.container}` : ""}</span>
                               <span className="v" style={{ fontFamily: "var(--font-mono)", opacity: 0.6 }}>{im.sha256 ? im.sha256 + "…" : "encrypted"}</span>
-                              <Button disabled title={im.flashable ? "Wired, enabled after testing on a donor unit" : (im.withheldBecause || []).join("; ") || "Not a flashable image"} style={{ marginLeft: 8 }}>
-                                {im.flashable ? "Flash (disabled)" : "—"}
+                              <Button disabled title={im.flashable ? "Flash this version from “Update firmware” above, which backs up and verifies" : (im.withheldBecause || []).join("; ") || "Not a flashable image"} style={{ marginLeft: 8 }}>
+                                {im.flashable ? "Flashable" : "—"}
                               </Button>
                             </div>
                           ))}

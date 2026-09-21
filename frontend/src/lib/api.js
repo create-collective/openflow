@@ -41,6 +41,19 @@ export const api = {
   reportContext: (identifiers = false) => req("GET", `/api/report/context?identifiers=${identifiers ? 1 : 0}`),
   reportBug: (body) => req("POST", "/rpc/report-bug", body),
   firmwareCatalog: () => req("GET", "/api/firmware-catalog"),
+  // Which image each connected half would take at a given version, and whether we actually hold
+  // it. Resolved by the backend from the half's product id: side and flash generation are not
+  // interchangeable, and the UI must not be the thing that guesses.
+  firmwareUpdatePlan: (version = "") =>
+    req("GET", "/api/firmware-update-plan" + (version ? "?version=" + encodeURIComponent(version) : "")),
+  // Starts the supervised firmware procedure and returns the run's opening snapshot -- it does
+  // NOT wait for the flash. Progress arrives on the stream (sse:flash-progress); flashRun() is
+  // the catch-up for a page that reloads mid-run.
+  flashFirmware: (targets, allowOlder = false) =>
+    req("POST", "/rpc/flash-procedure", { targets, allow_older: allowOlder }),
+  flashRun: (since = 0) => req("GET", `/api/flash-runs/current?since=${since}`),
+  flashLogs: () => req("GET", "/api/flash-logs"),
+  flashLog: (id) => req("GET", `/api/flash-logs/${encodeURIComponent(id)}`),
   deviceLog: (limit = 200) => req("GET", `/api/device-log?limit=${limit}`),
   clearDeviceLog: () => req("POST", "/rpc/clear-device-log", {}),
   openLogsFolder: () => req("POST", "/rpc/open-logs-folder", {}),

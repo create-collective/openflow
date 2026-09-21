@@ -41,12 +41,19 @@ function requestsInApi() {
   return out.map(({ method, path }) => ({ method, path: path.split("?")[0] }));
 }
 
-// "GET /api/x/{id}" and a request "/api/x/${id}" match on the wildcard.
+// "GET /api/x/{id}" and a request "/api/x/${id}" are the same route: both sides have their one
+// variable segment replaced by the same marker and are then compared as text.
+//
+// This used to build a regex from one side and test it against the other with `{id}` rewritten
+// to the character class `[^/]+` -- which contains a slash, so the class could never match the
+// text of itself and a path parameter never matched at all. The first route in api.js to use one
+// (GET /api/flash-logs/{run_id}, SCRUM-102) was reported missing although the backend serves it.
+const PARAM = "";
+const normalise = (s) => s.replace(/\$\{[^}]*\}/g, PARAM).replace(/\{[^}]+\}/g, PARAM);
+
 function served(method, path) {
-  const want = `${method} ${path}`;
-  if (MANIFEST.includes(want)) return true;
-  const re = new RegExp("^" + want.replace(/[.*+?^()|[\]\\]/g, "\\$&").replace(/\$\{[^}]*\}/g, "[^/]+") + "$");
-  return MANIFEST.some((entry) => re.test(entry.replace(/\{[^}]+\}/g, "[^/]+")));
+  const want = normalise(`${method} ${path}`);
+  return MANIFEST.some((entry) => normalise(entry) === want);
 }
 
 describe("api.js against the backend route manifest", () => {
