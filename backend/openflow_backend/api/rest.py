@@ -248,6 +248,15 @@ async def flash_procedure_run(body: dict = Body(...)) -> dict:
 
     Body: {"targets": {"left": "kb_fwl.bin", "right": "kb_fwr.bin"}, "allow_older": false}
     Either side may be omitted. A downgrade needs allow_older, as it does everywhere else.
+
+    RETURNS IMMEDIATELY with the run's opening snapshot (SCRUM-102). A measured run is four to ten
+    minutes; a request held open that long tells the user nothing while it is open, and a screen
+    with nothing on it is what makes someone pull the cable mid-write. The run goes on its own
+    thread (device/flash_runs) and its progress arrives over `/sse` as sse:flash-progress, with
+    `/api/flash-runs/current` as the catch-up for a page that reloads.
+
+    `{"wait": true}` keeps the old blocking form -- one call, one verdict, no stream -- which is
+    what our own hardware testing drives. A browser should never use it.
     """
     if not FIRMWARE_FLASH_ENABLED:
         raise HTTPException(status_code=400, detail=(
@@ -268,12 +277,58 @@ async def flash_procedure_run(body: dict = Body(...)) -> dict:
             raise HTTPException(status_code=400, detail=f"unknown side: {side}")
         path = _P(str(name))
         resolved[side] = _P(d) / str(name) if d and not path.is_absolute() else path
+    from ..device import flash_runs as runs
+    svc = get_service()
+    catalog = _firmware_catalog_raw()
+    allow_older = bool(body.get("allow_older", False))
+    sides = [s for s in ("left", "right") if s in resolved]
+
+    if bool(body.get("wait", False)):
+        try:
+            return await run_in_threadpool(proc.run, svc, resolved, catalog,
+                                           allow_older=allow_older)
+        except (TransportError, ValueError, KeyError) as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    # The run id IS the log directory's name, so the moment a run starts the UI already knows
+    # where its evidence will be and can offer the log by that id from /api/flash-logs.
+    from datetime import datetime
+    from ..config import logs_dir
+    run_id = f"flash-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    run_dir = logs_dir() / run_id
+
+    def work(on_event):
+        return proc.run(svc, resolved, catalog, allow_older=allow_older,
+                        log_dir=run_dir, on_event=on_event)
+
     try:
-        return await run_in_threadpool(
-            proc.run, get_service(), resolved, _firmware_catalog_raw(),
-            allow_older=bool(body.get("allow_older", False)))
-    except (TransportError, ValueError, KeyError) as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return runs.start(run_id, sides, resolved, run_dir, work).snapshot()
+    except runs.RunBusy as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.get("/api/flash-runs/current")
+async def flash_run_current(since: int = 0) -> dict:
+    """The run that is going now, or the last one that went, with the events after `since`.
+
+    The stream is the normal way to watch a run; this is what makes the stream survivable. A
+    reloaded page, a reconnected EventSource or a renderer that was asleep asks here with the
+    last sequence number it holds and gets the rest, so no step is ever missed silently.
+    """
+    from ..device import flash_runs as runs
+    run = runs.current()
+    return {"run": run.snapshot(since=since) if run else None}
+
+
+@router.get("/api/flash-runs/{run_id}")
+async def flash_run(run_id: str, since: int = 0) -> dict:
+    """One run by id, while it is still in memory. Older runs live on at /api/flash-logs/{id}."""
+    from ..device import flash_runs as runs
+    run = runs.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=(
+            f"no live run {run_id}; its log may still be at /api/flash-logs/{run_id}"))
+    return {"run": run.snapshot(since=since)}
 
 
 @router.get("/api/flash-logs")

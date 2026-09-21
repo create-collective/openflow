@@ -145,14 +145,27 @@ def test_upload_is_wired_only_through_the_gated_endpoint():
     FIRMWARE_FLASH_ENABLED gate, which ships False. So even with an arm token the endpoint refuses
     until a donor test flips the gate. If any other module starts importing firmware_upload, or the
     gate default drifts to True, this fails."""
+    import re
+
     root = _BACKEND / "openflow_backend"
 
     def referrers(name):
+        """The modules that IMPORT `name`.
+
+        This used to be a search for the bare word, which counted comments and docstrings as
+        wiring. It fired on prose: the progress stream and the run registry (SCRUM-102) both
+        explain why they must not take the service lock the procedure holds, and naming the
+        procedure while doing so is exactly how that explanation reads. An import is what makes
+        a module reachable -- nothing can call flash_procedure.run without one -- so that is what
+        is checked, and the safety property is unchanged.
+        """
+        pat = re.compile(rf"^\s*(?:from\s+\S+\s+import\s+.*\b{name}\b|import\s+.*\b{name}\b)",
+                         re.M)
         out = []
         for f in root.rglob("*.py"):
             if f.name == f"{name}.py" or "_vendor" in f.parts:
                 continue
-            if name in f.read_text(encoding="utf-8", errors="ignore"):
+            if pat.search(f.read_text(encoding="utf-8", errors="ignore")):
                 out.append(f.relative_to(root).as_posix())
         return sorted(out)
 

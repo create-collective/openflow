@@ -12,6 +12,8 @@
   "GET /api/firmware-catalog",
   "GET /api/flash-logs",
   "GET /api/flash-logs/{run_id}",
+  "GET /api/flash-runs/current",
+  "GET /api/flash-runs/{run_id}",
   "GET /api/info/system",
   "GET /api/layer-references",
   "GET /api/macros",

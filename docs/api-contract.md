@@ -51,6 +51,7 @@ One `EventSource`; named events (renderer uses `addEventListener`):
 | `sse:ui-state-change` | 1 | `{ready}` |
 | `sse:naya-devices-stream` | 1 | `{devices:[...]}` — emitted on change (2s USB poll). |
 | `sse:flash-keymap-state` | 2 | keymap flash progress (placeholder). |
+| `sse:flash-progress` | — | Ours, not NayaFlow's: a firmware run's steps as they happen (SCRUM-102). `{id, running, sides, seq, events:[...], verdict}`, with only the events after the last `seq` sent. While a run is going the device poll is suspended — it would queue behind the run's service lock — and the tick becomes this one. |
 | `sse:device-operation-options` | 2 | device op options (placeholder). |
 | `sse:main-process-quit` | — | shell shutdown (Electron only). |
 

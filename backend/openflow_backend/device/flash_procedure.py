@@ -77,7 +77,7 @@ class RunLog:
     Progress inside the upload is throttled by the caller so this stays cheap.
     """
 
-    def __init__(self, path: Path, meta: dict | None = None):
+    def __init__(self, path: Path, meta: dict | None = None, on_event=None):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._fh = self.path.open("a", encoding="utf-8")
@@ -85,6 +85,11 @@ class RunLog:
         self.events: list[dict] = []
         self.failures: list[str] = []
         self.advisories: list[str] = []
+        # A live subscriber (device/flash_runs.Run.publish) gets every event as it is written, so
+        # the browser and the file cannot tell different stories about the same run. It is handed
+        # the event AFTER the line is on disk: the file is the evidence, and a subscriber that
+        # throws must not be able to cost us a log line.
+        self._on_event = on_event
         self.event("run.start", "ok", **(meta or {}))
 
     def event(self, step: str, phase: str, side: str | None = None,
@@ -99,6 +104,11 @@ class RunLog:
         e.update(extra)
         self.events.append(e)
         self._write(e)
+        if self._on_event is not None:
+            try:
+                self._on_event(e)
+            except Exception:                       # noqa: BLE001 -- a watcher never stops a flash
+                pass
         return e
 
     def _write(self, e: dict) -> None:
@@ -563,7 +573,7 @@ def _recover_stranded_halves(svc, log: RunLog) -> None:
 
 
 def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
-        log_dir: Path | None = None, flash_fn=None) -> dict:
+        log_dir: Path | None = None, flash_fn=None, on_event=None) -> dict:
     """The whole procedure. `targets` maps side -> image path, one or both halves.
 
     Order: the CENTRAL (left) first when both are asked for, so the run only ever passes through
@@ -588,7 +598,8 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
     run_dir.mkdir(parents=True, exist_ok=True)
     log = RunLog(run_dir / "run.log",
                  {"sides": list(sides), "images": {k: str(v) for k, v in targets.items()},
-                  "allowOlder": allow_older})
+                  "allowOlder": allow_older},
+                 on_event=on_event)
 
     # Hold the service lock for the WHOLE procedure, not just the reads inside it.
     #
