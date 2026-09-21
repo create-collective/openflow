@@ -566,10 +566,28 @@ class DeviceService:
                     p = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_PAIR_ADDRESS))
                     if p is not None and len(p) >= 6:
                         ident["pairAddress"] = ":".join(f"{b:02X}" for b in p[:6])
-                    self._identity[dev.port] = ident
+                    # Cached only when the half actually said something (SCRUM-107).
+                    #
+                    # A half whose partner is on different firmware answers every command with an
+                    # EMPTY frame -- the port opens, nothing refuses, and each payload is zero
+                    # bytes. That produced an identity of {}, which was then cached like any
+                    # other, and `.get(port)` cannot tell "cached nothing" from "never read": the
+                    # half stayed blank in the app for as long as it remained plugged in, INCLUDING
+                    # after the firmware was matched again and it had started answering properly.
+                    # Not caching an empty read costs four commands on the next tick of a half
+                    # that has nothing to say, and lets it come back on its own.
+                    if ident:
+                        self._identity[dev.port] = ident
 
                 snap: dict = {"side": dev.side, "port": dev.port, "description": dev.description,
                               "serialNumber": dev.serial_number, "connected": True, **ident}
+                if not ident:
+                    # It is on the bus, it opened, it answered -- with nothing. Said plainly here
+                    # so a page can explain it instead of drawing a half with every field blank,
+                    # which reads as a broken keyboard. It is not: a half in this state types
+                    # normally, and the cause we have measured is a firmware mismatch between the
+                    # two halves.
+                    snap["reporting"] = False
                 p = _first_payload(t.send_command(dest, C.CAT_SYSTEM, C.SYS_GET_KB_BATTERY_LEVEL, timeout=0.5))
                 half = self._half_key(dev)
                 mv = self._fold(half, _to_millivolts((p[0] << 8) | p[1]) if p is not None and len(p) >= 2 else None)
@@ -904,6 +922,12 @@ class DeviceService:
                 module["batteryMillivolts"] = mv
                 module["batteryPercent"] = _battery_percent(mv)
             info["module"] = module
+
+        if not info:
+            # Every command answered with an empty frame. The same state the poll reports
+            # (see tick), said the same way on the explicit read, so a page does not have to
+            # learn two shapes for one condition (SCRUM-107).
+            info["reporting"] = False
 
         return info
 

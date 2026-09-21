@@ -71,6 +71,36 @@ const PAIRING = {
   unknown: { tone: "warn", text: "No pair address" },
 };
 
+// Halves grouped into the keyboards they belong to, with the firmware verdict for each.
+// Exported so the verdict can be tested without the page: what it says about a keyboard whose
+// halves disagree is the difference between "update it" and "it is broken".
+export function buildBoards(halves) {
+  const boards = [];
+  for (const h of (halves || []).filter((x) => x.side !== "dongle")) {
+    const id = h.keyboardId ?? 0;
+    let b = boards.find((x) => x.id === id);
+    if (!b) { b = { id, halves: [] }; boards.push(b); }
+    b.halves.push(h);
+  }
+  for (const b of boards) {
+    const fw = {};
+    for (const h of b.halves) if (h.side === "left" || h.side === "right") fw[h.side] = h.firmwareVersion;
+    b.fw = fw;
+    // Both halves present, both reporting, and disagreeing. Not flagged when one is unknown:
+    // "we could not read one of them" is a different statement from "they disagree".
+    b.mismatch = !!(fw.left && fw.right && fw.left !== fw.right);
+    // A half that answers with empty frames while its partner reads normally. This is the
+    // shape a mismatch takes in practice, and the reason the check above could not see it:
+    // the half that would prove the versions differ is the one that has stopped saying its
+    // own (SCRUM-107).
+    b.quiet = b.halves.find((h) => h.connected && h.reporting === false) || null;
+    b.quietPartner = b.quiet
+      ? b.halves.find((h) => h !== b.quiet && h.firmwareVersion) || null
+      : null;
+  }
+  return boards;
+}
+
 function HalfCard({ h, reference, onIgnorePort, className = "" }) {
   const m = h.module;
   const behind = reference && h.firmwareVersion && h.firmwareVersion !== reference.createFirmware;
@@ -80,6 +110,19 @@ function HalfCard({ h, reference, onIgnorePort, className = "" }) {
       title={h.description || h.side}
       actions={<Badge className="ui-badge-plain">{h.side === "dongle" ? "Dongle" : `${h.side[0].toUpperCase()}${h.side.slice(1)} half`}</Badge>}>
       {h.error && <Notice tone="err">{h.error}</Notice>}
+
+      {/* The port opened, the commands were accepted, and every answer came back empty. The
+          fields below would all be blank, which reads as a dead half -- and this one types
+          normally. The cause we have measured is the two halves being on different firmware:
+          the newer one reads perfectly and its partner's own port goes hollow (SCRUM-107). */}
+      {h.reporting === false && (
+        <Notice tone="warn" title="This half answers, but tells us nothing">
+          Its port opened and accepted every command, and each reply came back empty — so
+          firmware, battery and Bluetooth are all unreadable here. The half itself is fine and
+          still types. The cause we have seen is the two halves running different firmware;
+          putting both on the same version restores it.
+        </Notice>
+      )}
 
       {/* Only when the half could NOT be reached. A port that refused the handshake is
           not necessarily a ghost: on 3.28.7 every half exposes two CDC interfaces at once,
@@ -279,21 +322,7 @@ export default function Troubleshooting() {
   // unplugged, and a ghost row helps nobody. The last keyboard standing always stays on screen
   // even when it goes, because "your keyboard is not answering" is the thing to show (SCRUM-86).
   const showAllKb = useShowAllKeyboards();
-  const boards = [];
-  for (const h of visibleHalves(halves, showAllKb).filter((x) => x.side !== "dongle")) {
-    const id = h.keyboardId ?? 0;
-    let b = boards.find((x) => x.id === id);
-    if (!b) { b = { id, halves: [] }; boards.push(b); }
-    b.halves.push(h);
-  }
-  for (const b of boards) {
-    const fw = {};
-    for (const h of b.halves) if (h.side === "left" || h.side === "right") fw[h.side] = h.firmwareVersion;
-    b.fw = fw;
-    // Both halves present, both reporting, and disagreeing. Not flagged when one is unknown:
-    // "we could not read one of them" is a different statement from "they disagree".
-    b.mismatch = !!(fw.left && fw.right && fw.left !== fw.right);
-  }
+  const boards = buildBoards(visibleHalves(halves, showAllKb));
   const p = pairing && PAIRING[pairing.state];
 
   return (
@@ -434,6 +463,19 @@ export default function Troubleshooting() {
                   The left half reports {b.fw.left} and the right reports {b.fw.right}. The halves
                   talk to each other over their own link, and a mismatch is known to break it, so
                   one half can stop responding while both still work over USB.
+                </Notice>
+              )}
+              {/* Not "they disagree" -- one of them will not say. Worth its own banner, because
+                  this is what a half-finished update looks like from the outside and the fix is
+                  to finish it (SCRUM-107). */}
+              {!b.mismatch && b.quiet && (
+                <Notice tone="warn" title={`The ${b.quiet.side} half is not reporting`}>
+                  It answers every command with an empty reply, so we cannot read its firmware
+                  version{b.quietPartner
+                    ? `, while the ${b.quietPartner.side} half reads normally on ${b.quietPartner.firmwareVersion}`
+                    : ""}. That is what one half looks like when the two are on different
+                  firmware — usually an update that only got as far as one of them. Both halves
+                  on the same version puts it right; the half itself is not damaged.
                 </Notice>
               )}
               <div className="info-halves">

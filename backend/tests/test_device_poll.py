@@ -125,6 +125,29 @@ def test_battery_is_a_rolling_median_across_ticks(svc):
     assert left["batteryMillivolts"] == KB_MV, "the median of (4152, 3000) is the higher one"
 
 
+def test_a_half_that_answers_with_nothing_says_so_and_can_come_back(svc):
+    """The hollow port (SCRUM-107): every reply is an empty frame.
+
+    It is what a half looks like while its partner is on different firmware, and the half is
+    fine -- it types normally. Two things were wrong. The empty identity was cached like any
+    other, and `.get(port)` cannot tell "cached nothing" from "never read", so the half stayed
+    blank for as long as it was plugged in, including after it had started answering again. And
+    nothing said the state was happening at all, so the page drew a card of empty fields, which
+    reads as a dead half.
+    """
+    FakeTransport.answers = {}
+    snap = svc.tick_all()
+    left = next(h for h in snap["halves"] if h["side"] == "left")
+    assert left["connected"] is True, "the port opened and took every command"
+    assert left["reporting"] is False
+    assert left.get("firmwareVersion") is None
+
+    FakeTransport.answers = _answers()
+    back = next(h for h in svc.tick_all()["halves"] if h["side"] == "left")
+    assert back["firmwareVersion"], "an empty read must not be remembered as the answer"
+    assert "reporting" not in back
+
+
 def test_a_half_that_leaves_the_bus_is_marked_gone_and_its_handle_dropped(svc, monkeypatch):
     svc.tick_all()
     monkeypatch.setattr(S, "find_naya_serial_ports", lambda: [Dev("left", "COM9")])
