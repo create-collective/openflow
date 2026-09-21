@@ -386,6 +386,25 @@ class DeviceService:
                 t = self._transport_for(dev.port, dest)   # raises "Cannot open" if it is gone
                 return fn(t, dest, dev)
 
+    def forget_identity(self, port: str | None = None) -> None:
+        """Drop what we believe a half IS, so the next tick reads it from the board again.
+
+        Firmware version, hardware id and radio address are cached per port and never re-read
+        while a half stays plugged in, because none of them changes while you look at them. A
+        firmware flash is the one thing that makes that assumption false: after a successful
+        update the half is still connected, still on (usually) the same port, and running a
+        different version -- and the status bar, the Information page and /api/status/live would
+        all go on quoting the version it used to run until it was next unplugged.
+
+        One port, or every port when none is named (a half that has been through the bootloader
+        may come back somewhere else, and the old node can linger).
+        """
+        with self._lock:
+            if port is None:
+                self._identity.clear()
+            else:
+                self._identity.pop(port, None)
+
     def shutdown(self) -> None:
         with self._lock:
             for port in list(self._transports):

@@ -454,19 +454,29 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
 
 
 def _forget_cached_transports(svc) -> None:
-    """Drop the service's cached handles.
+    """Drop the service's cached handles, and what it believes the halves are.
 
     A half that has been through the bootloader re-enumerates, and may come back on a different
     COM port. The service caches an open transport per port and only reopens when a failure is
     recognisable as a dead handle; anything else propagates and would abort the run at
     `version.confirm` on a flash that worked. Dropping the cache costs one reconnect and removes
     a whole class of "it needed a restart to see the board again".
+
+    The identity cache goes with it. Firmware version is read once per port and kept, on the
+    grounds that it does not change while a half is plugged in -- which is true of everything
+    except the operation happening right here. Without this the app reports the old version
+    after a successful update until the keyboard is next unplugged: the flash worked and the
+    screen says it did not.
     """
     for port in list(getattr(svc, "_transports", {}) or {}):
         try:
             svc._drop(port)
         except Exception:                           # noqa: BLE001 -- best effort by design
             pass
+    try:
+        svc.forget_identity()
+    except Exception:                               # noqa: BLE001 -- best effort by design
+        pass
 
 
 def _await_application(svc, side: str, log: RunLog | None = None,

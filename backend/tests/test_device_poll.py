@@ -102,6 +102,19 @@ def test_identity_is_read_once_per_port_and_battery_every_tick(svc):
     assert sum(1 for c in t.sent if c == (C.CAT_SYSTEM, C.SYS_GET_KB_BATTERY_LEVEL)) == 3
 
 
+def test_a_firmware_flash_is_the_one_thing_that_makes_that_cache_a_lie(svc):
+    """After an update the half is still connected, on the same port, running a different
+    version. forget_identity() is how the next tick learns that (SCRUM-102/104)."""
+    before = next(h for h in svc.tick_all()["halves"] if h["side"] == "left")["firmwareVersion"]
+    FakeTransport.answers[(C.CAT_SYSTEM, C.SYS_GET_FW_VERSION)] = b"\x03\x23\x04"
+    unchanged = next(h for h in svc.tick_all()["halves"] if h["side"] == "left")["firmwareVersion"]
+    assert unchanged == before, "an ordinary tick keeps the cached identity, as it should"
+
+    svc.forget_identity()
+    after = next(h for h in svc.tick_all()["halves"] if h["side"] == "left")["firmwareVersion"]
+    assert after != before, "the version on screen would still be the pre-flash one"
+
+
 def test_battery_is_a_rolling_median_across_ticks(svc):
     """One noisy reading does not move the number; nayactl takes five samples per read for
     the same reason."""

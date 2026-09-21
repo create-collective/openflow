@@ -358,6 +358,19 @@ def test_cached_transports_are_dropped_when_a_half_comes_back(wired):
     assert "COM30" in dropped and "COM29" in dropped
 
 
+def test_the_cached_firmware_version_is_dropped_too(wired):
+    """Identity is read once per port and kept, because none of it changes while a half is
+    plugged in -- except across the one operation that changes exactly that. Without this the
+    app quotes the OLD version after a successful update until the keyboard is unplugged: the
+    flash worked and every screen says it did not."""
+    svc = wired["svc"]
+    forgotten = []
+    svc.forget_identity = lambda port=None: forgotten.append(port)
+    r = _run(wired, {"left": "kb_fwl.bin"})
+    assert r["ok"] is True
+    assert forgotten, "the service was never told its identity cache is now stale"
+
+
 def test_identify_retries_instead_of_probing_the_port_twice(monkeypatch):
     """The first real run died here. A separate port probe followed by read_running_image opened
     the bootloader's port twice within milliseconds, and Windows refuses the second open right
