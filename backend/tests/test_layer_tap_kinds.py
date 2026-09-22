@@ -112,3 +112,42 @@ def test_the_drop_report_still_names_the_press_when_the_press_is_the_problem():
     rows = [{"beh": "press", "at": "macro", "ac": "M1"},
             {"beh": "hold", "at": "key", "ac": "B"}]
     assert F._failing_row(rows, 200, 0, LAYER_ORDER)["beh"] == "press"
+
+
+# --- the drop report says WHY, in the encoder's words (2026-09-22) -------------------------- #
+# A tester's flash reported "LCTRL + LSHIFT + V on layer 0, key 67 -- OpenFlow has no encoder for
+# action type 'shortcut_alias' yet". The chord encodes perfectly well; the report named the press
+# row regardless of which row failed, and swallowed what the encoder had actually said.
+
+def test_the_culprit_carries_the_encoder_s_own_error():
+    rows = [{"beh": "press", "at": "shortcut_alias", "ac": "LCTRL + LSHIFT + V"},
+            {"beh": "hold", "at": "key", "ac": "NOT_A_KEY"}]
+    culprit = F._failing_row(rows, 200, 0, LAYER_ORDER)
+    assert culprit["beh"] == "hold" and culprit["ac"] == "NOT_A_KEY"
+    assert "unknown key 'NOT_A_KEY'" in culprit["error"]
+    assert "could not encode this binding: unknown key" in F._drop_reason("key", "NOT_A_KEY", culprit["error"])
+
+
+def test_an_invisible_character_in_a_chord_is_named_not_hidden_behind_the_type():
+    """A chord with non-breaking spaces LOOKS like the working one. The encoder sees the
+    difference and says so; the report used to reduce that to the action type."""
+    nbsp = "LCTRL" + "\u00a0+\u00a0" + "LSHIFT" + "\u00a0+\u00a0" + "V"   # U+00A0, not spaces
+    rows = [{"beh": "press", "at": "shortcut_alias", "ac": nbsp}]
+    culprit = F._failing_row(rows, 200, 0, LAYER_ORDER)
+    assert culprit["beh"] == "press"
+    reason = F._drop_reason(culprit["at"], culprit["ac"], culprit["error"])
+    assert "unknown base key" in reason
+    assert "no encoder for action type" not in reason
+
+
+def test_a_raw_record_keeps_its_own_explanation():
+    """RAW_ is the decoder saying it could not name the bytes; that message is the better one
+    and must not be replaced by the encoder's 'unknown key RAW_...'."""
+    reason = F._drop_reason("key", "RAW_k0c:03000000", "unknown key 'RAW_k0c:03000000'")
+    assert "cannot name yet" in reason
+
+
+def test_a_healthy_key_reports_no_error():
+    rows = [{"beh": "press", "at": "shortcut_alias", "ac": "LCTRL + LSHIFT + V"}]
+    assert F._binding_rows_to_record(rows, 200, 0, LAYER_ORDER) == (R.KEY_PRESS, bytes.fromhex("19000703"))
+    assert F._failing_row(rows, 200, 0, LAYER_ORDER)["error"] is None

@@ -282,7 +282,7 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
                     "layer": idx, "position": pos,
                     "actionCode": culprit["ac"], "actionType": culprit["at"],
                     "behavior": culprit["beh"],
-                    "reason": _drop_reason(culprit["at"], culprit["ac"]),
+                    "reason": _drop_reason(culprit["at"], culprit["ac"], culprit.get("error")),
                     "effect": "this key keeps whatever the keyboard already had on it",
                 })
             # double-tap / tap+hold are a second hold-tap record at pos + 0x52
@@ -349,29 +349,37 @@ def _failing_row(rows: list, term: int, flavour: int, layer_order: dict) -> dict
     """
     press = next((r for r in rows if r["beh"] in ("press", "tap", None)), rows[0])
     others = [r for r in rows if r is not press]
-    if not others:
-        return press
-    try:
-        if _binding_rows_to_record([press], term, flavour, layer_order) is None:
-            return press
-    except R.RemapEncodeError:
-        return press
-    for r in others:
+
+    def attempt(subset):
+        """(ok, error text). The encoder's own words are the reason a user can act on --
+        "unknown base key 'V\\xa0'" says what "no encoder for action type" never could."""
         try:
-            if _binding_rows_to_record([press, r], term, flavour, layer_order) is not None:
-                continue
-        except R.RemapEncodeError:
-            pass
-        return r
-    return press
+            return _binding_rows_to_record(subset, term, flavour, layer_order) is not None, None
+        except R.RemapEncodeError as e:
+            return False, str(e)
+
+    ok, err = attempt([press])
+    if not ok or not others:
+        return {**press, "error": err}
+    for r in others:
+        ok, err = attempt([press, r])
+        if not ok:
+            return {**r, "error": err}
+    return {**press, "error": None}
 
 
-def _drop_reason(action_type: str | None, code: str | None) -> str:
+def _drop_reason(action_type: str | None, code: str | None, error: str | None = None) -> str:
     if (code or "").startswith("RAW_"):
         # The decoder could not name what the board holds here. EMPTY_KEYPRESS is handled
         # (see _keypress); anything else RAW_ is bytes we have never seen.
         return ("The keyboard holds a record here that OpenFlow cannot name yet, so it "
                 "cannot be written back.")
+    if error:
+        # The encoder refused this binding and said why. Its words are the reason -- "unknown
+        # base key 'V\xa0' in 'LCTRL\xa0+\xa0LSHIFT\xa0+\xa0V'" names a stray character the eye
+        # cannot see, where "no encoder for action type 'shortcut_alias'" sent a tester (and
+        # us) looking at a type that encodes perfectly well (2026-09-22).
+        return f"OpenFlow could not encode this binding: {error}."
     base = _DROP_REASONS.get(action_type or "")
     if base:
         return base
