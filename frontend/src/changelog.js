@@ -3,6 +3,18 @@
 // what they can now do, what stopped happening.
 const CHANGELOG = [
   {
+    version: "0.3.1",
+    date: "2026-09-22",
+    notes: [
+      "A key that holds for a layer (the stock Enter and Backspace, or any thumb key you set that way) reads back as exactly that and flashes back exactly as it was, instead of showing a RAW value and being left out of the flash.",
+      "Double-tap works on a key that has no Hold set. Tap plus Double-tap alone used to fire the tap twice; the key is now written the way the keyboard needs to notice a second tap.",
+      "When a binding cannot be written, the flash report names the binding that actually failed and says why in the encoder's own words, rather than blaming the key's tap.",
+      "A flash no longer reports failure on layers it correctly did not need to write, and the multi-behaviour star sits on its own key rather than drifting onto a neighbour or the module bay on the right half.",
+      "Naya Touch profiles show their picture in the title bar again.",
+      "Settings has a Firmware tab that shows what each half is running and which versions exist, and an About tab about OpenFlow itself. Updating the firmware from it is held back for now.",
+    ],
+  },
+  {
     version: "0.3.0-beta.2",
     date: "2026-09-19",
     notes: [
