@@ -459,6 +459,19 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
         if pct != last_pct["v"] and pct % 5 == 0:
             last_pct["v"] = pct
             log.event("upload", "progress", side=side, percent=pct, sent=sent, total=total)
+        if sent >= total and not timing.get("done"):
+            # The last chunk is acknowledged and the bootloader goes quiet: the resource's
+            # trailer armed a permanent swap and MCUboot carries it out before it answers
+            # anything -- measured at 100 s on 2026-09-22. Without a step here the UI showed
+            # "100%" and then nothing for two minutes, which is the other moment a user pulls
+            # the cable. Logged from the callback so it lands the instant the upload is done,
+            # not after the wait that follows it.
+            timing["done"] = True
+            _log_chunk_timing(log, side, timing, STALL_MS)
+            log.event("swap.verify", "start", side=side,
+                      detail="the image is written; the bootloader is carrying out the swap "
+                             "and answers nothing until it is done. This can take a couple "
+                             "of minutes.")
 
     log.event("slot.erase", "start", side=side)
     t0 = time.monotonic()
@@ -466,7 +479,8 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
                       state=state, progress=progress)
     log.event("upload", "ok", side=side, took_ms=int((time.monotonic() - t0) * 1000),
               written=result.get("written"), swap=result.get("swap"))
-    _log_chunk_timing(log, side, timing, STALL_MS)
+    if not timing.get("done"):
+        _log_chunk_timing(log, side, timing, STALL_MS)   # an upload that never reached 100%
     log.event("swap.verify", "ok", side=side, detail=str(result.get("swap")),
               hash=result.get("hash"))
     log.event("mcuboot.exit", "ok", side=side,
@@ -620,6 +634,11 @@ def restore_brightness(svc, sides: tuple[str, ...], log: RunLog) -> None:
                       detail=f"{type(e).__name__}: {e} (the flash itself is unaffected)")
 
 
+# How long a failed run keeps re-sending the reset to a half it left in the bootloader before
+# giving up and telling the user to power cycle. The same five minutes version.confirm allows.
+RECOVERY_WAIT = 300.0
+
+
 def _recover_stranded_halves(svc, log: RunLog) -> None:
     """Put any half still sitting in the bootloader back into the application.
 
@@ -637,10 +656,23 @@ def _recover_stranded_halves(svc, log: RunLog) -> None:
                 rec.os_reset(port)
             except Exception:                       # noqa: BLE001 -- it reboots mid-reply
                 pass
-            log.event("mcuboot.exit", "ok", side=side,
-                      detail=f"the run failed with this half in the bootloader; it was reset "
-                             f"on {port} and should return to normal on its own")
-            _forget_cached_transports(svc)
+            log.event("mcuboot.exit", "start", side=side,
+                      detail=f"the run failed with this half in the bootloader; reset sent on "
+                             f"{port}, waiting for it to come back")
+            # One reset is not enough. The first one after an upload often does not take --
+            # the bootloader is busy with the swap the trailer armed -- and on 2026-09-22 a
+            # single reset here left the half dark, with the user looking at a keyboard whose
+            # lights were off, until it was reset again by hand. So this waits the way
+            # version.confirm does: re-sending until the half is back in the application.
+            got = _await_application(svc, side, log, timeout=RECOVERY_WAIT)
+            if got is not None:
+                log.event("mcuboot.exit", "ok", side=side,
+                          detail=f"back in the application, running {got}")
+            else:
+                log.event("mcuboot.exit", "fail", side=side,
+                          detail="this half is still in the bootloader after five minutes of "
+                                 "resets. Its firmware is untouched; a power cycle will bring "
+                                 "it back.")
         except Exception as e:                      # noqa: BLE001 -- say so, never hide it
             log.event("mcuboot.exit", "fail", side=side,
                       detail=f"this half is still in the bootloader and could not be reset "

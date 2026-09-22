@@ -840,6 +840,9 @@ def test_a_bootloader_that_never_answers_after_the_upload_does_not_reset(tmp_pat
     _patch_transport(monkeypatch, _dead)
     monkeypatch.setattr(fw.time, "sleep", lambda _s: None)
     monkeypatch.setattr(fw.rec, "find_recovery_ports", lambda: [])
+    # The real ceiling is five minutes of wall clock (the bootloader is carrying out the swap
+    # and answers nothing meanwhile); the test only needs the deadline to exist.
+    monkeypatch.setattr(fw, "SETTLED_TIMEOUT", 0.2)
     with pytest.raises(fw.UploadRefused, match="did not answer"):
         fw.flash(tmp_path / "kb_fwl.bin", _target_catalog(res), arm=RUNNING_HASH,
                  state=state_ok(), vendor_trailer=True)

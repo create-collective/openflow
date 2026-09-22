@@ -103,6 +103,11 @@ def wired(monkeypatch, tmp_path):
         "state": "ok", "pidSide": in_boot["side"], "pidGeneration": "A",
         "images": [{"slot": 0, "hash": "arm-token", "createFirmware": "3.35.4"}]})
     monkeypatch.setattr(P.fw, "plan", lambda *a, **k: _Plan())
+    # A failed run re-sends the reset to a stranded half for five minutes of wall clock, and the
+    # reset itself opens a real COM port. Neither belongs in a unit test: the wait is zeroed and
+    # the reset stubbed here, and the tests about recovery patch what they assert on.
+    monkeypatch.setattr(P, "RECOVERY_WAIT", 0.0)
+    monkeypatch.setattr(P.rec, "os_reset", lambda port: None)
 
     # Entering the bootloader is a send_command the FakeSvc swallows, so the side is tracked here.
     orig = FakeSvc._with_transport
@@ -466,6 +471,12 @@ def test_a_failed_run_does_not_leave_a_half_stranded_in_the_bootloader(wired, mo
     monkeypatch.setattr(P, "_answering_recovery_port", lambda side, timeout=30.0: "COM27")
     # Still in the bootloader when the failure lands.
     monkeypatch.setattr(P.rec, "find_recovery_ports", lambda: [_Dev("left")])
+    # The recovery then waits the way version.confirm does, re-sending the reset; that loop is
+    # tested on its own. Here it is stood in for, so this test stays about the recovery's
+    # decision to reset and what it reports.
+    waited = []
+    monkeypatch.setattr(P, "_await_application",
+                        lambda svc, side, log=None, **kw: (waited.append(side), "3.35.4")[1])
 
     def exploding(image, catalog, *, arm, progress=None, **kw):
         raise OSError("something went wrong mid-write")
@@ -473,9 +484,10 @@ def test_a_failed_run_does_not_leave_a_half_stranded_in_the_bootloader(wired, mo
 
     r = _run(wired, {"left": "kb_fwl.bin"})
     assert r["ok"] is False
-    assert reset == ["COM27"], "the stranded half must be reset back to the application"
+    assert reset[:1] == ["COM27"], "the stranded half must be reset back to the application"
+    assert waited == ["left"], "and then waited for, re-sending, rather than left dark"
     text = Path(r["log"]).read_text(encoding="utf-8")
-    assert "should return to normal on its own" in text
+    assert "back in the application, running 3.35.4" in text
 
 
 def test_the_wait_for_the_half_to_come_back_re_sends_the_reset(monkeypatch):
@@ -505,3 +517,46 @@ def test_the_wait_gives_up_eventually_rather_than_hanging(monkeypatch):
     monkeypatch.setattr(P, "_answering_recovery_port",
                         lambda side, timeout=10.0: (_ for _ in ()).throw(OSError("no port")))
     assert P._await_application(object(), "left", None, timeout=0.1) is None
+
+
+def test_the_stall_summary_and_the_swap_state_survive_a_post_upload_failure(wired, monkeypatch):
+    """On 2026-09-22 an upload reached 100%, the bootloader then stayed silent for 100 s carrying
+    out the swap, the post-upload read gave up at 90 s and raised -- and the run log had neither
+    the chunk-timing summary nor any step after "100%", because both were written after
+    flash() returned. The UI showed 100% and then nothing for two minutes. Both now land from
+    the progress callback the instant the last chunk is acknowledged."""
+    def uploads_then_dies(image, catalog, *, arm, progress=None, **kw):
+        progress(512, 663552)                     # erase done
+        for sent in range(1024, 663553, 512):     # the whole image, timed
+            progress(sent, 663552)
+        raise P.fw.UploadRefused("the upload completed but the bootloader did not answer")
+    wired["flash"] = uploads_then_dies
+    # The failure leaves the half "in the bootloader" as far as the stub is concerned, so the
+    # recovery would wait on the real five-minute re-send loop; that loop has its own tests.
+    monkeypatch.setattr(P, "_await_application", lambda svc, side, log=None, **kw: "3.35.4")
+
+    r = _run(wired, {"left": "kb_fwl.bin"})
+    assert r["ok"] is False
+    lines = [json.loads(x) for x in Path(r["log"]).read_text(encoding="utf-8").splitlines() if x]
+    summary = [e for e in lines if e["step"] == "upload" and e["phase"] == "note"]
+    assert summary and summary[0]["chunks"] == 1295, "the stall summary must be in the log"
+    started = [e for e in lines if e["step"] == "swap.verify" and e["phase"] == "start"]
+    assert started and "carrying out the swap" in started[0]["detail"]
+    order = [e["step"] + ":" + e["phase"] for e in lines]
+    assert order.index("swap.verify:start") < order.index("run.end:fail")
+
+
+def test_recovery_says_so_when_the_half_never_comes_back(wired, monkeypatch):
+    monkeypatch.setattr(P.rec, "os_reset", lambda port: None)
+    monkeypatch.setattr(P, "_answering_recovery_port", lambda side, timeout=30.0: "COM27")
+    monkeypatch.setattr(P.rec, "find_recovery_ports", lambda: [_Dev("left")])
+    monkeypatch.setattr(P, "_await_application", lambda svc, side, log=None, **kw: None)
+
+    def exploding(image, catalog, *, arm, progress=None, **kw):
+        raise OSError("mid-write")
+    wired["flash"] = exploding
+
+    r = _run(wired, {"left": "kb_fwl.bin"})
+    text = Path(r["log"]).read_text(encoding="utf-8")
+    assert "still in the bootloader after five minutes" in text
+    assert "power cycle will bring it back" in text

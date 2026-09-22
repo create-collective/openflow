@@ -696,7 +696,18 @@ def _slot_flags(images: list | None, slot: int) -> dict | None:
     return {k: bool(row.get(k)) for k in ("pending", "permanent", "confirmed", "active")}
 
 
-def _settled_image_state(port: str, side: str | None = None, timeout: float = 90.0):
+# How long the bootloader may stay silent after the last chunk before the upload is called
+# unverifiable. It is not idle in that window: the resource's trailer armed a permanent swap and
+# MCUboot carries it out immediately -- 648 KiB moved through the scratch area -- and answers
+# nothing until it is done. Measured 2026-09-22 on a UI-driven run: 100 s of silence, then the
+# half answered and was running the new image. The ceiling was 90 s, so a flash that had
+# succeeded was reported as one that could not be checked. Two earlier runs had simply come in
+# under it. A genuinely dead device still fails here, five minutes later instead of one and a
+# half; a working one is no longer failed for being busy.
+SETTLED_TIMEOUT = 300.0
+
+
+def _settled_image_state(port: str, side: str | None = None, timeout: float | None = None):
     """Read the slot table AFTER an upload, waiting out the bootloader's post-upload silence.
 
     Measured on both halves, 2026-09-20: the last chunk is acknowledged and the port then throws
@@ -706,6 +717,7 @@ def _settled_image_state(port: str, side: str | None = None, timeout: float = 90
     stranded in the bootloader. The device also re-enumerates, so the answering port is looked up
     again rather than assumed. Returns (state, port_that_answered).
     """
+    timeout = SETTLED_TIMEOUT if timeout is None else timeout
     deadline = time.monotonic() + timeout
     last: Exception | None = None
     while True:
