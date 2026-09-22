@@ -71,6 +71,10 @@ class FakeSvc:
         self.brightness.append((side, setting, value))
         return {"ok": True}
 
+    def restore_lighting(self, side="left"):
+        self.lighting_restored = getattr(self, "lighting_restored", 0) + 1
+        return {"ok": True, "side": side, "layers": 1}
+
 
 def _keymap(led_rows=None):
     return {"layers": {0: [(1, 4, b"\x01\x02"), (2, 4, b"\x03\x04")]},
@@ -560,3 +564,27 @@ def test_recovery_says_so_when_the_half_never_comes_back(wired, monkeypatch):
     text = Path(r["log"]).read_text(encoding="utf-8")
     assert "still in the bootloader after five minutes" in text
     assert "power cycle will bring it back" in text
+
+
+def test_the_lights_are_put_back_after_the_flash(wired):
+    """A half that has been through the bootloader comes back with a runtime lighting state
+    that is not what it stores: on 2026-09-22 one half plain white while the other stayed orange,
+    with the stored maps byte-identical before and after. Rewriting the layer list put it back
+    the moment it was sent, so the procedure does that itself, after the halves are back and
+    before the comparison."""
+    r = _run(wired, {"left": "kb_fwl.bin", "right": "kb_fwr.bin"})
+    assert r["ok"] is True
+    assert wired["svc"].lighting_restored == 1
+    lines = [json.loads(x) for x in Path(r["log"]).read_text(encoding="utf-8").splitlines() if x]
+    steps = [(e["step"], e["phase"]) for e in lines]
+    assert ("lighting.restore", "ok") in steps
+    assert steps.index(("lighting.restore", "ok")) < steps.index(("verify.compare", "start"))
+
+
+def test_a_lighting_restore_failure_does_not_fail_the_flash(wired):
+    def boom(side="left"):
+        raise OSError("port busy")
+    wired["svc"].restore_lighting = boom
+    r = _run(wired, {"left": "kb_fwl.bin"})
+    assert r["ok"] is True, "cosmetic; the flash is verified regardless"
+    assert "a power cycle also restores the lights" in Path(r["log"]).read_text(encoding="utf-8")

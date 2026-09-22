@@ -63,6 +63,7 @@ STEP_LABELS = {
     "mcuboot.exit": "Restarting the half",
     "version.confirm": "Restarting and confirming the new version (can take a few minutes)",
     "brightness.restore": "Restoring LED brightness",
+    "lighting.restore": "Putting the lights back to their stored colours",
     "verify.compare": "Comparing the keyboard against the backup",
     "run.end": "Finished",
 }
@@ -680,6 +681,28 @@ def _recover_stranded_halves(svc, log: RunLog) -> None:
                              "cycle will bring it back.")
 
 
+def restore_lighting(svc, log: RunLog) -> None:
+    """Put both halves' LEDs back to the stored colours after the flash.
+
+    A half that has been through the bootloader comes back with a RUNTIME lighting state that
+    is not what it stores: on 2026-09-20 "darker amber", on 2026-09-22 one half plain white while
+    the other stayed orange -- with the stored LED maps byte-identical before and after, as the
+    comparison proved. To a user that is a flash that changed their lights. Rewriting the layer
+    list is the one write measured to clear a runtime effect on both halves without a power
+    cycle (service.restore_lighting), and it put the white half back to orange the moment it was
+    sent. It writes the same bytes the board already holds, so the comparison after it still
+    measures the flash and not this.
+    """
+    try:
+        r = svc.restore_lighting("left")             # the central half drives both halves' LEDs
+        log.event("lighting.restore", "ok", layers=r.get("layers") if isinstance(r, dict) else None,
+                  detail="stored colours and animations re-sent to both halves")
+    except Exception as e:                          # noqa: BLE001 -- cosmetic, never fatal
+        log.event("lighting.restore", "fail",
+                  detail=f"{type(e).__name__}: {e} (the flash itself is unaffected; a power "
+                         "cycle also restores the lights)")
+
+
 def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
         log_dir: Path | None = None, flash_fn=None, on_event=None) -> dict:
     """The whole procedure. `targets` maps side -> image path, one or both halves.
@@ -738,6 +761,7 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
                            allow_older=allow_older, flash_fn=flash_fn)
 
         restore_brightness(svc, sides, log)
+        restore_lighting(svc, log)
 
         with log.step("verify.compare"):
             after = {"halves": {}, "keymap": {}}
