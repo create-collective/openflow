@@ -292,18 +292,111 @@ export const SHAPES = {
 // positionId -> shape name (index = positionId, 0..89)
 export const POS_SHAPE = ["att", "itt", "rtt", "ltt", "ctt", "dtt", "utt", "ptt", "gtt", "ftt", "htt", "mtt", "_tt", "vtt", "xtt", "ytt", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "wtt", "Tl", "Tl", "btt", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "ktt", "Tl", "Tl", "Ett", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ctt", "Stt", "Ttt", "Itt", "Ltt", "Tl", "Tl", "Att", "Ott", "Rtt", "Mtt", "Ntt", "pi", "pi", "pi", "pi", "pi", "pi", "pi", "pi", "gi", "gi", "gi", "gi", "gi", "gi", "gi", "gi"];
 
-// Where a per-key badge (the multi-behaviour star) sits, relative to the shape's legend anchor.
+// Where a per-key badge (the multi-behaviour star) sits: the bottom-left corner of the cap's
+// DRAWN silhouette, not of its box.
 //
-// The legend anchor is inside every silhouette by construction: it is where the cap's text is
-// drawn. A badge pinned to the BOX's corner is not: the inner-column caps (gtt, btt, ktt, Ett)
-// have their bottom-left cut away, so `bottom: 2px; left: 3px` landed on the neighbouring key or
-// the module bay, and on the right half that corner faces the centre of the board (SCRUM-111).
-// Measured against every path in SHAPES (tests/unit/starAnchor.test.js): an offset of -20% of
-// the box width and +20% of its height from the legend point is inside all of them, with 10% to
-// spare in each direction.
-export const BADGE_DX = -20;
-export const BADGE_DY = 20;
+// The box is the SVG viewBox and the silhouette does not fill it. The inner-column caps (gtt,
+// btt, ktt, Ett) have their bottom-left cut away, so a badge pinned to the box's corner sat
+// outside the cap -- on the neighbouring key, or on the module bay beside Backspace -- and on
+// the right half that corner faces the centre of the board (SCRUM-111). The owner wants the
+// star where it always was, the cap's own bottom-left corner; on a cut-away cap that corner is
+// simply further up the left edge. So it is computed from the path: the vertex nearest the
+// box's bottom-left, stepped inward toward the cap's centroid until the glyph has half its own
+// size of clearance on every side. tests/unit/starAnchor.test.js checks every shape.
+
+// Vertices of an SVG path in absolute coordinates. Curves contribute their end points, which is
+// enough for these caps: their curves are corner rounding, never a whole edge.
+export function pathVertices(d) {
+  const out = [];
+  const toks = d.match(/[MLHVCSQTAZmlhvcsqtaz]|-?\d*\.?\d+(?:e-?\d+)?/g) || [];
+  let x = 0, y = 0, cmd = "", i = 0;
+  const n = () => parseFloat(toks[i++]);
+  while (i < toks.length) {
+    const t = toks[i];
+    if (/[A-Za-z]/.test(t)) { cmd = t; i++; continue; }
+    switch (cmd) {
+      case "M": case "L": case "T": x = n(); y = n(); out.push([x, y]); break;
+      case "m": case "l": case "t": x += n(); y += n(); out.push([x, y]); break;
+      case "H": x = n(); out.push([x, y]); break;
+      case "h": x += n(); out.push([x, y]); break;
+      case "V": y = n(); out.push([x, y]); break;
+      case "v": y += n(); out.push([x, y]); break;
+      case "C": n(); n(); n(); n(); x = n(); y = n(); out.push([x, y]); break;
+      case "c": n(); n(); n(); n(); x += n(); y += n(); out.push([x, y]); break;
+      case "S": case "Q": n(); n(); x = n(); y = n(); out.push([x, y]); break;
+      case "s": case "q": n(); n(); x += n(); y += n(); out.push([x, y]); break;
+      case "A": n(); n(); n(); n(); n(); x = n(); y = n(); out.push([x, y]); break;
+      case "a": n(); n(); n(); n(); n(); x += n(); y += n(); out.push([x, y]); break;
+      default: i++;
+    }
+  }
+  return out;
+}
+
+export function pointInPolygon([px, py], poly) {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) c = !c;
+  }
+  return c;
+}
+
+// The star is 9px on caps that render at roughly one viewBox unit per px, so half a glyph is
+// the clearance it needs to sit inside a slanted edge rather than across it.
+export const BADGE_CLEARANCE = 4.5;
+
+function viewBoxSize(shape) {
+  return shape.viewBox.split(" ").slice(2).map(Number);
+}
+
+function clear(p, poly, r) {
+  return [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]
+    .every(([dx, dy]) => pointInPolygon([p[0] + dx, p[1] + dy], poly));
+}
+
+// The badge anchor in viewBox units, [x, y].
+export function badgePoint(shape) {
+  const [vw, vh] = viewBoxSize(shape);
+  if (shape.rect) {
+    const r = shape.rect, m = BADGE_CLEARANCE + 1;
+    return [r.x + m, r.y + r.h - m];
+  }
+  const poly = pathVertices(shape.d);
+  // The corner a person points at: the vertex furthest toward the bottom-left DIAGONALLY, the
+  // polygon's support point in direction (-1, +1). "Nearest the box's corner" chose the middle
+  // of gtt's long diagonal cut, and "bottom of the left edge" chose the top of btt, whose left
+  // edge is short. This picks where the left edge meets the cut on gtt (4,70), where the
+  // diagonal meets the bottom on btt (9,39), and the plain corner (1,91) on ptt.
+  let corner = poly[0], best = -Infinity;
+  for (const p of poly) {
+    const score = p[1] - p[0];
+    if (score > best) { best = score; corner = p; }
+  }
+  // Step inward up-and-right so the glyph hugs that corner, rather than toward the centroid,
+  // which on a tall cut-away cap drifts it a third of the way across the key.
+  const diag = Math.SQRT1_2;
+  for (let s = BADGE_CLEARANCE; s <= Math.max(vw, vh); s += 0.5) {
+    const p = [corner[0] + diag * s, corner[1] - diag * s];
+    if (clear(p, poly, BADGE_CLEARANCE)) return p;
+  }
+  // Never reached for the shipped shapes; a future shape that defeats the walk gets its centre.
+  const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length;
+  const cy = poly.reduce((s, p) => s + p[1], 0) / poly.length;
+  return [cx, cy];
+}
+
+const _badge = new Map();
+
+// CSS top/left for the badge, centred on badgePoint with translate(-50%, -50%).
 export function badgeAnchor(shape) {
-  const l = shape?.legend || { top: "50%", left: "50%" };
-  return { top: `calc(${l.top} + ${BADGE_DY}%)`, left: `calc(${l.left} + ${BADGE_DX}%)` };
+  if (!shape) return { top: "50%", left: "50%" };
+  let a = _badge.get(shape);
+  if (!a) {
+    const [vw, vh] = viewBoxSize(shape);
+    const [x, y] = badgePoint(shape);
+    a = { left: `${(100 * x / vw).toFixed(2)}%`, top: `${(100 * y / vh).toFixed(2)}%` };
+    _badge.set(shape, a);
+  }
+  return a;
 }
