@@ -1077,11 +1077,22 @@ def flash(desired: DesiredState, *, transport=None, dest: int = 0x50, current: D
 
 def diff_desired(a: "DesiredState", b: "DesiredState") -> list[dict]:
     """Records/leds in `a` (desired) that differ from `b` (device read-back). Empty = verified.
-    Only the positions/leds `a` sets are checked — a full re-read has extra padding we ignore."""
+    Only the positions/leds `a` sets are checked — a full re-read has extra padding we ignore.
+
+    A position ABSENT from the read-back counts as NONE, the same rule `_layer_needs_write`
+    applies and for the same reason: on the wire, absent and empty are the same record. What
+    made this matter (SCRUM-112): a layer with no second-bank records reads back as 82 records
+    and stops at 0x51 -- the device does not return the bank at all -- while `compute_plan` adds
+    the NONE shadows a profile owes for every key it sets. The write diff saw absent == NONE,
+    correctly skipped the layer, and this function then demanded those NONEs from a read that
+    never carries them. Two real flashes on 2026-09-21 wrote and verified perfectly on layer 0
+    and were reported "verify-failed" on the two layers they had rightly left alone.
+    """
     out = []
+    empty = (R.NONE_BEH, b"")
     for idx, poss in a.layers.items():
         for pos, rec in poss.items():
-            if b.layers.get(idx, {}).get(pos) != rec:
+            if b.layers.get(idx, {}).get(pos, empty) != rec:
                 out.append({"kind": "layer", "layer": idx, "pos": pos,
                             "want": [rec[0], rec[1].hex()],
                             "got": _fmt_rec(b.layers.get(idx, {}).get(pos))})

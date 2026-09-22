@@ -85,6 +85,37 @@ def test_diff_desired_ignores_readback_padding() -> None:
     print("Diff OK: read-back padding ignored, only intended positions checked")
 
 
+def test_a_position_absent_from_the_readback_counts_as_none() -> None:
+    """SCRUM-112. A layer with no second-bank records reads back stopping at 0x51 -- the device
+    does not return the bank -- while compute_plan adds the NONE shadows a profile owes for every
+    key it sets. The write diff already treats absent as NONE and rightly skips such a layer; the
+    verify must agree, or every good sync flash is reported as failed on the layers it left alone.
+    Measured twice on 2026-09-21: layer 0 verified clean, layers 1 and 2 'failed' at 82+."""
+    desired = _desired_one_key(layer=1, pos=0x20, code="B")
+    desired.layers[1][0x20 + 0x52] = (R.NONE_BEH, b"")      # the shadow the profile owes
+    readback = _desired_one_key(layer=1, pos=0x20, code="B")
+    assert 0x20 + 0x52 not in readback.layers[1], "the read must model a bank the device omits"
+    assert F.diff_desired(desired, readback) == []
+    print("Diff OK: an owed NONE shadow the device does not return is not a mismatch")
+
+
+def test_a_real_record_missing_from_the_readback_is_still_a_mismatch() -> None:
+    """Patience is not credulity: a key the profile SETS that the board does not carry is a
+    failed write and must still be reported, with got=null so the reader can tell absent
+    from wrong."""
+    desired = _desired_one_key(layer=1, pos=0x20, code="B")
+    readback = F.DesiredState(layers={1: {}})
+    mism = F.diff_desired(desired, readback)
+    assert mism and mism[0]["pos"] == 0x20 and mism[0]["got"] is None
+
+
+def test_a_none_the_board_did_not_honour_is_still_a_mismatch() -> None:
+    """The other direction of the same rule: wanting NONE where the board holds a record."""
+    desired = F.DesiredState(layers={1: {0x72: (R.NONE_BEH, b"")}})
+    readback = _desired_one_key(layer=1, pos=0x72, code="B")
+    assert [m["pos"] for m in F.diff_desired(desired, readback)] == [0x72]
+
+
 if __name__ == "__main__":
     test_wet_happy_path_verified()
     test_wet_bad_ack_aborts()
