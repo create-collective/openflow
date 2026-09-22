@@ -298,9 +298,30 @@ def decode_keypress(param: bytes) -> tuple[str, str]:
 
 def translate(typ: int, param: bytes, order_to_layer: dict[int, str]) -> list[tuple[str, str, str]]:
     """One REMAP record -> [(behavior, action_type, action_code), ...]. [] = no binding."""
-    def layer_code(prefix: str) -> str:
-        tgt = int.from_bytes(param[:4], "little") if len(param) >= 4 else -1
+    def layer_code(prefix: str, raw: bytes | None = None) -> str:
+        src = param if raw is None else raw
+        tgt = int.from_bytes(src[:4], "little") if len(src) >= 4 else -1
         return f"{prefix}{order_to_layer.get(tgt, tgt)}"
+
+    def slot(beh: str, kind: int, raw: bytes) -> list[tuple[str, str, str]]:
+        """One half of a hold-tap, decoded by the KIND byte its header carries for it.
+
+        The header's first two bytes are per-slot behaviour kinds, [hold][tap], not the constant
+        01 01 every OneKey capture happened to show. A stock layer-tap (hold Enter/Backspace ->
+        layer 2) is `05 01` with the hold slot holding a layer INDEX; fed to the keypress decoder
+        that came out as RAW_p00:02m00 (SCRUM-110). An empty half is four zero bytes -- but only
+        for a keypress slot: for a layer slot the same bytes mean layer 0, a real target.
+        """
+        if kind == KEY_PRESS:
+            # Either half may be empty and that half is then simply not bound. On the second
+            # bank this is routine: a key with a tap+hold but no double-tap is written with an
+            # empty TAP slot (flash._second_bank_record), and the reverse for the other.
+            return [] if raw == EMPTY_SLOT else [(beh, *decode_keypress(raw))]
+        if kind == LAYER_HOLD:
+            return [(beh, "layer_polite_hold", layer_code("MO_LAYER_", raw))]
+        # A kind nobody has seen. Keep the bytes AND the kind visible, so a re-flash refuses it
+        # (RAW_ never encodes) and the next capture can name it, rather than guessing a keypress.
+        return [(beh, "key", Unmapped(f"k{kind:02x}:{raw.hex()}"))]
 
     if typ == KEY_PRESS:
         if len(param) < 3:
@@ -311,16 +332,12 @@ def translate(typ: int, param: bytes, order_to_layer: dict[int, str]) -> list[tu
         return []
     if typ in HOLD_TAP_TYPES and len(param) >= 16:
         h = len(param) - 16          # header length (8 for 0x10, 5 for 0x03)
+        # Both real header lengths carry the kinds at the same place, 5 and 4 bytes before the
+        # hold slot. A shorter header has never been seen; read it as keypress/keypress rather
+        # than index off the front of the record.
+        hold_kind, tap_kind = (param[h - 5], param[h - 4]) if h >= 5 else (KEY_PRESS, KEY_PRESS)
         hold_raw, tap_raw = param[h:h + 4], param[h + 8:h + 12]
-        # Either half may be empty and that half is then simply not bound. On the second
-        # bank this is routine: a key with a tap+hold but no double-tap is written with an
-        # empty TAP slot (flash._second_bank_record), and the reverse for the other.
-        out = []
-        if tap_raw != EMPTY_SLOT:
-            out.append(("press", *decode_keypress(tap_raw)))
-        if hold_raw != EMPTY_SLOT:
-            out.append(("hold", *decode_keypress(hold_raw)))
-        return out
+        return slot("press", tap_kind, tap_raw) + slot("hold", hold_kind, hold_raw)
     if typ == LAYER_HOLD:
         return [("press", "layer_polite_hold", layer_code("MO_LAYER_"))]
     if typ == OUTPUTS:

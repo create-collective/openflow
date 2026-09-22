@@ -174,17 +174,30 @@ def encode_keypress(action_type: str, action_code: str) -> bytes:
 # param builders per behavior type                                            #
 # --------------------------------------------------------------------------- #
 
-def _holdtap_body(flavour: int, term: int, hold_kp: bytes, tap_kp: bytes) -> bytes:
-    """The shared 21-byte hold-tap body: 01 01 <flavour> <term u16 LE> hold(4) pad(4) tap(4) pad(4)."""
+# The first two bytes of a hold-tap body are the behaviour KIND of each slot, [hold][tap], not a
+# constant. Every OneKey record we had captured was 01 01 (keypress, keypress), and that read as
+# fixed bytes until a stock board's thumb keys turned up as `05 01`: hold = LAYER_HOLD, tap =
+# KEY_PRESS, with the hold slot carrying a layer INDEX rather than a keycode -- ZMK's layer-tap,
+# hold Enter/Backspace for layer 2 (SCRUM-110, 2026-09-21). These are the two kinds seen on real
+# hardware; anything else is decoded as RAW with the kind visible rather than guessed at.
+HOLD_TAP_SLOT_KINDS = (KEY_PRESS, LAYER_HOLD)
+
+
+def _holdtap_body(flavour: int, term: int, hold_kp: bytes, tap_kp: bytes,
+                  hold_kind: int = KEY_PRESS, tap_kind: int = KEY_PRESS) -> bytes:
+    """The shared 21-byte hold-tap body:
+    <hold kind> <tap kind> <flavour> <term u16 LE> hold(4) pad(4) tap(4) pad(4)."""
     if len(hold_kp) != 4 or len(tap_kp) != 4:
-        raise RemapEncodeError("hold/tap keypress must be 4 bytes")
-    return (bytes([0x01, 0x01, flavour & 0xFF]) + (term & 0xFFFF).to_bytes(2, "little")
+        raise RemapEncodeError("hold/tap slot must be 4 bytes")
+    return (bytes([hold_kind & 0xFF, tap_kind & 0xFF, flavour & 0xFF])
+            + (term & 0xFFFF).to_bytes(2, "little")
             + hold_kp + b"\x00\x00\x00\x00" + tap_kp + b"\x00\x00\x00\x00")
 
 
-def encode_holdtap_param(kind: int, flavour: int, term: int, hold_kp: bytes, tap_kp: bytes) -> bytes:
+def encode_holdtap_param(kind: int, flavour: int, term: int, hold_kp: bytes, tap_kp: bytes,
+                         *, hold_kind: int = KEY_PRESS, tap_kind: int = KEY_PRESS) -> bytes:
     """0x03 = the 21-byte body; 0x10 = <term u16 LE> 03 <body> (term repeated), 24 bytes."""
-    body = _holdtap_body(flavour, term, hold_kp, tap_kp)
+    body = _holdtap_body(flavour, term, hold_kp, tap_kp, hold_kind, tap_kind)
     if kind == HOLD_TAP_HOME:
         return body
     if kind == HOLD_TAP_ONEKEY:

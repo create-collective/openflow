@@ -277,11 +277,12 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
                 # NOT written as NONE. Clearing the key would destroy a binding the user never
                 # asked to remove; leaving it and SAYING so is the honest option. The report
                 # states what the key will actually keep doing.
-                press = next((r for r in rows if r["beh"] in ("press", "tap", None)), rows[0])
+                culprit = _failing_row(rows, term, flavour, layer_order)
                 d.dropped.append({
                     "layer": idx, "position": pos,
-                    "actionCode": press["ac"], "actionType": press["at"],
-                    "reason": _drop_reason(press["at"], press["ac"]),
+                    "actionCode": culprit["ac"], "actionType": culprit["at"],
+                    "behavior": culprit["beh"],
+                    "reason": _drop_reason(culprit["at"], culprit["ac"]),
                     "effect": "this key keeps whatever the keyboard already had on it",
                 })
             # double-tap / tap+hold are a second hold-tap record at pos + 0x52
@@ -337,6 +338,34 @@ def _keypress(action_type: str | None, code: str | None) -> bytes:
     return R.encode_keypress(action_type, code)
 
 
+def _failing_row(rows: list, term: int, flavour: int, layer_order: dict) -> dict:
+    """Which of a key's rows could not be encoded.
+
+    The drop report used to name the PRESS row regardless, so a key whose tap encoded fine and
+    whose hold did not was reported as "no encoder for action type 'key'" -- pointing the user
+    at the one binding that was not the problem (SCRUM-110: RETURN / BACKSPACE with a layer-tap
+    hold the decoder had not named). Re-trying the press alone tells the two cases apart; if the
+    press itself fails, it is rightly the one reported.
+    """
+    press = next((r for r in rows if r["beh"] in ("press", "tap", None)), rows[0])
+    others = [r for r in rows if r is not press]
+    if not others:
+        return press
+    try:
+        if _binding_rows_to_record([press], term, flavour, layer_order) is None:
+            return press
+    except R.RemapEncodeError:
+        return press
+    for r in others:
+        try:
+            if _binding_rows_to_record([press, r], term, flavour, layer_order) is not None:
+                continue
+        except R.RemapEncodeError:
+            pass
+        return r
+    return press
+
+
 def _drop_reason(action_type: str | None, code: str | None) -> str:
     if (code or "").startswith("RAW_"):
         # The decoder could not name what the board holds here. EMPTY_KEYPRESS is handled
@@ -381,11 +410,24 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
     can_be_tap = at in ("key", "modifier", *R.CHORD_ACTION_TYPES) or code == R.EMPTY_KEYPRESS
 
     if hold is not None or (second_bank and can_be_tap):
+        tap_kp = _keypress(at, code)
+        if hold is not None and hold["at"] == "layer_polite_hold":
+            # A layer in the hold slot: ZMK's layer-tap, which a stock board carries on its
+            # Enter and Backspace keys (hold for layer 2). The slot holds the layer INDEX and the
+            # header's hold-kind byte says so (SCRUM-110). Written as the 0x03 form, because
+            # that is byte for byte what the board holds for these keys -- a profile read from a
+            # stock board and flashed back must not rewrite them -- and the 0x10 form with a
+            # layer hold has never been seen on hardware.
+            order = _target_order(hold["ac"], layer_order)
+            if order is None:
+                raise R.RemapEncodeError(f"hold layer {hold['ac']!r} is not in this profile")
+            return R.HOLD_TAP_HOME, R.encode_holdtap_param(
+                R.HOLD_TAP_HOME, flavour, term, R.encode_layer_param(order), tap_kp,
+                hold_kind=R.LAYER_HOLD)
         # OneKey (0x10), not the home-row 0x03 form. Both are hold-tap records with the same
         # body, but the type encodes intent and 0x10 is what NayaFlow writes for a user-created
         # tap+hold -- it is what sits on the board, and what the secondary bank uses. Emitting
         # 0x03 here made a re-flash of a profile READ FROM the device rewrite those two keys.
-        tap_kp = _keypress(at, code)
         hold_kp = _keypress(hold["at"], hold["ac"]) if hold is not None else bytes(4)
         return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
 
