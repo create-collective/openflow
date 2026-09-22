@@ -588,3 +588,73 @@ def test_a_lighting_restore_failure_does_not_fail_the_flash(wired):
     r = _run(wired, {"left": "kb_fwl.bin"})
     assert r["ok"] is True, "cosmetic; the flash is verified regardless"
     assert "a power cycle also restores the lights" in Path(r["log"]).read_text(encoding="utf-8")
+
+
+# --- what the first UI-driven UPGRADE taught the comparison, 2026-09-22 --------------------- #
+# Both halves 3.35.4 -> 3.41.0. The primary bank was byte-identical before and after; the run
+# still reported "layer 0 bindings differ at 74 positions". 3.35.4 does not report the second
+# bank at all (its read stops at 0x51) and 3.41.0 returns the whole bank padded with NONE, so a
+# double-tap key that was on the board throughout was invisible before and present after.
+
+def _rows(*recs):
+    return [[p, t, h] for p, t, h in recs]
+
+
+def test_bindings_absent_from_one_read_count_as_none():
+    before = _rows((1, 1, "04000700"))
+    after = _rows((1, 1, "04000700"), (83, 7, ""), (84, 7, ""))     # the bank, padded
+    assert P._differing_positions(before, after) == []
+
+
+def _compare(before_layers, after_layers, *, version_changed, tmp_path):
+    log = P.RunLog(tmp_path / "c.log")
+    before = {"halves": {}, "keymap": {"layers": before_layers, "led": {}}}
+    after = {"halves": {}, "keymap": {"layers": after_layers, "led": {}}}
+    P.compare_preflight(before, after, version_changed=version_changed, log=log)
+    return log
+
+
+def test_a_second_bank_the_old_firmware_could_not_report_is_an_advisory_across_versions(tmp_path):
+    dt = "c80003010101c80000000000000000000500070000000000"           # the double-tap record
+    log = _compare({"0": _rows((1, 1, "04000700"))},
+                   {"0": _rows((1, 1, "04000700"), (137, 16, dt))},
+                   version_changed=True, tmp_path=tmp_path)
+    assert log.failures == []
+    assert log.advisories and "older firmware does not report these slots" in log.advisories[0]
+
+
+def test_the_same_second_bank_difference_within_one_version_is_a_failure(tmp_path):
+    dt = "c80003010101c80000000000000000000500070000000000"
+    log = _compare({"0": _rows((1, 1, "04000700"))},
+                   {"0": _rows((1, 1, "04000700"), (137, 16, dt))},
+                   version_changed=False, tmp_path=tmp_path)
+    assert log.failures and "double-tap / tap+hold" in log.failures[0]
+
+
+def test_a_primary_bank_difference_is_a_failure_even_across_versions(tmp_path):
+    log = _compare({"0": _rows((1, 1, "04000700"))},
+                   {"0": _rows((1, 1, "05000700"))},
+                   version_changed=True, tmp_path=tmp_path)
+    assert log.failures and "[1]" in log.failures[0]
+
+
+def test_the_procedure_waits_for_both_halves_to_re_link(wired, monkeypatch):
+    """When the second half comes back on matching firmware the halves re-link and the central
+    drops off USB for a moment. Three steps ran in that gap on 2026-09-22 and reported the left
+    half missing. The procedure now waits for both before it touches the keyboard as a whole."""
+    real = P._identity
+    calls = {"n": 0}
+
+    def flaky(svc, side):
+        calls["n"] += 1
+        if side == "left" and calls["n"] in (5, 6):      # the moment after the last flash
+            raise RuntimeError("No left device found")
+        return real(svc, side)
+    monkeypatch.setattr(P, "_identity", flaky)
+    monkeypatch.setattr(P, "SETTLE_WAIT", 20.0)
+
+    r = _run(wired, {"left": "kb_fwl.bin", "right": "kb_fwr.bin"})
+    assert r["ok"] is True, r
+    text = Path(r["log"]).read_text(encoding="utf-8")
+    assert "both halves answering; the keyboard has re-linked" in text
+    assert "No left device found" not in text, "nothing after the settle may report it missing"

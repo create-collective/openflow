@@ -47,6 +47,7 @@ from pathlib import Path
 
 from . import firmware_upload as fw
 from . import recovery as rec
+from .keymap_read import NONE_BEH, SECOND_BANK
 
 # The steps, in order, with the words the user sees. Named here rather than inline so the UI and
 # the log agree and neither drifts.
@@ -62,6 +63,7 @@ STEP_LABELS = {
     "swap.verify": "Checking what landed",
     "mcuboot.exit": "Restarting the half",
     "version.confirm": "Restarting and confirming the new version (can take a few minutes)",
+    "halves.settle": "Waiting for both halves to re-link",
     "brightness.restore": "Restoring LED brightness",
     "lighting.restore": "Putting the lights back to their stored colours",
     "verify.compare": "Comparing the keyboard against the backup",
@@ -299,10 +301,28 @@ def compare_preflight(before: dict, after: dict, *, version_changed: bool, log: 
         if now is None:
             log.fail(f"layer {li}: {len(recs)} records before, the layer is missing now")
             continue
-        if now != recs:
-            moved = _differing_positions(recs, now)
-            log.fail(f"layer {li} bindings differ at {len(moved)} position(s): {moved[:12]}"
-                     + (" ..." if len(moved) > 12 else ""))
+        moved = _differing_positions(recs, now)
+        # Two banks, two rules. The PRIMARY bank (0x00-0x51) is the keys the user sees; every
+        # firmware we have read reports it the same way, so a difference there is a real change
+        # whatever the versions. The SECOND bank (0x52 up, double-tap and tap+hold) is only
+        # REPORTED by newer firmware: 3.35.4 stops its read at 0x51, 3.41.0 returns the whole
+        # bank. Measured 2026-09-22 -- a double-tap key was on the board throughout an upgrade,
+        # invisible to the read before it and present after, and the comparison called that
+        # 74 changed bindings. Across a version change a second-bank difference is therefore an
+        # advisory; within one version it is as real as any other.
+        primary = [p for p in moved if p < SECOND_BANK]
+        shadow = [p for p in moved if p >= SECOND_BANK]
+        if primary:
+            log.fail(f"layer {li} bindings differ at {len(primary)} position(s): {primary[:12]}"
+                     + (" ..." if len(primary) > 12 else ""))
+        if shadow and version_changed:
+            log.advise(f"layer {li}: {len(shadow)} double-tap / tap+hold slot(s) read differently "
+                       f"({shadow[:8]}{' ...' if len(shadow) > 8 else ''}). The firmware version "
+                       "changed, and older firmware does not report these slots at all, so this "
+                       "is what the new version can now show rather than a changed key.")
+        elif shadow:
+            log.fail(f"layer {li} double-tap / tap+hold bindings differ at {len(shadow)} "
+                     f"position(s): {shadow[:12]}" + (" ..." if len(shadow) > 12 else ""))
 
     for li, rows in (kb.get("led") or {}).items():
         now = (ka.get("led") or {}).get(li)
@@ -317,11 +337,22 @@ def compare_preflight(before: dict, after: dict, *, version_changed: bool, log: 
             log.fail(f"layer {li} LED map differs ({where})")
 
 
+_NONE_RECORD = [NONE_BEH, ""]
+
+
 def _differing_positions(before: list, after: list) -> list:
-    """Which key positions changed, rather than 'the lists differ'."""
-    bi = {r[0]: r for r in before}
-    ai = {r[0]: r for r in after}
-    return sorted(pos for pos in set(bi) | set(ai) if bi.get(pos) != ai.get(pos))
+    """Which key positions changed, rather than 'the lists differ'.
+
+    A position absent from one read counts as NONE, the same rule the flash's write diff and
+    verify use (SCRUM-112): the device pads every unbound position with `07 00` when it reports
+    a bank at all, and omits the bank entirely when nothing in it is bound. Absent and empty
+    are the same record on the wire, and comparing them as different reported 73 phantom
+    changes on 2026-09-22.
+    """
+    bi = {r[0]: [r[1], r[2]] for r in before}
+    ai = {r[0]: [r[1], r[2]] for r in after}
+    return sorted(pos for pos in set(bi) | set(ai)
+                  if bi.get(pos, _NONE_RECORD) != ai.get(pos, _NONE_RECORD))
 
 
 # --- the procedure -------------------------------------------------------------------------- #
@@ -608,6 +639,42 @@ def _await_application(svc, side: str, log: RunLog | None = None,
         time.sleep(2.0)
 
 
+SETTLE_WAIT = 90.0
+
+
+def await_halves(svc, log: RunLog, timeout: float | None = None) -> None:
+    """Wait until every half answers again before anything is done to the keyboard as a whole.
+
+    When the second half comes back on matching firmware the two re-link, and the central half
+    drops off USB for a moment while they do -- on 2026-09-22 the left disappeared at the exact
+    second the right was confirmed on 3.41.0, its lights went out, and it was back two seconds
+    later. Three steps ran in that gap and reported the left half missing: brightness, the
+    lighting restore, and the comparison's identity read. None of them had failed; they had
+    been early. So the procedure now waits here, for both halves, and says why.
+    """
+    timeout = SETTLE_WAIT if timeout is None else timeout
+    deadline = time.monotonic() + timeout
+    missing: list[str] = []
+    while True:
+        missing = []
+        for side in ("left", "right"):
+            try:
+                _identity(svc, side)
+            except Exception:                       # noqa: BLE001 -- absent or re-enumerating
+                missing.append(side)
+        if not missing:
+            log.event("halves.settle", "ok",
+                      detail="both halves answering; the keyboard has re-linked")
+            return
+        if time.monotonic() >= deadline:
+            log.event("halves.settle", "fail",
+                      detail=f"{', '.join(missing)} half not answering after {timeout:.0f}s; "
+                             "continuing, and what follows may report it missing")
+            return
+        _forget_cached_transports(svc)
+        time.sleep(2.0)
+
+
 def restore_brightness(svc, sides: tuple[str, ...], log: RunLog) -> None:
     """Put LED brightness back where the user had it.
 
@@ -760,6 +827,7 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
             flash_one_half(svc, side, Path(targets[side]), catalog, log,
                            allow_older=allow_older, flash_fn=flash_fn)
 
+        await_halves(svc, log)
         restore_brightness(svc, sides, log)
         restore_lighting(svc, log)
 
