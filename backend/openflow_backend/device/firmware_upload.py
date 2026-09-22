@@ -41,11 +41,19 @@ and then write the trailer ourselves through `image state` with the hash -- test
 our decision, after the check. On paper it is the better sequence, and on paper is where it has
 stayed: every upload this project has ever put on a board used the vendor's bytes.
 
-So the DEFAULT IS NOW vendor_trailer=True (SCRUM-106), because a default should be the path that
-has been run rather than the one that reads best. `vendor_trailer=False` remains, unchanged and
-still argued for above, as design that has not met hardware; the day it is tried it should be
-tried deliberately, on a board someone is prepared to recover, and not because it was what the
-signature happened to say. What the vendor path costs is real and is not hidden: the swap is
+Its last step HAS met hardware, and failed. On 2026-09-20 an `image state` write on the
+reference board's bootloader, arming a swap of an image already in the secondary slot, came back
+rc=8 (MGMT_ERR_ENOTSUP): this bootloader does not implement the write at all. So on the Create,
+`vendor_trailer=False` would upload the whole image, pass the slot check, and then fail at the
+mark, leaving a written slot with nothing armed. The same finding means an image already sitting
+in the secondary slot cannot be booted by marking it; it has to be uploaded again. And it is why
+NayaCore's `testImage`/`confirmImage` exist in its binary and are never called: the vendor had
+no other route either.
+
+So the DEFAULT IS vendor_trailer=True (SCRUM-106): it is the path that has been run, and on this
+bootloader the only one that can work. `vendor_trailer=False` remains, unchanged, for a
+bootloader that does implement `image state`; do not re-derive the "safer" argument above and
+make it the default again for the Create. What the vendor path costs is real and is not hidden: the swap is
 armed by the last chunk, so there is no test mode and the hash check happens after the point of
 no return -- MCUboot validates the signature before it swaps and refuses a corrupt image, which
 is what makes that survivable, and the procedure above verifies the running version afterwards
