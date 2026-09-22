@@ -291,3 +291,19 @@ export const SHAPES = {
 
 // positionId -> shape name (index = positionId, 0..89)
 export const POS_SHAPE = ["att", "itt", "rtt", "ltt", "ctt", "dtt", "utt", "ptt", "gtt", "ftt", "htt", "mtt", "_tt", "vtt", "xtt", "ytt", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "wtt", "Tl", "Tl", "btt", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "ktt", "Tl", "Tl", "Ett", "Ve", "Ve", "Ve", "Ve", "Ve", "Ve", "Ctt", "Stt", "Ttt", "Itt", "Ltt", "Tl", "Tl", "Att", "Ott", "Rtt", "Mtt", "Ntt", "pi", "pi", "pi", "pi", "pi", "pi", "pi", "pi", "gi", "gi", "gi", "gi", "gi", "gi", "gi", "gi"];
+
+// Where a per-key badge (the multi-behaviour star) sits, relative to the shape's legend anchor.
+//
+// The legend anchor is inside every silhouette by construction: it is where the cap's text is
+// drawn. A badge pinned to the BOX's corner is not: the inner-column caps (gtt, btt, ktt, Ett)
+// have their bottom-left cut away, so `bottom: 2px; left: 3px` landed on the neighbouring key or
+// the module bay, and on the right half that corner faces the centre of the board (SCRUM-111).
+// Measured against every path in SHAPES (tests/unit/starAnchor.test.js): an offset of -20% of
+// the box width and +20% of its height from the legend point is inside all of them, with 10% to
+// spare in each direction.
+export const BADGE_DX = -20;
+export const BADGE_DY = 20;
+export function badgeAnchor(shape) {
+  const l = shape?.legend || { top: "50%", left: "50%" };
+  return { top: `calc(${l.top} + ${BADGE_DY}%)`, left: `calc(${l.left} + ${BADGE_DX}%)` };
+}

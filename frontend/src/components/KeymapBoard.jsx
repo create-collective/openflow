@@ -5,7 +5,7 @@ import { ActionIcon, iconNameFor } from "../lib/icons";
 import { deviceColor } from "../lib/color";
 import LayersIcon from "./LayersIcon";
 import WindowsIcon from "./WindowsIcon";
-import { SHAPES, POS_SHAPE } from "../lib/keyshapes";
+import { SHAPES, POS_SHAPE, badgeAnchor } from "../lib/keyshapes";
 import {
   LEFT_COLS, RIGHT_COLS, KEY_WRAPPERS, LEFT_THUMBS, RIGHT_THUMBS,
   LEFT_LEDS, RIGHT_LEDS, KEY_UNIT, REM,
@@ -139,7 +139,11 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, 
         </span>
       )}
       {behaviours > 1 && (
-        <span className="kc-multi" title={`${behaviours} behaviours: ${Object.keys(data.bindings).join(", ")}`}>
+        // Anchored to the cap's own legend point, not the box's corner: the inner-column caps have
+        // their bottom-left cut away, and a corner-pinned star sat outside the silhouette -- on
+        // the neighbour, or on the module bay next to Backspace (SCRUM-111). See keyshapes.badgeAnchor.
+        <span className="kc-multi" style={badgeAnchor(shape)}
+          title={`${behaviours} behaviours: ${Object.keys(data.bindings).join(", ")}`}>
           ★
         </span>
       )}
