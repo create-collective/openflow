@@ -367,14 +367,26 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
     press = next((r for r in rows if r["beh"] in ("press", "tap", None)), rows[0])
     hold = next((r for r in rows if r["beh"] == "hold"), None)
     at, code = press["at"], press["ac"]
+    # Double-tap and tap+hold live in the SECOND bank, but they only ever fire if the primary
+    # record is a hold-tap: that record is what runs the tapping-term state machine that can
+    # notice a second tap. A plain KEY_PRESS fires the instant it is pressed and the second bank
+    # is never consulted. Measured 2026-09-21 (SCRUM-109): Tap A + Double-tap B with Hold empty
+    # produced "aa" on a double tap and never "b"; filling Hold with anything "fixed" it, because
+    # that flipped the primary to a hold-tap. So a key with either second-bank behaviour gets a
+    # hold-tap primary even with no hold action -- with the hold slot EMPTY (four zero bytes),
+    # which is the device's own convention for an unset half (SCRUM-96) and reads back as no
+    # hold. A tap-only key stays a plain keypress: promoting it would add tapping-term latency
+    # to a key that has nothing to wait for.
+    second_bank = any(_behaviour(r) in ("double_tap", "tap_hold") for r in rows)
+    can_be_tap = at in ("key", "modifier", *R.CHORD_ACTION_TYPES) or code == R.EMPTY_KEYPRESS
 
-    if hold is not None:
+    if hold is not None or (second_bank and can_be_tap):
         # OneKey (0x10), not the home-row 0x03 form. Both are hold-tap records with the same
         # body, but the type encodes intent and 0x10 is what NayaFlow writes for a user-created
         # tap+hold -- it is what sits on the board, and what the secondary bank uses. Emitting
         # 0x03 here made a re-flash of a profile READ FROM the device rewrite those two keys.
         tap_kp = _keypress(at, code)
-        hold_kp = _keypress(hold["at"], hold["ac"])
+        hold_kp = _keypress(hold["at"], hold["ac"]) if hold is not None else bytes(4)
         return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
 
     if at in ("key", "modifier", *R.CHORD_ACTION_TYPES):
