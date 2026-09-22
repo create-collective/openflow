@@ -6,6 +6,7 @@ import GestureRow from "../components/modules/GestureRow";
 import ModuleRail from "../components/modules/ModuleRail";
 import ModuleSettingsTab from "../components/modules/ModuleSettingsTab";
 import ModuleVisual from "../components/modules/ModuleVisual";
+import { moduleImg } from "../components/ModuleProfileList";
 import Badge from "../components/ui/Badge";
 import Card from "../components/ui/Card";
 import Disclosure from "../components/ui/Disclosure";
@@ -139,7 +140,7 @@ export default function Modules() {
             <>
               <h2 className="module-title">
                 <img className="module-title-img" alt=""
-                  src={`/modules/v2/${config.type === "TRACK" ? (config.variant === "TRACK_RIGHT" ? "track-right" : "track-left") : config.type.toLowerCase()}.png`} />
+                  src={moduleImg(config.type.toLowerCase(), config.variant === "TRACK_RIGHT" ? "right" : "left")} />
                 {config.name}
                 {sync && (
                   <Badge className="ui-badge-plain module-sync" tone={sync.tone} title={sync.detail}>
