@@ -409,17 +409,17 @@ export default function Settings() {
 
                       Keyboard and module are two buttons because they are two procedures: one
                       swaps an MCUboot slot and can be rolled back, the other writes a filesystem
-                      and cannot. The module one has never been run on hardware and says so
-                      rather than offering to. */}
+                      and cannot, and they want opposite setups -- keyboard firmware with no
+                      module docked on either half (SCRUM-114), module firmware with only the left
+                      half connected and one module in its bay. */}
                   <div className="btn-row fw-actions">
-                    <FirmwareUpdate connected={firmwareConnected} />
-                    <ModuleFirmwareUpdate
-                      modules={liveHalves.filter((h) => h.module).map((h) => ({
+                    <FirmwareUpdate
+                      connected={firmwareConnected}
+                      dockedModules={liveHalves.filter((h) => h.module).map((h) => ({
                         side: h.side, type: h.module.type,
-                        firmwareVersion: h.module.firmwareVersion,
                       }))}
-                      reference={firmware?.reference?.moduleFirmware}
                     />
+                    <ModuleFirmwareUpdate connected={firmwareConnected} />
                   </div>
 
                   <h3 className="settings-section tight">Firmware library</h3>

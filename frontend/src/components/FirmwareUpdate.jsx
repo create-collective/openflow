@@ -73,7 +73,7 @@ function sideName(side) {
   return side === "left" ? "Left half" : side === "right" ? "Right half" : "Keyboard";
 }
 
-export default function FirmwareUpdate({ connected }) {
+export default function FirmwareUpdate({ connected, dockedModules = [] }) {
   const [open, setOpen] = useState(false);
   const [plan, setPlan] = useState(null);
   const [version, setVersion] = useState("");
@@ -189,6 +189,9 @@ export default function FirmwareUpdate({ connected }) {
   const downgrading = Object.entries(chosen)
     .some(([side, on]) => on && targets[side]?.downgrade);
   const gateOff = plan && plan.flashEnabled === false;
+  // SCRUM-114: NayaFlow's rule, "Please ensure NO modules are connected to both of your Create
+  // halves". The backend refuses too; this says it before anyone presses the button.
+  const docked = dockedModules.length > 0;
   const verdict = run && !run.running ? run.verdict : null;
 
   function close() {
@@ -210,9 +213,10 @@ export default function FirmwareUpdate({ connected }) {
       <Button
         variant={downgrading ? "danger" : "primary"}
         onClick={start}
-        disabled={starting || gateOff || !anyChosen}
+        disabled={starting || gateOff || !anyChosen || docked}
         title={
           gateOff ? "Firmware flashing is switched off in this build"
+            : docked ? "Undock the modules first"
             : !anyChosen ? "Choose a half to update"
             : downgrading ? "Writes an older firmware than the half runs now"
             : "Backs the keyboard up, writes the firmware, then verifies it"
@@ -277,6 +281,14 @@ export default function FirmwareUpdate({ connected }) {
                 ))}
               </select>
             </label>
+
+            {docked && (
+              <Notice tone="warn" title="Undock the modules first">
+                Keyboard firmware is updated with no module docked on either half, as NayaFlow
+                requires. Docked now:{" "}
+                {dockedModules.map((m) => `${m.type} on the ${m.side} half`).join(", ")}.
+              </Notice>
+            )}
 
             {(plan.halves || []).length === 0 && (
               <Notice tone="warn" title="No keyboard is connected">

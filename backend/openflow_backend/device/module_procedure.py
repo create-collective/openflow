@@ -537,30 +537,42 @@ def _program(svc, log: fp.RunLog, pre: dict) -> None:
                 f"the module reports {got or 'nothing'} after programming, not {pre['target']}.")
 
 
+# The blockers Force Update lifts: it exists for the module that does not identify (or is not
+# detected at all). A Track is never lifted -- forcing a Track as a Touch or Tune would give it the
+# wrong app, which is the exact failure Force Update was used to repair.
+FORCE_LIFTS = ("no-module", "unknown-module")
+
+
 def plan(svc, catalog: list, firmware_root: Path | None, version: str | None = None) -> dict:
     """What an update WOULD do, for the dialog, and everything that would stop it. Reads only.
 
     Never raises for a board that is not ready: every precondition the run enforces is reported
-    here as a plain-language `blockers` entry instead, so the screen can say what to do before
-    anyone presses Go -- plug in the left half, unplug the right one, dock the module.
+    here as a `blockers` entry, {code, text}, the text in plain language so the screen can say
+    what to do before anyone presses Go -- plug in the left half, unplug the right one, dock the
+    module. The code lets the screen tell which ones Force Update lifts (FORCE_LIFTS).
     """
     out: dict = {"left": None, "rightConnected": _present(svc, "right"), "module": None,
                  "storedBundle": None, "keyboardFirmware": None, "versions": [], "target": None,
-                 "blockers": [], "forceTypes": list(FWUP_TYPES)}
+                 "blockers": [], "forceTypes": list(FWUP_TYPES), "forceLifts": list(FORCE_LIFTS)}
     blockers = out["blockers"]
+
+    def block(code, text):
+        blockers.append({"code": code, "text": text})
+
     if not _present(svc, "left"):
-        blockers.append("Plug in the LEFT half's USB cable. Module firmware goes through the left "
-                        "half.")
+        block("left-missing", "Plug in the LEFT half's USB cable. Module firmware goes through the "
+                              "left half.")
         return out
     if out["rightConnected"]:
-        blockers.append("Unplug the RIGHT half's USB cable. Modules are updated with only the left "
-                        "half connected, as NayaFlow requires.")
+        block("right-connected", "Unplug the RIGHT half's USB cable. Modules are updated with only "
+                                 "the left half connected, as NayaFlow requires.")
     try:
         ident = fp._identity(svc, "left")
         out["left"] = {"firmwareVersion": ident.get("firmwareVersion"), "port": ident.get("port")}
         out["keyboardFirmware"] = ident.get("firmwareVersion")
     except Exception as e:                          # noqa: BLE001 -- reported, not raised
-        blockers.append(f"The left half did not answer ({type(e).__name__}). Replug it and try again.")
+        block("left-silent", f"The left half did not answer ({type(e).__name__}). Replug it and "
+                             "try again.")
         return out
     try:
         out["module"] = read_module(svc)
@@ -568,18 +580,19 @@ def plan(svc, catalog: list, firmware_root: Path | None, version: str | None = N
         out["module"] = None
     m = out["module"]
     if not m:
-        blockers.append("Dock the module you want to update in the LEFT bay and switch it on. It "
-                        "can take a few seconds to be found, and a Tune up to a minute the first "
-                        "time. A module that is docked but never shows up can be reached with "
-                        "Force Update.")
+        block("no-module", "Dock the module you want to update in the LEFT bay and switch it on. "
+                           "It can take a few seconds to be found, and a Tune up to a minute the "
+                           "first time. A module that is docked but never shows up can be reached "
+                           "with Force Update.")
     elif m.get("docked") not in (None, "left"):
-        blockers.append(f"The module reports the {m.get('docked')} bay; move it to the LEFT bay.")
+        block("wrong-bay", f"The module reports the {m.get('docked')} bay; move it to the LEFT bay.")
     elif m.get("type") == "Track":
-        blockers.append("A Track's programming byte has not been captured from NayaFlow yet, so "
-                        "OpenFlow will not update a Track. Use NayaFlow for this one for now.")
+        block("track", "A Track's programming byte has not been captured from NayaFlow yet, so "
+                       "OpenFlow will not update a Track. Use NayaFlow for this one for now.")
     elif m.get("type") not in FWUP_TYPES:
-        blockers.append(f"The docked module does not identify as a known type ({m.get('type')}). "
-                        "If it is a Touch or a Tune, Force Update can reprogram it.")
+        block("unknown-module", f"The docked module does not identify as a known type "
+                                f"({m.get('type')}). If it is a Touch or a Tune, Force Update can "
+                                "reprogram it.")
     out["storedBundle"] = _stored_bundle(svc)
 
     kb = out["keyboardFirmware"]
@@ -598,8 +611,8 @@ def plan(svc, catalog: list, firmware_root: Path | None, version: str | None = N
     chosen = next((v for v in out["versions"] if v["version"] == version), None) if version \
         else (fitting[0] if fitting else None)
     if chosen is None:
-        blockers.append(f"No module firmware we hold works on keyboard firmware {kb}."
-                        if not version else f"Module firmware {version} is not in the catalogue.")
+        block("no-version", f"No module firmware we hold works on keyboard firmware {kb}."
+                            if not version else f"Module firmware {version} is not in the catalogue.")
         return out
     running = (m or {}).get("firmwareVersion")
     have, want = fw._version_tuple(running), fw._version_tuple(chosen["version"])
@@ -611,11 +624,11 @@ def plan(svc, catalog: list, firmware_root: Path | None, version: str | None = N
         "downgrade": bool(have and want and want < have),
         "unchanged": running == chosen["version"] and out["storedBundle"] == chosen["version"]}
     if not chosen["fits"]:
-        blockers.append(f"Module firmware {chosen['version']} needs keyboard firmware "
-                        f"{chosen['needsKeyboard']} or newer; this keyboard runs {kb}. Update the "
-                        "keyboard first.")
+        block("too-new", f"Module firmware {chosen['version']} needs keyboard firmware "
+                         f"{chosen['needsKeyboard']} or newer; this keyboard runs {kb}. Update the "
+                         "keyboard first.")
     if not chosen["present"]:
-        blockers.append(f"Module firmware {chosen['version']} has not been downloaded yet.")
+        block("not-downloaded", f"Module firmware {chosen['version']} has not been downloaded yet.")
     return out
 
 

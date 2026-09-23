@@ -1,70 +1,91 @@
-// Module firmware is its own button because it is its own procedure (owner, 2026-09-21).
-//
-// The keyboard flash swaps an MCUboot slot: the old image stays put until the new one has been
-// written and its hash checked, so a failure changes nothing. A module bundle is a LittleFS
-// filesystem written into the left half's modules partition — no slot, no swap, nothing to roll
-// back to. It has never been run on hardware, and the dialog's job is to say so plainly rather
-// than to be a greyed-out button with no explanation.
-import { render, screen } from "@testing-library/react";
+// The module firmware dialog (owner, 2026-09-23): read the board, say what stops an update in
+// plain words, offer the versions this keyboard can take, start the procedure, and -- while it
+// runs -- ask for the cable replug the moment the backend asks for one.
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ModuleFirmwareUpdate from "../../src/components/ModuleFirmwareUpdate";
 import { api } from "../../src/lib/api";
+import { resetFlashProgressForTests, seedFlashProgress } from "../../src/lib/deviceStream";
 
-const LIBRARY = {
-  dir: "C:/fw",
-  source: { url: "https://example.test/fw", authenticated: false },
-  images: [
-    { path: "v1.21.0/module/FlashMemory.bin", target: "module", label: "2.3.3", present: true },
-    { path: "v1.20.0/module/FlashMemory.bin", target: "module", label: "2.3.2", present: false },
-    { path: "v1.25.1/kb_fwl.bin", target: "keyboard", label: "3.41.0", present: true },
+const READY = {
+  flashEnabled: true, keyboardFirmware: "3.41.0", storedBundle: "2.3.2", rightConnected: false,
+  module: { type: "Touch", address: 16, docked: "left", firmwareVersion: "2.3.2" },
+  versions: [
+    { version: "2.3.3", fits: true, needsKeyboard: "3.40.0", present: true, historyPath: "v1.25.1/module/FlashMemory.bin" },
+    { version: "2.3.2", fits: true, needsKeyboard: "3.31.1", present: true, historyPath: "v1.21.0/module/FlashMemory.bin" },
   ],
+  target: { version: "2.3.3", present: true, upload: true, program: true, downgrade: false, unchanged: false },
+  blockers: [], forceTypes: ["Touch", "Tune"], forceLifts: ["no-module", "unknown-module"],
 };
 
+async function openIt(plan = READY) {
+  vi.spyOn(api, "moduleUpdatePlan").mockResolvedValue(plan);
+  render(<ModuleFirmwareUpdate connected />);
+  await userEvent.click(screen.getByRole("button", { name: /update module firmware/i }));
+}
+
 beforeEach(() => {
-  vi.spyOn(api, "firmwareLibrary").mockResolvedValue(LIBRARY);
+  resetFlashProgressForTests();
+  vi.spyOn(api, "flashRun").mockResolvedValue({ run: null });
 });
 afterEach(() => vi.restoreAllMocks());
 
 describe("ModuleFirmwareUpdate", () => {
-  it("is a separate button from the keyboard's", () => {
-    render(<ModuleFirmwareUpdate />);
-    expect(screen.getByRole("button", { name: /update module firmware/i })).toBeEnabled();
+  it("offers the newest version this keyboard can take, and starts it", async () => {
+    const flash = vi.spyOn(api, "flashModuleFirmware").mockResolvedValue({ id: "module-1", running: true, events: [] });
+    await openIt();
+    const go = await screen.findByRole("button", { name: "Update Touch to 2.3.3" });
+    expect(go).toBeEnabled();
+    await userEvent.click(go);
+    expect(flash).toHaveBeenCalledWith({ version: "2.3.3", allow_older: false });
   });
 
-  it("says the write path has never been run, and why that matters here", async () => {
-    render(<ModuleFirmwareUpdate />);
-    await userEvent.click(screen.getByRole("button", { name: /update module firmware/i }));
-
-    expect(await screen.findByText(/Writing module firmware is not enabled/i)).toBeInTheDocument();
-    expect(screen.getByText(/never been run on hardware/i)).toBeInTheDocument();
-    // The reason it is treated differently, not just the fact that it is.
-    expect(screen.getByText(/partly erased/i)).toBeInTheDocument();
-    expect(screen.getByText(/keeps working/i)).toBeInTheDocument();
-    // And it does not offer to do it anyway.
-    expect(screen.queryByRole("button", { name: /^flash/i })).not.toBeInTheDocument();
+  it("lists what stops it in plain words, and does not let it start", async () => {
+    await openIt({ ...READY, rightConnected: true,
+      blockers: [{ code: "right-connected", text: "Unplug the RIGHT half's USB cable." }] });
+    expect(await screen.findByText("Unplug the RIGHT half's USB cable.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Update Touch to 2.3.3" })).toBeDisabled();
   });
 
-  it("shows what is docked and what it runs", async () => {
-    render(<ModuleFirmwareUpdate
-      modules={[{ side: "left", type: "Tune", firmwareVersion: "2.1.2" }]}
-      reference="2.3.3" />);
-    await userEvent.click(screen.getByRole("button", { name: /update module firmware/i }));
-    expect(await screen.findByText("Tune on the left half")).toBeInTheDocument();
-    expect(screen.getByText("2.1.2")).toBeInTheDocument();
-    expect(screen.getByText("Naya ships (reference)")).toBeInTheDocument();
+  it("marks a downgrade, and a version the keyboard is too old for", async () => {
+    await openIt({ ...READY,
+      versions: [{ ...READY.versions[0], fits: false }, READY.versions[1]],
+      target: { ...READY.target, version: "2.3.2", downgrade: true } });
+    expect(await screen.findByText(/older module firmware than it runs now/i)).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /2.3.3 · needs keyboard 3.40.0 or newer/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Downgrade Touch to 2.3.2" })).toBeEnabled();
   });
 
-  it("counts the bundles held, because downloading one is allowed even though flashing is not", async () => {
-    render(<ModuleFirmwareUpdate />);
-    await userEvent.click(screen.getByRole("button", { name: /update module firmware/i }));
-    // Two module bundles catalogued, one held — and the keyboard image is not counted.
-    expect(await screen.findByText(/1 of 2 module bundles downloaded/i)).toBeInTheDocument();
+  it("force-updates a module that does not identify, as the type the person names", async () => {
+    const flash = vi.spyOn(api, "flashModuleFirmware").mockResolvedValue({ id: "module-2", running: true, events: [] });
+    await openIt({ ...READY, module: { type: "Unknown (addr 0x4A)", address: 74, firmwareVersion: "2.3.3" },
+      storedBundle: "2.3.3", target: { ...READY.target, unchanged: true },
+      blockers: [{ code: "unknown-module", text: "The docked module does not identify as a known type." }] });
+    expect(await screen.findByText(/does not identify as a known type/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: /force update/i }));
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: /the docked module is a/i }), "Tune");
+    await userEvent.click(screen.getByRole("button", { name: "Force update as Tune to 2.3.3" }));
+    expect(flash).toHaveBeenCalledWith({ version: "2.3.3", allow_older: false, force_type: "Tune" });
   });
 
-  it("says nothing is docked rather than showing an empty list", async () => {
-    render(<ModuleFirmwareUpdate modules={[]} />);
-    await userEvent.click(screen.getByRole("button", { name: /update module firmware/i }));
-    expect(await screen.findByText(/No module is docked/i)).toBeInTheDocument();
+  it("asks for the replug, large, while the run is waiting on it, and drops it when the half is back", async () => {
+    await openIt();
+    act(() => seedFlashProgress({ id: "module-3", running: true, events: [
+      { seq: 1, step: "bundle.restart", phase: "start", label: "Waiting for the keyboard to restart" },
+      { seq: 2, step: "replug", phase: "action", label: "Unplug", detail: "Unplug its USB cable" },
+    ] }));
+    expect(await screen.findByText(/count to ten, and plug it back in/i)).toBeInTheDocument();
+    act(() => seedFlashProgress({ id: "module-3", running: true, events: [
+      { seq: 3, step: "replug", phase: "ok", label: "Unplug", detail: "the left half is back" },
+    ] }));
+    expect(screen.queryByText(/count to ten, and plug it back in/i)).not.toBeInTheDocument();
+  });
+
+  it("ignores a KEYBOARD run on the same stream", async () => {
+    await openIt();
+    act(() => seedFlashProgress({ id: "flash-9", running: true, events: [
+      { seq: 1, step: "upload", phase: "start", label: "Writing the firmware" }] }));
+    expect(await screen.findByRole("button", { name: "Update Touch to 2.3.3" })).toBeInTheDocument();
   });
 });

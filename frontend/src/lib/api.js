@@ -52,6 +52,12 @@ export const api = {
   flashFirmware: (targets, allowOlder = false) =>
     req("POST", "/rpc/flash-procedure", { targets, allow_older: allowOlder }),
   flashRun: (since = 0) => req("GET", `/api/flash-runs/current?since=${since}`),
+  // Module firmware (backend device/module_procedure.py): what an update would do and what stops
+  // it, read-only; then the run, which returns its opening snapshot and streams like a keyboard
+  // flash. body: { version, allow_older, force_type }.
+  moduleUpdatePlan: (version = "") =>
+    req("GET", "/api/module-update-plan" + (version ? "?version=" + encodeURIComponent(version) : "")),
+  flashModuleFirmware: (body) => req("POST", "/rpc/module-flash-procedure", body),
   // The catalogue joined against what this machine holds, and the download that closes the gap.
   // Images are not shipped with OpenFlow; each one is verified against the catalogue's sha256
   // before it is kept.

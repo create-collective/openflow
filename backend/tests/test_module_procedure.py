@@ -495,8 +495,9 @@ def test_force_update_fails_if_the_module_still_does_not_identify(rig):
 def test_the_plan_names_every_blocker_in_plain_words(rig):
     kb = FakeKeyboard(right=True, module=None)
     p = mp.plan(kb, CATALOG, rig["root"])
-    text = " ".join(p["blockers"])
+    text = " ".join(b["text"] for b in p["blockers"])
     assert "Unplug the RIGHT half" in text and "Dock the module" in text
+    assert {b["code"] for b in p["blockers"]} == {"right-connected", "no-module"}
 
 
 def test_the_plan_for_a_ready_board_offers_the_newest_that_fits_and_marks_a_downgrade(rig):
@@ -512,14 +513,16 @@ def test_the_plan_for_a_ready_board_offers_the_newest_that_fits_and_marks_a_down
 def test_the_plan_refuses_a_bundle_newer_than_the_keyboard(rig):
     kb = FakeKeyboard(kb="3.35.4", stored="2.3.2", module=("Touch", 0x10, "2.3.2"))
     p = mp.plan(kb, CATALOG, rig["root"], "2.3.3")
-    assert any("needs keyboard firmware 3.40.0 or newer" in b for b in p["blockers"])
+    assert any(b["code"] == "too-new" and "needs keyboard firmware 3.40.0 or newer" in b["text"]
+               for b in p["blockers"])
 
 
 def test_the_plan_turns_a_track_away_and_offers_force_for_an_unknown_module(rig):
     p = mp.plan(FakeKeyboard(module=("Track", 0x20, "2.1.2")), CATALOG, rig["root"])
-    assert any("Track's programming byte" in b for b in p["blockers"])
+    assert [b["code"] for b in p["blockers"]] == ["track"] and "track" not in p["forceLifts"]
     p = mp.plan(FakeKeyboard(module=("Tune", 0x4A, "2.3.3")), CATALOG, rig["root"])
-    assert any("Force Update" in b for b in p["blockers"]) and p["forceTypes"] == ["Touch", "Tune"]
+    assert [b["code"] for b in p["blockers"]] == ["unknown-module"]
+    assert p["forceTypes"] == ["Touch", "Tune"] and "unknown-module" in p["forceLifts"]
 
 
 # --- the upload primitive ------------------------------------------------------------------------ #
