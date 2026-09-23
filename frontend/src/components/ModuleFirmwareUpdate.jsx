@@ -300,8 +300,8 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
                   keyboard restarts. <strong>Keep the module docked</strong> until it finishes.
                 </li>
                 <li>
-                  After a restart the left half sometimes does not reconnect to this computer. If
-                  that happens, this window asks you to unplug its USB cable, count to ten and plug
+                  After a restart the left half sometimes does not reconnect to the computer. If
+                  that happens, the window asks you to unplug its USB cable, count to ten and plug
                   it back in. It runs on its battery, so nothing is interrupted.
                 </li>
               </ul>
@@ -315,7 +315,7 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
             {replug ? (
               <Notice tone="err" icon="warn" className="fw-replug"
                 title="Unplug the left half's USB cable, count to ten, and plug it back in">
-                The left half restarted and has not come back to this computer. It is powered by its
+                The left half restarted and has not come back to the computer. It is powered by its
                 battery, so this is not a power cycle and nothing being written is interrupted. This
                 message goes away as soon as it is back.
               </Notice>
