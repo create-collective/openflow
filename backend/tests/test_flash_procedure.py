@@ -589,6 +589,18 @@ def test_recovery_does_not_blame_the_bootloader_for_a_half_that_left_it(wired, m
     assert "still in the bootloader after five minutes" not in text
 
 
+def test_a_keyboard_flash_refuses_while_a_module_is_docked(wired, monkeypatch):
+    """SCRUM-114: NayaFlow's rule, 'Please ensure NO modules are connected to both of your Create
+    halves'. Every earlier flash had empty bays by coincidence."""
+    monkeypatch.setattr(P, "docked_module",
+                        lambda svc, side: {"type": "Touch", "address": 0x11} if side == "right" else None)
+    calls = []
+    wired["flash"] = lambda *a, **k: calls.append(1)
+    r = _run(wired, {"left": "kb_fwl.bin"})
+    assert r["ok"] is False and "Touch is docked on the right half" in r["summary"]
+    assert calls == []
+
+
 def test_the_lights_are_put_back_after_the_flash(wired):
     """A half that has been through the bootloader comes back with a runtime lighting state
     that is not what it stores: on 2026-09-22 one half plain white while the other stayed orange,

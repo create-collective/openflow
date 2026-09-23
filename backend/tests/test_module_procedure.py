@@ -456,6 +456,72 @@ def test_a_refusal_before_the_bootloader_does_not_wait_for_anything(rig):
     assert "mcuboot.exit" not in log and '"phase": "action"' not in log
 
 
+# --- Force Update (NayaFlow's Danger Zone option, captured 2026-09-23) --------------------------- #
+
+def test_force_update_programs_a_module_that_does_not_identify(rig):
+    """The rescued Tune: docked, answering, but reporting 0x4A (an unknown type). Forced as a
+    Tune it gets 02, and it must come back identifying as a Tune."""
+    kb = FakeKeyboard(stored="2.3.3", module=("Tune", 0x4A, "2.3.3"))
+
+    real = kb._with_transport
+
+    def heals(side, fn, serial=None):
+        out = real(side, fn, serial)
+        if kb.fwup_bytes():
+            kb.module["address"] = 0x40                     # the right app is back
+        return out
+    kb._with_transport = heals
+    verdict, calls, log = _run(rig, kb, force_type="Tune")
+    assert verdict["ok"], verdict
+    assert kb.fwup_bytes() == [b"\x02"] and calls == []    # bundle already held: no upload
+    assert "forced" in log
+
+
+def test_force_update_refuses_a_type_whose_byte_was_never_captured(rig):
+    kb = FakeKeyboard(stored="2.3.3", module=("Tune", 0x4A, "2.3.3"))
+    verdict, calls, _ = _run(rig, kb, force_type="Track")
+    assert not verdict["ok"] and "Force Update can program" in verdict["summary"]
+    assert kb.fwup_bytes() == [] and calls == []
+
+
+def test_force_update_fails_if_the_module_still_does_not_identify(rig):
+    kb = FakeKeyboard(stored="2.3.3", module=("Tune", 0x4A, "2.3.3"))   # stays 0x4A
+    verdict, _, _ = _run(rig, kb, force_type="Tune")
+    assert not verdict["ok"] and "no longer identifies as a Tune" in verdict["summary"]
+
+
+# --- the plan the dialog reads -------------------------------------------------------------------- #
+
+def test_the_plan_names_every_blocker_in_plain_words(rig):
+    kb = FakeKeyboard(right=True, module=None)
+    p = mp.plan(kb, CATALOG, rig["root"])
+    text = " ".join(p["blockers"])
+    assert "Unplug the RIGHT half" in text and "Dock the module" in text
+
+
+def test_the_plan_for_a_ready_board_offers_the_newest_that_fits_and_marks_a_downgrade(rig):
+    kb = FakeKeyboard(stored="2.3.3", module=("Touch", 0x10, "2.3.3"))
+    p = mp.plan(kb, CATALOG, rig["root"])
+    assert p["blockers"] == [] and p["target"]["version"] == "2.3.3" and p["target"]["unchanged"]
+    p = mp.plan(kb, CATALOG, rig["root"], "2.3.2")
+    assert p["blockers"] == []
+    assert p["target"]["downgrade"] and p["target"]["upload"] and p["target"]["program"]
+    assert {v["version"]: v["fits"] for v in p["versions"]}["2.3.3"] is True
+
+
+def test_the_plan_refuses_a_bundle_newer_than_the_keyboard(rig):
+    kb = FakeKeyboard(kb="3.35.4", stored="2.3.2", module=("Touch", 0x10, "2.3.2"))
+    p = mp.plan(kb, CATALOG, rig["root"], "2.3.3")
+    assert any("needs keyboard firmware 3.40.0 or newer" in b for b in p["blockers"])
+
+
+def test_the_plan_turns_a_track_away_and_offers_force_for_an_unknown_module(rig):
+    p = mp.plan(FakeKeyboard(module=("Track", 0x20, "2.1.2")), CATALOG, rig["root"])
+    assert any("Track's programming byte" in b for b in p["blockers"])
+    p = mp.plan(FakeKeyboard(module=("Tune", 0x4A, "2.3.3")), CATALOG, rig["root"])
+    assert any("Force Update" in b for b in p["blockers"]) and p["forceTypes"] == ["Touch", "Tune"]
+
+
 # --- the upload primitive ------------------------------------------------------------------------ #
 
 def test_require_module_pairing_accepts_the_shipped_pair_only():

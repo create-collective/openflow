@@ -21,6 +21,7 @@
   "GET /api/macros",
   "GET /api/module-firmware-file",
   "GET /api/module-gestures",
+  "GET /api/module-update-plan",
   "GET /api/module-variants",
   "GET /api/modules",
   "GET /api/pairing-repair/plan",

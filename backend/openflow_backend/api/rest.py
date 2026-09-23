@@ -439,9 +439,11 @@ async def module_flash_procedure_run(body: dict = Body(default={})) -> dict:
     svc = get_service()
     catalog = _firmware_catalog_raw()
     version = body.get("version") or None
+    force = body.get("force_type") or None
     kwargs = {"version": str(version) if version else None,
               "allow_older": bool(body.get("allow_older", False)),
               "force_upload": bool(body.get("force_upload", False)),
+              "force_type": str(force) if force else None,
               "firmware_root": firmware_dir()}
 
     if bool(body.get("wait", False)):
@@ -459,6 +461,22 @@ async def module_flash_procedure_run(body: dict = Body(default={})) -> dict:
                           run_dir, work).snapshot()
     except runs.RunBusy as e:
         raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.get("/api/module-update-plan")
+async def module_update_plan(version: str = "") -> dict:
+    """What a module update would do and what would stop it, for the dialog (reads only): the
+    left half and its firmware, whether the right half is still plugged in, the docked module and
+    its version, the bundle the keyboard holds, every bundle with whether this keyboard can take
+    it and whether it is downloaded, and the chosen target -- upload or not, program or not,
+    downgrade or not. Preconditions come back as plain sentences in `blockers`."""
+    from ..config import firmware_dir
+    from ..device import module_procedure as mproc
+    svc = get_service()
+    out = await run_in_threadpool(mproc.plan, svc, _firmware_catalog_raw(), firmware_dir(),
+                                  version or None)
+    out["flashEnabled"] = FIRMWARE_FLASH_ENABLED
+    return out
 
 
 @router.get("/api/recovery-read")

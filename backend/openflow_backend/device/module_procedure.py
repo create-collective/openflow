@@ -67,26 +67,8 @@ def _present(svc, side: str) -> bool:
 
 
 def read_module(svc) -> dict | None:
-    """What is docked in the LEFT bay, read the way the live status reads it: presence from
-    MODULE_DETECT, type and side from the dock address, then the module's own firmware."""
-    from .._vendor.nayactl import constants as C
-    from .._vendor.nayactl.util import format_fw_version
-    from .service import _first_payload
-
-    def go(t, dest, dev):
-        hs = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_SEND_HANDSHAKE, timeout=1.5))
-        det = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_DETECT))
-        if det is None or len(det) < 1 or det[0] == 0:
-            return None
-        addr = hs[1] if hs is not None and len(hs) >= 2 else None
-        if addr is None:
-            ap = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_ADDRESS))
-            addr = ap[0] if ap is not None and len(ap) >= 1 else None
-        fwp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_FW_VERSION))
-        return {"address": addr, "type": C.module_type_from_address(addr),
-                "docked": C.module_side_from_address(addr),
-                "firmwareVersion": format_fw_version(fwp) if fwp else None}
-    return svc._with_transport("left", go)
+    """What is docked in the LEFT bay (flash_procedure.docked_module)."""
+    return fp.docked_module(svc, "left")
 
 
 def _find_module(svc, timeout: float, *, want_version: bool = True) -> dict | None:
@@ -226,8 +208,18 @@ def bundle_path(entry: dict, firmware_root: Path | None) -> Path:
 # --- the procedure ----------------------------------------------------------------------------- #
 
 def _preflight(svc, log: fp.RunLog, catalog: list, version: str | None, allow_older: bool,
-               force_upload: bool, firmware_root: Path | None) -> dict:
-    """Every precondition, before anything is written. Returns what the run needs."""
+               force_upload: bool, firmware_root: Path | None,
+               force_type: str | None = None) -> dict:
+    """Every precondition, before anything is written. Returns what the run needs.
+
+    `force_type` is NayaFlow's Danger Zone "Force Update" (captured 2026-09-23): the same
+    sequence, with the type byte the user picked instead of the one read off the dock -- for a
+    module that does not identify properly, which is exactly what it rescued (a Tune reporting
+    0x4A after being given the wrong app). The module need not be recognised, or even detected;
+    afterwards it must identify as the forced type."""
+    if force_type is not None and force_type not in FWUP_TYPES:
+        raise ModuleRefused(f"Force Update can program a {' or a '.join(FWUP_TYPES)} (the types "
+                            f"whose byte has been captured), not {force_type}. Nothing was written.")
     if not _present(svc, "left"):
         raise ModuleRefused("the left half is not connected. Plug in the LEFT half's USB cable.")
     if _present(svc, "right"):
@@ -236,8 +228,11 @@ def _preflight(svc, log: fp.RunLog, catalog: list, version: str | None, allow_ol
             "updated with only the LEFT half connected, as NayaFlow requires. Nothing was written.")
     ident = fp._identity(svc, "left")
     kb = ident.get("firmwareVersion")
-    module = _find_module(svc, 10.0)
-    if module is None:
+    module = _find_module(svc, 10.0, want_version=force_type is None)
+    if force_type is not None:
+        module = dict(module or {"type": None, "address": None, "docked": "left",
+                                 "firmwareVersion": None})
+    elif module is None:
         raise ModuleRefused(
             "no module is docked on the left half, or it is switched off. Dock the module you want "
             "to update in the LEFT bay and switch it on; it can take a few seconds to be found, "
@@ -245,33 +240,39 @@ def _preflight(svc, log: fp.RunLog, catalog: list, version: str | None, allow_ol
     if module.get("docked") not in (None, "left"):
         raise ModuleRefused(f"the module reports the {module.get('docked')} bay; it must be in the "
                             "LEFT bay. Nothing was written.")
-    if module.get("type") == "Track":
+    kind = force_type or module.get("type")
+    # Forced: whatever the module reads as, the user named it (that is what Force Update is for).
+    if force_type is None and module.get("type") == "Track":
         raise ModuleRefused(
             "a Track's programming byte has not been observed from NayaFlow yet, and guessing it "
             "is how a Tune was given the wrong module app on 2026-09-23. Update this Track with "
             "NayaFlow for now. Nothing was written.")
-    if module.get("type") not in FWUP_TYPES:
+    if force_type is None and module.get("type") not in FWUP_TYPES:
         raise ModuleRefused(f"the docked module reads as {module.get('type')}; OpenFlow can update "
-                            "a Touch or a Tune. Nothing was written.")
+                            "a Touch or a Tune, and Force Update can reprogram one that no longer "
+                            "identifies. Nothing was written.")
     entry = choose_bundle(catalog, kb, version)
     target = entry.get("moduleFirmware")
     path = bundle_path(entry, firmware_root)
     stored = _stored_bundle(svc)
     running = module.get("firmwareVersion")
     have, want = fw._version_tuple(running), fw._version_tuple(target)
-    if have and want and want < have and not allow_older:
+    if have and want and want < have and not allow_older and force_type is None:
         raise ModuleRefused(
-            f"module firmware {target} is older than the {running} this {module['type']} runs. "
+            f"module firmware {target} is older than the {running} this {kind} runs. "
             "Pass allow_older to say you meant it. Nothing was written.")
     upload = force_upload or stored != target
-    program = running != target
+    program = force_type is not None or running != target
     log.event("preflight.check", "ok", side="left", keyboard=kb, module=module, storedBundle=stored,
               target=target, keyboardRange=entry.get("keyboardRange"), upload=upload,
-              program=program, forceUpload=force_upload,
-              detail=(f"left half {kb}, {module['type']} on {running or 'unknown'}, keyboard holds "
-                      f"module firmware {stored or 'unknown'}, installing {target}"))
+              program=program, forceUpload=force_upload, forceType=force_type,
+              detail=(f"left half {kb}, {module.get('type') or 'no module identified'} on "
+                      f"{running or 'unknown'}, keyboard holds module firmware "
+                      f"{stored or 'unknown'}, installing {target}"
+                      + (f" as a FORCED {force_type}" if force_type else "")))
     return {"ident": ident, "keyboard": kb, "module": module, "entry": entry, "target": target,
-            "path": path, "stored": stored, "upload": upload, "program": program}
+            "path": path, "stored": stored, "upload": upload, "program": program,
+            "kind": kind, "forceType": force_type}
 
 
 def _capture(svc, log: fp.RunLog, run_dir: Path, pre: dict) -> dict:
@@ -467,15 +468,16 @@ def _program(svc, log: fp.RunLog, pre: dict) -> None:
     from .._vendor.nayactl import constants as C
 
     with log.step("module.program", side="left"):
-        module = _find_module(svc, MODULE_FIND_WAIT, want_version=False)
-        if module is None:
+        forced = pre.get("forceType")
+        module = _find_module(svc, 10.0 if forced else MODULE_FIND_WAIT, want_version=False)
+        if module is None and not forced:
             raise fw.UploadRefused("the module was not found after the keyboard restarted. Check it "
                                    "is docked in the LEFT bay and switched on, then run the update "
                                    "again; the keyboard already holds the bundle.")
-        code = FWUP_TYPES.get(module.get("type"))
+        kind = forced or (module or {}).get("type")
+        code = FWUP_TYPES.get(kind)
         if code is None:
-            raise fw.UploadRefused(f"the docked module reads as {module.get('type')}, which cannot "
-                                   "be programmed.")
+            raise fw.UploadRefused(f"the docked module reads as {kind}, which cannot be programmed.")
 
         def go(t, dest, dev):
             try:
@@ -484,8 +486,8 @@ def _program(svc, log: fp.RunLog, pre: dict) -> None:
                 pass
             return True
         svc._with_transport("left", go)
-        log.event("module.program", "note", side="left", module=module.get("type"), code=code,
-                  detail=f"MODULE_FWUP sent ({module.get('type')}, {code:02X}). The module's lights "
+        log.event("module.program", "note", side="left", module=kind, code=code, forced=bool(forced),
+                  detail=f"MODULE_FWUP sent ({kind}{', forced' if forced else ''}, {code:02X}). The module's lights "
                          "go out for 10-15 s while the keyboard programs it, then the keyboard "
                          "restarts. Keep the module docked.")
 
@@ -507,7 +509,7 @@ def _program(svc, log: fp.RunLog, pre: dict) -> None:
         # 03 read 2.3.3 and passed, dark, reporting dock address 0x4A. So the module must also still
         # say it is the type it was -- given time, since a Tune's first update can take up to a
         # minute to settle.
-        want_type = pre["module"].get("type")
+        want_type = pre.get("kind") or pre["module"].get("type")
         deadline = time.monotonic() + MODULE_FIND_WAIT
         module = None
         while True:
@@ -535,9 +537,92 @@ def _program(svc, log: fp.RunLog, pre: dict) -> None:
                 f"the module reports {got or 'nothing'} after programming, not {pre['target']}.")
 
 
+def plan(svc, catalog: list, firmware_root: Path | None, version: str | None = None) -> dict:
+    """What an update WOULD do, for the dialog, and everything that would stop it. Reads only.
+
+    Never raises for a board that is not ready: every precondition the run enforces is reported
+    here as a plain-language `blockers` entry instead, so the screen can say what to do before
+    anyone presses Go -- plug in the left half, unplug the right one, dock the module.
+    """
+    out: dict = {"left": None, "rightConnected": _present(svc, "right"), "module": None,
+                 "storedBundle": None, "keyboardFirmware": None, "versions": [], "target": None,
+                 "blockers": [], "forceTypes": list(FWUP_TYPES)}
+    blockers = out["blockers"]
+    if not _present(svc, "left"):
+        blockers.append("Plug in the LEFT half's USB cable. Module firmware goes through the left "
+                        "half.")
+        return out
+    if out["rightConnected"]:
+        blockers.append("Unplug the RIGHT half's USB cable. Modules are updated with only the left "
+                        "half connected, as NayaFlow requires.")
+    try:
+        ident = fp._identity(svc, "left")
+        out["left"] = {"firmwareVersion": ident.get("firmwareVersion"), "port": ident.get("port")}
+        out["keyboardFirmware"] = ident.get("firmwareVersion")
+    except Exception as e:                          # noqa: BLE001 -- reported, not raised
+        blockers.append(f"The left half did not answer ({type(e).__name__}). Replug it and try again.")
+        return out
+    try:
+        out["module"] = read_module(svc)
+    except Exception:                               # noqa: BLE001
+        out["module"] = None
+    m = out["module"]
+    if not m:
+        blockers.append("Dock the module you want to update in the LEFT bay and switch it on. It "
+                        "can take a few seconds to be found, and a Tune up to a minute the first "
+                        "time. A module that is docked but never shows up can be reached with "
+                        "Force Update.")
+    elif m.get("docked") not in (None, "left"):
+        blockers.append(f"The module reports the {m.get('docked')} bay; move it to the LEFT bay.")
+    elif m.get("type") == "Track":
+        blockers.append("A Track's programming byte has not been captured from NayaFlow yet, so "
+                        "OpenFlow will not update a Track. Use NayaFlow for this one for now.")
+    elif m.get("type") not in FWUP_TYPES:
+        blockers.append(f"The docked module does not identify as a known type ({m.get('type')}). "
+                        "If it is a Touch or a Tune, Force Update can reprogram it.")
+    out["storedBundle"] = _stored_bundle(svc)
+
+    kb = out["keyboardFirmware"]
+    bundles = sorted((e for e in catalog if e.get("type") == "littlefs"
+                      and e.get("target") == "module" and e.get("flashable")),
+                     key=lambda e: fw._version_tuple(e.get("moduleFirmware")) or (), reverse=True)
+    for e in bundles:
+        rel = e.get("historyPath")
+        present = bool(firmware_root and rel and (Path(firmware_root) / rel).is_file())
+        out["versions"].append({
+            "version": e.get("moduleFirmware"), "fits": fw.module_bundle_fits(e, kb),
+            "needsKeyboard": (e.get("keyboardRange") or {}).get("from"),
+            "present": present, "historyPath": rel,
+            "fetchable": not present and bool(rel and e.get("blobSha256"))})
+    fitting = [v for v in out["versions"] if v["fits"]]
+    chosen = next((v for v in out["versions"] if v["version"] == version), None) if version \
+        else (fitting[0] if fitting else None)
+    if chosen is None:
+        blockers.append(f"No module firmware we hold works on keyboard firmware {kb}."
+                        if not version else f"Module firmware {version} is not in the catalogue.")
+        return out
+    running = (m or {}).get("firmwareVersion")
+    have, want = fw._version_tuple(running), fw._version_tuple(chosen["version"])
+    out["target"] = {
+        "version": chosen["version"], "present": chosen["present"],
+        "fetchable": chosen["fetchable"], "historyPath": chosen["historyPath"],
+        "upload": out["storedBundle"] != chosen["version"],
+        "program": running != chosen["version"],
+        "downgrade": bool(have and want and want < have),
+        "unchanged": running == chosen["version"] and out["storedBundle"] == chosen["version"]}
+    if not chosen["fits"]:
+        blockers.append(f"Module firmware {chosen['version']} needs keyboard firmware "
+                        f"{chosen['needsKeyboard']} or newer; this keyboard runs {kb}. Update the "
+                        "keyboard first.")
+    if not chosen["present"]:
+        blockers.append(f"Module firmware {chosen['version']} has not been downloaded yet.")
+    return out
+
+
 def run(svc, catalog: list, *, version: str | None = None, allow_older: bool = False,
         force_upload: bool = False, firmware_root: Path | None = None,
-        log_dir: Path | None = None, upload_fn=None, on_event=None) -> dict:
+        log_dir: Path | None = None, upload_fn=None, on_event=None,
+        force_type: str | None = None) -> dict:
     """Update the module docked on the left half. `version` defaults to the bundle that shipped
     with the left half's firmware. `force_upload` writes the bundle even when the keyboard
     already holds it (the upload is otherwise skipped, as NayaFlow skips it)."""
@@ -548,7 +633,8 @@ def run(svc, catalog: list, *, version: str | None = None, allow_older: bool = F
     run_dir.mkdir(parents=True, exist_ok=True)
     log = fp.RunLog(run_dir / "run.log",
                     {"kind": "module", "sides": ["left"], "version": version,
-                     "allowOlder": allow_older, "forceUpload": force_upload},
+                     "allowOlder": allow_older, "forceUpload": force_upload,
+                     "forceType": force_type},
                     on_event=on_event)
 
     # The service lock for the whole run, as the keyboard procedure holds it: nothing else may
@@ -559,9 +645,10 @@ def run(svc, catalog: list, *, version: str | None = None, allow_older: bool = F
     track = {"in_boot": False}
     try:
         with log.step("preflight.check", side="left"):
-            pre = _preflight(svc, log, catalog, version, allow_older, force_upload, firmware_root)
+            pre = _preflight(svc, log, catalog, version, allow_older, force_upload, firmware_root,
+                             force_type)
         if not pre["upload"] and not pre["program"]:
-            return log.finish(True, f"the {pre['module']['type']} already runs {pre['target']} and "
+            return log.finish(True, f"the {pre['kind']} already runs {pre['target']} and "
                                     "the keyboard holds that bundle; nothing to do")
         with log.step("preflight.capture"):
             before = _capture(svc, log, run_dir, pre)
@@ -616,5 +703,5 @@ def run(svc, catalog: list, *, version: str | None = None, allow_older: bool = F
         return log.finish(False, f"module firmware {pre['target']} is installed, but "
                                  f"{len(log.failures)} thing(s) on the keyboard do not match "
                                  "the backup")
-    return log.finish(True, f"the {pre['module']['type']} runs module firmware {pre['target']}; "
+    return log.finish(True, f"the {pre['kind']} runs module firmware {pre['target']}; "
                             "the keyboard matches its backup")

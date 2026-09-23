@@ -262,6 +262,50 @@ def _identity(svc, side: str) -> dict:
     return svc._with_transport(side, go)
 
 
+def docked_module(svc, side: str) -> dict | None:
+    """What is docked in this half's bay, read the way the live status reads it: presence from
+    MODULE_DETECT, type and side from the dock address, then the module's own firmware. None
+    when the bay is empty. Used by both procedures: the module procedure needs exactly one module
+    in the LEFT bay, and a keyboard flash needs none in either (SCRUM-114)."""
+    from .._vendor.nayactl import constants as C
+    from .._vendor.nayactl.util import format_fw_version
+    from .service import _first_payload
+
+    def go(t, dest, dev):
+        hs = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_SEND_HANDSHAKE, timeout=1.5))
+        det = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_DETECT))
+        if det is None or len(det) < 1 or det[0] == 0:
+            return None
+        addr = hs[1] if hs is not None and len(hs) >= 2 else None
+        if addr is None:
+            ap = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_ADDRESS))
+            addr = ap[0] if ap is not None and len(ap) >= 1 else None
+        fwp = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_GET_FW_VERSION))
+        return {"address": addr, "type": C.module_type_from_address(addr),
+                "docked": C.module_side_from_address(addr),
+                "firmwareVersion": format_fw_version(fwp) if fwp else None}
+    return svc._with_transport(side, go)
+
+
+def refuse_docked_modules(svc, sides: tuple[str, ...], log: RunLog | None = None) -> None:
+    """SCRUM-114: keyboard firmware is written with NO module docked on either half, as NayaFlow
+    requires ("Please ensure NO modules are connected to both of your Create halves"). Every
+    keyboard flash before 2026-09-23 happened to run with empty bays, by coincidence; the rule
+    had never been written down, so it is enforced here rather than trusted to luck."""
+    for side in sides:
+        try:
+            m = docked_module(svc, side)
+        except Exception:                           # noqa: BLE001 -- an unreadable bay is not a refusal
+            continue
+        if m:
+            raise fw.UploadRefused(
+                f"a {m.get('type') or 'module'} is docked on the {side} half. Keyboard firmware is "
+                "updated with no modules docked on either half, as NayaFlow requires: undock it "
+                "and start again. Nothing was written.")
+    if log is not None:
+        log.event("preflight.capture", "note", detail="no module docked on " + " or ".join(sides))
+
+
 def _keymap(svc) -> dict:
     """The board's keymap and LED map, as JSON-comparable structures."""
     got = svc.read_keymap("left")
@@ -832,6 +876,7 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
     held = lock.acquire() is not False if lock is not None else False
     try:
         with log.step("preflight.capture"):
+            refuse_docked_modules(svc, ("left", "right"), log)
             before = capture_preflight(svc, sides, log, run_dir)
         with log.step("preflight.verify"):
             saved = json.loads((run_dir / "preflight.json").read_text(encoding="utf-8"))
