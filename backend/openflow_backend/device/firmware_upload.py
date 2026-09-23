@@ -896,38 +896,35 @@ def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
 
 
 def module_range_text(target: dict) -> str:
-    """"3.31.1 up to 3.40.0" / "3.40.0 and later": the keyboard firmware a bundle goes with."""
+    """"3.40.0 or newer": the keyboard firmware a bundle needs."""
     r = target.get("keyboardRange") or {}
-    if not r.get("from"):
-        return "no known keyboard firmware"
-    return f"{r['from']} up to {r['below']}" if r.get("below") else f"{r['from']} and later"
+    return f"{r['from']} or newer" if r.get("from") else "a keyboard firmware we cannot name"
 
 
 def module_bundle_fits(target: dict, keyboard_version: str | None) -> bool:
-    """Is this keyboard firmware inside the bundle's range (catalogue `keyboardRange`)?
+    """Can a keyboard on this firmware take this bundle? Only if it is at least as new as the
+    first keyboard firmware the bundle shipped with (catalogue `keyboardRange.from`, built from
+    the official and beta releases).
 
-    The range runs from the first keyboard version the bundle shipped with up to, not including,
-    the first keyboard version the NEXT bundle shipped with, across official and beta releases
-    (owner, 2026-09-23). A keyboard version nobody catalogued still has a home: a 3.36.x falls in
-    2.3.2's range because 2.3.2 shipped with 3.35.4 and the beta 3.39.4, and 2.3.3 first shipped
-    with 3.40.0.
+    ONE-SIDED, by the owner's rule of 2026-09-23: modules are backward compatible -- every module
+    here ran 2.1.2 on 3.41.0 keyboards without trouble -- so an OLDER bundle on a NEWER keyboard
+    is fine, and only a bundle newer than the keyboard is refused (2.3.3 first shipped with 3.40.0,
+    so a 3.35.4 keyboard cannot take it). The range's upper end (`below`) stays in the catalogue
+    as the record of where the next bundle took over, and it is what picks the DEFAULT bundle
+    (choose_bundle takes the newest that fits); it no longer refuses anything.
     """
     r = target.get("keyboardRange") or {}
     have, lo = _version_tuple(keyboard_version), _version_tuple(r.get("from"))
-    if not have or not lo or have < lo:
-        return False
-    # _version_tuple gives () for a missing version, so the open end is tested on the field itself.
-    return r.get("below") is None or have < _version_tuple(r["below"])
+    return bool(have and lo and have >= lo)
 
 
 def require_module_pairing(target: dict, keyboard_version: str | None, catalog: list) -> None:
-    """Refuse a module bundle outside the left half's keyboard firmware range.
+    """Refuse a module bundle NEWER than the left half's keyboard firmware can take.
 
-    NayaFlow installs a bundle only on the keyboard firmware it goes with (2.3.3 needs an
-    up-to-date Create Left), and every release carried exactly one of each. We hold the same rule
-    for every version, not just the latest, so a downgrade is a downgrade of the PAIR: the
-    keyboard first, then its modules. The refusal names the bundle that DOES fit, because "not
-    this one" alone leaves the user guessing.
+    NayaFlow installs 2.3.3 only on an up-to-date Create Left; the first keyboard firmware each
+    bundle shipped with is its minimum (module_bundle_fits). Older bundles on newer keyboards are
+    allowed -- modules are backward compatible (owner, 2026-09-23). The refusal names what DOES
+    fit, because "not this one" alone leaves the user guessing.
     """
     if module_bundle_fits(target, keyboard_version):
         return
@@ -936,15 +933,15 @@ def require_module_pairing(target: dict, keyboard_version: str | None, catalog: 
                    and module_bundle_fits(e, keyboard_version)} - {None},
                   key=lambda v: _version_tuple(v) or ())
     want = target.get("versionLabel") or target.get("moduleFirmware")
-    goes = f"module firmware {want} goes with keyboard firmware {module_range_text(target)}"
+    goes = f"module firmware {want} needs keyboard firmware {module_range_text(target)}"
     if not keyboard_version:
         raise UploadRefused(
             f"{goes}, and this left half's firmware version could not be read, so the pairing "
             "cannot be checked. Nothing was written.")
     raise UploadRefused(
         f"{goes}; this left half runs {keyboard_version}. "
-        + (f"Module firmware {' or '.join(fits)} is the one for {keyboard_version}. "
-           if fits else f"No module firmware we hold goes with {keyboard_version}. ")
+        + (f"Module firmware {', '.join(reversed(fits))} works on {keyboard_version}. "
+           if fits else f"No module firmware we hold works on {keyboard_version}. ")
         + "Update the keyboard first to use this one. Nothing was written.")
 
 @dataclass

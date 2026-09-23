@@ -25,9 +25,10 @@ REPLUG_AFTER seconds it asks the user, once, as an `action` event, and keeps wai
 
 PRECONDITIONS, the vendor's own: "Module Firmware can only be updated if the only Naya Device
 connected is a single up-to-date Create Left with the docked module." The right half off USB, the
-module in the LEFT bay, and the bundle one whose keyboard range holds the firmware the left half
-runs (firmware_upload.require_module_pairing; the ranges come from every official and beta
-release, see tools/build_firmware_catalog.py). A right-bay module is moved to the left bay.
+module in the LEFT bay, and a bundle no newer than the left half's firmware can take
+(firmware_upload.require_module_pairing: each bundle's minimum keyboard firmware comes from every
+official and beta release, see tools/build_firmware_catalog.py; older bundles on newer keyboards
+are fine). A right-bay module is moved to the left bay.
 """
 from __future__ import annotations
 
@@ -190,8 +191,8 @@ def await_drop(svc, timeout: float | None = None) -> bool:
 # --- choosing the bundle ---------------------------------------------------------------------- #
 
 def choose_bundle(catalog: list, keyboard_version: str | None, version: str | None) -> dict:
-    """The catalogue entry to install. With no `version`, the bundle whose keyboard range holds
-    the firmware the left half runs -- which is what NayaFlow does, since it carries exactly one."""
+    """The catalogue entry to install. With no `version`, the NEWEST bundle the left half's
+    firmware can take -- on a current keyboard, the one NayaFlow carries."""
     bundles = [e for e in catalog if e.get("type") == "littlefs" and e.get("target") == "module"]
     if version:
         entry = next((e for e in bundles if e.get("moduleFirmware") == version), None)
@@ -205,7 +206,7 @@ def choose_bundle(catalog: list, keyboard_version: str | None, version: str | No
     fits = [e for e in bundles if e.get("flashable") and fw.module_bundle_fits(e, keyboard_version)]
     if not fits:
         raise ModuleRefused(
-            f"no module firmware we hold goes with keyboard firmware {keyboard_version}, so "
+            f"no module firmware we hold works on keyboard firmware {keyboard_version}, so "
             "there is nothing that is known to belong on this keyboard. Nothing was written.")
     return max(fits, key=lambda e: fw._version_tuple(e.get("moduleFirmware")) or ())
 

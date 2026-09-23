@@ -736,8 +736,8 @@ def test_a_bundle_downgrade_needs_allow_older_when_the_installed_version_is_know
 
 
 def test_a_bundle_the_left_halfs_firmware_did_not_ship_with_is_refused(bundle):
-    """2.3.3 goes with 3.40.0 and later; NayaFlow will not put it on anything older, nor do we."""
-    with pytest.raises(fw.UploadRefused, match="goes with keyboard firmware 3.40.0 and later; this left half runs 3.35.4"):
+    """2.3.3 needs 3.40.0 or newer; NayaFlow will not put it on anything older, nor do we."""
+    with pytest.raises(fw.UploadRefused, match="needs keyboard firmware 3.40.0 or newer; this left half runs 3.35.4"):
         fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(fw_version="3.35.4"),
                               slot_info=MODULE_MAP)
 

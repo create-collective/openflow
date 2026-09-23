@@ -303,22 +303,29 @@ def test_a_bundle_the_keyboard_firmware_did_not_ship_with_is_refused_and_the_rig
     kb = FakeKeyboard(kb="3.35.4")
     verdict, calls, _ = _run(rig, kb, version="2.3.3")
     assert not verdict["ok"]
-    assert "goes with keyboard firmware 3.40.0 and later; this left half runs 3.35.4" in verdict["summary"]
-    assert "2.3.2 is the one for 3.35.4" in verdict["summary"]
+    assert "needs keyboard firmware 3.40.0 or newer; this left half runs 3.35.4" in verdict["summary"]
+    assert "2.3.2, 2.2.0, 2.1.2 works on 3.35.4" in verdict["summary"]
     assert calls == [] and kb.fwup_bytes() == []
 
 
 @pytest.mark.parametrize("kb_version,chosen", [("3.36.2", "2.3.2"), ("3.39.9", "2.3.2"),
                                                ("3.40.0", "2.3.3"), ("3.40.4", "2.3.3"),
                                                ("3.41.0", "2.3.3"), ("3.30.0", "2.2.0")])
-def test_a_keyboard_version_nobody_catalogued_still_gets_the_bundle_whose_range_holds_it(kb_version, chosen):
-    """The owner's rule: a bundle goes with every keyboard version from the first it shipped with
-    up to the next bundle's first, not only the handful of versions we have seen."""
+def test_the_default_is_the_newest_bundle_the_keyboard_can_take(kb_version, chosen):
+    """Including keyboard versions nobody catalogued: a 3.36.2 takes 2.3.2, because 2.3.3 needs
+    3.40.0 or newer."""
     assert mp.choose_bundle(CATALOG, kb_version, None)["moduleFirmware"] == chosen
 
 
+@pytest.mark.parametrize("version", ["2.3.2", "2.2.0", "2.1.2"])
+def test_an_older_bundle_on_a_newer_keyboard_is_allowed(version):
+    """Owner's rule, 2026-09-23: modules are backward compatible -- 2.1.2 modules ran on 3.41.0
+    keyboards. Only a bundle NEWER than the keyboard is refused."""
+    assert mp.choose_bundle(CATALOG, "3.41.0", version)["moduleFirmware"] == version
+
+
 def test_below_the_oldest_range_there_is_nothing_to_offer():
-    with pytest.raises(mp.ModuleRefused, match="no module firmware we hold goes with keyboard firmware 3.27.0"):
+    with pytest.raises(mp.ModuleRefused, match="no module firmware we hold works on keyboard firmware 3.27.0"):
         mp.choose_bundle(CATALOG, "3.27.0", None)
 
 
@@ -454,9 +461,11 @@ def test_a_refusal_before_the_bootloader_does_not_wait_for_anything(rig):
 def test_require_module_pairing_accepts_the_shipped_pair_only():
     fw.require_module_pairing(CATALOG[0], "3.41.0", CATALOG)
     fw.require_module_pairing(CATALOG[0], "3.40.4", CATALOG)              # a beta keyboard
-    with pytest.raises(fw.UploadRefused, match="2.1.2 is the one for 3.28.7"):
+    fw.require_module_pairing(CATALOG[1], "3.41.0", CATALOG)              # older bundle, newer kb
+    fw.require_module_pairing(CATALOG[3], "3.41.0", CATALOG)              # 2.1.2 on 3.41.0
+    with pytest.raises(fw.UploadRefused, match="2.1.2 works on 3.28.7"):
         fw.require_module_pairing(CATALOG[0], "3.28.7", CATALOG)
-    with pytest.raises(fw.UploadRefused, match="3.31.1 up to 3.40.0; this left half runs 3.40.0"):
-        fw.require_module_pairing(CATALOG[1], "3.40.0", CATALOG)          # the bound is exclusive
+    with pytest.raises(fw.UploadRefused, match="needs keyboard firmware 3.31.1 or newer"):
+        fw.require_module_pairing(CATALOG[1], "3.29.1", CATALOG)
     with pytest.raises(fw.UploadRefused, match="could not be read"):
         fw.require_module_pairing(CATALOG[0], None, CATALOG)
