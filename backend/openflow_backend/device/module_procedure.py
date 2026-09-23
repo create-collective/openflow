@@ -318,6 +318,8 @@ def _slot_map(state: dict, log: fp.RunLog) -> tuple[dict | None, bool]:
         log.advise(f"the bootloader did not report its slot map after {tries + 1} tries ({why}); "
                    "writing to NayaCore's modules slot 4, as NayaFlow does without asking",
                    step="identify")
+        # What it DID send, for the record: the map answered on 2026-09-16 and not since.
+        log.event("identify", "note", side="left", slotMapReply=repr((info or {}).get("raw"))[:400])
     return info, not answered
 
 

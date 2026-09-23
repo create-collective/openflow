@@ -20,6 +20,8 @@ import struct
 import sys
 from pathlib import Path
 
+import pytest
+
 _BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_BACKEND))
 sys.path.insert(0, str(_BACKEND / "openflow_backend" / "_vendor"))
@@ -268,6 +270,15 @@ def test_slot_info_is_an_image_group_read_with_id_6_and_is_normalised(monkeypatc
     assert (body[0] & 7, struct.unpack(">H", body[4:6])[0], body[7]) == (0, 1, 6)
     assert got["supported"] and [s["uploadImageId"] for s in got["slots"]] == [1, 2, 3]
     assert got["slots"][2] == {"image": 1, "slot": 0, "size": 1048576, "uploadImageId": 3}
+
+
+@pytest.mark.parametrize("reply", [{}, {"rc": 0}, {"images": []}])
+def test_a_slot_info_reply_with_no_slot_list_is_not_a_map(monkeypatch, reply):
+    """2026-09-23: the warranty board's bootloader answered rc 0 with no slots, and counting that
+    as a map made the modules guard refuse over a numbering it had never seen."""
+    monkeypatch.setattr(rec, "_talk", lambda *a, **k: reply)
+    got = rec.slot_info("COM9")
+    assert got["supported"] is None and got["slots"] == [] and "no slot list" in got["error"]
 
 
 def test_slot_info_not_supported_is_an_answer_not_an_error(monkeypatch):

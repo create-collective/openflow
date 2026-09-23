@@ -475,6 +475,13 @@ def slot_info(port: str) -> dict:
     rc = reply.get("rc", 0)
     if rc:
         return {"supported": rc != SMP_ERR_ENOTSUP, "rc": rc, "slots": [], "raw": reply}
+    if not reply.get("images"):
+        # rc 0 with no slot list is not a map. Seen 2026-09-23 on the warranty board's bootloader,
+        # which answered the same read with a full map on 2026-09-16: calling that "supported"
+        # made the modules guard read an empty list as a numbering that disagrees with NayaCore.
+        # Unanswered is what it is; the caller retries, and the module path then falls back.
+        return {"supported": None, "rc": rc, "slots": [], "raw": reply,
+                "error": "the reply carried no slot list"}
     slots = []
     for img in reply.get("images") or []:
         for s in img.get("slots") or []:
