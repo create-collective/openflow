@@ -28,7 +28,7 @@ EXPECT = {
     "reset_dfu":                 (0xEE, 0x10BE, ""),
     "reset_module":              (0xDE, 0x1006, ""),
     "set_host_os":               (0xFE, 0x1005, "01"),   # with os=mac
-    "module_fwup":               (0xDE, 0x1005, "02"),   # with module=track
+    "module_fwup":               (0xDE, 0x1005, "02"),   # with module=tune (captured)
     "module_battery_recovery":   (0xFE, 0x1003, ""),
     "ble_set_pair_address":      (0xBE, 0x1001, "e2f79ee87c18"),
     "ble_unpair_address":        (0xBE, 0x1003, "e2f79ee87c18"),
@@ -39,7 +39,7 @@ EXPECT = {
     "erase_chip":                (0xFA, 0x1006, ""),
 }
 ARGS = {"set_host_os": {"os": "mac"}, "format_partition": {"partition": 1},
-        "module_fwup": {"module": "track"},
+        "module_fwup": {"module": "tune"},
         "ble_set_pair_address": {"mac": "E2:F7:9E:E8:7C:18"},
         "ble_unpair_address": {"mac": "E2:F7:9E:E8:7C:18"}}
 
@@ -48,7 +48,10 @@ def test_module_fwup_takes_the_docked_type_and_nothing_else():
     """NayaCore: "parameter size should be 1", an invalid type becomes AUTO_DETECT. We never send
     an invalid one for the firmware to reinterpret."""
     assert ro.frame_for("module_fwup", {"module": "touch"})[2] == b"\x01"
-    assert ro.frame_for("module_fwup", {"module": 3})[2] == b"\x03"
+    assert ro.frame_for("module_fwup", {"module": "tune"})[2] == b"\x02"    # NOT 03: see FWUP_TYPES
+    for guessed in ({"module": "track"}, {"module": 3}, {"module": 2}):
+        with pytest.raises(ValueError):
+            ro.frame_for("module_fwup", guessed)
     for bad in ({}, {"module": "float"}, {"module": 0}, {"module": 7}):
         with pytest.raises(ValueError, match="touch"):
             ro.frame_for("module_fwup", bad)

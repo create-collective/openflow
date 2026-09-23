@@ -40,10 +40,8 @@ from . import firmware_upload as fw
 from . import flash_procedure as fp
 from . import recovery as rec
 
-# MODULE_FWUP's one payload byte, by the type the dock address decodes to. Touch = 01 is on the
-# wire (2026-09-23); Track and Tune follow nayactl's MODULE_TYPES numbering, which the Touch
-# capture agrees with, and are confirmed the first time each is run.
-FWUP_TYPES = {"Touch": 1, "Track": 2, "Tune": 3}
+# MODULE_FWUP's byte per module type: only values captured from NayaCore (see recovery_ops).
+from .recovery_ops import FWUP_TYPES                   # noqa: E402
 
 REPLUG_AFTER = 30.0        # the half unseen this long after a restart: ask for a cable replug
 RETURN_WAIT = 600.0        # how long to wait for it at all, prompt included
@@ -246,9 +244,14 @@ def _preflight(svc, log: fp.RunLog, catalog: list, version: str | None, allow_ol
     if module.get("docked") not in (None, "left"):
         raise ModuleRefused(f"the module reports the {module.get('docked')} bay; it must be in the "
                             "LEFT bay. Nothing was written.")
+    if module.get("type") == "Track":
+        raise ModuleRefused(
+            "a Track's programming byte has not been observed from NayaFlow yet, and guessing it "
+            "is how a Tune was given the wrong module app on 2026-09-23. Update this Track with "
+            "NayaFlow for now. Nothing was written.")
     if module.get("type") not in FWUP_TYPES:
-        raise ModuleRefused(f"the docked module reads as {module.get('type')}; only a Touch, Track "
-                            "or Tune can be updated. Nothing was written.")
+        raise ModuleRefused(f"the docked module reads as {module.get('type')}; OpenFlow can update "
+                            "a Touch or a Tune. Nothing was written.")
     entry = choose_bundle(catalog, kb, version)
     target = entry.get("moduleFirmware")
     path = bundle_path(entry, firmware_root)

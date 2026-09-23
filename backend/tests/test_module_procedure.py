@@ -249,13 +249,20 @@ def test_nothing_to_do_writes_nothing(rig):
     assert calls == [] and kb.fwup_bytes() == [] and not kb.entered_bootloader()
 
 
-@pytest.mark.parametrize("module,code", [(("Track", 0x20, "2.1.2"), b"\x02"),
-                                         (("Tune", 0x40, "2.1.2"), b"\x03")])
-def test_the_fwup_byte_is_the_type_number_not_the_dock_address(rig, module, code):
-    kb = FakeKeyboard(stored="2.3.3", module=module)
+def test_a_tune_gets_02_the_byte_nayacore_sends(rig):
+    """Captured from NayaFlow's Force Update -> Tune (2026-09-23). OpenFlow had sent 03 -- the
+    guess from nayactl's table -- and the Tune came back dark on the wrong app."""
+    kb = FakeKeyboard(stored="2.3.3", module=("Tune", 0x40, "2.1.2"))
     verdict, _, _ = _run(rig, kb)
     assert verdict["ok"], verdict
-    assert kb.fwup_bytes() == [code]
+    assert kb.fwup_bytes() == [b"\x02"]
+
+
+def test_a_track_is_refused_until_its_byte_is_captured(rig):
+    kb = FakeKeyboard(stored="2.3.3", module=("Track", 0x20, "2.1.2"))
+    verdict, calls, _ = _run(rig, kb)
+    assert not verdict["ok"] and "Track's programming byte has not been observed" in verdict["summary"]
+    assert kb.fwup_bytes() == [] and calls == [] and not kb.entered_bootloader()
 
 
 # --- preconditions: refused before anything is written ------------------------------------------- #
