@@ -82,6 +82,20 @@ describe("ModuleFirmwareUpdate", () => {
     expect(screen.queryByText(/count to ten, and plug it back in/i)).not.toBeInTheDocument();
   });
 
+  it("reopened after a finished run, offers the next update rather than the old verdict", async () => {
+    vi.spyOn(api, "flashRun").mockResolvedValue({ run: { id: "module-4", running: false,
+      verdict: { ok: true, summary: "the Touch runs module firmware 2.3.3" }, events: [] } });
+    await openIt();
+    act(() => seedFlashProgress({ id: "module-4", running: false, events: [],
+      verdict: { ok: true, summary: "the Touch runs module firmware 2.3.3" } }));
+    expect(await screen.findByText(/Module firmware written and verified/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await userEvent.click(screen.getByRole("button", { name: /update module firmware/i }));
+    // the catch-up hands back the same finished run: it must not come back
+    expect(await screen.findByRole("button", { name: "Update Touch to 2.3.3" })).toBeInTheDocument();
+    expect(screen.queryByText(/Module firmware written and verified/)).not.toBeInTheDocument();
+  });
+
   it("ignores a KEYBOARD run on the same stream", async () => {
     await openIt();
     act(() => seedFlashProgress({ id: "flash-9", running: true, events: [

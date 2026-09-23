@@ -20,6 +20,9 @@ const MAX_RETRIES = 20;
 
 let snapshot = { data: null, connected: false };
 let flash = { run: null, events: [] };
+// Finished runs the person has closed. A dialog reopened after a finished run should offer the
+// next update, not replay the last verdict; the log keeps the record (/api/flash-logs).
+const dismissed = new Set();
 let source = null;
 let retries = 0;
 const listeners = new Set();
@@ -38,6 +41,7 @@ function emitFlash() {
 // and mixing two runs' steps into one list would be worse than showing none.
 export function mergeFlash(prev, state) {
   if (!state || !state.id) return prev;
+  if (!state.running && dismissed.has(state.id)) return prev;
   const fresh = prev.run?.id !== state.id;
   const before = fresh ? [] : prev.events;
   const seen = before.length ? before[before.length - 1].seq : 0;
@@ -115,7 +119,16 @@ export function seedFlashProgress(state) {
   emitFlash();
 }
 
+/** The person closed the dialog on this finished run: forget it, and do not take it back. */
+export function dismissFlashRun(id) {
+  if (!id || !flash.run || flash.run.id !== id || flash.run.running) return;
+  dismissed.add(id);
+  flash = { run: null, events: [] };
+  emitFlash();
+}
+
 export function resetFlashProgressForTests() {
   flash = { run: null, events: [] };
+  dismissed.clear();
   emitFlash();
 }

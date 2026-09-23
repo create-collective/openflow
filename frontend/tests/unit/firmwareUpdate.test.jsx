@@ -259,6 +259,32 @@ describe("FirmwareUpdate", () => {
     expect(screen.getByText("flash-20260921-101500")).toBeInTheDocument();
   });
 
+  it("reopened after a finished flash, offers the next one rather than the old verdict", async () => {
+    render(<FirmwareUpdate connected />);
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
+    await screen.findByText("Left half");
+    const done = { id: "flash-20260923-170000", running: false, sides: ["left"], elapsedMs: 1000, seq: 1,
+      events: [{ seq: 1, step: "version.confirm", phase: "ok", side: "left", label: "Confirming", took_ms: 1 }],
+      verdict: { ok: true, summary: "firmware written and verified", failures: [], advisories: [] } };
+    act(() => seedFlashProgress(done));
+    expect(await screen.findByText("Keyboard firmware updated ✓")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    vi.spyOn(api, "flashRun").mockResolvedValue({ run: done });   // the backend still holds it
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
+    expect(await screen.findByText("Left half")).toBeInTheDocument();
+    expect(screen.queryByText("Keyboard firmware updated ✓")).not.toBeInTheDocument();
+  });
+
+  it("does not draw a MODULE run's steps as a keyboard flash", async () => {
+    render(<FirmwareUpdate connected />);
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
+    await screen.findByText("Left half");
+    act(() => seedFlashProgress({ id: "module-20260923-161251", running: true, seq: 1,
+      events: [{ seq: 1, step: "upload", phase: "start", label: "Writing the firmware" }] }));
+    expect(screen.queryByText("Updating keyboard firmware…")).not.toBeInTheDocument();
+    expect(screen.getByText("Left half")).toBeInTheDocument();
+  });
+
   it("a failure says the keyboard is probably fine and points at the log", async () => {
     render(<FirmwareUpdate connected />);
     await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));

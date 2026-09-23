@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.js";
-import { seedFlashProgress, useFlashProgress } from "../lib/deviceStream";
+import { dismissFlashRun, seedFlashProgress, useFlashProgress } from "../lib/deviceStream";
+import { isModuleRun } from "../lib/moduleRun.js";
 import Button from "./ui/Button";
 import Modal from "./ui/Modal";
 import Notice from "./ui/Notice";
@@ -83,7 +84,11 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [logText, setLogText] = useState("");
-  const { run, events } = useFlashProgress();
+  const { run: anyRun, events: anyEvents } = useFlashProgress();
+  // The stream carries module runs too (device/module_procedure.py); this dialog shows keyboard
+  // runs only, or a module run's steps would be drawn as a keyboard flash.
+  const run = anyRun && !isModuleRun(anyRun) ? anyRun : null;
+  const events = run ? anyEvents : [];
 
   const running = !!run?.running;
   const rows = stepRows(events);
@@ -143,11 +148,14 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
     }
   }
 
-  // A window opened after a run started -- a reload mid-flash, or the dialog closed and
-  // reopened -- catches up from the backend rather than showing an empty list.
+  // A window opened while a run is GOING -- a reload mid-flash -- catches up from the backend
+  // rather than showing an empty list. A finished run is not brought back: reopening after one
+  // offers the next flash (the log keeps the record).
   useEffect(() => {
     if (!open || run) return;
-    api.flashRun(0).then((r) => { if (r.run) seedFlashProgress(r.run); }).catch(() => {});
+    api.flashRun(0).then((r) => {
+      if (r.run?.running && !isModuleRun(r.run)) seedFlashProgress(r.run);
+    }).catch(() => {});
   }, [open, run]);
 
   // Fetch the chosen version, then re-resolve: the same plan call decides all over again what
@@ -195,6 +203,7 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
   const verdict = run && !run.running ? run.verdict : null;
 
   function close() {
+    if (run && !run.running) dismissFlashRun(run.id);
     setOpen(false);
     setLogText("");
     setError("");

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.js";
-import { seedFlashProgress, useFlashProgress } from "../lib/deviceStream";
+import { dismissFlashRun, seedFlashProgress, useFlashProgress } from "../lib/deviceStream";
 import { activeBlockers, isModuleRun, replugPending, startLabel } from "../lib/moduleRun.js";
 import { currentLabel, stepRows } from "./FirmwareUpdate";
 import Button from "./ui/Button";
@@ -79,10 +79,11 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
     await load(v);
   }
 
-  // A window opened while a run is going catches up from the backend.
+  // A window opened while a run is GOING catches up from the backend (a reload mid-flash). A
+  // finished one is not brought back: reopening after a run offers the next update.
   useEffect(() => {
     if (!open || run) return;
-    api.flashRun(0).then((r) => { if (r.run) seedFlashProgress(r.run); }).catch(() => {});
+    api.flashRun(0).then((r) => { if (r.run?.running) seedFlashProgress(r.run); }).catch(() => {});
   }, [open, run]);
 
   async function start() {
@@ -122,6 +123,7 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
   }
 
   function close() {
+    if (mine && !mine.running) dismissFlashRun(mine.id);
     setOpen(false);
     setLogText("");
     setError("");
