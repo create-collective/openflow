@@ -54,6 +54,7 @@ describe("startLabel", () => {
     expect(startLabel(plan({ unchanged: true }, "Unknown (addr 0x4A)"), { force: true, forceType: "Tune" }))
       .toEqual({ label: "Force update as Tune to 2.3.2", needed: true });
     expect(startLabel(plan({}, "Unknown (addr 0x4A)")).label).toBe("Update module to 2.3.2");
+    expect(startLabel(plan({}), { force: true, forceType: "" })).toEqual({ label: "Choose the module first", needed: false });
   });
 });
 

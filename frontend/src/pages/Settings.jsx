@@ -420,6 +420,9 @@ export default function Settings() {
                       }))}
                     />
                     <ModuleFirmwareUpdate connected={firmwareConnected} />
+                    {/* Its own button, not an option inside the dialog above: it exists for the
+                        module that cannot pass that dialog's identification check (owner). */}
+                    <ModuleFirmwareUpdate connected={firmwareConnected} force />
                   </div>
 
                   <h3 className="settings-section tight">Firmware library</h3>

@@ -20,9 +20,13 @@ import Notice from "./ui/Notice";
 //   * THE REPLUG. The left half restarts once or twice and sometimes does not come back on USB
 //     until its cable is unplugged and plugged in again. That is asked for here, large, the moment
 //     the run asks for it, and it goes away when the half is back.
-//   * FORCE UPDATE, for a module that does not identify properly: the person names the module
-//     (Touch or Tune -- the two whose programming byte has been captured) and a version this
-//     keyboard can take. It is how a Tune given the wrong app on 2026-09-23 was brought back.
+//   * FORCE UPDATE is its OWN button and dialog (owner, 2026-09-23), rendered by this component
+//     with `force`. It is for the module that cannot pass the normal dialog's "is it a Touch or a
+//     Tune" check -- not detected, or reporting an unknown type -- so it cannot be an option inside
+//     the dialog that enforces that check. The person names the module physically in the bay
+//     (Touch or Tune, the two whose programming byte has been captured; no default, so it is a
+//     choice) and a version this keyboard can take. It is how a Tune given the wrong app on
+//     2026-09-23 was brought back. Every other rule still holds.
 
 function duration(ms) {
   if (ms == null) return null;
@@ -31,11 +35,10 @@ function duration(ms) {
   return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
 }
 
-export default function ModuleFirmwareUpdate({ connected = true }) {
+export default function ModuleFirmwareUpdate({ connected = true, force = false }) {
   const [open, setOpen] = useState(false);
   const [plan, setPlan] = useState(null);
   const [version, setVersion] = useState("");
-  const [force, setForce] = useState(false);
   const [forceType, setForceType] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,7 +74,7 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
     setOpen(true);
     const p = await load("");
     if (p?.target) setVersion(p.target.version);
-    if (p?.forceTypes?.length && !forceType) setForceType(p.forceTypes[0]);
+    setForceType("");                                 // named on purpose each time
   }
 
   async function chooseVersion(v) {
@@ -127,7 +130,7 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
     setOpen(false);
     setLogText("");
     setError("");
-    setForce(false);
+    setForceType("");
   }
 
   const blockers = activeBlockers(plan, force);
@@ -135,8 +138,7 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
   const { label, needed } = startLabel(plan, { force, forceType });
   const gateOff = plan && plan.flashEnabled === false;
   const needsDownload = target && !target.present;
-  const canStart = !!target && !gateOff && blockers.length === 0 && !needsDownload && needed
-    && (!force || !!forceType);
+  const canStart = !!target && !gateOff && blockers.length === 0 && !needsDownload && needed;
   const m = plan?.module;
 
   const footer = running ? (
@@ -159,8 +161,10 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
         title={gateOff ? "Firmware flashing is switched off in this build"
           : blockers.length ? blockers[0].text
             : needsDownload ? "Download this version first"
+              : force && !forceType ? "Choose the module that is in the left bay"
               : !needed ? "The module and the keyboard already hold this version"
-                : "Backs the keyboard up, then updates the module"}
+                : force ? "Backs the keyboard up, then programs the module as the type you chose"
+                  : "Backs the keyboard up, then updates the module"}
       >
         {starting ? "Starting…" : label}
       </Button>
@@ -172,17 +176,18 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
       <Button
         onClick={openDialog}
         disabled={!connected}
-        title={connected ? "Update the firmware of the module docked in the left bay"
-          : "Connect the keyboard first"}
+        title={!connected ? "Connect the keyboard first"
+          : force ? "For a module in the left bay that is not detected or does not identify properly"
+            : "Update the firmware of the module docked in the left bay"}
       >
-        Update module firmware…
+        {force ? "Force update module…" : "Update module firmware…"}
       </Button>
 
       <Modal
         open={open}
-        title={running ? "Updating module firmware…"
+        title={running ? (force ? "Force-updating module…" : "Updating module firmware…")
           : verdict ? (verdict.ok ? "Module firmware updated ✓" : "The module update did not finish")
-            : "Update module firmware"}
+            : force ? "Force update module" : "Update module firmware"}
         subtitle={!running && !verdict
           ? "Nothing is written until you start, and the keyboard is backed up first."
           : undefined}
@@ -227,6 +232,21 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
               </li>
             </ul>
 
+            {force && (
+              <Notice tone="warn" title="Only for a module that is not detected, or does not identify">
+                <label className="fw-version">
+                  <span>The module in the left bay is a</span>
+                  <select value={forceType} onChange={(e) => setForceType(e.target.value)}>
+                    <option value="">choose…</option>
+                    {(plan.forceTypes || []).map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </label>
+                The keyboard programs it as the type you choose, whatever it reports. Choose the
+                module that is physically there: the wrong type gives it the wrong app. A Track is
+                not offered yet — its byte has not been captured.
+              </Notice>
+            )}
+
             {blockers.length > 0 && (
               <Notice tone="warn" title="Before this can start">
                 <ul className="fw-expect">
@@ -267,24 +287,6 @@ export default function ModuleFirmwareUpdate({ connected = true }) {
               <Notice tone="warn" title="This writes an older module firmware than it runs now">
                 Older module firmware runs on a newer keyboard, so this is allowed. It is not the
                 usual thing to do, which is why it says so.
-              </Notice>
-            )}
-
-            <label className="fw-force">
-              <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
-              <span>Force update: the module is not detected, or does not identify properly</span>
-            </label>
-            {force && (
-              <Notice tone="warn" title="Force update programs the module you name, whatever it reports">
-                <label className="fw-version">
-                  <span>The docked module is a</span>
-                  <select value={forceType} onChange={(e) => setForceType(e.target.value)}>
-                    {(plan.forceTypes || []).map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </label>
-                Choose the module that is physically in the left bay: programming it as the wrong
-                type gives it the wrong app. A Track is not offered yet — its byte has not been
-                captured.
               </Notice>
             )}
 

@@ -670,17 +670,9 @@ img:not([draggable="true"]) {
 .fw-bar::-webkit-progress-value { background: var(--accent); border-radius: var(--radius-pill); }
 .fw-bar::-moz-progress-bar { background: var(--accent); border-radius: var(--radius-pill); }
 .fw-elapsed { color: var(--text-dim); }
-/* Module firmware (components/ModuleFirmwareUpdate.jsx). The force option is a plain checkbox
-   row; the replug request is the one moment the person at the keyboard has to act, so its title
-   is set larger than any other notice in the dialog. */
-.fw-force {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin: var(--sp-3) 0;
-  font-size: var(--fs-md);
-  color: var(--text-muted);
-}
+/* Module firmware (components/ModuleFirmwareUpdate.jsx). The replug request is the one moment
+   the person at the keyboard has to act, so its title is set larger than any other notice in the
+   dialog. */
 .fw-replug .ui-notice-title { font-size: var(--fs-lg); }
 .fw-verdict-list { margin: var(--sp-2) 0 0; padding-left: var(--sp-5); }
 .fw-verdict-note { margin: var(--sp-2) 0 0; color: var(--text-muted); font-size: var(--fs-sm); }

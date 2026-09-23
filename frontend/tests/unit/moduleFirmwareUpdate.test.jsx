@@ -19,10 +19,11 @@ const READY = {
   blockers: [], forceTypes: ["Touch", "Tune"], forceLifts: ["no-module", "unknown-module"],
 };
 
-async function openIt(plan = READY) {
+async function openIt(plan = READY, { force = false } = {}) {
   vi.spyOn(api, "moduleUpdatePlan").mockResolvedValue(plan);
-  render(<ModuleFirmwareUpdate connected />);
-  await userEvent.click(screen.getByRole("button", { name: /update module firmware/i }));
+  render(<ModuleFirmwareUpdate connected force={force} />);
+  await userEvent.click(screen.getByRole("button",
+    { name: force ? /force update module/i : /update module firmware/i }));
 }
 
 beforeEach(() => {
@@ -57,16 +58,35 @@ describe("ModuleFirmwareUpdate", () => {
     expect(screen.getByRole("button", { name: "Downgrade Touch to 2.3.2" })).toBeEnabled();
   });
 
+  it("has no force option: forcing is its own button", async () => {
+    await openIt();
+    await screen.findByRole("button", { name: "Update Touch to 2.3.3" });
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByText(/The module in the left bay is a/)).not.toBeInTheDocument();
+  });
+
   it("force-updates a module that does not identify, as the type the person names", async () => {
     const flash = vi.spyOn(api, "flashModuleFirmware").mockResolvedValue({ id: "module-2", running: true, events: [] });
     await openIt({ ...READY, module: { type: "Unknown (addr 0x4A)", address: 74, firmwareVersion: "2.3.3" },
       storedBundle: "2.3.3", target: { ...READY.target, unchanged: true },
-      blockers: [{ code: "unknown-module", text: "The docked module does not identify as a known type." }] });
-    expect(await screen.findByText(/does not identify as a known type/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("checkbox", { name: /force update/i }));
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: /the docked module is a/i }), "Tune");
+      blockers: [{ code: "unknown-module", text: "The docked module does not identify as a known type." }] },
+    { force: true });
+    // the identification blocker is what this dialog exists to lift
+    expect(await screen.findByText(/Only for a module that is not detected/)).toBeInTheDocument();
+    expect(screen.queryByText(/does not identify as a known type/)).not.toBeInTheDocument();
+    // no default type: nothing can start until the person names the module
+    expect(screen.getByRole("button", { name: "Choose the module first" })).toBeDisabled();
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: /the module in the left bay is a/i }), "Tune");
     await userEvent.click(screen.getByRole("button", { name: "Force update as Tune to 2.3.3" }));
     expect(flash).toHaveBeenCalledWith({ version: "2.3.3", allow_older: false, force_type: "Tune" });
+  });
+
+  it("force update still keeps the rules it does not exist to lift", async () => {
+    await openIt({ ...READY, rightConnected: true,
+      blockers: [{ code: "right-connected", text: "Unplug the RIGHT half's USB cable." }] }, { force: true });
+    await userEvent.selectOptions(await screen.findByRole("combobox", { name: /the module in the left bay is a/i }), "Touch");
+    expect(screen.getByText("Unplug the RIGHT half's USB cable.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Force update as Touch to 2.3.3" })).toBeDisabled();
   });
 
   it("asks for the replug, large, while the run is waiting on it, and drops it when the half is back", async () => {

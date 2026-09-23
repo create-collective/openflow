@@ -42,7 +42,10 @@ export function startLabel(plan, { force = false, forceType = "" } = {}) {
   if (!t) return { label: "Update module", needed: false };
   const kind = plan?.module?.type && plan.module.type.indexOf("Unknown") !== 0
     ? plan.module.type : "module";
-  if (force) return { label: `Force update as ${forceType} to ${t.version}`, needed: true };
+  if (force) {
+    return forceType ? { label: `Force update as ${forceType} to ${t.version}`, needed: true }
+      : { label: "Choose the module first", needed: false };
+  }
   if (t.unchanged) return { label: `Already on ${t.version}`, needed: false };
   if (t.downgrade) return { label: `Downgrade ${kind} to ${t.version}`, needed: true };
   return { label: `Update ${kind} to ${t.version}`, needed: true };
