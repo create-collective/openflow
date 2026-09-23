@@ -105,6 +105,88 @@ def test_response_round_trip():
     assert got["images"][0]["hash"] == b"\xaa\xbb\xcc", got
 
 
+def _reply_line(cid: int, payload: bytes, seq: int = 0, group: int = None) -> bytes:
+    """A device reply line exactly as the bootloader frames one."""
+    import base64
+    group = rec.SMP_GROUP_IMAGE if group is None else group
+    body = rec._smp_header(rec.SMP_OP_READ_RSP, group, cid, len(payload), seq) + payload
+    framed = struct.pack(">H", len(body) + 2) + body + struct.pack(">H", rec._crc16_xmodem(body))
+    return b"\x06\x09" + base64.b64encode(framed) + b"\n"
+
+
+# What the warranty board's bootloader sent on 2026-09-23: an `image state` reply (images, no
+# slots) arriving late, then -- sometimes -- the slot map that was actually asked for.
+STALE_STATE = _reply_line(rec.SMP_ID_IMAGE_STATE,
+                          b"\xa1" + b"\x66images" + b"\x81" + b"\xa1" + b"\x64slot" + b"\x00")
+SLOT_MAP = _reply_line(rec.SMP_ID_IMAGE_SLOT_INFO,
+                       b"\xa1" + b"\x66images" + b"\x81" + b"\xa2" + b"\x65image" + b"\x00"
+                       + b"\x65slots" + b"\x81" + b"\xa3" + b"\x64slot" + b"\x01"
+                       + b"\x64size" + b"\x1a\x00\x0a\x20\x00"
+                       + b"\x6fupload_image_id" + b"\x02")
+
+
+def test_a_reply_is_matched_to_the_request_that_asked_for_it():
+    want = rec.request_key(rec.encode_request(rec.SMP_OP_READ, rec.SMP_GROUP_IMAGE,
+                                              rec.SMP_ID_IMAGE_SLOT_INFO))
+    assert want == (rec.SMP_GROUP_IMAGE, rec.SMP_ID_IMAGE_SLOT_INFO, 0)
+    got = rec.decode_response(STALE_STATE + SLOT_MAP, want)
+    assert got["images"][0]["slots"][0]["upload_image_id"] == 2
+    got = rec.decode_response(SLOT_MAP + STALE_STATE, want)          # order does not matter
+    assert got["images"][0]["slots"][0]["upload_image_id"] == 2
+    with pytest.raises(rec.ReplyMismatch, match="group 1 id 6"):
+        rec.decode_response(STALE_STATE, want)                        # the 2026-09-23 case
+    # without a request to match, the old behaviour: the last frame
+    assert "slots" not in rec.decode_response(SLOT_MAP + STALE_STATE)["images"][0]
+
+
+def test_the_sequence_number_matters_for_upload_chunks():
+    def ack(seq):                                                     # image upload is id 1
+        return _reply_line(1, b"\xa2" + b"\x62rc" + b"\x00" + b"\x63off" + b"\x19\x02\x00", seq=seq)
+    with pytest.raises(rec.ReplyMismatch):
+        rec.decode_response(ack(4), (rec.SMP_GROUP_IMAGE, 1, 5))      # last chunk's ack, stale
+    assert rec.decode_response(ack(4) + ack(5), (rec.SMP_GROUP_IMAGE, 1, 5))["off"] == 512
+
+
+class _Serial:
+    """A port that delivers `chunks` one per poll, as a bootloader's USB endpoint does. A None
+    is a poll on which nothing has arrived yet: the gap between a stale reply and the real one."""
+
+    def __init__(self, chunks):
+        self.chunks, self.written, self.port = list(chunks), b"", "COM27"
+
+    def write(self, b):
+        self.written += b
+
+    def flush(self):
+        pass
+
+    @property
+    def in_waiting(self):
+        if self.chunks and self.chunks[0] is None:
+            self.chunks.pop(0)
+            return 0
+        return len(self.chunks[0]) if self.chunks else 0
+
+    def read(self, n):
+        return self.chunks.pop(0) if self.chunks else b""
+
+
+def test_exchange_keeps_listening_past_a_stale_reply(monkeypatch):
+    monkeypatch.setattr(rec, "RESPONSE_GRACE", 0.0)
+    ser = _Serial([STALE_STATE, None, SLOT_MAP])
+    frame = rec.encode_request(rec.SMP_OP_READ, rec.SMP_GROUP_IMAGE, rec.SMP_ID_IMAGE_SLOT_INFO)
+    got = rec._exchange(ser, frame, timeout=2.0)
+    assert got["images"][0]["slots"][0]["upload_image_id"] == 2
+
+
+def test_exchange_with_only_a_stale_reply_says_so_instead_of_returning_it(monkeypatch):
+    monkeypatch.setattr(rec, "RESPONSE_GRACE", 0.0)
+    ser = _Serial([STALE_STATE])
+    frame = rec.encode_request(rec.SMP_OP_READ, rec.SMP_GROUP_IMAGE, rec.SMP_ID_IMAGE_SLOT_INFO)
+    with pytest.raises(rec.ReplyMismatch):
+        rec._exchange(ser, frame, timeout=0.3)
+
+
 def test_a_corrupted_frame_is_refused_not_interpreted():
     """A mangled response must raise, not decode to something plausible -- this feeds a decision
     about which firmware a device is running."""

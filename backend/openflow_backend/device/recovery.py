@@ -271,18 +271,25 @@ def encode_request(op: int, group: int, cmd_id: int, payload: bytes = b"\xa0", s
     return b"\x06\x09" + b64 + b"\n"
 
 
-def decode_response(raw: bytes) -> dict:
-    """Pull the CBOR body out of one or more console lines."""
-    chunks = []
+class ReplyMismatch(ValueError):
+    """What arrived answers a different request than the one just sent."""
+
+
+def _frames(raw: bytes) -> list[bytes]:
+    """The base64 of each SMP frame in `raw`: a 06 09 line starts one, 04 14 lines continue it."""
+    frames: list[list[bytes]] = []
     for line in raw.split(b"\n"):
         line = line.strip()
         if line.startswith(b"\x06\x09"):
-            chunks = [line[2:]]
-        elif line.startswith(b"\x04\x14"):
-            chunks.append(line[2:])
-    if not chunks:
-        raise ValueError("no SMP frame in response")
-    framed = base64.b64decode(b"".join(chunks))
+            frames.append([line[2:]])
+        elif line.startswith(b"\x04\x14") and frames:
+            frames[-1].append(line[2:])
+    return [b"".join(f) for f in frames]
+
+
+def _decode_frame(b64: bytes) -> tuple[tuple[int, int, int], dict]:
+    """((group, id, seq), CBOR body) of one frame, or ValueError."""
+    framed = base64.b64decode(b64)
     if len(framed) < 4:
         raise ValueError("SMP frame too short")
     body = framed[2:-2]          # strip the length prefix and the CRC
@@ -290,8 +297,48 @@ def decode_response(raw: bytes) -> dict:
         raise ValueError("SMP CRC mismatch")
     if len(body) < 8:
         raise ValueError("SMP body too short")
+    _op, _flags, _len, group, seq, cid = struct.unpack(">BBHHBB", body[:8])
     value, _ = _cbor_decode(body[8:])
-    return value if isinstance(value, dict) else {"value": value}
+    return (group, cid, seq), (value if isinstance(value, dict) else {"value": value})
+
+
+def request_key(frame: bytes) -> tuple[int, int, int] | None:
+    """(group, id, seq) of a request we built, read back out of its own frame."""
+    try:
+        return _decode_frame(_frames(frame)[0])[0]
+    except (ValueError, IndexError, struct.error):
+        return None
+
+
+def decode_response(raw: bytes, want: tuple[int, int, int] | None = None) -> dict:
+    """Pull the CBOR body out of one or more console lines.
+
+    With `want` = the request's (group, id, seq), only a reply to THAT request is returned. The
+    bootloader echoes the sequence number, and what arrives on a freshly opened port is not
+    always the answer to what was just asked: on 2026-09-23 a late reply to an earlier
+    `image state` read (an `images` list with no slots) was taken as the answer to `image slot
+    info`, and a slot map the device never sent was reported as "numbering not understood".
+    Without `want`, the last frame is returned, as before.
+    """
+    frames = _frames(raw)
+    if not frames:
+        raise ValueError("no SMP frame in response")
+    if want is None:
+        return _decode_frame(frames[-1])[1]
+    seen, last_err = [], None
+    for b64 in reversed(frames):
+        try:
+            key, body = _decode_frame(b64)
+        except ValueError as e:
+            last_err = e
+            continue
+        if key == want:
+            return body
+        seen.append(key)
+    if seen:
+        raise ReplyMismatch(f"no reply to group {want[0]} id {want[1]} seq {want[2]} among "
+                            f"{len(frames)} frame(s); got {list(reversed(seen))}")
+    raise last_err or ValueError("no SMP frame in response")
 
 
 # --- the two reads the Create's recovery actually supports ---------------------------------- #
@@ -382,9 +429,11 @@ def _exchange(ser, frame: bytes, timeout: float, port: str = "") -> dict:
     Each of those cost a full timeout per request.
     """
     import time as _time
+    want = request_key(frame)
     ser.write(frame)
     ser.flush()
     raw = b""
+    last_err: Exception | None = None
     deadline = _time.monotonic() + timeout
     while _time.monotonic() < deadline:
         waiting = ser.in_waiting
@@ -393,12 +442,19 @@ def _exchange(ser, frame: bytes, timeout: float, port: str = "") -> dict:
             # A multi-line response arrives back-to-back; give the rest a moment to land.
             _time.sleep(RESPONSE_GRACE)
             if not ser.in_waiting:
-                break
+                # Only the reply to THIS request ends the wait. A stale reply to an earlier one,
+                # or a frame still arriving, keeps us listening until the deadline.
+                try:
+                    return decode_response(raw, want)
+                except ValueError as e:
+                    last_err = e
         else:
             _time.sleep(0.005)
     if not raw:
         raise TimeoutError(f"no SMP response on {port or ser.port}")
-    return decode_response(raw)
+    if last_err is not None:
+        raise last_err
+    return decode_response(raw, want)
 
 
 @contextlib.contextmanager
