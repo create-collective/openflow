@@ -635,6 +635,22 @@ def bundle(tmp_path):
     return p
 
 
+def test_an_unanswered_map_may_fall_back_to_nayacores_4_only_when_asked(bundle):
+    """NayaFlow never reads the map (captured 2026-09-23); the procedure retries it, then allows
+    the fallback. A map that ANSWERS and disagrees is refused either way."""
+    image_id, slot = fw.modules_slot({"supported": None, "slots": []}, fw.MODULE_BUNDLE_SIZE,
+                                     allow_unmapped=True)
+    assert image_id == 4 and "did not answer" in slot["source"]
+    p = fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(), slot_info=None,
+                              allow_unmapped=True)
+    assert p.upload_image_id == 4
+    odd = {"supported": True, "rc": 0, "slots": [{"image": 0, "slot": 1, "size": 663552, "uploadImageId": 1}]}
+    with pytest.raises(fw.UploadRefused, match="numbering is not understood"):
+        fw.modules_slot(odd, fw.MODULE_BUNDLE_SIZE, allow_unmapped=True)
+    with pytest.raises(fw.UploadRefused, match="bytes"):
+        fw.modules_slot(None, 1000, allow_unmapped=True)
+
+
 def test_a_bundle_needs_the_devices_slot_map(bundle):
     with pytest.raises(fw.UploadRefused, match="slot map"):
         fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok())

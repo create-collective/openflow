@@ -747,11 +747,19 @@ def _recover_stranded_halves(svc, log: RunLog) -> None:
             if got is not None:
                 log.event("mcuboot.exit", "ok", side=side,
                           detail=f"back in the application, running {got}")
-            else:
+            elif [d for d in rec.find_recovery_ports() if d.side == side]:
                 log.event("mcuboot.exit", "fail", side=side,
                           detail="this half is still in the bootloader after five minutes of "
                                  "resets. Its firmware is untouched; a power cycle will bring "
                                  "it back.")
+            else:
+                # Measured 2026-09-23: a reset took the half out of the bootloader and it never
+                # came back on USB until its cable was replugged. Blaming the bootloader there
+                # sent the reader after the wrong thing.
+                log.event("mcuboot.exit", "fail", side=side,
+                          detail="this half left the bootloader but has not come back on USB. "
+                                 "Unplug its USB cable and plug it back in; it runs on its "
+                                 "battery, so this is not a power cycle.")
         except Exception as e:                      # noqa: BLE001 -- say so, never hide it
             log.event("mcuboot.exit", "fail", side=side,
                       detail=f"this half is still in the bootloader and could not be reset "

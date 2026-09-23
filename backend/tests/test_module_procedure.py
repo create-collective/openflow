@@ -29,6 +29,9 @@ def _bundle(version, rng, *, flashable=True, path=None):
             "historyPath": path or f"v-{version}/module/FlashMemory.bin"}
 
 
+# What the warranty board's bootloader answered for `image slot info` on 2026-09-16.
+BOARD_MAP = {"supported": True, "rc": 0, "slots": [{"image": 0, "slot": 0, "size": 663552, "uploadImageId": 1}, {"image": 0, "slot": 1, "size": 663552, "uploadImageId": 2}]}
+
 # The ranges the catalogue builds from every official and beta release (2026-09-23).
 CATALOG = [_bundle("2.3.3", ("3.40.0", None)), _bundle("2.3.2", ("3.31.1", "3.40.0")),
            _bundle("2.2.0", ("3.29.1", "3.31.1")), _bundle("2.1.2", ("3.28.7", "3.29.1")),
@@ -131,7 +134,9 @@ def rig(monkeypatch, tmp_path):
     monkeypatch.setattr(mp.rec, "os_reset", lambda port: None)
     monkeypatch.setattr(mp.fp, "RECOVERY_WAIT", 0.0)
     monkeypatch.setattr(mp.fp, "_identify_in_bootloader", lambda side, catalog: {
-        "state": "ok", "port": "COM26", "images": [{"slot": 0, "hash": "arm", "createFirmware": "3.41.0"}]})
+        "state": "ok", "port": "COM26", "slotInfo": BOARD_MAP,
+        "images": [{"slot": 0, "hash": "arm", "createFirmware": "3.41.0"}]})
+    monkeypatch.setattr(mp.rec, "slot_info", lambda port: BOARD_MAP)
     for e in CATALOG:
         p = tmp_path / "fw" / e["historyPath"]
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -141,8 +146,9 @@ def rig(monkeypatch, tmp_path):
 
 def _upload_that_restarts(kb, calls):
     def upload(path, catalog, *, arm, installed_version=None, allow_older=False, progress=None,
-               state=None):
-        calls.append({"path": Path(path), "arm": arm, "installed": installed_version})
+               state=None, slot_info=None, allow_unmapped=False):
+        calls.append({"path": Path(path), "arm": arm, "installed": installed_version,
+                      "slot_info": slot_info, "allow_unmapped": allow_unmapped})
         progress(512, 1024)
         progress(1024, 1024)
         kb.stored = next(e["moduleFirmware"] for e in catalog
@@ -294,6 +300,71 @@ def test_a_half_that_never_comes_back_fails_with_what_to_do(rig):
     assert not verdict["ok"]
     assert "did not come back after programming" in verdict["summary"]
     assert '"phase": "action"' in log
+
+
+# --- the slot map (first hardware run, 2026-09-23 13:32) ---------------------------------------- #
+
+def _no_map_at_identify(monkeypatch):
+    monkeypatch.setattr(mp.fp, "_identify_in_bootloader", lambda side, catalog: {
+        "state": "ok", "port": "COM26",
+        "slotInfo": {"supported": None, "error": "SerialException: could not open port", "slots": []},
+        "images": [{"slot": 0, "hash": "arm", "createFirmware": "3.41.0"}]})
+
+
+def test_a_slot_map_identify_missed_is_read_again_and_used(rig, monkeypatch):
+    _no_map_at_identify(monkeypatch)
+    reads = []
+    monkeypatch.setattr(mp.rec, "slot_info", lambda port: reads.append(port) or BOARD_MAP)
+    kb = FakeKeyboard(stored="2.3.3")
+    verdict, calls, log = _run(rig, kb, force_upload=True)
+    assert verdict["ok"], verdict
+    assert reads == ["COM26"]
+    assert calls[0]["slot_info"] == BOARD_MAP and calls[0]["allow_unmapped"] is False
+    assert "the bootloader reported its slot map (after 1 retries)" in log
+
+
+def test_a_slot_map_that_never_answers_falls_back_to_slot_4_and_says_so(rig, monkeypatch):
+    _no_map_at_identify(monkeypatch)
+    reads = []
+
+    def refuse(port):
+        reads.append(port)
+        raise OSError("could not open port")
+    monkeypatch.setattr(mp.rec, "slot_info", refuse)
+    kb = FakeKeyboard(stored="2.3.3")
+    verdict, calls, log = _run(rig, kb, force_upload=True)
+    assert verdict["ok"], verdict
+    assert len(reads) == mp.SLOT_MAP_TRIES
+    assert calls[0]["allow_unmapped"] is True
+    assert any("modules slot 4, as NayaFlow does" in a for a in verdict["advisories"])
+
+
+# --- recovery after a failure in the bootloader -------------------------------------------------- #
+
+def test_a_failure_in_the_bootloader_waits_for_the_half_with_the_replug_prompt(rig, monkeypatch):
+    """What actually happened at 13:32: the half left the bootloader after the reset and never
+    came back on USB. The old recovery blamed the bootloader after five minutes."""
+    monkeypatch.setattr(mp.fp, "RECOVERY_WAIT", 120.0)
+    kb = FakeKeyboard(stored="2.3.3", absent_for=None)
+
+    def failing_upload(path, catalog, **kw):
+        kb.absent = 1                                        # restarts, never comes back
+        raise fw.UploadRefused("the bootloader rejected the chunk at offset 0")
+
+    verdict = mp.run(kb, CATALOG, firmware_root=rig["root"], log_dir=rig["logs"],
+                     upload_fn=failing_upload, force_upload=True)
+    log = (rig["logs"] / "run.log").read_text(encoding="utf-8")
+    assert not verdict["ok"] and "rejected the chunk" in verdict["summary"]
+    assert '"phase": "action"' in log                        # asked for the replug
+    assert "has not come back on USB" in log
+    assert "still in its bootloader" not in log
+
+
+def test_a_refusal_before_the_bootloader_does_not_wait_for_anything(rig):
+    kb = FakeKeyboard(right=True)
+    verdict, _, log = _run(rig, kb)
+    assert not verdict["ok"]
+    assert "mcuboot.exit" not in log and '"phase": "action"' not in log
 
 
 # --- the upload primitive ------------------------------------------------------------------------ #

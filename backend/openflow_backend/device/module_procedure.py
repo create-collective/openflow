@@ -286,9 +286,46 @@ def _capture(svc, log: fp.RunLog, run_dir: Path, pre: dict) -> dict:
     return cap
 
 
-def _upload(svc, log: fp.RunLog, catalog: list, pre: dict, allow_older: bool, upload_fn) -> None:
+SLOT_MAP_TRIES = 3          # extra reads of `image slot info` when identify's own read failed
+
+
+def _slot_map(state: dict, log: fp.RunLog) -> tuple[dict | None, bool]:
+    """The bootloader's slot map, read again if the identify read did not get one, and whether
+    the upload must fall back to NayaCore's constant because it never answered.
+
+    The first hardware run (2026-09-23 13:32) died here: identify's own map read failed, and the
+    guard refused, correctly, before a byte was sent. The map answered on 2026-09-16 and NayaFlow
+    never asks for it, so a failed read is retried after a pause (Windows can refuse a port
+    reopened milliseconds after the last close), and only then does the upload fall back to 4.
+    Every outcome is logged, so a run that falls back says so.
+    """
+    info = state.get("slotInfo")
+    tries = 0
+    while not (info and info.get("supported")) and tries < SLOT_MAP_TRIES and state.get("port"):
+        tries += 1
+        time.sleep(2.0)
+        try:
+            info = rec.slot_info(state["port"])
+        except Exception as e:                      # noqa: BLE001 -- recorded below
+            info = {"supported": None, "error": f"{type(e).__name__}: {e}", "slots": []}
+    answered = bool(info and info.get("supported"))
+    if answered:
+        log.event("identify", "note", side="left", slotMap=info.get("slots"), retries=tries,
+                  detail="the bootloader reported its slot map" + (f" (after {tries} retries)"
+                                                                     if tries else ""))
+    else:
+        why = (info or {}).get("error") or (info or {}).get("rc") or "no answer"
+        log.advise(f"the bootloader did not report its slot map after {tries + 1} tries ({why}); "
+                   "writing to NayaCore's modules slot 4, as NayaFlow does without asking",
+                   step="identify")
+    return info, not answered
+
+
+def _upload(svc, log: fp.RunLog, catalog: list, pre: dict, allow_older: bool, upload_fn,
+            track: dict) -> None:
     from .._vendor.nayactl import constants as C
 
+    track["in_boot"] = True        # from here a failure must bring the half back
     with log.step("mcuboot.enter", side="left",
                   detail="the half's LEDs will go off; that is expected"):
         def go(t, dest, dev):
@@ -305,6 +342,7 @@ def _upload(svc, log: fp.RunLog, catalog: list, pre: dict, allow_older: bool, up
         running = next((i for i in state.get("images") or [] if i.get("slot") == 0), {})
         log.event("identify", "ok", side="left", running=running.get("createFirmware"),
                   port=state.get("port"), armToken=running.get("hash"))
+        slot_info, unmapped = _slot_map(state, log)
 
     erase = {"done": False}
     last_pct = {"v": -1}
@@ -323,13 +361,15 @@ def _upload(svc, log: fp.RunLog, catalog: list, pre: dict, allow_older: bool, up
     t0 = time.monotonic()
     result = upload_fn(pre["path"], catalog, arm=running.get("hash") or "",
                        installed_version=pre["stored"], allow_older=allow_older,
-                       progress=progress, state=state)
+                       progress=progress, state=state, slot_info=slot_info,
+                       allow_unmapped=unmapped)
     log.event("upload", "ok", side="left", took_ms=int((time.monotonic() - t0) * 1000),
               written=result.get("written"), target=pre["target"],
               detail="the bundle is written; the half restarts on its own")
 
     with log.step("bundle.restart", side="left"):
         got = await_left(svc, log, "bundle.restart")
+        track["in_boot"] = got is None
         if got is None:
             raise fw.UploadRefused(
                 "the left half did not come back after the upload. The bundle was written in "
@@ -343,6 +383,41 @@ def _upload(svc, log: fp.RunLog, catalog: list, pre: dict, allow_older: bool, up
             raise fw.UploadRefused(
                 f"the keyboard reports module firmware {now} after the upload, not "
                 f"{pre['target']}. Its keyboard firmware is untouched; run the update again.")
+
+
+def _recover_left(svc, log: fp.RunLog) -> None:
+    """After a failure that happened with the half sent into its bootloader: get it back.
+
+    Not the keyboard procedure's recovery, which assumes a half it cannot see is still in the
+    bootloader. On 2026-09-23 the half left the bootloader after the first reset and simply never
+    came back on USB; that recovery waited five minutes and then blamed the bootloader. This one
+    resets a half that IS in the bootloader (on the port that answers SMP) and otherwise waits
+    with the same replug prompt as every other restart in this procedure.
+    """
+    if [d for d in rec.find_recovery_ports() if d.side == "left"]:
+        try:
+            port = fp._answering_recovery_port("left", timeout=30.0)
+            try:
+                rec.os_reset(port)
+            except Exception:                       # noqa: BLE001 -- it reboots mid-reply
+                pass
+            log.event("mcuboot.exit", "start", side="left",
+                      detail=f"the run failed with the half in its bootloader; reset sent on {port}")
+        except Exception as e:                      # noqa: BLE001 -- the wait below still runs
+            log.event("mcuboot.exit", "note", side="left",
+                      detail=f"could not reach the bootloader to reset it ({type(e).__name__}: {e})")
+    got = await_left(svc, log, "mcuboot.exit", timeout=fp.RECOVERY_WAIT)
+    if got is not None:
+        log.event("mcuboot.exit", "ok", side="left", detail=f"back in the application, running {got}")
+    elif [d for d in rec.find_recovery_ports() if d.side == "left"]:
+        log.event("mcuboot.exit", "fail", side="left",
+                  detail="the half is still in its bootloader. Its keyboard firmware is untouched; "
+                         "a power cycle brings it back.")
+    else:
+        log.event("mcuboot.exit", "fail", side="left",
+                  detail="the half left its bootloader but has not come back on USB. Unplug its "
+                         "USB cable and plug it back in; it runs on its battery, so this is not "
+                         "a power cycle.")
 
 
 def _program(svc, log: fp.RunLog, pre: dict) -> None:
@@ -414,6 +489,7 @@ def run(svc, catalog: list, *, version: str | None = None, allow_older: bool = F
     # few seconds, and NayaFlow sent nothing at all between MODULE_FWUP and the restart.
     lock = getattr(svc, "_lock", None)
     held = lock.acquire() is not False if lock is not None else False
+    track = {"in_boot": False}
     try:
         with log.step("preflight.check", side="left"):
             pre = _preflight(svc, log, catalog, version, allow_older, force_upload, firmware_root)
@@ -436,7 +512,7 @@ def run(svc, catalog: list, *, version: str | None = None, allow_older: bool = F
                       if pre["upload"] else
                       f"the keyboard already holds module firmware {pre['target']}; no upload")
         if pre["upload"]:
-            _upload(svc, log, catalog, pre, allow_older, upload_fn)
+            _upload(svc, log, catalog, pre, allow_older, upload_fn, track)
         if pre["program"]:
             _program(svc, log, pre)
 
@@ -454,7 +530,8 @@ def run(svc, catalog: list, *, version: str | None = None, allow_older: bool = F
                 json.dumps(after, indent=1, default=str), encoding="utf-8")
             fp.compare_preflight(before, after, version_changed=False, log=log)
     except Exception as e:                          # noqa: BLE001 -- the verdict is the product
-        fp._recover_stranded_halves(svc, log)
+        if track["in_boot"]:
+            _recover_left(svc, log)
         return log.finish(False, f"{type(e).__name__}: {e}")
     finally:
         if held:

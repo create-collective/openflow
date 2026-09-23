@@ -566,6 +566,29 @@ def test_recovery_says_so_when_the_half_never_comes_back(wired, monkeypatch):
     assert "power cycle will bring it back" in text
 
 
+def test_recovery_does_not_blame_the_bootloader_for_a_half_that_left_it(wired, monkeypatch):
+    """2026-09-23: the reset took the half out of the bootloader and it never came back on USB.
+    The message must say that, and ask for a cable replug, not a power cycle."""
+    monkeypatch.setattr(P.rec, "os_reset", lambda port: None)
+    monkeypatch.setattr(P, "_answering_recovery_port", lambda side, timeout=30.0: "COM27")
+    looks = {"n": 0}
+
+    def ports():
+        looks["n"] += 1
+        return [_Dev("left")] if looks["n"] == 1 else []      # in the bootloader, then gone
+    monkeypatch.setattr(P.rec, "find_recovery_ports", ports)
+    monkeypatch.setattr(P, "_await_application", lambda svc, side, log=None, **kw: None)
+
+    def exploding(image, catalog, *, arm, progress=None, **kw):
+        raise OSError("mid-write")
+    wired["flash"] = exploding
+
+    r = _run(wired, {"left": "kb_fwl.bin"})
+    text = Path(r["log"]).read_text(encoding="utf-8")
+    assert "left the bootloader but has not come back on USB" in text
+    assert "still in the bootloader after five minutes" not in text
+
+
 def test_the_lights_are_put_back_after_the_flash(wired):
     """A half that has been through the bootloader comes back with a runtime lighting state
     that is not what it stores: on 2026-09-22 one half plain white while the other stayed orange,

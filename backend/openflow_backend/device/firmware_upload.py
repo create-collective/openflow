@@ -325,7 +325,8 @@ def _slot_upload_id(slot_info: dict | None, image: int, slot: int):
     return None
 
 
-def modules_slot(slot_info: dict | None, bundle_size: int) -> tuple[int, dict]:
+def modules_slot(slot_info: dict | None, bundle_size: int, *,
+                 allow_unmapped: bool = False) -> tuple[int, dict]:
     """Which upload id addresses the modules partition, and the slot-map row it rests on.
 
     The partition is a filesystem, not an MCUboot image slot, so the bootloader's map never
@@ -333,7 +334,23 @@ def modules_slot(slot_info: dict | None, bundle_size: int) -> tuple[int, dict]:
     The number therefore comes from NayaCore -- uploadImageToModulesSlot is uploadImageToSlot(_, 4)
     -- and it is used only after the map has shown that this bootloader and NayaCore count the
     same way (_numbering_is_understood). Should a map ever list a slot of exactly the bundle's
-    size with an upload id, the device's own row wins over the constant."""
+    size with an upload id, the device's own row wins over the constant.
+
+    `allow_unmapped` (owner, 2026-09-23): when the bootloader does not ANSWER the map at all, use
+    NayaCore's constant anyway, because that is exactly what NayaFlow does -- it never reads the
+    map (captured 2026-09-23) -- and 4 never addresses the running firmware. A map that answers
+    and disagrees is still refused; that is the case the check exists for. The caller retries
+    the read first and logs that it fell back."""
+    if allow_unmapped and not (slot_info and slot_info.get("supported")):
+        if bundle_size != MODULE_BUNDLE_SIZE:
+            raise UploadRefused(
+                f"a module bundle is {MODULE_BUNDLE_SIZE} bytes (the partition's size); this file "
+                f"is {bundle_size}. Not written.")
+        return MODULES_UPLOAD_IMAGE_ID, {
+            "image": None, "slot": "modules", "size": MODULE_BUNDLE_SIZE,
+            "uploadImageId": MODULES_UPLOAD_IMAGE_ID,
+            "source": "NayaCore constant (uploadImageToModulesSlot -> 4); the bootloader did not "
+                      "answer its slot map, and NayaFlow does not read it either"}
     _numbering_is_understood(slot_info)
     listed = [s for s in slot_info.get("slots") or []
               if s.get("size") == bundle_size and not ((s.get("image") or 0) == 0 and s.get("slot") in (0, 1))
@@ -960,7 +977,8 @@ class ModuleBundlePlan:
 def plan_module_bundle(image_path: str | Path, catalog: list, *, chunk: int = DEFAULT_CHUNK,
                        state: dict | None = None, slot_info: dict | None = None,
                        installed_version: str | None = None,
-                       allow_older: bool = False) -> ModuleBundlePlan:
+                       allow_older: bool = False,
+                       allow_unmapped: bool = False) -> ModuleBundlePlan:
     """Every interlock for a module bundle upload. Writes nothing.
 
     `installed_version` is what MODULE_FILE_FW_VERSION reported before the half was rebooted into
@@ -1010,7 +1028,7 @@ def plan_module_bundle(image_path: str | Path, catalog: list, *, chunk: int = DE
 
     if slot_info is None:
         slot_info = state.get("slotInfo")
-    image_id, slot = modules_slot(slot_info, len(raw))
+    image_id, slot = modules_slot(slot_info, len(raw), allow_unmapped=allow_unmapped)
     return ModuleBundlePlan(
         image_path=path, total_bytes=len(raw), chunks=max(1, -(-len(raw) // chunk)),
         image_sha256=hashlib.sha256(raw).hexdigest(), upload_image_id=image_id, slot=slot,
@@ -1022,7 +1040,7 @@ def plan_module_bundle(image_path: str | Path, catalog: list, *, chunk: int = DE
 def flash_module_bundle(image_path: str | Path, catalog: list, *, arm: str,
                         chunk: int = DEFAULT_CHUNK, installed_version: str | None = None,
                         allow_older: bool = False, progress=None, state: dict | None = None,
-                        slot_info: dict | None = None) -> dict:
+                        slot_info: dict | None = None, allow_unmapped: bool = False) -> dict:
     """Upload a module bundle into the modules slot of the left half. The verification is NOT
     here: it is the app-mode MODULE_FILE_FW_VERSION read after the half is back, which the result
     spells out, followed by MODULE_FWUP with a module docked (device/module_procedure.py).
@@ -1045,7 +1063,8 @@ def flash_module_bundle(image_path: str | Path, catalog: list, *, arm: str,
     if slot_info is None:
         slot_info = _live_slot_info(state)
     p = plan_module_bundle(image_path, catalog, chunk=chunk, state=state, slot_info=slot_info,
-                           installed_version=installed_version, allow_older=allow_older)
+                           installed_version=installed_version, allow_older=allow_older,
+                           allow_unmapped=allow_unmapped)
     if arm != p.arm_token:
         raise UploadRefused(
             "not armed. Pass arm= the hash this half reports for its running image "
