@@ -501,10 +501,34 @@ def _program(svc, log: fp.RunLog, pre: dict) -> None:
                              "the module anyway")
 
     with log.step("module.verify", side="left"):
-        module = _find_module(svc, MODULE_FIND_WAIT)
+        # The version alone cannot catch a module programmed with the WRONG app: every app in a
+        # bundle carries the bundle's version. On 2026-09-23 a Tune given the Touch/Track numbering's
+        # 03 read 2.3.3 and passed, dark, reporting dock address 0x4A. So the module must also still
+        # say it is the type it was -- given time, since a Tune's first update can take up to a
+        # minute to settle.
+        want_type = pre["module"].get("type")
+        deadline = time.monotonic() + MODULE_FIND_WAIT
+        module = None
+        while True:
+            module = _find_module(svc, max(1.0, deadline - time.monotonic()))
+            if module and module.get("type") == want_type and module.get("firmwareVersion"):
+                break
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(2.0)
         got = module.get("firmwareVersion") if module else None
-        log.event("module.verify", "ok" if got == pre["target"] else "fail", side="left",
-                  expected=pre["target"], got=got, module=(module or {}).get("type"))
+        got_type = (module or {}).get("type")
+        ok = got == pre["target"] and got_type == want_type
+        log.event("module.verify", "ok" if ok else "fail", side="left", expected=pre["target"],
+                  got=got, module=got_type, expectedModule=want_type,
+                  address=(module or {}).get("address"))
+        if got_type != want_type:
+            raise fw.UploadRefused(
+                f"the module no longer identifies as a {want_type}: it reports "
+                f"{got_type or 'nothing'} (dock address "
+                f"{hex((module or {}).get('address') or 0)}), firmware {got or 'unknown'}. It may "
+                f"have been programmed with the wrong app. NayaFlow's Danger Zone Force Update -> "
+                f"{want_type} restores it.")
         if got != pre["target"]:
             raise fw.UploadRefused(
                 f"the module reports {got or 'nothing'} after programming, not {pre['target']}.")

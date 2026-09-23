@@ -258,6 +258,24 @@ def test_a_tune_gets_02_the_byte_nayacore_sends(rig):
     assert kb.fwup_bytes() == [b"\x02"]
 
 
+def test_a_module_that_comes_back_as_another_type_fails_even_on_the_right_version(rig, monkeypatch):
+    """The 2026-09-23 Tune: programmed with the wrong app, it read 2.3.3 and reported address
+    0x4A. The version matched; the run must fail anyway and say how to recover."""
+    kb = FakeKeyboard(stored="2.3.3", module=("Tune", 0x40, "2.1.2"))
+    real = kb._with_transport
+
+    def wrong_app(side, fn, serial=None):
+        out = real(side, fn, serial)
+        if kb.fwup_bytes():
+            kb.module["address"] = 0x4A                     # what the Tune reported afterwards
+        return out
+    monkeypatch.setattr(kb, "_with_transport", wrong_app)
+    verdict, _, log = _run(rig, kb)
+    assert not verdict["ok"]
+    assert "no longer identifies as a Tune" in verdict["summary"]
+    assert "Force Update" in verdict["summary"]
+
+
 def test_a_track_is_refused_until_its_byte_is_captured(rig):
     kb = FakeKeyboard(stored="2.3.3", module=("Track", 0x20, "2.1.2"))
     verdict, calls, _ = _run(rig, kb)
