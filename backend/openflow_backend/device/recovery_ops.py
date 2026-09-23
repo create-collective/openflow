@@ -81,11 +81,26 @@ def _partition_byte(opts: dict) -> bytes:
     return bytes([int(opts.get("partition", 0)) & 0xFF])
 
 
+# SYS_MODULE_BATTERY_RECOVERY's one payload byte. NayaCore's _constructSystemMessages rejects an
+# empty payload and anything but 00/01 ("0x00=OFF, 0x01=ON", initializeModuleTestValues), so the
+# state is required, never defaulted. NayaFlow exposes the same thing as the key action "Activate
+# Module Recovery Mode" (MODULE_FORCE_CHARGING); restarting the keyboard also turns it off.
+def _on_off_byte(opts: dict) -> bytes:
+    on = opts.get("on")
+    if isinstance(on, str):
+        on = {"on": True, "1": True, "true": True, "off": False, "0": False, "false": False}.get(on.lower())
+    if not isinstance(on, bool):
+        raise ValueError("battery recovery needs on: true or false (the firmware takes 01 or 00)")
+    return b"\x01" if on else b"\x00"
+
+
 # MODULE_FWUP's one payload byte, by the type the dock address decodes to. Only values PROVEN
 # from NayaCore belong here, never a guess:
 #   Touch = 01  on the wire: NayaFlow 1.25.1 update, 2026-09-23 (module-fw-touch1-20260923-part2.pcap)
 #   Tune  = 02  on the wire: NayaFlow Force Update -> Tune, 2026-09-23 (module-fw-tune-nayaflow-force-*)
-#   Track = 03  in NayaCore's code: Naya_DeviceManager::doUpdateModuleOperations (NayaCore 6.11.0,
+#   Track = 03  on the wire: NayaFlow Force Update -> Track, 2026-09-23 (module-fw-track-nayaflow-
+#               recover-20260923.pcap), and a Track downgrade that read back as a Track; first read
+#               from NayaCore's code: Naya_DeviceManager::doUpdateModuleOperations (NayaCore 6.11.0,
 #               mac x86_64, symbols intact) builds the payload as QByteArray(1, N) in each forced
 #               branch -- ModuleFW_Touch_Upload N=1, ModuleFW_Tune_Upload N=2,
 #               ModuleFW_Track_Upload N=3. Touch and Tune match their captures exactly, which is
@@ -157,7 +172,8 @@ REGISTRY: tuple[RecoveryOp, ...] = (
     RecoveryOp("module_battery_recovery", "Recover Module Battery",
                "The dead-module rescue for a module whose battery is critically drained.",
                "recovery", C.CAT_SYSTEM, C.SYS_MODULE_BATTERY_RECOVERY, INFERRED,
-               "Run module battery recovery? Use this only for a module that will not charge."),
+               "Run module battery recovery? Use this only for a module that will not charge.",
+               args=("on",), build_payload=_on_off_byte),
 
     # --- pairing repair (the sharpest gap) ------------------------------------------------------ #
     RecoveryOp("ble_set_pair_address", "Set Split-Link Address",

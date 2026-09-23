@@ -29,7 +29,7 @@ EXPECT = {
     "reset_module":              (0xDE, 0x1006, ""),
     "set_host_os":               (0xFE, 0x1005, "01"),   # with os=mac
     "module_fwup":               (0xDE, 0x1005, "02"),   # with module=tune (captured)
-    "module_battery_recovery":   (0xFE, 0x1003, ""),
+    "module_battery_recovery":   (0xFE, 0x1003, "01"),   # with on=True
     "ble_set_pair_address":      (0xBE, 0x1001, "e2f79ee87c18"),
     "ble_unpair_address":        (0xBE, 0x1003, "e2f79ee87c18"),
     "ble_unpair_all":            (0xBE, 0x1004, ""),
@@ -39,9 +39,18 @@ EXPECT = {
     "erase_chip":                (0xFA, 0x1006, ""),
 }
 ARGS = {"set_host_os": {"os": "mac"}, "format_partition": {"partition": 1},
-        "module_fwup": {"module": "tune"},
+        "module_fwup": {"module": "tune"}, "module_battery_recovery": {"on": True},
         "ble_set_pair_address": {"mac": "E2:F7:9E:E8:7C:18"},
         "ble_unpair_address": {"mac": "E2:F7:9E:E8:7C:18"}}
+
+
+def test_module_battery_recovery_says_on_or_off_and_never_sends_it_empty():
+    """NayaCore rejects an empty payload and anything but 00/01 for SYS_MODULE_BATTERY_RECOVERY."""
+    assert ro.frame_for("module_battery_recovery", {"on": True})[2] == b"\x01"
+    assert ro.frame_for("module_battery_recovery", {"on": "off"})[2] == b"\x00"
+    for bad in ({}, {"on": 1}, {"on": "maybe"}):
+        with pytest.raises(ValueError, match="01 or 00"):
+            ro.frame_for("module_battery_recovery", bad)
 
 
 def test_module_fwup_takes_the_docked_type_and_nothing_else():
