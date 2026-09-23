@@ -137,6 +137,7 @@ def _firmware_catalog() -> list[dict]:
             "lastSeen": img.get("lastSeen"),
             "releaseOrder": img.get("releaseOrder"),       # chronological; newest first in the UI
             "era": img.get("era"),
+            "channel": img.get("channel") or "official",   # beta images: recognised, not offered
             # Where it sits in nayaHistory/firmware-history. Also the id the page joins on: the
             # library endpoint reports what is held BY PATH, and an entry with none is one that
             # has no file of its own (a .sfb userapp inside FlashMemory.bin) and so can never be
@@ -346,11 +347,14 @@ async def flash_logs() -> dict:
     from ..config import logs_dir
     runs = []
     try:
-        for d in sorted(logs_dir().glob("flash-*"), reverse=True):
+        # Keyboard runs are flash-<stamp>, module runs module-<stamp>; one list, newest first.
+        dirs = [*logs_dir().glob("flash-*"), *logs_dir().glob("module-*")]
+        for d in sorted(dirs, key=lambda d: d.name.split("-", 1)[1], reverse=True):
             f = d / "run.log"
             if f.is_file():
-                runs.append({"id": d.name, "at": d.name.removeprefix("flash-"),
-                             "bytes": f.stat().st_size})
+                kind, at = d.name.split("-", 1)
+                runs.append({"id": d.name, "at": at, "bytes": f.stat().st_size,
+                             "kind": "module" if kind == "module" else "keyboard"})
     except Exception:                       # noqa: BLE001 -- an unreadable dir means no history
         pass
     return {"runs": runs}
@@ -383,11 +387,12 @@ async def flash_log(run_id: str, fmt: str = "text") -> dict:
 
 @router.post("/rpc/flash-module-firmware")
 async def flash_module_firmware(body: dict = Body(...)) -> dict:
-    """Upload a catalogued module bundle (FlashMemory.bin) into the left half's modules slot and
-    reboot it. Same two gates as the keyboard flash: refused here while FIRMWARE_FLASH_ENABLED is
-    False, and the upload path itself needs `arm` = the hash the half reports for its running
-    image. A third stands in front of both: the bundle's catalogue entry is withheld until the
-    modules slot is confirmed on a donor unit (build_firmware_catalog.MODULE_PATH_WITHHELD)."""
+    """Upload a catalogued module bundle (FlashMemory.bin) into the left half's modules slot; the
+    half restarts on its own. The single-step primitive for our own testing: the supervised
+    sequence a user reaches is /rpc/module-flash-procedure below. Same two gates as the keyboard
+    flash: refused here while FIRMWARE_FLASH_ENABLED is False, and the upload path itself needs
+    `arm` = the hash the half reports for its running image. The bundle must also be the one that
+    shipped with the left half's firmware (firmware_upload.require_module_pairing)."""
     if not FIRMWARE_FLASH_ENABLED:
         raise HTTPException(status_code=400, detail=(
             "Firmware flashing is wired but disabled until it is verified on a donor unit. "
@@ -407,6 +412,53 @@ async def flash_module_firmware(body: dict = Body(...)) -> dict:
             allow_older=bool(body.get("allow_older", False)))
     except (fw.UploadRefused, TransportError, ValueError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rpc/module-flash-procedure")
+async def module_flash_procedure_run(body: dict = Body(default={})) -> dict:
+    """Update the module docked on the LEFT half, as NayaFlow does it (device/module_procedure.py):
+    check the bundle the keyboard holds, upload only if it differs, program the module, confirm
+    its version, and log every step like a keyboard flash.
+
+    Body (all optional): {"version": "2.3.3", "allow_older": false, "force_upload": false}.
+    With no version, the bundle that shipped with the left half's firmware is installed. A bundle
+    that did not ship with it is refused. `force_upload` writes the bundle even when the keyboard
+    already holds it.
+
+    Returns immediately with the run's opening snapshot and streams progress like the keyboard
+    procedure; `{"wait": true}` blocks for the verdict (our own hardware testing). Same gate:
+    refused while FIRMWARE_FLASH_ENABLED is False. One run at a time, keyboard or module.
+    """
+    if not FIRMWARE_FLASH_ENABLED:
+        raise HTTPException(status_code=400, detail=(
+            "Firmware flashing is wired but disabled until it is verified on a donor unit. "
+            "Nothing was sent."))
+    from ..config import firmware_dir, logs_dir
+    from ..device import flash_runs as runs
+    from ..device import module_procedure as mproc
+    svc = get_service()
+    catalog = _firmware_catalog_raw()
+    version = body.get("version") or None
+    kwargs = {"version": str(version) if version else None,
+              "allow_older": bool(body.get("allow_older", False)),
+              "force_upload": bool(body.get("force_upload", False)),
+              "firmware_root": firmware_dir()}
+
+    if bool(body.get("wait", False)):
+        return await run_in_threadpool(mproc.run, svc, catalog, **kwargs)
+
+    from datetime import datetime
+    run_id = f"module-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    run_dir = logs_dir() / run_id
+
+    def work(on_event):
+        return mproc.run(svc, catalog, log_dir=run_dir, on_event=on_event, **kwargs)
+
+    try:
+        return runs.start(run_id, ["left"], {"left": kwargs["version"] or "paired"},
+                          run_dir, work).snapshot()
+    except runs.RunBusy as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
 @router.get("/api/recovery-read")

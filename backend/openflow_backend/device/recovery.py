@@ -544,7 +544,10 @@ def identify(image_hash: str | None, catalog: list | None) -> dict:
                     # release order is what the downgrade guard compares when the version
                     # number is unknown (most images before 1.14.5 have none).
                     "bundle": e.get("bundle"), "versionLabel": e.get("versionLabel"),
-                    "releaseOrder": e.get("releaseOrder")}
+                    "releaseOrder": e.get("releaseOrder"),
+                    # "beta" for an image only the NayaFlow beta channel shipped: recognised so
+                    # the half can be updated, never offered as a target.
+                    "channel": e.get("channel") or "official"}
     return {"identified": False,
             "why": "this image is not one we hold. That is not a fault — it just means we "
                    "cannot say which side or flash generation it is, so nothing may be written "

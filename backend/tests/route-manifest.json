@@ -78,6 +78,7 @@
   "POST /rpc/import-profile-file",
   "POST /rpc/led",
   "POST /rpc/led-setting",
+  "POST /rpc/module-flash-procedure",
   "POST /rpc/open-backup-folder",
   "POST /rpc/open-logs-folder",
   "POST /rpc/pairing-repair",

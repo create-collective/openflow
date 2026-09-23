@@ -68,6 +68,15 @@ STEP_LABELS = {
     "lighting.restore": "Putting the lights back to their stored colours",
     "verify.compare": "Comparing the keyboard against the backup",
     "run.end": "Finished",
+    # The module firmware procedure (device/module_procedure.py) writes to the same kind of log.
+    "preflight.check": "Checking the keyboard is ready for a module update",
+    "bundle.check": "Checking which module firmware the keyboard holds",
+    "bundle.restart": "Waiting for the keyboard to restart after the upload",
+    "bundle.verify": "Checking the module firmware the keyboard now holds",
+    "module.program": "Programming the module (its lights go out for a few seconds)",
+    "module.restart": "Waiting for the keyboard to restart after programming",
+    "module.verify": "Confirming the module's new version",
+    "replug": "Unplug the left half's USB cable and plug it back in",
 }
 
 
@@ -174,7 +183,9 @@ def render_events(events: list[dict]) -> str:
     """
     out = []
     for e in events:
-        mark = {"start": "  ", "ok": "OK", "fail": "!!", "note": "**"}.get(e.get("phase"), "  ")
+        # `action` is a step only the user can do (the module procedure's cable replug).
+        mark = {"start": "  ", "ok": "OK", "fail": "!!", "note": "**",
+                "action": ">>"}.get(e.get("phase"), "  ")
         side = f" [{e['side']}]" if e.get("side") else ""
         took = f" ({e['took_ms']} ms)" if e.get("took_ms") is not None else ""
         label = e.get("label") or e.get("step", "")

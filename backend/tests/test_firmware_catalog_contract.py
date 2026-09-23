@@ -41,7 +41,7 @@ def test_it_covers_every_nayaflow_release(cat):
 
 
 def test_every_distinct_keyboard_image_appears_once(images):
-    kb = [e for e in images if e["target"] == "keyboard"]
+    kb = [e for e in images if e["target"] == "keyboard" and e["channel"] == "official"]
     hashes = [e["plaintextSha256"] for e in kb]
     assert len(kb) == 26 and len(set(hashes)) == 26, "12 releases changed firmware; 1.25.x has 4 images"
     assert all(HEX64.match(h) for h in hashes)
@@ -81,15 +81,34 @@ def test_the_running_image_of_the_owners_board_is_present_and_flashable(images):
 def test_versions_come_from_the_changelogs_and_the_drift_is_normalised(images):
     """1.14.5's notes say `0.3.28.7`, 1.15.0's say `3.29.1`: the same numbering. Nothing keeps
     the four-part form."""
-    declared = {e["createFirmware"] for e in images if e["target"] == "keyboard" and e["createFirmware"]}
+    official = [e for e in images if e["target"] == "keyboard" and e["channel"] == "official"]
+    declared = {e["createFirmware"] for e in official if e["createFirmware"]}
     assert declared == {"3.28.7", "3.29.1", "3.31.1", "3.35.4", "3.41.0"}
     assert not any(v.startswith("0.") for v in declared)
-    for e in images:
+    for e in official:
         if e["target"] == "keyboard":
             if e["createFirmware"]:
                 assert e["versionConfidence"] == "declared" and e["versionLabel"] == e["createFirmware"]
             else:
                 assert e["versionConfidence"] == "unknown" and e["versionLabel"].startswith("NayaFlow ")
+
+
+def test_beta_channel_keyboard_images_are_recognised_but_never_offered(images):
+    """A half on a beta must be identifiable, or every write refuses it as "not one we hold" and
+    a board left on 3.40.4 could never be moved to 3.41.0. Recognised is not offered: none is
+    flashable, none is downloadable, and none duplicates an official image."""
+    beta = [e for e in images if e["channel"] == "beta"]
+    assert {(e["createFirmware"], e["side"]) for e in beta} == {
+        (v, s) for v in ("3.39.4", "3.40.0", "3.40.4") for s in ("left", "right")}
+    official = {e.get("plaintextSha256") for e in images if e["channel"] == "official"}
+    for e in beta:
+        assert e["target"] == "keyboard" and HEX64.match(e["plaintextSha256"]), e["versionLabel"]
+        assert e["plaintextSha256"] not in official
+        assert not e["flashable"] and any("beta" in w for w in e["withheldBecause"])
+        assert "historyPath" not in e and e["betaPath"].startswith("firmware-history-beta/")
+        assert e["generation"] == "A" and all(t.startswith("beta v") for t in e["bundles"])
+    # the 1.22.0 note says 3.39.3; the binaries say 3.39.4, and the conflict is kept, not hidden
+    assert all(e["versionConflict"] for e in beta if e["createFirmware"] == "3.39.4")
 
 
 def test_the_dvt_era_images_are_catalogued_but_withheld(images):
@@ -98,10 +117,34 @@ def test_the_dvt_era_images_are_catalogued_but_withheld(images):
     assert all(not e["flashable"] and e["withheldBecause"] for e in dvt)
 
 
-def test_no_module_image_is_offerable_until_the_module_path_is_tested(images):
-    mods = [e for e in images if e["target"] == "module"]
-    assert mods and all(not e["flashable"] for e in mods)
-    assert all(any("module flash path" in w for w in e["withheldBecause"]) for e in mods)
+def test_a_module_bundle_is_offerable_only_with_a_version_and_a_versioned_pairing(images):
+    """Watched end to end on NayaFlow 2026-09-23, so the path is no longer withheld as a whole.
+    What still withholds a bundle is what a device cannot check: no version of its own, or a
+    pairing with keyboard firmware that declares none."""
+    bundles = [e for e in images if e["file"] == "FlashMemory.bin"]
+    offered = {e["moduleFirmware"]: e["keyboardRange"] for e in bundles if e["flashable"]}
+    # A RANGE per bundle, from the first keyboard version it shipped with (official or beta) up to
+    # the next bundle's first. The beta channel moved one boundary: 2.3.3 first shipped with the
+    # beta 3.40.0, and 2.3.2 was still shipping with the beta 3.39.4.
+    assert offered == {"2.3.3": {"from": "3.40.0", "below": None},
+                       "2.3.2": {"from": "3.31.1", "below": "3.40.0"},
+                       "2.2.0": {"from": "3.29.1", "below": "3.31.1"},
+                       "2.1.2": {"from": "3.28.7", "below": "3.29.1"}}
+    seen = {e["moduleFirmware"]: e["pairedKeyboard"] for e in bundles if e["flashable"]}
+    assert seen["2.3.2"] == ["3.31.1", "3.35.4", "3.39.4"]
+    assert seen["2.3.3"] == ["3.40.0", "3.40.4", "3.41.0"]
+    withheld = {e["versionLabel"]: e["withheldBecause"] for e in bundles if not e["flashable"]}
+    assert set(withheld) == {"2.1.1", "NayaFlow 1.11.0 to 1.11.11"}
+    assert all(withheld.values())
+    # an app inside a bundle is offerable exactly when its bundle is and it is a shipping module
+    for app in (e for e in images if e.get("type") == "sfb"):
+        bundle = next(b for b in bundles if b["blobSha256"] == app["containerBlobSha256"])
+        shipping = app["component"] in ("touch", "track", "tune")
+        assert app["flashable"] == (bundle["flashable"] and shipping), app["file"]
+    assert not any(e["flashable"] for e in images if e.get("component") == "dial")
+
+
+def test_module_bundles_are_catalogued_whole(images):
     bundles = [e for e in images if e["file"] == "FlashMemory.bin"]
     assert len(bundles) == 6 and len({e["blobSha256"] for e in bundles}) == 6
     # every bundle since 1.14.3 names its own version in a VERSION file; 1.11.x has none
@@ -142,7 +185,8 @@ def test_every_mcuboot_resource_is_a_whole_slot_with_a_permanent_swap_trailer(im
     """image_ok = 0x01 and BOOT_MAGIC at the end of every resource: uploaded whole, it schedules a
     permanent swap by itself. The flasher must know, and does (firmware_upload.image_trailer)."""
     res = [e for e in images if e.get("type") == "mcuboot"]
-    assert len(res) == 27                             # 26 keyboard images + the dial
+    assert len([e for e in res if e["channel"] == "official"]) == 27   # 26 keyboard images + the dial
+    assert len([e for e in res if e["channel"] == "beta"]) == 6        # 3.39.4, 3.40.0, 3.40.4 x 2
     for e in res:
         assert e["trailer"] == {"magic": "good", "imageOk": True, "swapOnUpload": "permanent"}, e["file"]
         assert e["mcubootImageLen"] < e["resourceSize"], e["file"]

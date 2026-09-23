@@ -871,7 +871,61 @@ def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
 # LittleFS image, not an MCUboot image: nothing is marked pending, MCUboot does not swap it, and
 # there is no hash to read back through `image state`. The post-upload check is therefore an
 # app-mode read after the reboot -- MODULE_FILE_FW_VERSION (DeviceService.module_file_fw_version)
-# must equal the bundle's VERSION -- and the third step is the gated recovery op `module_fwup`.
+# must equal the bundle's VERSION. The whole sequence, measured on NayaFlow 2026-09-23, is driven
+# by device/module_procedure.py.
+
+
+def module_range_text(target: dict) -> str:
+    """"3.31.1 up to 3.40.0" / "3.40.0 and later": the keyboard firmware a bundle goes with."""
+    r = target.get("keyboardRange") or {}
+    if not r.get("from"):
+        return "no known keyboard firmware"
+    return f"{r['from']} up to {r['below']}" if r.get("below") else f"{r['from']} and later"
+
+
+def module_bundle_fits(target: dict, keyboard_version: str | None) -> bool:
+    """Is this keyboard firmware inside the bundle's range (catalogue `keyboardRange`)?
+
+    The range runs from the first keyboard version the bundle shipped with up to, not including,
+    the first keyboard version the NEXT bundle shipped with, across official and beta releases
+    (owner, 2026-09-23). A keyboard version nobody catalogued still has a home: a 3.36.x falls in
+    2.3.2's range because 2.3.2 shipped with 3.35.4 and the beta 3.39.4, and 2.3.3 first shipped
+    with 3.40.0.
+    """
+    r = target.get("keyboardRange") or {}
+    have, lo = _version_tuple(keyboard_version), _version_tuple(r.get("from"))
+    if not have or not lo or have < lo:
+        return False
+    # _version_tuple gives () for a missing version, so the open end is tested on the field itself.
+    return r.get("below") is None or have < _version_tuple(r["below"])
+
+
+def require_module_pairing(target: dict, keyboard_version: str | None, catalog: list) -> None:
+    """Refuse a module bundle outside the left half's keyboard firmware range.
+
+    NayaFlow installs a bundle only on the keyboard firmware it goes with (2.3.3 needs an
+    up-to-date Create Left), and every release carried exactly one of each. We hold the same rule
+    for every version, not just the latest, so a downgrade is a downgrade of the PAIR: the
+    keyboard first, then its modules. The refusal names the bundle that DOES fit, because "not
+    this one" alone leaves the user guessing.
+    """
+    if module_bundle_fits(target, keyboard_version):
+        return
+    fits = sorted({e.get("moduleFirmware") for e in catalog
+                   if e.get("type") == "littlefs" and e.get("flashable")
+                   and module_bundle_fits(e, keyboard_version)} - {None},
+                  key=lambda v: _version_tuple(v) or ())
+    want = target.get("versionLabel") or target.get("moduleFirmware")
+    goes = f"module firmware {want} goes with keyboard firmware {module_range_text(target)}"
+    if not keyboard_version:
+        raise UploadRefused(
+            f"{goes}, and this left half's firmware version could not be read, so the pairing "
+            "cannot be checked. Nothing was written.")
+    raise UploadRefused(
+        f"{goes}; this left half runs {keyboard_version}. "
+        + (f"Module firmware {' or '.join(fits)} is the one for {keyboard_version}. "
+           if fits else f"No module firmware we hold goes with {keyboard_version}. ")
+        + "Update the keyboard first to use this one. Nothing was written.")
 
 @dataclass
 class ModuleBundlePlan:
@@ -944,6 +998,9 @@ def plan_module_bundle(image_path: str | Path, catalog: list, *, chunk: int = DE
         raise UploadRefused(
             f"this is the {active.get('side')} half. The module firmware store is the LEFT "
             "half's: NayaCore uploads the bundle through the left half only.")
+    # The running image was identified by its hash against the catalogue, so its version here is
+    # the catalogue's, not a number the device could misreport.
+    require_module_pairing(target, active.get("createFirmware"), catalog)
 
     have, want = _version_tuple(installed_version), _version_tuple(target.get("moduleFirmware"))
     if have and want and want < have and not allow_older:
@@ -966,15 +1023,22 @@ def flash_module_bundle(image_path: str | Path, catalog: list, *, arm: str,
                         chunk: int = DEFAULT_CHUNK, installed_version: str | None = None,
                         allow_older: bool = False, progress=None, state: dict | None = None,
                         slot_info: dict | None = None) -> dict:
-    """Upload a module bundle into the modules slot of the left half and reboot it. The
-    verification is NOT here: it is the app-mode MODULE_FILE_FW_VERSION read after the half is
-    back, which the result spells out, followed by the `module_fwup` op with a module docked.
+    """Upload a module bundle into the modules slot of the left half. The verification is NOT
+    here: it is the app-mode MODULE_FILE_FW_VERSION read after the half is back, which the result
+    spells out, followed by MODULE_FWUP with a module docked (device/module_procedure.py).
 
     No mark-pending: the bundle is a filesystem, MCUboot has nothing to swap. Interrupting the
     upload leaves the modules partition partly erased and the KEYBOARD firmware untouched -- the
     keyboard keeps working, module programming does not until a bundle is uploaded again.
 
-    GATED: reached only through the FIRMWARE_FLASH_ENABLED endpoint. Never run on hardware.
+    NO RESET AFTERWARDS, and that is the vendor's shape, not an omission. NayaCore sends nothing
+    after the last chunk: the half restarts on its own about a second later (captured 2026-09-23,
+    NayaFlow 1.25.1, device/out/module-fw-touch1-20260923.pcap). A reset sent into that restart
+    goes to a port that is already closing. A half that does stay in the bootloader is reset by
+    the procedure's wait, which only ever resets a half it can see still sitting there.
+
+    GATED: reached only through the FIRMWARE_FLASH_ENABLED endpoints. The upload shape matches the
+    vendor's capture; this function itself has not yet run on hardware.
     """
     if state is None:
         state = rec.read_running_image(catalog)
@@ -996,12 +1060,9 @@ def flash_module_bundle(image_path: str | Path, catalog: list, *, arm: str,
         raise UploadRefused(
             f"the bootloader acknowledged {sent} of {len(raw)} bytes and stopped. Not resetting; "
             "upload the bundle again.")
-    try:
-        rec._talk(p.port, build_reset_request(seq=1), timeout=2.0)
-    except Exception:      # noqa: BLE001 -- the device reboots while answering
-        pass
     return {"ok": True, "written": sent, "uploadImageId": p.upload_image_id,
-            "slot": p.slot, "image": p.image_path.name, "port": p.port, "reset": True,
+            "slot": p.slot, "image": p.image_path.name, "port": p.port, "reset": False,
+            "target": p.expected_version,
             "verifyNext": {"read": "MODULE_FILE_FW_VERSION", "expect": p.expected_version,
                            "then": "module_fwup with the docked module's type, then "
                                    "GET_MODULE_FW_VERSION should report the same version"}}

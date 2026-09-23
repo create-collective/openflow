@@ -71,6 +71,10 @@ def test_the_endpoint_refuses_while_the_gate_is_shut(monkeypatch):
                    json={"targets": {"left": "kb_fwl.bin", "right": "kb_fwr.bin"}})
         assert r.status_code == 400
         assert "Nothing was sent" in r.json()["detail"]
+        # Its module twin (2026-09-23) is reached the same way and refuses the same way.
+        r = c.post("/rpc/module-flash-procedure", json={"force_upload": True})
+        assert r.status_code == 400
+        assert "Nothing was sent" in r.json()["detail"]
     assert HTTPException  # imported for the reader: the refusal is an HTTP 400, not a crash
 
 

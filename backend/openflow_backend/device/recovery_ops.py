@@ -83,11 +83,13 @@ def _partition_byte(opts: dict) -> bytes:
 
 def _module_type_byte(opts: dict) -> bytes:
     # MODULE_FWUP: NayaCore validates "parameter size should be 1" and substitutes AUTO_DETECT for
-    # an "invalid module_type", so the byte is a module type. Its numbering is nayactl's
-    # MODULE_TYPES (1 Touch, 2 Track, 3 Tune), which is INFERRED for this command: the size and
-    # the meaning are pinned by the strings, the exact enum values are not. The docked module's
+    # an "invalid module_type", so the byte is a module type. Numbering is nayactl's MODULE_TYPES
+    # (1 Touch, 2 Track, 3 Tune). Touch = 01 is ON THE WIRE (NayaFlow 1.25.1, 2026-09-23: `DE 1005`
+    # to dest 0x50, payload `01`, no reply) -- the plain type, not the side-dependent dock address.
+    # Track and Tune follow the same table and are confirmed when first run. The docked module's
     # type is what NayaCore sends when no force type is set ("reading from current module type"),
-    # so the caller passes the type it read off the dock, never a guess.
+    # so the caller passes the type it read off the dock, never a guess. The supervised update is
+    # device/module_procedure.py; this op is the bare command for recovery.
     m = opts.get("module")
     mapping = {"touch": 1, "track": 2, "tune": 3}
     v = m if isinstance(m, int) else mapping.get(str(m).lower())

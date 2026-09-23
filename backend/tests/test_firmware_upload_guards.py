@@ -173,12 +173,17 @@ def test_upload_is_wired_only_through_the_gated_endpoint():
     # uploader: it is the logged, verified procedure (SCRUM-108) and it drives flash() directly.
     # The gate is preserved by the second assertion -- the procedure itself is reachable only
     # through api/rest.py, so there is still exactly one gated way in.
-    assert referrers("firmware_upload") == ["api/rest.py", "device/flash_procedure.py"], (
-        "firmware_upload must be referenced only by api/rest.py and device/flash_procedure.py; "
-        f"found {referrers('firmware_upload')}")
-    assert referrers("flash_procedure") == ["api/rest.py"], (
-        "flash_procedure must be reachable only through the gated endpoint; "
-        f"found {referrers('flash_procedure')}")
+    # device/module_procedure.py is the module firmware twin of it (2026-09-23), with the same
+    # rule: reachable only through api/rest.py.
+    allowed = ["api/rest.py", "device/flash_procedure.py", "device/module_procedure.py"]
+    assert referrers("firmware_upload") == allowed, (
+        f"firmware_upload must be referenced only by {allowed}; found {referrers('firmware_upload')}")
+    assert referrers("flash_procedure") == ["api/rest.py", "device/module_procedure.py"], (
+        "flash_procedure must be reachable only through the gated endpoint (and the module "
+        f"procedure, which is itself gated); found {referrers('flash_procedure')}")
+    assert referrers("module_procedure") == ["api/rest.py"], (
+        "module_procedure must be reachable only through the gated endpoint; "
+        f"found {referrers('module_procedure')}")
     rest = (root / "api" / "rest.py").read_text(encoding="utf-8")
     # The gate is driven by the environment, so it cannot be committed on by accident the way an
     # edited `= True` can. What matters here is that it is never UNCONDITIONALLY open; that it is
@@ -604,6 +609,7 @@ MODULE_CATALOG = CATALOG + [
     {"file": "FlashMemory.bin", "target": "module", "type": "littlefs", "component": "modules",
      "blobSha256": _sha(BUNDLE_BYTES), "moduleFirmware": "2.3.3", "versionLabel": "2.3.3",
      "bundle": "NayaFlow 1.25.1", "releaseOrder": 24, "flashable": True, "withheldBecause": [],
+     "keyboardRange": {"from": "3.40.0", "below": None},
      "contents": {"Touch_UserApp.sfb": {"sha256": "aa" * 32, "size": 1}}},
 ]
 BOARD_MAP = {"supported": True, "rc": 0, "slots": [
@@ -713,6 +719,13 @@ def test_a_bundle_downgrade_needs_allow_older_when_the_installed_version_is_know
     assert same.expected_version == "2.3.3"
 
 
+def test_a_bundle_the_left_halfs_firmware_did_not_ship_with_is_refused(bundle):
+    """2.3.3 goes with 3.40.0 and later; NayaFlow will not put it on anything older, nor do we."""
+    with pytest.raises(fw.UploadRefused, match="goes with keyboard firmware 3.40.0 and later; this left half runs 3.35.4"):
+        fw.plan_module_bundle(bundle, MODULE_CATALOG, state=state_ok(fw_version="3.35.4"),
+                              slot_info=MODULE_MAP)
+
+
 def test_a_withheld_bundle_is_refused(bundle):
     held = [dict(e, flashable=False, withheldBecause=["module flash path not tested"])
             if e["file"] == "FlashMemory.bin" else e for e in MODULE_CATALOG]
@@ -720,16 +733,18 @@ def test_a_withheld_bundle_is_refused(bundle):
         fw.plan_module_bundle(bundle, held, state=state_ok(), slot_info=MODULE_MAP)
 
 
-def test_flash_module_bundle_is_chunks_then_reset_and_nothing_else(bundle, monkeypatch):
-    """No mark-pending and no slot re-read: the bundle is a filesystem, not an MCUboot image."""
+def test_flash_module_bundle_is_chunks_and_nothing_else(bundle, monkeypatch):
+    """No mark-pending, no slot re-read and NO RESET: the bundle is a filesystem, and NayaCore
+    sends nothing after the last chunk because the half restarts on its own (captured on NayaFlow
+    1.25.1, 2026-09-23)."""
     log = []
     _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
     r = fw.flash_module_bundle(bundle, MODULE_CATALOG, arm=RUNNING_HASH, state=state_ok(),
                                slot_info=MODULE_MAP, chunk=BIG_CHUNK)
-    assert _kinds(log) == [(1, 1, 2)] * BUNDLE_CHUNKS + [(0, 5, 2)]
+    assert _kinds(log) == [(1, 1, 2)] * BUNDLE_CHUNKS
     assert all(b["image"] == 4 for _h, b in log[:BUNDLE_CHUNKS])
     assert log[0][1]["len"] == len(BUNDLE_BYTES) and log[0][1]["sha"] == hashlib.sha256(BUNDLE_BYTES).digest()
-    assert r["reset"] is True and r["uploadImageId"] == 4
+    assert r["reset"] is False and r["uploadImageId"] == 4
     assert r["verifyNext"]["read"] == "MODULE_FILE_FW_VERSION" and r["verifyNext"]["expect"] == "2.3.3"
 
 

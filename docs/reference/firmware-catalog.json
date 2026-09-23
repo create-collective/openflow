@@ -1,6 +1,6 @@
 {
  "_note": "Metadata only; the images are vendor material and are NOT in this repository (they live in the private nayaHistory clone under firmware-history/<tag>/, see historyPath). Built by tools/build_firmware_catalog.py from every NayaFlow release 0.0.1 to 1.25.1; do not hand-edit. One entry per DISTINCT image (deduplicated by plaintextSha256, by blobSha256 for the LittleFS module bundle); `bundles` lists every release that shipped it, `bundle` the newest. Filenames repeat across releases (every one has a kb_fwl.bin), so match a file by blobSha256, never by name. Keyboard: plaintextSha256 is what `mcumgr image list` reports for the running image; `generation` is the QSPI flash generation NayaCore picks by USB PID and a half matches exactly one image. `createFirmware` / `moduleFirmware` come from the release changelogs (\"NayaCreate (vA -> vB)\") or the 1.25.x app JS; where no release declared a number, versionConfidence is \"unknown\" and versionLabel names the release(s) instead. `releaseOrder` is the chronological index of the first release that shipped the image, for the downgrade guard when versions are unknown. Module: FlashMemory.bin is a LittleFS bundle; its `moduleFirmware` is the VERSION file inside it (what MODULE_FILE_FW_VERSION reports) and `contents` lists its userapps with the SHA-256 the Create reports for each (the bundle's _HASH sidecars); the .sfb entries repeat that per app, `containerBlobSha256` naming their bundle.",
- "generated": "2026-09-16T00:52:41",
+ "generated": "2026-09-23T13:16:06",
  "source": "https://github.com/traviswye/nayaHistory (firmware-history/, changelogs/, MANIFEST.json)",
  "signingKeys": [
   "de8b07187913e6e788306618e4166e38a8c2eda99b68970d17fd00e75fd5b972"
@@ -281,7 +281,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl_64.bin",
@@ -325,7 +326,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -369,7 +371,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr_64.bin",
@@ -413,7 +416,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -458,7 +462,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -503,7 +508,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -547,7 +553,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -591,7 +598,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -635,7 +643,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -679,7 +688,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -728,7 +738,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -777,7 +788,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -820,7 +832,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -863,7 +876,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -906,7 +920,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -949,7 +964,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -993,7 +1009,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -1037,7 +1054,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -1081,7 +1099,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -1125,7 +1144,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -1172,7 +1192,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -1219,7 +1240,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwl.bin",
@@ -1263,7 +1285,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "kb_fwr.bin",
@@ -1307,7 +1330,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "fwl.bin",
@@ -1353,7 +1377,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   },
   {
    "file": "fwr.bin",
@@ -1399,7 +1424,352 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
+  },
+  {
+   "file": "kb_fwl.bin",
+   "target": "keyboard",
+   "type": "mcuboot",
+   "channel": "beta",
+   "component": "left",
+   "side": "left",
+   "sideConfidence": "confirmed",
+   "generation": "A",
+   "generationConfidence": "pre-split",
+   "imageSize": 327808,
+   "mcubootImageLen": 328916,
+   "resourceSize": 663552,
+   "encrypted": true,
+   "plaintextSha256": "3740d3631311b64a787bded506402941ad17108b92015a6a3d3ac02f04b6e8d5",
+   "signingKeyHash": "de8b07187913e6e788306618e4166e38a8c2eda99b68970d17fd00e75fd5b972",
+   "blobSha256": "36ee12661ccc2281fb6756cb3b533614afa146fe4b04420af281b17579a3a664",
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   },
+   "createFirmware": "3.40.4",
+   "versionLabel": "3.40.4",
+   "versionConfidence": "declared",
+   "versionSource": "NayaCore version literal (highest 0.3.x.y)",
+   "versionConflict": false,
+   "versionEvidence": [
+    {
+     "version": "3.40.4",
+     "source": "NayaCore version literal (highest 0.3.x.y)"
+    },
+    {
+     "version": "3.40.4",
+     "source": "app JS NAYA_CREATE_FW_VERSION"
+    },
+    {
+     "version": "3.40.4",
+     "source": "beta note v1.24.0 (NayaCreate heading)"
+    }
+   ],
+   "betaPath": "firmware-history-beta/v1.24.0/kb_fwl.bin",
+   "era": "beta",
+   "releaseOrder": null,
+   "firstSeen": "beta v1.24.0",
+   "firstSeenAt": "2026-06-09",
+   "bundles": [
+    "beta v1.24.0"
+   ],
+   "flashable": false,
+   "withheldBecause": [
+    "beta-channel image: catalogued so a half running it is RECOGNISED (it can be updated to an official release, and matched to its module firmware), not offered as something to install"
+   ],
+   "lastSeen": "beta v1.24.0",
+   "bundle": "NayaFlow beta 1.24.0",
+   "source": "NayaFlow beta 1.24.0"
+  },
+  {
+   "file": "kb_fwr.bin",
+   "target": "keyboard",
+   "type": "mcuboot",
+   "channel": "beta",
+   "component": "right",
+   "side": "right",
+   "sideConfidence": "confirmed",
+   "generation": "A",
+   "generationConfidence": "pre-split",
+   "imageSize": 225024,
+   "mcubootImageLen": 226132,
+   "resourceSize": 663552,
+   "encrypted": true,
+   "plaintextSha256": "684f70f853b0ec1e4318c5dc52f265284545b5ca06ecb6048d4fc9b3816e4c22",
+   "signingKeyHash": "de8b07187913e6e788306618e4166e38a8c2eda99b68970d17fd00e75fd5b972",
+   "blobSha256": "da499748ffa23953527509105e20b240a67543c9e8ab4e3e0676699fe4358e7d",
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   },
+   "createFirmware": "3.40.4",
+   "versionLabel": "3.40.4",
+   "versionConfidence": "declared",
+   "versionSource": "NayaCore version literal (highest 0.3.x.y)",
+   "versionConflict": false,
+   "versionEvidence": [
+    {
+     "version": "3.40.4",
+     "source": "NayaCore version literal (highest 0.3.x.y)"
+    },
+    {
+     "version": "3.40.4",
+     "source": "app JS NAYA_CREATE_FW_VERSION"
+    },
+    {
+     "version": "3.40.4",
+     "source": "beta note v1.24.0 (NayaCreate heading)"
+    }
+   ],
+   "betaPath": "firmware-history-beta/v1.24.0/kb_fwr.bin",
+   "era": "beta",
+   "releaseOrder": null,
+   "firstSeen": "beta v1.24.0",
+   "firstSeenAt": "2026-06-09",
+   "bundles": [
+    "beta v1.24.0"
+   ],
+   "flashable": false,
+   "withheldBecause": [
+    "beta-channel image: catalogued so a half running it is RECOGNISED (it can be updated to an official release, and matched to its module firmware), not offered as something to install"
+   ],
+   "lastSeen": "beta v1.24.0",
+   "bundle": "NayaFlow beta 1.24.0",
+   "source": "NayaFlow beta 1.24.0"
+  },
+  {
+   "file": "kb_fwl.bin",
+   "target": "keyboard",
+   "type": "mcuboot",
+   "channel": "beta",
+   "component": "left",
+   "side": "left",
+   "sideConfidence": "confirmed",
+   "generation": "A",
+   "generationConfidence": "pre-split",
+   "imageSize": 327264,
+   "mcubootImageLen": 328372,
+   "resourceSize": 663552,
+   "encrypted": true,
+   "plaintextSha256": "01e3ddda14b5f2dc3554c59d95df2e95319fe24624f97489cafa51a9db1f8a6e",
+   "signingKeyHash": "de8b07187913e6e788306618e4166e38a8c2eda99b68970d17fd00e75fd5b972",
+   "blobSha256": "d2e46e2acdc8e9534ccc958f4d32dd2cc87ce0f1ba5d5c273c315afffc0aa6bd",
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   },
+   "createFirmware": "3.40.0",
+   "versionLabel": "3.40.0",
+   "versionConfidence": "declared",
+   "versionSource": "NayaCore version literal (highest 0.3.x.y)",
+   "versionConflict": false,
+   "versionEvidence": [
+    {
+     "version": "3.40.0",
+     "source": "NayaCore version literal (highest 0.3.x.y)"
+    },
+    {
+     "version": "3.40.0",
+     "source": "app JS NAYA_CREATE_FW_VERSION"
+    },
+    {
+     "version": "3.40.0",
+     "source": "beta note v1.23.0 (NayaCreate heading)"
+    }
+   ],
+   "betaPath": "firmware-history-beta/v1.23.0/kb_fwl.bin",
+   "era": "beta",
+   "releaseOrder": null,
+   "firstSeen": "beta v1.23.0",
+   "firstSeenAt": "2026-05-21",
+   "bundles": [
+    "beta v1.23.0",
+    "beta v1.23.1"
+   ],
+   "flashable": false,
+   "withheldBecause": [
+    "beta-channel image: catalogued so a half running it is RECOGNISED (it can be updated to an official release, and matched to its module firmware), not offered as something to install"
+   ],
+   "lastSeen": "beta v1.23.1",
+   "bundle": "NayaFlow beta 1.23.1",
+   "source": "NayaFlow beta 1.23.1"
+  },
+  {
+   "file": "kb_fwr.bin",
+   "target": "keyboard",
+   "type": "mcuboot",
+   "channel": "beta",
+   "component": "right",
+   "side": "right",
+   "sideConfidence": "confirmed",
+   "generation": "A",
+   "generationConfidence": "pre-split",
+   "imageSize": 224800,
+   "mcubootImageLen": 225908,
+   "resourceSize": 663552,
+   "encrypted": true,
+   "plaintextSha256": "8b0a4e3d78dff551596d8d0aaa727f4f3d2db34021597736507bea17bfd7459f",
+   "signingKeyHash": "de8b07187913e6e788306618e4166e38a8c2eda99b68970d17fd00e75fd5b972",
+   "blobSha256": "f769368921aa7f5f6bb3a024f374f87a0a2e38d930c6f117ea978f62a08ddf8e",
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   },
+   "createFirmware": "3.40.0",
+   "versionLabel": "3.40.0",
+   "versionConfidence": "declared",
+   "versionSource": "NayaCore version literal (highest 0.3.x.y)",
+   "versionConflict": false,
+   "versionEvidence": [
+    {
+     "version": "3.40.0",
+     "source": "NayaCore version literal (highest 0.3.x.y)"
+    },
+    {
+     "version": "3.40.0",
+     "source": "app JS NAYA_CREATE_FW_VERSION"
+    },
+    {
+     "version": "3.40.0",
+     "source": "beta note v1.23.0 (NayaCreate heading)"
+    }
+   ],
+   "betaPath": "firmware-history-beta/v1.23.0/kb_fwr.bin",
+   "era": "beta",
+   "releaseOrder": null,
+   "firstSeen": "beta v1.23.0",
+   "firstSeenAt": "2026-05-21",
+   "bundles": [
+    "beta v1.23.0",
+    "beta v1.23.1"
+   ],
+   "flashable": false,
+   "withheldBecause": [
+    "beta-channel image: catalogued so a half running it is RECOGNISED (it can be updated to an official release, and matched to its module firmware), not offered as something to install"
+   ],
+   "lastSeen": "beta v1.23.1",
+   "bundle": "NayaFlow beta 1.23.1",
+   "source": "NayaFlow beta 1.23.1"
+  },
+  {
+   "file": "kb_fwl.bin",
+   "target": "keyboard",
+   "type": "mcuboot",
+   "channel": "beta",
+   "component": "left",
+   "side": "left",
+   "sideConfidence": "confirmed",
+   "generation": "A",
+   "generationConfidence": "pre-split",
+   "imageSize": 327008,
+   "mcubootImageLen": 328116,
+   "resourceSize": 663552,
+   "encrypted": true,
+   "plaintextSha256": "d9f7f80a402e0deb2c13a0e803fcb97db28584e40a866254fa3d051feab52c4e",
+   "signingKeyHash": "de8b07187913e6e788306618e4166e38a8c2eda99b68970d17fd00e75fd5b972",
+   "blobSha256": "845ff18080fd02994f8e5395ed6711b6185b73bba5f8cbb2339ab1375d2d83df",
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   },
+   "createFirmware": "3.39.4",
+   "versionLabel": "3.39.4",
+   "versionConfidence": "declared",
+   "versionSource": "NayaCore version literal (highest 0.3.x.y)",
+   "versionConflict": true,
+   "versionEvidence": [
+    {
+     "version": "3.39.4",
+     "source": "NayaCore version literal (highest 0.3.x.y)"
+    },
+    {
+     "version": "3.39.4",
+     "source": "app JS NAYA_CREATE_FW_VERSION"
+    },
+    {
+     "version": "3.39.3",
+     "source": "beta note v1.22.0 (NayaCreate heading)"
+    }
+   ],
+   "betaPath": "firmware-history-beta/v1.22.0/kb_fwl.bin",
+   "era": "beta",
+   "releaseOrder": null,
+   "firstSeen": "beta v1.22.0",
+   "firstSeenAt": "2026-05-18",
+   "bundles": [
+    "beta v1.22.0"
+   ],
+   "flashable": false,
+   "withheldBecause": [
+    "beta-channel image: catalogued so a half running it is RECOGNISED (it can be updated to an official release, and matched to its module firmware), not offered as something to install"
+   ],
+   "lastSeen": "beta v1.22.0",
+   "bundle": "NayaFlow beta 1.22.0",
+   "source": "NayaFlow beta 1.22.0"
+  },
+  {
+   "file": "kb_fwr.bin",
+   "target": "keyboard",
+   "type": "mcuboot",
+   "channel": "beta",
+   "component": "right",
+   "side": "right",
+   "sideConfidence": "confirmed",
+   "generation": "A",
+   "generationConfidence": "pre-split",
+   "imageSize": 224464,
+   "mcubootImageLen": 225572,
+   "resourceSize": 663552,
+   "encrypted": true,
+   "plaintextSha256": "d3d7bf81757dda7b5f93e90791fb2ed5f2ad03dd7872958901bab7d21c6f22ff",
+   "signingKeyHash": "de8b07187913e6e788306618e4166e38a8c2eda99b68970d17fd00e75fd5b972",
+   "blobSha256": "74176ce35ca49af9d07c69d9934b73d1a496e31d29f1611a21a865945415135a",
+   "trailer": {
+    "magic": "good",
+    "imageOk": true,
+    "swapOnUpload": "permanent"
+   },
+   "createFirmware": "3.39.4",
+   "versionLabel": "3.39.4",
+   "versionConfidence": "declared",
+   "versionSource": "NayaCore version literal (highest 0.3.x.y)",
+   "versionConflict": true,
+   "versionEvidence": [
+    {
+     "version": "3.39.4",
+     "source": "NayaCore version literal (highest 0.3.x.y)"
+    },
+    {
+     "version": "3.39.4",
+     "source": "app JS NAYA_CREATE_FW_VERSION"
+    },
+    {
+     "version": "3.39.3",
+     "source": "beta note v1.22.0 (NayaCreate heading)"
+    }
+   ],
+   "betaPath": "firmware-history-beta/v1.22.0/kb_fwr.bin",
+   "era": "beta",
+   "releaseOrder": null,
+   "firstSeen": "beta v1.22.0",
+   "firstSeenAt": "2026-05-18",
+   "bundles": [
+    "beta v1.22.0"
+   ],
+   "flashable": false,
+   "withheldBecause": [
+    "beta-channel image: catalogued so a half running it is RECOGNISED (it can be updated to an official release, and matched to its module firmware), not offered as something to install"
+   ],
+   "lastSeen": "beta v1.22.0",
+   "bundle": "NayaFlow beta 1.22.0",
+   "source": "NayaFlow beta 1.22.0"
   },
   {
    "file": "FlashMemory.bin",
@@ -1460,10 +1830,53 @@
    "versionLabel": "2.3.3",
    "component": "modules",
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ]
+   "flashable": true,
+   "withheldBecause": [],
+   "pairedKeyboard": [
+    "3.40.0",
+    "3.40.4",
+    "3.41.0"
+   ],
+   "pairedKeyboardEvidence": [
+    {
+     "keyboard": "3.40.0",
+     "release": "beta v1.23.0",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.40.0",
+     "release": "beta v1.23.1",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.40.4",
+     "release": "beta v1.24.0",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.41.0",
+     "release": "beta v1.25.0",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.41.0",
+     "release": "v1.25.0",
+     "channel": "official"
+    },
+    {
+     "keyboard": "3.41.0",
+     "release": "v1.25.1",
+     "channel": "official"
+    }
+   ],
+   "keyboardRange": {
+    "from": "3.40.0",
+    "below": null
+   },
+   "pairedKeyboardLabels": [
+    "3.41.0"
+   ],
+   "channel": "official"
   },
   {
    "file": "Touch_UserApp.sfb",
@@ -1491,11 +1904,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.3",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Track_UserApp.sfb",
@@ -1523,11 +1935,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.3",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Tune_UserApp.sfb",
@@ -1555,11 +1966,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.3",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Float_UserApp.sfb",
@@ -1589,10 +1999,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Query_UserApp.sfb",
@@ -1622,10 +2032,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "FlashMemory.bin",
@@ -1689,10 +2099,89 @@
    "versionLabel": "2.3.2",
    "component": "modules",
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ]
+   "flashable": true,
+   "withheldBecause": [],
+   "pairedKeyboard": [
+    "3.31.1",
+    "3.35.4",
+    "3.39.4"
+   ],
+   "pairedKeyboardEvidence": [
+    {
+     "keyboard": "3.31.1",
+     "release": "beta v1.17.1",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.31.1",
+     "release": "beta v1.17.2",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.31.1",
+     "release": "v1.17.2",
+     "channel": "official"
+    },
+    {
+     "keyboard": "3.31.1",
+     "release": "v1.17.3",
+     "channel": "official"
+    },
+    {
+     "keyboard": "3.35.4",
+     "release": "beta v1.18.0",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.35.4",
+     "release": "beta v1.19.0",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.35.4",
+     "release": "beta v1.19.1",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.35.4",
+     "release": "beta v1.20.0",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.35.4",
+     "release": "beta v1.21.0",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.35.4",
+     "release": "v1.19.1",
+     "channel": "official"
+    },
+    {
+     "keyboard": "3.35.4",
+     "release": "v1.20.0",
+     "channel": "official"
+    },
+    {
+     "keyboard": "3.35.4",
+     "release": "v1.21.0",
+     "channel": "official"
+    },
+    {
+     "keyboard": "3.39.4",
+     "release": "beta v1.22.0",
+     "channel": "beta"
+    }
+   ],
+   "keyboardRange": {
+    "from": "3.31.1",
+    "below": "3.40.0"
+   },
+   "pairedKeyboardLabels": [
+    "3.31.1",
+    "3.35.4"
+   ],
+   "channel": "official"
   },
   {
    "file": "Touch_UserApp.sfb",
@@ -1723,11 +2212,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.2",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Track_UserApp.sfb",
@@ -1758,11 +2246,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.2",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Tune_UserApp.sfb",
@@ -1793,11 +2280,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.3.2",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Float_UserApp.sfb",
@@ -1830,10 +2316,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Query_UserApp.sfb",
@@ -1866,10 +2352,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "FlashMemory.bin",
@@ -1930,10 +2416,46 @@
    "versionLabel": "2.2.0",
    "component": "modules",
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ]
+   "flashable": true,
+   "withheldBecause": [],
+   "pairedKeyboard": [
+    "3.29.1"
+   ],
+   "pairedKeyboardEvidence": [
+    {
+     "keyboard": "3.29.1",
+     "release": "beta v1.16.0",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.29.1",
+     "release": "beta v1.16.1",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.29.1",
+     "release": "beta v1.17.0",
+     "channel": "beta"
+    },
+    {
+     "keyboard": "3.29.1",
+     "release": "v1.15.0",
+     "channel": "official"
+    },
+    {
+     "keyboard": "3.29.1",
+     "release": "v1.15.1",
+     "channel": "official"
+    }
+   ],
+   "keyboardRange": {
+    "from": "3.29.1",
+    "below": "3.31.1"
+   },
+   "pairedKeyboardLabels": [
+    "3.29.1"
+   ],
+   "channel": "official"
   },
   {
    "file": "Touch_UserApp.sfb",
@@ -1961,11 +2483,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.2.0",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Track_UserApp.sfb",
@@ -1993,11 +2514,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.2.0",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Tune_UserApp.sfb",
@@ -2025,11 +2545,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.2.0",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Float_UserApp.sfb",
@@ -2059,10 +2578,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "Query_UserApp.sfb",
@@ -2092,10 +2611,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app."
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). sha256 is the bundle's own _HASH sidecar, the value the Create reports for the app.",
+   "channel": "official"
   },
   {
    "file": "FlashMemory.bin",
@@ -2161,10 +2680,26 @@
    "versionLabel": "2.1.2",
    "component": "modules",
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ]
+   "flashable": true,
+   "withheldBecause": [],
+   "pairedKeyboard": [
+    "3.28.7"
+   ],
+   "pairedKeyboardEvidence": [
+    {
+     "keyboard": "3.28.7",
+     "release": "v1.14.5",
+     "channel": "official"
+    }
+   ],
+   "keyboardRange": {
+    "from": "3.28.7",
+    "below": "3.29.1"
+   },
+   "pairedKeyboardLabels": [
+    "3.28.7"
+   ],
+   "channel": "official"
   },
   {
    "file": "Touch_UserApp.sfb",
@@ -2191,11 +2726,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.1.2",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Track_UserApp.sfb",
@@ -2222,11 +2756,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.1.2",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Tune_UserApp.sfb",
@@ -2253,11 +2786,10 @@
    "versionSource": "VERSION file inside FlashMemory.bin",
    "versionLabel": "2.1.2",
    "encrypted": true,
-   "flashable": false,
-   "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ],
-   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "flashable": true,
+   "withheldBecause": [],
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Float_UserApp.sfb",
@@ -2286,10 +2818,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Query_UserApp.sfb",
@@ -2318,10 +2850,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
     "not a shipping module"
    ],
-   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "FlashMemory.bin",
@@ -2383,8 +2915,15 @@
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ]
+    "shipped with keyboard firmware that declares no version number, so whether a keyboard runs its pairing cannot be checked on the device"
+   ],
+   "pairedKeyboard": [],
+   "pairedKeyboardEvidence": [],
+   "keyboardRange": null,
+   "pairedKeyboardLabels": [
+    "NayaFlow 1.14.3"
+   ],
+   "channel": "official"
   },
   {
    "file": "Touch_UserApp.sfb",
@@ -2413,9 +2952,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
+    "shipped with keyboard firmware that declares no version number, so whether a keyboard runs its pairing cannot be checked on the device"
    ],
-   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Track_UserApp.sfb",
@@ -2444,9 +2984,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
+    "shipped with keyboard firmware that declares no version number, so whether a keyboard runs its pairing cannot be checked on the device"
    ],
-   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Tune_UserApp.sfb",
@@ -2475,9 +3016,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
+    "shipped with keyboard firmware that declares no version number, so whether a keyboard runs its pairing cannot be checked on the device"
    ],
-   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Float_UserApp.sfb",
@@ -2506,10 +3048,11 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
+    "shipped with keyboard firmware that declares no version number, so whether a keyboard runs its pairing cannot be checked on the device",
     "not a shipping module"
    ],
-   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Query_UserApp.sfb",
@@ -2538,10 +3081,11 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
+    "shipped with keyboard firmware that declares no version number, so whether a keyboard runs its pairing cannot be checked on the device",
     "not a shipping module"
    ],
-   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "FlashMemory.bin",
@@ -2607,8 +3151,17 @@
    "note": "LittleFS image holding every module's encrypted .sfb userapp (Touch, Track, Tune, and the non-shipping Float, Query). Written whole to the modules slot; no MCUboot header, so no plaintext hash.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
-   ]
+    "this bundle declares no version number, so neither the keyboard's stored copy nor the module could be checked against it after the write"
+   ],
+   "pairedKeyboard": [],
+   "pairedKeyboardEvidence": [],
+   "keyboardRange": null,
+   "pairedKeyboardLabels": [
+    "NayaFlow 1.11.0, 1.11.9",
+    "NayaFlow 1.11.11",
+    "NayaFlow 1.11.8, 1.11.10"
+   ],
+   "channel": "official"
   },
   {
    "file": "Touch_UserApp.sfb",
@@ -2641,9 +3194,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
+    "this bundle declares no version number, so neither the keyboard's stored copy nor the module could be checked against it after the write"
    ],
-   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Naya Touch module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Track_UserApp.sfb",
@@ -2676,9 +3230,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
+    "this bundle declares no version number, so neither the keyboard's stored copy nor the module could be checked against it after the write"
    ],
-   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Naya Track module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Tune_UserApp.sfb",
@@ -2711,9 +3266,10 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)"
+    "this bundle declares no version number, so neither the keyboard's stored copy nor the module could be checked against it after the write"
    ],
-   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Naya Tune module firmware. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Float_UserApp.sfb",
@@ -2746,10 +3302,11 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
+    "this bundle declares no version number, so neither the keyboard's stored copy nor the module could be checked against it after the write",
     "not a shipping module"
    ],
-   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Float module -- appears unreleased; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "Query_UserApp.sfb",
@@ -2782,10 +3339,11 @@
    "encrypted": true,
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
+    "this bundle declares no version number, so neither the keyboard's stored copy nor the module could be checked against it after the write",
     "not a shipping module"
    ],
-   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here."
+   "note": "Query module -- deprecated/experimental; bundled but not a shipping module. Encrypted .sfb inside FlashMemory.bin (LittleFS). This bundle predates the _HASH sidecars; sha256 is computed here.",
+   "channel": "official"
   },
   {
    "file": "d_fw.bin",
@@ -2825,7 +3383,6 @@
    "note": "Standalone dial firmware, the Tune's predecessor, shipped 0.1.0 to 1.6.10 before FlashMemory.bin folded the modules into one bundle. An MCUboot image for the module MCU, not for a keyboard half.",
    "flashable": false,
    "withheldBecause": [
-    "module flash path never run: wired (firmware_upload.flash_module_bundle, modules slot = NayaCore's upload id 4, numbering confirmed by the owner's board's slot map on 2026-09-16) and withheld until the first upload is watched on a donor unit (work-queue step 2)",
     "no dial hardware to test on, and the module bundle superseded it"
    ],
    "headerSize": 512,
@@ -2836,7 +3393,8 @@
     "magic": "good",
     "imageOk": true,
     "swapOnUpload": "permanent"
-   }
+   },
+   "channel": "official"
   }
  ]
 }
