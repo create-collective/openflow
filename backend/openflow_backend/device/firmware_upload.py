@@ -589,11 +589,14 @@ ERASE_TIMEOUT = 90.0
 
 
 def _send_chunks(port: str, image_id: int, raw: bytes, *, chunk: int, progress=None,
-                 untouched: str = "the primary image is untouched") -> int:
+                 untouched: str = "the primary image is untouched", link=None) -> int:
     """Stream one image to the bootloader, chunk by chunk, stopping on the first refusal. Returns
-    the number of bytes the DEVICE acknowledged."""
+    the number of bytes the DEVICE acknowledged. With `link` (recovery.BootloaderLink) the chunks
+    go over the conversation the caller already holds -- the port that identified the half, with
+    its console drained -- instead of a session opened here."""
     sha = hashlib.sha256(raw).digest()
-    sent, seq = 0, 0
+    if link is not None:
+        return _stream_chunks(link.send, image_id, raw, sha, chunk, progress, untouched)
     # ONE open port for the whole transfer, as NayaCore does ("Open the serial port ... chunked
     # via uploadImageChunk"). This used to call rec._talk per chunk, which reopens the port every
     # time -- and the bootloader's CDC endpoint needs a moment to settle after an open, so a
@@ -1040,7 +1043,8 @@ def plan_module_bundle(image_path: str | Path, catalog: list, *, chunk: int = DE
 def flash_module_bundle(image_path: str | Path, catalog: list, *, arm: str,
                         chunk: int = DEFAULT_CHUNK, installed_version: str | None = None,
                         allow_older: bool = False, progress=None, state: dict | None = None,
-                        slot_info: dict | None = None, allow_unmapped: bool = False) -> dict:
+                        slot_info: dict | None = None, allow_unmapped: bool = False,
+                        link=None) -> dict:
     """Upload a module bundle into the modules slot of the left half. The verification is NOT
     here: it is the app-mode MODULE_FILE_FW_VERSION read after the half is back, which the result
     spells out, followed by MODULE_FWUP with a module docked (device/module_procedure.py).
@@ -1074,7 +1078,7 @@ def flash_module_bundle(image_path: str | Path, catalog: list, *, arm: str,
         raise UploadRefused(f"chunk must be 1 to {MAX_CHUNK} bytes, not {chunk}")
     sent = _send_chunks(p.port, p.upload_image_id, raw, chunk=chunk, progress=progress,
                         untouched="the keyboard firmware is untouched, the modules partition is "
-                                  "partly written")
+                                  "partly written", link=link)
     if sent < len(raw):
         raise UploadRefused(
             f"the bootloader acknowledged {sent} of {len(raw)} bytes and stopped. Not resetting; "

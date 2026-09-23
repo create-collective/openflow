@@ -502,6 +502,215 @@ def image_state(port: str) -> dict:
     return _talk(port, encode_request(SMP_OP_READ, SMP_GROUP_IMAGE, SMP_ID_IMAGE_STATE))
 
 
+# --- one held conversation with a bootloader --------------------------------------------------- #
+
+def _open_serial(port: str, timeout: float = 5.0):
+    """Open a bootloader port the way _talk does, retrying the refusal Windows gives a port for a
+    moment after the bootloader enumerates."""
+    import serial
+    last = None
+    for _attempt in range(6):
+        try:
+            ser = serial.Serial(port=port, baudrate=115200, bytesize=serial.EIGHTBITS,
+                                parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
+                                timeout=0.02, dsrdtr=False, write_timeout=timeout)
+            ser.dtr = True
+            ser.rts = True
+            return ser
+        except serial.SerialException as e:
+            last = e
+            time.sleep(0.35)
+    from . import port_access
+    if port_access.is_permission_denied(last):
+        raise serial.SerialException(port_access.denied_message(port)) from last
+    raise last
+
+
+class BootloaderLink:
+    """ONE conversation with a half in MCUboot, held the way NayaCore holds it.
+
+    Measured on 2026-09-23 against the warranty board: opening and closing the data port for
+    every request made the bootloader answer late and in bursts -- identification took a minute,
+    `image slot info` replies arrived 56 s after they were asked for, all at once, and a late
+    reply to one request was read as the answer to the next. NayaCore does it differently. Its
+    log: "Serial port opened successfully" twice (BOTH of the half's ports), "Log port detected,
+    polling serial for boot log until data port worker finishes" -- the console port is read the
+    whole time the data port is in use, and both stay open for the visit.
+
+    So: open every port the half presents, find the one that answers SMP, keep it open for every
+    request of the visit, and drain the others on a thread, keeping what the console says (the
+    bootloader's own account of the visit, for the run log). An unread console can back up; a
+    reopened port has to settle each time. This does neither.
+
+        with BootloaderLink("left") as link:
+            state = link.image_state()
+            link.send(frame, timeout)            # SMP, reply matched to the request
+            text = link.console_text()
+    """
+
+    def __init__(self, side: str, *, find_timeout: float = 60.0, answer_timeout: float = 2.0,
+                 open_fn=None, find_fn=None):
+        self.side = side
+        self.find_timeout = find_timeout
+        self.answer_timeout = answer_timeout
+        self._open = open_fn or _open_serial
+        self._find = find_fn or find_recovery_ports
+        self.device: RecoveryDevice | None = None
+        self.port: str | None = None
+        self._handles: dict = {}
+        self._console = bytearray()
+        self._stop = None
+        self._thread = None
+        self.tries: list[str] = []
+
+    # --- lifecycle ----------------------------------------------------------------------- #
+
+    def __enter__(self) -> "BootloaderLink":
+        import threading
+        deadline = time.monotonic() + self.find_timeout
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._drain_loop, name=f"mcuboot-console-{self.side}",
+                                        daemon=True)
+        self._thread.start()
+        while True:
+            devs = [d for d in self._find() if d.side == self.side]
+            for d in devs:
+                if d.port not in self._handles:
+                    try:
+                        self._handles[d.port] = self._open(d.port)
+                    except Exception as e:           # noqa: BLE001 -- retried on the next pass
+                        self.tries.append(f"open {d.port}: {type(e).__name__}: {e}")
+            for d in devs:
+                if d.port not in self._handles:
+                    continue
+                self.port = d.port                   # the drain thread leaves this one alone
+                tee = _Tee(self._handles[d.port])
+                try:
+                    _exchange(tee, encode_request(SMP_OP_READ, SMP_GROUP_IMAGE,
+                                                  SMP_ID_IMAGE_STATE), self.answer_timeout, d.port)
+                    self.device = d
+                    return self
+                except Exception as e:               # noqa: BLE001 -- the console port, or not yet
+                    # Whatever the probe read from a port that did not answer is the console's
+                    # text -- the bootloader's opening lines -- so it is kept, not thrown away.
+                    self._console += tee.seen
+                    self.tries.append(f"{d.port}: {type(e).__name__}: {e}")
+                    self.port = None
+            if time.monotonic() >= deadline:
+                self.__exit__(None, None, None)
+                raise TimeoutError(f"no {self.side} bootloader port answered SMP within "
+                                   f"{self.find_timeout:.0f}s ({'; '.join(self.tries[-4:])})")
+            time.sleep(0.5)
+
+    def __exit__(self, *exc) -> None:
+        if self._stop is not None:
+            self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+        for h in list(self._handles.values()):
+            try:
+                h.close()
+            except Exception:                        # noqa: BLE001 -- a port that already went away
+                pass
+        self._handles.clear()
+
+    def _drain_loop(self) -> None:
+        while not self._stop.is_set():
+            idle = True
+            for port, h in list(self._handles.items()):
+                if port == self.port:
+                    continue
+                try:
+                    n = h.in_waiting
+                    if n:
+                        self._console += h.read(n)
+                        idle = False
+                except Exception:                    # noqa: BLE001 -- the half may be restarting
+                    pass
+            if idle:
+                time.sleep(0.02)
+
+    # --- requests ------------------------------------------------------------------------ #
+
+    @property
+    def serial(self):
+        return self._handles.get(self.port)
+
+    def send(self, frame: bytes, timeout: float = 5.0) -> dict:
+        return exchange(self, frame, timeout)
+
+    def image_state(self, timeout: float = 5.0) -> dict:
+        return self.send(encode_request(SMP_OP_READ, SMP_GROUP_IMAGE, SMP_ID_IMAGE_STATE), timeout)
+
+    def slot_info(self, timeout: float = 5.0) -> dict:
+        return _slot_info_from(self.send(
+            encode_request(SMP_OP_READ, SMP_GROUP_IMAGE, SMP_ID_IMAGE_SLOT_INFO), timeout))
+
+    def reset(self) -> dict:
+        try:
+            return {"reset": True, "reply": self.send(encode_request(2, SMP_GROUP_OS,
+                                                                     SMP_ID_OS_RESET), 2.0)}
+        except Exception as e:                       # noqa: BLE001 -- the reset working
+            return {"reset": True, "reply": None, "note": f"{type(e).__name__}: {e}"}
+
+    def console_text(self, limit: int = 4000) -> str:
+        return bytes(self._console[-limit:]).decode("utf-8", "replace")
+
+
+class _Tee:
+    """A serial handle that remembers what was read through it."""
+
+    def __init__(self, ser):
+        self.ser, self.seen = ser, bytearray()
+
+    @property
+    def port(self):
+        return getattr(self.ser, "port", "")
+
+    @property
+    def in_waiting(self):
+        return self.ser.in_waiting
+
+    def read(self, n):
+        got = self.ser.read(n)
+        self.seen += got
+        return got
+
+    def write(self, b):
+        return self.ser.write(b)
+
+    def flush(self):
+        return self.ser.flush()
+
+
+def exchange(link: "BootloaderLink", frame: bytes, timeout: float) -> dict:
+    ser = link.serial
+    if ser is None:
+        raise TimeoutError("the bootloader link has no data port")
+    return _exchange(ser, frame, timeout, link.port or "")
+
+
+def read_running_image_linked(link: "BootloaderLink", catalog: list | None = None) -> dict:
+    """read_running_image, over a held link: the same result, from one open conversation."""
+    d = link.device
+    state = link.image_state()
+    out = {"state": "ok", "port": link.port, "pid": d.pid if d else None,
+           "pidSide": d.side if d else None, "pidGeneration": d.generation if d else None,
+           "images": []}
+    for img in state.get("images") or []:
+        h = img.get("hash")
+        entry = {"slot": img.get("slot"), "active": bool(img.get("active")),
+                 "confirmed": bool(img.get("confirmed")), "version": img.get("version"),
+                 "hash": h.hex() if isinstance(h, (bytes, bytearray)) else h}
+        entry.update(identify(entry["hash"], catalog))
+        out["images"].append(entry)
+    try:
+        out["slotInfo"] = link.slot_info()
+    except Exception as e:                           # noqa: BLE001
+        out["slotInfo"] = {"supported": None, "error": f"{type(e).__name__}: {e}", "slots": []}
+    return out
+
+
 SMP_ID_OS_RESET = 5
 
 
@@ -527,7 +736,12 @@ def slot_info(port: str) -> dict:
     the guess; a slot whose size is exactly the module bundle's 1 MiB is the modules slot. Never
     run on the owner's board before the keyboard is plugged in for step 3 -- it is read-only, but
     recovery mode is a reboot away."""
-    reply = _talk(port, encode_request(SMP_OP_READ, SMP_GROUP_IMAGE, SMP_ID_IMAGE_SLOT_INFO))
+    return _slot_info_from(_talk(port, encode_request(SMP_OP_READ, SMP_GROUP_IMAGE,
+                                                      SMP_ID_IMAGE_SLOT_INFO)))
+
+
+def _slot_info_from(reply: dict) -> dict:
+    """Normalise an `image slot info` reply (see slot_info)."""
     rc = reply.get("rc", 0)
     if rc:
         return {"supported": rc != SMP_ERR_ENOTSUP, "rc": rc, "slots": [], "raw": reply}

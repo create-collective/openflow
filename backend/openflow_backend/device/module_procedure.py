@@ -289,7 +289,7 @@ def _capture(svc, log: fp.RunLog, run_dir: Path, pre: dict) -> dict:
 SLOT_MAP_TRIES = 3          # extra reads of `image slot info` when identify's own read failed
 
 
-def _slot_map(state: dict, log: fp.RunLog) -> tuple[dict | None, bool]:
+def _slot_map(state: dict, log: fp.RunLog, link=None) -> tuple[dict | None, bool]:
     """The bootloader's slot map, read again if the identify read did not get one, and whether
     the upload must fall back to NayaCore's constant because it never answered.
 
@@ -305,7 +305,7 @@ def _slot_map(state: dict, log: fp.RunLog) -> tuple[dict | None, bool]:
         tries += 1
         time.sleep(2.0)
         try:
-            info = rec.slot_info(state["port"])
+            info = link.slot_info() if link is not None else rec.slot_info(state["port"])
         except Exception as e:                      # noqa: BLE001 -- recorded below
             info = {"supported": None, "error": f"{type(e).__name__}: {e}", "slots": []}
     answered = bool(info and info.get("supported"))
@@ -321,6 +321,27 @@ def _slot_map(state: dict, log: fp.RunLog) -> tuple[dict | None, bool]:
         # What it DID send, for the record: the map answered on 2026-09-16 and not since.
         log.event("identify", "note", side="left", slotMapReply=repr((info or {}).get("raw"))[:400])
     return info, not answered
+
+
+def _identify_linked(link, catalog: list, tries: int = 5) -> dict:
+    """What the half in the bootloader runs, over the held link, retried on the SAME port (no
+    reopen). Refuses a half whose product id names the other side."""
+    last = None
+    for _ in range(tries):
+        try:
+            state = rec.read_running_image_linked(link, catalog)
+            seen = state.get("pidSide")
+            if seen not in (None, "left"):
+                raise fw.UploadRefused(f"the half in the bootloader reports itself as {seen}, "
+                                       "not left. Nothing was written.")
+            return state
+        except fw.UploadRefused:
+            raise
+        except Exception as e:                      # noqa: BLE001 -- retried below
+            last = e
+            time.sleep(1.0)
+    raise fw.UploadRefused(f"the left half's bootloader did not say what it runs ({last}). "
+                           "Nothing was written.")
 
 
 def _upload(svc, log: fp.RunLog, catalog: list, pre: dict, allow_older: bool, upload_fn,
@@ -339,12 +360,21 @@ def _upload(svc, log: fp.RunLog, catalog: list, pre: dict, allow_older: bool, up
             return True
         svc._with_transport("left", go)
 
+    # ONE conversation for the whole visit, as NayaCore holds it: both of the half's ports open,
+    # the console drained, the data port kept for identify, the slot map and every chunk
+    # (recovery.BootloaderLink). Reopening per request is what made the bootloader answer late.
+    link = rec.BootloaderLink("left")
     with log.step("identify", side="left"):
-        state = fp._identify_in_bootloader("left", catalog)
+        link.__enter__()
+        try:
+            state = _identify_linked(link, catalog)
+        except Exception:
+            link.__exit__(None, None, None)
+            raise
         running = next((i for i in state.get("images") or [] if i.get("slot") == 0), {})
         log.event("identify", "ok", side="left", running=running.get("createFirmware"),
                   port=state.get("port"), armToken=running.get("hash"))
-        slot_info, unmapped = _slot_map(state, log)
+        slot_info, unmapped = _slot_map(state, log, link)
 
     erase = {"done": False}
     last_pct = {"v": -1}
@@ -361,10 +391,17 @@ def _upload(svc, log: fp.RunLog, catalog: list, pre: dict, allow_older: bool, up
 
     log.event("slot.erase", "start", side="left")
     t0 = time.monotonic()
-    result = upload_fn(pre["path"], catalog, arm=running.get("hash") or "",
-                       installed_version=pre["stored"], allow_older=allow_older,
-                       progress=progress, state=state, slot_info=slot_info,
-                       allow_unmapped=unmapped)
+    try:
+        result = upload_fn(pre["path"], catalog, arm=running.get("hash") or "",
+                           installed_version=pre["stored"], allow_older=allow_older,
+                           progress=progress, state=state, slot_info=slot_info,
+                           allow_unmapped=unmapped, link=link)
+    finally:
+        console = link.console_text()
+        link.__exit__(None, None, None)
+        if console.strip():
+            log.event("upload", "note", side="left", console=console,
+                      detail="what the bootloader's console said during the visit")
     log.event("upload", "ok", side="left", took_ms=int((time.monotonic() - t0) * 1000),
               written=result.get("written"), target=pre["target"],
               detail="the bundle is written; the half restarts on its own")

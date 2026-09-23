@@ -137,18 +137,41 @@ def rig(monkeypatch, tmp_path):
         "state": "ok", "port": "COM26", "slotInfo": BOARD_MAP,
         "images": [{"slot": 0, "hash": "arm", "createFirmware": "3.41.0"}]})
     monkeypatch.setattr(mp.rec, "slot_info", lambda port: BOARD_MAP)
+
+    class FakeLink:
+        """The held bootloader conversation; its reads go through the stubs above."""
+        opened = []
+
+        def __init__(self, side, **kw):
+            self.side, self.port = side, "COM26"
+
+        def __enter__(self):
+            FakeLink.opened.append(self.side)
+            return self
+
+        def __exit__(self, *exc):
+            return None
+
+        def slot_info(self):
+            return mp.rec.slot_info(self.port)
+
+        def console_text(self, limit=4000):
+            return "*** Booting MCUboot 9ddeffa8169c ***\r\nI: Starting bootloader"
+    monkeypatch.setattr(mp.rec, "BootloaderLink", FakeLink)
+    monkeypatch.setattr(mp.rec, "read_running_image_linked",
+                        lambda link, catalog=None: mp.fp._identify_in_bootloader("left", catalog))
     for e in CATALOG:
         p = tmp_path / "fw" / e["historyPath"]
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(b"\xff" * 16)
-    return {"clock": clock, "root": tmp_path / "fw", "logs": tmp_path / "logs"}
+    return {"clock": clock, "root": tmp_path / "fw", "logs": tmp_path / "logs", "link": FakeLink}
 
 
 def _upload_that_restarts(kb, calls):
     def upload(path, catalog, *, arm, installed_version=None, allow_older=False, progress=None,
-               state=None, slot_info=None, allow_unmapped=False):
+               state=None, slot_info=None, allow_unmapped=False, link=None):
         calls.append({"path": Path(path), "arm": arm, "installed": installed_version,
-                      "slot_info": slot_info, "allow_unmapped": allow_unmapped})
+                      "slot_info": slot_info, "allow_unmapped": allow_unmapped, "link": link})
         progress(512, 1024)
         progress(1024, 1024)
         kb.stored = next(e["moduleFirmware"] for e in catalog
@@ -198,6 +221,17 @@ def test_a_different_stored_bundle_is_uploaded_first_then_the_module_programmed(
     assert calls[0]["arm"] == "arm" and calls[0]["installed"] == "2.3.2"
     assert kb.stored == "2.3.3" and kb.module["version"] == "2.3.3"
     assert kb.fwup_bytes() == [b"\x01"]
+
+
+def test_the_whole_bootloader_visit_is_one_held_link(rig):
+    """Identify, the slot map and every chunk over ONE conversation, as NayaCore holds it; the
+    bootloader's console is kept for the log."""
+    kb = FakeKeyboard(stored="2.3.2")
+    verdict, calls, log = _run(rig, kb)
+    assert verdict["ok"], verdict
+    assert rig["link"].opened == ["left"]
+    assert calls[0]["link"] is not None and calls[0]["link"].port == "COM26"
+    assert "Booting MCUboot" in log and "what the bootloader's console said" in log
 
 
 def test_force_upload_rewrites_a_bundle_the_keyboard_already_holds(rig):

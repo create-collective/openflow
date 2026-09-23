@@ -187,6 +187,81 @@ def test_exchange_with_only_a_stale_reply_says_so_instead_of_returning_it(monkey
         rec._exchange(ser, frame, timeout=0.3)
 
 
+class _SmpPort:
+    """A bootloader data port: answers each request it is sent, matched by group/id/seq."""
+
+    def __init__(self, answers):
+        self.answers, self.out, self.closed, self.port = answers, b"", False, "COM27"
+
+    def write(self, frame):
+        g, cid, seq = rec.request_key(frame)
+        payload = self.answers.get((g, cid))
+        if payload is not None:
+            self.out += _reply_line(cid, payload, seq=seq, group=g)
+
+    def flush(self):
+        pass
+
+    @property
+    def in_waiting(self):
+        return len(self.out)
+
+    def read(self, n):
+        got, self.out = self.out[:n], self.out[n:]
+        return got
+
+    def close(self):
+        self.closed = True
+
+
+class _ConsolePort(_SmpPort):
+    """The other port: takes the frame, says nothing to it, and prints boot text."""
+
+    def __init__(self, text):
+        super().__init__({})
+        self.out, self.port = text, "COM26"
+
+
+def _devices():
+    return [rec.RecoveryDevice(port="COM26", pid=0x6F, side="left", generation="A"),
+            rec.RecoveryDevice(port="COM27", pid=0x6F, side="left", generation="A")]
+
+
+def test_a_held_link_finds_the_smp_port_and_keeps_the_console_drained(monkeypatch):
+    monkeypatch.setattr(rec, "RESPONSE_GRACE", 0.0)
+    state_payload = b"\xa1" + b"\x66images" + b"\x81" + b"\xa1" + b"\x64slot" + b"\x00"
+    slot_payload = (b"\xa1" + b"\x66images" + b"\x81" + b"\xa2" + b"\x65image" + b"\x00"
+                    + b"\x65slots" + b"\x81" + b"\xa3" + b"\x64slot" + b"\x01"
+                    + b"\x64size" + b"\x1a\x00\x0a\x20\x00" + b"\x6fupload_image_id" + b"\x02")
+    smp = _SmpPort({(rec.SMP_GROUP_IMAGE, rec.SMP_ID_IMAGE_STATE): state_payload,
+                    (rec.SMP_GROUP_IMAGE, rec.SMP_ID_IMAGE_SLOT_INFO): slot_payload})
+    console = _ConsolePort(b"*** Booting MCUboot 9ddeffa8169c ***\r\nI: Starting bootloader\r\n")
+    ports = {"COM26": console, "COM27": smp}
+    link = rec.BootloaderLink("left", find_timeout=5.0, answer_timeout=0.3,
+                              open_fn=lambda p: ports[p], find_fn=_devices)
+    with link:
+        assert link.port == "COM27" and link.device.port == "COM27"
+        assert link.slot_info()["slots"][0]["uploadImageId"] == 2
+        assert link.image_state()["images"][0]["slot"] == 0
+        import time as _t
+        for _ in range(100):
+            if "Starting bootloader" in link.console_text():
+                break
+            _t.sleep(0.02)
+        assert "Booting MCUboot" in link.console_text()
+    assert smp.closed and console.closed
+
+
+def test_a_link_that_finds_no_answering_port_says_so(monkeypatch):
+    monkeypatch.setattr(rec, "RESPONSE_GRACE", 0.0)
+    ports = {"COM26": _ConsolePort(b""), "COM27": _ConsolePort(b"")}
+    link = rec.BootloaderLink("left", find_timeout=0.5, answer_timeout=0.1,
+                              open_fn=lambda p: ports[p], find_fn=_devices)
+    with pytest.raises(TimeoutError, match="no left bootloader port answered SMP"):
+        link.__enter__()
+    assert all(p.closed for p in ports.values())
+
+
 def test_a_corrupted_frame_is_refused_not_interpreted():
     """A mangled response must raise, not decode to something plausible -- this feeds a decision
     about which firmware a device is running."""
