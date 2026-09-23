@@ -536,6 +536,14 @@ def run(svc, catalog: list, *, version: str | None = None, allow_older: bool = F
             _recover_left(svc, log)
         return log.finish(False, f"{type(e).__name__}: {e}")
     finally:
+        # Whatever happened to the module, what the app believes it runs is now stale: the live
+        # status caches a module's firmware per docking, and this module never left the bay.
+        forget = getattr(svc, "forget_module_firmware", None)
+        if forget is not None:
+            try:
+                forget()
+            except Exception:                       # noqa: BLE001 -- a stale label, not a failure
+                pass
         if held:
             lock.release()
 

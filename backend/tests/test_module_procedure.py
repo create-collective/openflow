@@ -179,6 +179,16 @@ def test_the_keyboard_already_holding_the_bundle_skips_the_upload_and_programs(r
     assert '"step": "module.verify", "label": "Confirming the module\'s new version", "phase": "ok"' in log
 
 
+def test_the_apps_cached_module_version_is_dropped_when_the_run_ends(rig):
+    """2026-09-23: verified on 2.3.3, and the status bar still said 2.1.2 -- the live status
+    reads a module's firmware once per docking, and the module never left the bay."""
+    kb = FakeKeyboard(stored="2.3.3")
+    kb.forgot = 0
+    kb.forget_module_firmware = lambda: setattr(kb, "forgot", kb.forgot + 1)
+    verdict, _, _ = _run(rig, kb)
+    assert verdict["ok"] and kb.forgot == 1
+
+
 def test_a_different_stored_bundle_is_uploaded_first_then_the_module_programmed(rig):
     """Run 1 + run 2 of the capture in one: 2.3.2 stored, 2.3.3 installed."""
     kb = FakeKeyboard(stored="2.3.2")

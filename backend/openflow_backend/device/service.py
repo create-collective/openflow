@@ -405,6 +405,18 @@ class DeviceService:
             else:
                 self._identity.pop(port, None)
 
+    def forget_module_firmware(self) -> None:
+        """Drop the cached firmware of every docked module, so the next tick reads it again.
+
+        A module's firmware is read once per docking (keyed by half and dock address) because it
+        does not change while the module sits in the bay -- except when it is UPDATED there. On
+        2026-09-23 a Touch was verified on 2.3.3 by the module procedure and the status bar went
+        on showing 2.1.2, because nothing had been undocked. module_procedure calls this when it
+        finishes, whatever the verdict.
+        """
+        with self._lock:
+            self._module_fw.clear()
+
     def shutdown(self) -> None:
         with self._lock:
             for port in list(self._transports):
