@@ -24,7 +24,7 @@ import Notice from "./ui/Notice";
 //     with `force`. It is for the module that cannot pass the normal dialog's "is it a Touch or a
 //     Tune" check -- not detected, or reporting an unknown type -- so it cannot be an option inside
 //     the dialog that enforces that check. The person names the module physically in the bay
-//     (Touch or Tune, the two whose programming byte has been captured; no default, so it is a
+//     (Touch, Tune or Track, the types whose programming byte is proven; no default, so it is a
 //     choice) and a version this keyboard can take. It is how a Tune given the wrong app on
 //     2026-09-23 was brought back. Every other rule still holds.
 
@@ -242,8 +242,7 @@ export default function ModuleFirmwareUpdate({ connected = true, force = false }
                   </select>
                 </label>
                 The keyboard programs it as the type you choose, whatever it reports. Choose the
-                module that is physically there: the wrong type gives it the wrong app. A Track is
-                not offered yet — its byte has not been captured.
+                module that is physically there: the wrong type gives it the wrong app.
               </Notice>
             )}
 

@@ -49,7 +49,8 @@ def test_module_fwup_takes_the_docked_type_and_nothing_else():
     an invalid one for the firmware to reinterpret."""
     assert ro.frame_for("module_fwup", {"module": "touch"})[2] == b"\x01"
     assert ro.frame_for("module_fwup", {"module": "tune"})[2] == b"\x02"    # NOT 03: see FWUP_TYPES
-    for guessed in ({"module": "track"}, {"module": 3}, {"module": 2}):
+    assert ro.frame_for("module_fwup", {"module": "track"})[2] == b"\x03"   # from NayaCore's code
+    for guessed in ({"module": "float"}, {"module": 3}, {"module": 2}):
         with pytest.raises(ValueError):
             ro.frame_for("module_fwup", guessed)
     for bad in ({}, {"module": "float"}, {"module": 0}, {"module": 7}):

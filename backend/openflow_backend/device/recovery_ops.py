@@ -81,16 +81,20 @@ def _partition_byte(opts: dict) -> bytes:
     return bytes([int(opts.get("partition", 0)) & 0xFF])
 
 
-# MODULE_FWUP's one payload byte, by the type the dock address decodes to. ONLY VALUES SEEN ON
-# THE WIRE from NayaCore belong here:
-#   Touch = 01  NayaFlow 1.25.1 update, 2026-09-23 (device/out/module-fw-touch1-20260923-part2.pcap)
-#   Tune  = 02  NayaFlow 1.25.1 Force Update -> Tune, 2026-09-23 (module-fw-tune-nayaflow-force-*)
-# Track is NOT here. nayactl's MODULE_TYPES (1 Touch, 2 Track, 3 Tune) was used as a guess for
-# the Tune and it was wrong: OpenFlow sent 03 to a Tune on 2026-09-23, the keyboard programmed
-# it with the wrong module app, and it came back dark, reporting dock address 0x4A instead of
-# 0x40, until NayaFlow's forced 02 restored it. A module type whose byte has not been captured
-# is refused, never guessed.
-FWUP_TYPES = {"Touch": 1, "Tune": 2}
+# MODULE_FWUP's one payload byte, by the type the dock address decodes to. Only values PROVEN
+# from NayaCore belong here, never a guess:
+#   Touch = 01  on the wire: NayaFlow 1.25.1 update, 2026-09-23 (module-fw-touch1-20260923-part2.pcap)
+#   Tune  = 02  on the wire: NayaFlow Force Update -> Tune, 2026-09-23 (module-fw-tune-nayaflow-force-*)
+#   Track = 03  in NayaCore's code: Naya_DeviceManager::doUpdateModuleOperations (NayaCore 6.11.0,
+#               mac x86_64, symbols intact) builds the payload as QByteArray(1, N) in each forced
+#               branch -- ModuleFW_Touch_Upload N=1, ModuleFW_Tune_Upload N=2,
+#               ModuleFW_Track_Upload N=3. Touch and Tune match their captures exactly, which is
+#               what makes the Track's value from the same code trustworthy. (NayaFlow will not
+#               Force Update a module it recognises, so the Track's byte could not be captured.)
+# nayactl's MODULE_TYPES (1 Touch, 2 Track, 3 Tune) is NOT this numbering. It was used as a guess
+# for the Tune on 2026-09-23: OpenFlow sent 03, the keyboard gave the Tune the TRACK app, and it
+# came back dark reporting dock address 0x4A until NayaFlow's forced 02 restored it.
+FWUP_TYPES = {"Touch": 1, "Tune": 2, "Track": 3}
 
 
 def _module_type_byte(opts: dict) -> bytes:
@@ -102,7 +106,7 @@ def _module_type_byte(opts: dict) -> bytes:
     v = mapping.get(str(m).lower())
     if v is None:
         raise ValueError(f"module must be one of {sorted(mapping)}: the type docked on this half, "
-                         "as read from its address. A Track's byte has not been captured yet.")
+                         "as read from its address.")
     return bytes([v])
 
 

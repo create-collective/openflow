@@ -242,15 +242,10 @@ def _preflight(svc, log: fp.RunLog, catalog: list, version: str | None, allow_ol
                             "LEFT bay. Nothing was written.")
     kind = force_type or module.get("type")
     # Forced: whatever the module reads as, the user named it (that is what Force Update is for).
-    if force_type is None and module.get("type") == "Track":
-        raise ModuleRefused(
-            "a Track's programming byte has not been observed from NayaFlow yet, and guessing it "
-            "is how a Tune was given the wrong module app on 2026-09-23. Update this Track with "
-            "NayaFlow for now. Nothing was written.")
     if force_type is None and module.get("type") not in FWUP_TYPES:
         raise ModuleRefused(f"the docked module reads as {module.get('type')}; OpenFlow can update "
-                            "a Touch or a Tune, and Force Update can reprogram one that no longer "
-                            "identifies. Nothing was written.")
+                            "a Touch, a Tune or a Track, and Force Update can reprogram one that no "
+                            "longer identifies. Nothing was written.")
     entry = choose_bundle(catalog, kb, version)
     target = entry.get("moduleFirmware")
     path = bundle_path(entry, firmware_root)
@@ -505,7 +500,7 @@ def _program(svc, log: fp.RunLog, pre: dict) -> None:
 
     with log.step("module.verify", side="left"):
         # The version alone cannot catch a module programmed with the WRONG app: every app in a
-        # bundle carries the bundle's version. On 2026-09-23 a Tune given the Touch/Track numbering's
+        # bundle carries the bundle's version. On 2026-09-23 a Tune given nayactl's numbering's
         # 03 read 2.3.3 and passed, dark, reporting dock address 0x4A. So the module must also still
         # say it is the type it was -- given time, since a Tune's first update can take up to a
         # minute to settle.
@@ -538,8 +533,8 @@ def _program(svc, log: fp.RunLog, pre: dict) -> None:
 
 
 # The blockers Force Update lifts: it exists for the module that does not identify (or is not
-# detected at all). A Track is never lifted -- forcing a Track as a Touch or Tune would give it the
-# wrong app, which is the exact failure Force Update was used to repair.
+# detected at all). Nothing else is lifted: the right half must still be unplugged, and the
+# version must still be one the keyboard can take.
 FORCE_LIFTS = ("no-module", "unknown-module")
 
 
@@ -586,13 +581,10 @@ def plan(svc, catalog: list, firmware_root: Path | None, version: str | None = N
                            "with Force Update.")
     elif m.get("docked") not in (None, "left"):
         block("wrong-bay", f"The module reports the {m.get('docked')} bay; move it to the LEFT bay.")
-    elif m.get("type") == "Track":
-        block("track", "A Track's programming byte has not been captured from NayaFlow yet, so "
-                       "OpenFlow will not update a Track. Use NayaFlow for this one for now.")
     elif m.get("type") not in FWUP_TYPES:
         block("unknown-module", f"The docked module does not identify as a known type "
-                                f"({m.get('type')}). If it is a Touch or a Tune, Force Update can "
-                                "reprogram it.")
+                                f"({m.get('type')}). Force update module can reprogram it as the "
+                                "type you name.")
     out["storedBundle"] = _stored_bundle(svc)
 
     kb = out["keyboardFirmware"]

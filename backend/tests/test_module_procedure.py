@@ -276,11 +276,13 @@ def test_a_module_that_comes_back_as_another_type_fails_even_on_the_right_versio
     assert "Force Update" in verdict["summary"]
 
 
-def test_a_track_is_refused_until_its_byte_is_captured(rig):
+def test_a_track_gets_03_the_byte_nayacore_builds_for_it(rig):
+    """From NayaCore's own code (doUpdateModuleOperations: QByteArray(1, 3) for the Track branch,
+    beside 1 and 2 for Touch and Tune, both of which match their wire captures)."""
     kb = FakeKeyboard(stored="2.3.3", module=("Track", 0x20, "2.1.2"))
-    verdict, calls, _ = _run(rig, kb)
-    assert not verdict["ok"] and "Track's programming byte has not been observed" in verdict["summary"]
-    assert kb.fwup_bytes() == [] and calls == [] and not kb.entered_bootloader()
+    verdict, _, _ = _run(rig, kb)
+    assert verdict["ok"], verdict
+    assert kb.fwup_bytes() == [b"\x03"]
 
 
 # --- preconditions: refused before anything is written ------------------------------------------- #
@@ -477,9 +479,9 @@ def test_force_update_programs_a_module_that_does_not_identify(rig):
     assert "forced" in log
 
 
-def test_force_update_refuses_a_type_whose_byte_was_never_captured(rig):
+def test_force_update_refuses_a_type_whose_byte_is_not_known(rig):
     kb = FakeKeyboard(stored="2.3.3", module=("Tune", 0x4A, "2.3.3"))
-    verdict, calls, _ = _run(rig, kb, force_type="Track")
+    verdict, calls, _ = _run(rig, kb, force_type="Float")
     assert not verdict["ok"] and "Force Update can program" in verdict["summary"]
     assert kb.fwup_bytes() == [] and calls == []
 
@@ -517,12 +519,12 @@ def test_the_plan_refuses_a_bundle_newer_than_the_keyboard(rig):
                for b in p["blockers"])
 
 
-def test_the_plan_turns_a_track_away_and_offers_force_for_an_unknown_module(rig):
+def test_the_plan_takes_a_track_and_offers_force_for_an_unknown_module(rig):
     p = mp.plan(FakeKeyboard(module=("Track", 0x20, "2.1.2")), CATALOG, rig["root"])
-    assert [b["code"] for b in p["blockers"]] == ["track"] and "track" not in p["forceLifts"]
+    assert p["blockers"] == [] and p["target"]["program"]
     p = mp.plan(FakeKeyboard(module=("Tune", 0x4A, "2.3.3")), CATALOG, rig["root"])
     assert [b["code"] for b in p["blockers"]] == ["unknown-module"]
-    assert p["forceTypes"] == ["Touch", "Tune"] and "unknown-module" in p["forceLifts"]
+    assert p["forceTypes"] == ["Touch", "Tune", "Track"] and "unknown-module" in p["forceLifts"]
 
 
 # --- the upload primitive ------------------------------------------------------------------------ #
