@@ -407,8 +407,10 @@ export default function Troubleshooting() {
                 normal protocol, which is why it shows here rather than above.
               </div>
               <div className="info-banner-help">
-                This is not damage. Recovery boots the keyboard's normal firmware again on its own
-                after a few seconds of inactivity, so a half usually leaves it without help.
+                This is not damage. Every half passes through its bootloader for a second or two
+                when it starts; this one has stayed, and a half that stays does not leave on its
+                own. Switch it off and on again. If it comes straight back here, its firmware needs
+                reinstalling.
               </div>
             </div>
           )}

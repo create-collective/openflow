@@ -173,6 +173,81 @@ def test_recovery_scan_sees_either_half_and_either_generation(monkeypatch):
     assert rec.RECOVERY_PID in rec.RECOVERY_PIDS and len(rec.RECOVERY_PIDS) == 4
 
 
+# --- a sighting is not a stuck half (SCRUM-88) ---------------------------------------------- #
+# Every half passes through MCUboot for ~1.7 s on an ordinary power-on. These pin that a status
+# read reports only a half still there on a second look, and that the look costs nothing when
+# no half is in the bootloader at all.
+
+class _Port:
+    def __init__(self, device, pid):
+        self.device, self.vid, self.pid, self.description, self.serial_number = device, 0x37D1, pid, "", None
+
+
+class _Clock:
+    def __init__(self, t=100.0):
+        self.t, self.slept = t, []
+
+    def __call__(self):
+        return self.t
+
+    def sleep(self, s):
+        self.slept.append(s)
+        self.t += s
+
+
+def _scans(monkeypatch, *snapshots):
+    """comports() answers each snapshot in turn, then the last one forever."""
+    calls = []
+
+    def comports():
+        calls.append(1)
+        return snapshots[min(len(calls), len(snapshots)) - 1]
+    monkeypatch.setattr(rec, "comports", comports)
+    return calls
+
+
+def test_an_ordinary_power_on_is_not_reported_as_recovery(monkeypatch):
+    """The donor's own timeline: the right half at 0x00D3 on COM17, then the application at
+    0x00C8 on COM21 under a different port name."""
+    _scans(monkeypatch, [_Port("COM17", 0x00D3)], [_Port("COM21", 0x00C8)])
+    clock = _Clock()
+    seen, at = rec.find_recovery_ports(), clock()
+    clock.t += 0.4                                  # the status read took 0.4 s
+    assert rec.still_in_recovery(seen, at, clock=clock, sleep=clock.sleep) == []
+    assert len(clock.slept) == 1 and abs(clock.slept[0] - (rec.BOOT_PASS_SETTLE_S - 0.4)) < 1e-9
+
+
+def test_a_parked_half_is_reported_and_the_read_time_counts(monkeypatch):
+    parked = [_Port("COM17", 0x00D3), _Port("COM18", 0x00D3)]
+    _scans(monkeypatch, parked, parked)
+    clock = _Clock()
+    seen, at = rec.find_recovery_ports(), clock()
+    clock.t += 5.0                                  # a verbose read outlasted the settle time
+    got = rec.still_in_recovery(seen, at, clock=clock, sleep=clock.sleep)
+    assert [(d.port, d.side) for d in got] == [("COM17", "right"), ("COM18", "right")]
+    assert clock.slept == []                        # no wait on top of a read that was long enough
+
+
+def test_no_half_in_the_bootloader_costs_no_wait_and_no_second_scan(monkeypatch):
+    calls = _scans(monkeypatch, [_Port("COM21", 0x00C8)])
+    clock = _Clock()
+    seen, at = rec.find_recovery_ports(), clock()
+    assert rec.still_in_recovery(seen, at, clock=clock, sleep=clock.sleep) == []
+    assert clock.slept == [] and len(calls) == 1
+
+
+def test_only_a_half_seen_both_times_is_reported(monkeypatch):
+    """The left half booted through; the right half is parked; a third port that turned up
+    between the looks was never seen twice, so it is not reported yet."""
+    _scans(monkeypatch,
+           [_Port("COM17", 0x006F), _Port("COM19", 0x00D3)],
+           [_Port("COM19", 0x00D3), _Port("COM23", 0x0064), _Port("COM25", 0x006F)])
+    clock = _Clock()
+    seen, at = rec.find_recovery_ports(), clock()
+    got = rec.still_in_recovery(seen, at, clock=clock, sleep=clock.sleep)
+    assert [(d.port, d.side) for d in got] == [("COM19", "right")]
+
+
 def test_slot_info_is_an_image_group_read_with_id_6_and_is_normalised(monkeypatch):
     """`image slot info` (MCUboot IMGMGR_NMGR_ID_SLOT_INFO = 6) is the read that says how uploads
     are addressed; its answer is flattened to one row per slot with the device's upload id."""

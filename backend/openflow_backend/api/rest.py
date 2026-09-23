@@ -16,6 +16,7 @@ import json
 import io
 
 import platform
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, Body, File, HTTPException, Request, UploadFile
@@ -723,6 +724,9 @@ async def status(verbose: bool = False) -> dict:
     """Query the halves over USB. Persists the result so the page can paint from cache next
     time rather than re-opening the port on every mount."""
     svc = get_service()
+    # First look for halves in MCUboot, taken before the read so the read's own time counts
+    # toward confirming them (recovery.still_in_recovery, below).
+    seen, seen_at = recovery_mod.find_recovery_ports(), time.monotonic()
     halves = await run_in_threadpool(svc.status_all, verbose)
     # An empty reading (nothing answered: unplugged, or the port busy with a keymap read a
     # moment earlier) is not worth remembering over the last one that saw the keyboard. The
@@ -736,8 +740,10 @@ async def status(verbose: bool = False) -> dict:
     out = {"halves": halves, "at": at}
     # A half in MCUboot enumerates under a different product id and answers none of the normal
     # protocol, so without this it is not merely unidentified -- it does not appear at all, and
-    # the page looks the same as if it were unplugged.
-    stuck = recovery_mod.find_recovery_ports()
+    # the page looks the same as if it were unplugged. But every half passes through MCUboot
+    # for ~1.7 s on an ordinary power-on, so one sighting is not enough to call it stuck: only
+    # a half still there on a second look a few seconds later is reported (SCRUM-88).
+    stuck = await run_in_threadpool(recovery_mod.still_in_recovery, seen, seen_at)
     if stuck:
         out["recovery"] = [{"port": d.port, "description": d.description, "pid": d.pid,
                             "side": d.side, "generation": d.generation} for d in stuck]

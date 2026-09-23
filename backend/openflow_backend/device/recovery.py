@@ -26,6 +26,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import struct
+import time
 from dataclasses import dataclass, field
 
 from serial.tools.list_ports import comports
@@ -37,10 +38,11 @@ NAYA_VID = 0x37D1
 #     pid & 0xEFFF   left: 0x064 app, 0x06F MCUboot, 0x07A a third mode
 #                    right: 0x0C8 app, 0x0D3 MCUboot, 0x0DE a third mode
 #     pid & 0x1000   clear = generation A, set = generation B
-# Confirmed on the owner's board: 0x0064 left app, 0x00C8 right app, 0x006F left in MCUboot with
-# TWO CDC ports (a data port and a log port, not labelled, so both are tried). The right half in
-# MCUboot (0x00D3), the third members and every generation-B value are NayaCore's table, not yet
-# seen on hardware. Before this table only 0x006F was looked for, so a right half sitting in its
+# Confirmed on hardware: 0x0064 left app, 0x00C8 right app, 0x006F left in MCUboot, and 0x00D3
+# right in MCUboot -- seen on a donor's power-on (2026-09-19, SCRUM-88) and on every right-half
+# flash since 2026-09-20, by hand and from the UI. A half in MCUboot presents TWO CDC ports on
+# either side (a data port and a log port, not labelled, so both are tried). The third members and
+# every generation-B value are still NayaCore's table, not yet seen on hardware. Before this table only 0x006F was looked for, so a right half sitting in its
 # bootloader was invisible.
 #
 # LEAVING RECOVERY. A half that entered MCUboot on RESET/MCU_BOOT does NOT come back on its own:
@@ -122,6 +124,37 @@ def find_recovery_ports() -> list[RecoveryDevice]:
 
 def in_recovery() -> bool:
     return bool(find_recovery_ports())
+
+
+# A half passes through MCUboot on EVERY power-on, not only when it is stuck there (SCRUM-88).
+# Watched on a donor on 2026-09-19: each half enumerated under its MCUboot pid for ~1.6-1.7 s,
+# then left for the application on its own. Watched again on the warranty board (3.41.0) on
+# 2026-09-22, switching only the RIGHT half on: right at 0x00D3 for 0.98 s, and then the LEFT half,
+# untouched, went through MCUboot too (0x006F for 1.40 s, starting 2.2 s after the right). The
+# central's re-enumeration when its peer re-links is a reboot, so powering one half on sends both
+# through the bootloader, one after the other. One look at the ports cannot tell that from a half
+# that is PARKED (entered on RESET/MCU_BOOT, an interrupted flash, an invalid primary), which does
+# not leave by itself. So telling a user a half is "in recovery" takes two looks, far enough apart
+# that an ordinary boot has finished in between. The flash procedure keeps calling
+# find_recovery_ports directly: it put the half there itself and needs to see it at once.
+BOOT_PASS_SETTLE_S = 3.0
+
+
+def still_in_recovery(seen: list[RecoveryDevice], seen_at: float, *,
+                      settle: float = BOOT_PASS_SETTLE_S, clock=time.monotonic,
+                      sleep=time.sleep) -> list[RecoveryDevice]:
+    """Of the halves `seen` in recovery at `seen_at` (a `clock()` reading), the ones still there
+    at least `settle` seconds later. Sleeps only for what is left of that interval, and only when
+    something was seen: a caller that did other work in between pays nothing, and a board with
+    no half in MCUboot never waits. A half that has re-enumerated into the application is gone
+    from the second look under its MCUboot pid, which is exactly an ordinary boot."""
+    if not seen:
+        return []
+    left = settle - (clock() - seen_at)
+    if left > 0:
+        sleep(left)
+    now = {(d.port, d.pid) for d in find_recovery_ports()}
+    return [d for d in seen if (d.port, d.pid) in now]
 
 
 # --- CBOR, only as much as the image-state response uses ----------------------------------- #
