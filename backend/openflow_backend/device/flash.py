@@ -432,12 +432,18 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
             return R.HOLD_TAP_HOME, R.encode_holdtap_param(
                 R.HOLD_TAP_HOME, flavour, term, R.encode_layer_param(order), tap_kp,
                 hold_kind=R.LAYER_HOLD)
-        # OneKey (0x10), not the home-row 0x03 form. Both are hold-tap records with the same
-        # body, but the type encodes intent and 0x10 is what NayaFlow writes for a user-created
-        # tap+hold -- it is what sits on the board, and what the secondary bank uses. Emitting
-        # 0x03 here made a re-flash of a profile READ FROM the device rewrite those two keys.
+        # The record TYPE changes how the key types, not just what it is called. 0x10 (OneKey)
+        # is the four-behaviour record: its tap waits for a possible double-tap, so it lands on
+        # release or after the tapping term, and a key pressed meanwhile goes out first. On a
+        # home-row mod that swaps letters ("few" -> "efw") and drops some. 0x03 (MOD_TAP) sends
+        # the tap in order. Measured 2026-09-25 (tools/c11_homerow_timing.py): D/F/J/K as
+        # hold-mod/tap-letter, same flavour and term, 0x10 garbled 5 fast sentences of 5 and 0x03
+        # typed them clean. NayaFlow draws the line in the same place: in its captured flash
+        # (tests/hold-tap-fixture.json) every tap+hold key is 0x03 except the one that also has a
+        # second-bank record. So 0x10 only when the second bank is in play.
         hold_kp = _keypress(hold["at"], hold["ac"]) if hold is not None else bytes(4)
-        return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
+        typ = R.HOLD_TAP_ONEKEY if second_bank else R.HOLD_TAP_HOME
+        return typ, R.encode_holdtap_param(typ, flavour, term, hold_kp, tap_kp)
 
     if at in ("key", "modifier", *R.CHORD_ACTION_TYPES):
         return R.KEY_PRESS, _keypress(at, code)
@@ -554,7 +560,11 @@ def _read_term_flavour(conn) -> tuple[int, int]:
     TERM = "8fe34f61-df0c-48c9-b0f7-ee9bfbaa2a05"
     FLAV = "24de8555-1a56-4e02-a1c3-3641603a5ac9"
     FLAVOUR_ENUM = {"hold-preferred": 0, "balanced": 1, "tap-preferred": 2, "tap-unless-interrupted": 3}
-    term, flavour = 200, 0
+    # No saved flavour means what the settings page shows as its default: Balanced (1).
+    # NayaFlow also displays "Balanced" by default but sends 0, which is hold-preferred. Measured
+    # 2026-09-25 with home-row mods: at 0, any key pressed during a home-row key turned it into
+    # the modifier on fast rolls (select-all, new tabs); at 1 the same typing came out clean.
+    term, flavour = 200, FLAVOUR_ENUM["balanced"]
     for r in conn.execute("SELECT value, correlation_id FROM settings WHERE correlation_id IN (?,?)", (TERM, FLAV)):
         if r["correlation_id"] == TERM:
             term = int(r["value"])

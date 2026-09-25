@@ -77,6 +77,9 @@ def test_import_stores_all_four_behaviours():
 def test_reflash_reproduces_both_records_byte_for_byte():
     conn = _db()
     out, captured = _import(conn)
+    # The capture went out at flavour 0 (hold-preferred), NayaFlow's wire value for an unset
+    # flavour. OpenFlow's unset default is Balanced (1), so the flavour it was made with is set.
+    conn.execute("INSERT INTO settings VALUES ('24de8555-1a56-4e02-a1c3-3641603a5ac9', 'hold-preferred')")
     d = F.desired_from_db(conn, out["profileId"])
     for pos in (0x49, 0x9B):
         assert d.layers[0].get(pos) == captured[pos], f"{pos:#04x}: {d.layers[0].get(pos)}"

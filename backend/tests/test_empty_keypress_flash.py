@@ -56,7 +56,7 @@ def test_the_reported_key_no_longer_aborts_the_flash():
         200, 0, {})
     assert rec is not None
     typ, param = rec
-    assert typ == R.HOLD_TAP_ONEKEY
+    assert typ == R.HOLD_TAP_HOME   # tap+hold with no second bank (test_home_row_record_type)
     # The tap survives intact and the hold is written back as the zeros it came from.
     assert R.encode_keypress("shortcut_alias", CHORD).hex() in param.hex()
     assert param.hex().count("00000000") >= 1

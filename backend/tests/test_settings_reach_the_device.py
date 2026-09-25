@@ -89,6 +89,15 @@ def test_interrupt_flavor_needs_the_value_translated_too_not_just_the_key():
         f"flash read flavour {flavour}; FLAVOUR_ENUM wants the wire value 'tap-preferred'")
 
 
+def test_an_unset_flavour_flashes_the_default_the_ui_shows():
+    """The settings page shows Balanced when nothing is saved, so that is what goes out: 1,
+    not the 0 (hold-preferred) that NayaFlow sends under the same label."""
+    conn = _db()
+    _term, flavour = F._read_term_flavour(conn)
+    shown = _field(_get(conn), "interrupt_flavor")["default"]
+    assert shown == "Balanced" and flavour == 1, f"UI default {shown!r}, flashed {flavour}"
+
+
 def test_timeouts_are_emitted_at_all():
     """_read_timeouts returns None unless BOTH rows exist, and None means no SYS_SET_TIMEOUTS
     op is added to the plan -- the setting did nothing, silently."""
