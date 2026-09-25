@@ -41,6 +41,10 @@ export default function BoardFit({ children }) {
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(page);
+    // The column beside the board can change width without the page doing so (RailColumn
+    // folding), and the board must take up or give back that room.
+    const split = el.closest(".editor-split");
+    if (split) for (const c of split.children) if (!c.contains(el)) ro.observe(c);
     return () => ro.disconnect();
   }, []);
   return <div className="board-fit" ref={ref}>{children}</div>;

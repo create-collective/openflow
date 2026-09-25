@@ -10,6 +10,7 @@ import { actionText } from "../lib/keylabels";
 import { clearSaved, useOnDeviceRead } from "../lib/deviceActions";
 import useProfileEditor from "../lib/useProfileEditor";
 import BoardFit from "../components/BoardFit";
+import RailColumn from "../components/RailColumn";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
 import ModuleProfileList from "../components/ModuleProfileList";
@@ -270,7 +271,7 @@ export default function Bindings() {
     // column (the board, then the selected-key band and the palette), each stacking on its own
     // so neither pushes the other around.
     <div className="editor editor-split">
-      <div className="layer-col">
+      <RailColumn>
           <LayerList
             profiles={ed.profiles.filter((p) => p.id !== profile.id)}
             layers={profile.layers}
@@ -282,7 +283,7 @@ export default function Bindings() {
             {...ed.layerFileHandlers}
           />
           <ModuleProfileList bays={bayUI} boardKnown={!!deviceRead && Object.keys(deviceRead).length > 0} />
-      </div>
+      </RailColumn>
       <div className="editor-main">
         <div className="board-wrap">
           <div className="board-header">

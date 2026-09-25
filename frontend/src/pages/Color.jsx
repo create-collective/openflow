@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { hsvToHex, isValidHex, deviceColor } from "../lib/color";
 import useProfileEditor from "../lib/useProfileEditor";
 import BoardFit from "../components/BoardFit";
+import RailColumn from "../components/RailColumn";
 import KeymapBoard from "../components/KeymapBoard";
 import LayerList from "../components/LayerList";
 import Button from "../components/ui/Button";
@@ -147,7 +148,7 @@ export default function Color() {
     // The same two containers as Bindings: the Layers card on the left, the board with its two
     // cards under it on the right, each stacking on its own.
     <div className="editor editor-split">
-      <div className="layer-col">
+      <RailColumn>
           <LayerList
             profiles={ed.profiles.filter((p) => p.id !== profile.id)}
             layers={profile.layers}
@@ -158,7 +159,7 @@ export default function Color() {
             {...ed.layerHandlers}
             {...ed.layerFileHandlers}
           />
-      </div>
+      </RailColumn>
       <div className="editor-main">
         <div className="board-wrap">
           <div className="board-header">

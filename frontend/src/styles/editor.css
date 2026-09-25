@@ -10,8 +10,17 @@
 .layer-col {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+.rail-body {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
+.rail-body[hidden] { display: none; }
+.rail-toggle { align-self: flex-start; }
+/* Folded (RailColumn): the column shrinks to its button and BoardFit gives the board the rest. */
+.editor-split:has(> .layer-col.collapsed) { grid-template-columns: auto auto; }
 
 /* Layer list: a card titled Layers, each layer a bordered row with its grip and number, the
    active one in the accent, then Add layer and Import as full-width buttons. */
