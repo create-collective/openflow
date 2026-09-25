@@ -120,9 +120,29 @@ def _validate(doc) -> tuple[str, str, dict]:
     return mtype, str(doc.get("name") or f"Imported {mtype.title()}"), bindings
 
 
+# The stock map an import starts from, per type: what "add profile" seeds a new one with
+# (module_profiles.create). A Track picks its side from the file's variant.
+_SEED_VARIANT = {"TUNE": "TUNE", "TOUCH": "TOUCH_WINDOWS", "TRACK": "TRACK_LEFT"}
+
+
+def _seed(mtype: str, variant: str | None) -> dict:
+    """{gesture: (action_type, action_code)} of the stock map this import starts from."""
+    from . import module_profiles
+    stock = module_profiles._STOCK.get(variant or "") or module_profiles._STOCK.get(
+        _SEED_VARIANT.get(mtype, ""))
+    if not stock or stock["module_type"] != mtype:
+        return {}
+    return {g: (b["action_type"], b["action_code"]) for g, b in stock["bindings"].items()}
+
+
 def import_profile(doc: dict, name: str | None = None) -> dict:
     """Create a module profile from a document. Never overwrites: an import is always a new
-    profile, so importing a file twice gives you two you can compare rather than a surprise."""
+    profile, so importing a file twice gives you two you can compare rather than a surprise.
+
+    A file need not name every gesture -- Create Companion's names only the ones it binds. The
+    profile starts from the type's stock map, as a new profile does, and the file's bindings
+    replace those gestures. Until 2026-09-25 only the file's gestures were created, so an
+    imported Tune showed seven rows where the module has seventeen."""
     mtype, doc_name, bindings = _validate(doc)
     label = (name or doc_name).strip() or f"Imported {mtype.title()}"
     now, cid = _now(), str(uuid.uuid4())
@@ -145,25 +165,45 @@ def import_profile(doc: dict, name: str | None = None) -> dict:
             "updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
             (label, mtype, 0, pos, None, variant, cid, now, now))
 
+        def add(gesture, code, atype, direction, entry, invert=False):
+            conn.execute(
+                "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
+                "invert, threshold, direction, mode, module_config_id, id, updated_at, "
+                "created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (None, code or "", atype or "none", gesture, 1 if invert else 0,
+                 int(entry.get("threshold") or 0), direction, int(entry.get("mode") or 0),
+                 cid, str(uuid.uuid4()), now, now))
+
+        # A split on a PAIRED gesture (the Tune dial) names the pair's own half gestures, not
+        # direction rows under the combined one. Stored as rows of the combined gesture they
+        # were three rows for one behaviour, and the flash keeps one value per behaviour --
+        # whichever row came last, sometimes the bare "F23" instead of the pair.
+        pairs = module_fields.paired_gestures(mtype)
+        written = {g for g, e in bindings.items() if isinstance(e, dict)}
+        for gesture, entry in bindings.items():
+            for half in (pairs.get(gesture) or {}).values():
+                written.add(half)
+
         rows, skipped = 0, []
+        for gesture, (atype, code) in sorted(_seed(mtype, variant).items()):
+            if gesture not in written:
+                add(gesture, code, atype, "+", {})
+                rows += 1
         for gesture, entry in bindings.items():
             if not isinstance(entry, dict):
                 skipped.append(gesture)
                 continue
-            def add(code, atype, direction, invert=False):
-                nonlocal rows
-                conn.execute(
-                    "INSERT INTO module_bindings (action_id, action_code, action_type, behavior, "
-                    "invert, threshold, direction, mode, module_config_id, id, updated_at, "
-                    "created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (None, code or "", atype or "none", gesture, 1 if invert else 0,
-                     int(entry.get("threshold") or 0), direction, int(entry.get("mode") or 0),
-                     cid, str(uuid.uuid4()), now, now))
-                rows += 1
-            add(entry.get("actionCode"), entry.get("actionType"), "+", entry.get("invert"))
+            add(gesture, entry.get("actionCode"), entry.get("actionType"), "+", entry,
+                bool(entry.get("invert")))
+            rows += 1
             for sign, half in (entry.get("split") or {}).items():
                 if sign in ("-", "+") and isinstance(half, dict):
-                    add(half.get("actionCode"), half.get("actionType"), sign)
+                    target = (pairs.get(gesture) or {}).get(sign)
+                    if target:
+                        add(target, half.get("actionCode"), half.get("actionType"), "+", entry)
+                    else:
+                        add(gesture, half.get("actionCode"), half.get("actionType"), sign, entry)
+                    rows += 1
 
         for cor, val in (doc.get("settings") or {}).items():
             conn.execute("INSERT INTO module_settings (module_config_id, correlation_id, value) "

@@ -258,3 +258,60 @@ def test_module_type_is_required_and_checked():
         except M.ProfileFormatError as e:
             assert expect in str(e), f"{expect!r} not in {e}"
     print("  every malformed document is refused by name")
+
+
+# Create Companion's export, verbatim (2026-09-25): it names only the gestures it binds, and it
+# splits the Tune dial.
+COMPANION_TUNE = {
+    "format": "openflow.module-profile", "version": 1, "moduleType": "TUNE",
+    "name": "Create Companion Tune",
+    "bindings": {
+        "rotate:tune:dial": {"actionType": "value", "actionCode": "F23 - F24",
+                             "split": {"+": {"actionType": "key", "actionCode": "F24"},
+                                       "-": {"actionType": "key", "actionCode": "F23"}}},
+        "tap:tune:1_finger": {"actionType": "key", "actionCode": "F22"},
+        "swipe_left:tune:2_fingers": {"actionType": "key", "actionCode": "F13"},
+        "swipe_left:tune:3_fingers": {"actionType": "key", "actionCode": "F20"},
+        "swipe_right:tune:3_fingers": {"actionType": "key", "actionCode": "F19"},
+        "swipe_up:tune:3_fingers": {"actionType": "key", "actionCode": "F18"},
+        "swipe_down:tune:3_fingers": {"actionType": "key", "actionCode": "F17"},
+    },
+}
+
+
+def _import_companion():
+    from openflow_backend.db import module_io
+    conn = _io_db()
+    with mock.patch.object(module_io, "connect", lambda: _Keep(conn)):
+        out = module_io.import_profile(COMPANION_TUNE)
+    rows = [dict(r) for r in conn.execute(
+        "SELECT behavior, direction, action_type, action_code FROM module_bindings "
+        "WHERE module_config_id=?", (out["id"],))]
+    return rows
+
+
+def test_a_partial_file_starts_from_the_stock_map():
+    """Only seven gestures in the file; the profile still has every stock gesture, with the
+    file's bindings in place of the stock ones."""
+    from openflow_backend.db import module_profiles as M
+    rows = _import_companion()
+    by = {}
+    for r in rows:
+        by.setdefault(r["behavior"], []).append(r)
+    stock = M._STOCK["TUNE"]["bindings"]
+    assert set(stock) <= set(by), f"missing stock gestures: {set(stock) - set(by)}"
+    assert [r["action_code"] for r in by["swipe_left:tune:2_fingers"]] == ["F13"], "the file wins"
+    assert [r["action_code"] for r in by["tap:tune:1_finger"]] == ["F22"]
+    assert [r["action_code"] for r in by["tap:tune:2_fingers"]] == ["C_PLAY_PAUSE"], "stock fills the gap"
+    print(f"  {len(by)} gestures, file bindings over the stock map")
+
+
+def test_a_split_dial_lands_on_its_half_gestures():
+    """One row per behaviour: the flash keeps one value per behaviour, so three rows under
+    rotate:tune:dial let the last one win."""
+    rows = _import_companion()
+    dial = [r for r in rows if r["behavior"] == "rotate:tune:dial"]
+    assert [r["action_code"] for r in dial] == ["F23 - F24"], dial
+    half = {r["behavior"]: r["action_code"] for r in rows if "clockwise_rotate" in r["behavior"]}
+    assert half == {"counter_clockwise_rotate:tune:dial": "F23", "clockwise_rotate:tune:dial": "F24"}
+    print("  dial pair on rotate:tune:dial, halves on their own gestures")
