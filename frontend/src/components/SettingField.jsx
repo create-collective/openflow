@@ -61,6 +61,17 @@ export default function SettingField({ f, onChange }) {
     if (steps) v = nearestStep(steps, v);
     if (v !== f.value) onChange(f.id, v);
   };
+  // The slider, likewise, commits once: on release, not on every step of the drag. Each step
+  // used to save (a request apiece, landing in any order) and, for Interface scaling, re-zoom the
+  // whole page -- which moved the slider under the pointer and fired more steps. The value
+  // stored was whichever request landed last, not the one let go on (owner, 2026-09-25).
+  const [slide, setSlide] = useState(null);
+  const commitSlide = () => {
+    if (slide === null) return;
+    setSlide(null);
+    if (slide !== f.value) onChange(f.id, slide);
+  };
+  const slideEnd = { onPointerUp: commitSlide, onKeyUp: commitSlide, onBlur: commitSlide };
   // A setting that has no home yet in the browser dev build -- the system-tray battery needs the
   // Electron shell. Shown, but inert and labelled, rather than offering a switch that does nothing.
   if (f.deferred) {
@@ -81,7 +92,7 @@ export default function SettingField({ f, onChange }) {
     // is 0-6000 across ~600px, so one pixel is ten seconds and the exact value you want
     // is unreachable by dragging.
     <input type="number" className="mac-input setting-num"
-      min={f.min} max={f.max} value={draft ?? f.value}
+      min={f.min} max={f.max} value={draft ?? slide ?? f.value}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commitDraft}
       onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
@@ -102,9 +113,10 @@ export default function SettingField({ f, onChange }) {
           <span className="setting-bound">{steps[0]}{f.unit}</span>
           <input
             type="range" min={0} max={steps.length - 1}
-            value={steps.indexOf(nearestStep(steps, Number(f.value)))}
-            onChange={(e) => onChange(f.id, steps[Number(e.target.value)])}
-            title={`${f.value} ticks per turn = one every ${(360 / Number(f.value)).toFixed(1)} degrees`}
+            value={steps.indexOf(nearestStep(steps, Number(slide ?? f.value)))}
+            onChange={(e) => setSlide(steps[Number(e.target.value)])}
+            {...slideEnd}
+            title={`${slide ?? f.value} ticks per turn = one every ${(360 / Number(slide ?? f.value)).toFixed(1)} degrees`}
           />
           <span className="setting-bound">{steps[steps.length - 1]}{f.unit}</span>
         </div>
@@ -113,8 +125,9 @@ export default function SettingField({ f, onChange }) {
         <div className="setting-slider">
           <span className="setting-bound">{f.min}{f.unit}</span>
           <input
-            type="range" min={f.min} max={f.max} value={f.value}
-            onChange={(e) => onChange(f.id, Number(e.target.value))}
+            type="range" min={f.min} max={f.max} value={slide ?? f.value}
+            onChange={(e) => setSlide(Number(e.target.value))}
+            {...slideEnd}
           />
           <span className="setting-bound">{f.max}{f.unit}</span>
         </div>

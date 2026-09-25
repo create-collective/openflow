@@ -19,10 +19,14 @@ export default function BoardFit({ children }) {
       const cs = getComputedStyle(page);
       const inner = page.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
       // Whatever shares the row with the board (the cards column) and the gap between them.
+      // offsetWidth, not getBoundingClientRect: with Settings > Interface scaling the root has a
+      // CSS zoom, and the rect comes back multiplied by it (a 220px rail measured 330 at 1.5x)
+      // while clientWidth above does not. Mixing the two counted the rail zoom-times over, so
+      // raising the interface scale shrank the board far more than the bigger rail explains.
       const split = el.closest(".editor-split");
       let aside = 0;
       if (split) {
-        for (const c of split.children) if (!c.contains(el)) aside += c.getBoundingClientRect().width;
+        for (const c of split.children) if (!c.contains(el)) aside += c.offsetWidth;
         aside += parseFloat(getComputedStyle(split).columnGap) || 0;
       }
       // The card around the board has padding and a border of its own; they are not board.
