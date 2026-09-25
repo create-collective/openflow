@@ -157,6 +157,20 @@ def test_disabled_key_from_the_db_blanks_its_shadow_as_well():
     print("  disabling a key clears its double-tap slot too")
 
 
+def test_a_double_tap_we_cannot_encode_is_kept_and_reported():
+    """A double-tap that read back as RAW (a slot kind we have not decoded) must not be blanked.
+    It used to be: the encode error was swallowed, so the key looked tap-only, and the shadow was
+    written as NONE -- NayaFlow's double-tap erased by an OpenFlow flash, with nothing in the
+    report. Now the board keeps it and the dropped list names it."""
+    desired = F.desired_from_db(_db({"tap": ("key", "B"), "double_tap": ("key", "RAW_k07:00000000")}))
+    written = _written(F.compute_plan(desired, _device(), full=True))
+    assert written[SHADOW_POS] == (R.HOLD_TAP_ONEKEY, SHADOW), \
+        f"the board's second bank was overwritten: {written[SHADOW_POS]}"
+    drop = [d for d in desired.dropped if d["position"] == KEY]
+    assert drop and drop[0]["behavior"] == "double_tap" and drop[0]["actionCode"] == "RAW_k07:00000000"
+    print("  an unencodable double-tap keeps the board's shadow and is reported")
+
+
 if __name__ == "__main__":
     for fn in (test_tap_only_key_blanks_its_shadow,
                test_unmodelled_key_keeps_both_banks,
@@ -165,7 +179,8 @@ if __name__ == "__main__":
                test_bays_and_unset_keys_get_no_shadow_entry,
                test_recovery_mode_blanks_it_too,
                test_tap_only_from_the_db_blanks_the_board_shadow,
-               test_disabled_key_from_the_db_blanks_its_shadow_as_well):
+               test_disabled_key_from_the_db_blanks_its_shadow_as_well,
+               test_a_double_tap_we_cannot_encode_is_kept_and_reported):
         print(fn.__name__)
         fn()
     print("\nOK")

@@ -127,6 +127,10 @@ class DesiredState:
     # the flash reported "verified" because verification only checks records the plan SET.
     # So a key set to Disabled kept its old binding and nothing said so.
     dropped: list[dict] = field(default_factory=list)
+    # {layer: {pos + 0x52}}: second-bank slots whose double-tap / tap+hold could not be encoded.
+    # _own_second_bank must leave these to the board. Blanking them is how a double-tap NayaFlow
+    # wrote, which read back as RAW, used to vanish on the next OpenFlow flash with no report.
+    keep_second_bank: dict[int, set[int]] = field(default_factory=dict)
 
 
 def desired_from_read(read_json: dict) -> DesiredState:
@@ -288,8 +292,19 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
             # double-tap / tap+hold are a second hold-tap record at pos + 0x52
             try:
                 second = _second_bank_record(rows, term, flavour)
-            except R.RemapEncodeError:
+            except R.RemapEncodeError as e:
                 second = None
+                culprit = next(r for r in rows if _behaviour(r) in ("double_tap", "tap_hold")
+                               and not _encodes_as_keypress(r))
+                d.dropped.append({
+                    "layer": idx, "position": pos,
+                    "actionCode": culprit["ac"], "actionType": culprit["at"],
+                    "behavior": _behaviour(culprit),
+                    "reason": _drop_reason(culprit["at"], culprit["ac"], str(e)),
+                    "effect": "this key keeps whatever double-tap and tap+hold the keyboard "
+                              "already had",
+                })
+                d.keep_second_bank.setdefault(idx, set()).add(pos + SECOND_BANK)
             if second is not None:
                 d.layers[idx][pos + SECOND_BANK] = second
         for pos, hexc in colors.items():
@@ -537,6 +552,14 @@ def _second_bank_record(rows: list, term: int, flavour: int) -> tuple[int, bytes
     return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
 
 
+def _encodes_as_keypress(row) -> bool:
+    try:
+        _keypress(row["at"], row["ac"])
+        return True
+    except R.RemapEncodeError:
+        return False
+
+
 def _behaviour(row) -> str:
     """Normalise the behaviour name. The UI slot is 'tap+hold' and the device decoder emits
     'tap_hold'; both mean the same slot."""
@@ -727,7 +750,8 @@ def _full_layer_payload(idx: int, poss: dict[int, tuple[int, bytes]],
     return R.encode_layer_data(idx, recs)
 
 
-def _own_second_bank(poss: dict[int, tuple[int, bytes]]) -> dict[int, tuple[int, bytes]]:
+def _own_second_bank(poss: dict[int, tuple[int, bytes]],
+                     keep: set[int] | frozenset[int] = frozenset()) -> dict[int, tuple[int, bytes]]:
     """The second-bank NONE records a profile owes for the keys it sets.
 
     A key's double-tap and tap+hold live at position + 0x52. When the profile sets a key and
@@ -747,10 +771,15 @@ def _own_second_bank(poss: dict[int, tuple[int, bytes]]) -> dict[int, tuple[int,
     Only KEYS the profile sets are affected. A position the profile does not mention keeps both
     its banks from the device, as before: the profile has no opinion about that key, so it must
     not have one about its double-tap either. Bays have no second bank.
+
+    `keep` is the shadows whose double-tap / tap+hold the profile HAS but could not encode
+    (DesiredState.keep_second_bank). The profile does have an opinion there, one we cannot write,
+    so the board's record stays and the flash report says so.
     """
     return {pos + SECOND_BANK: (R.NONE_BEH, b"")
             for pos in poss
-            if pos in SECOND_BANK_KEYS and pos + SECOND_BANK not in poss}
+            if pos in SECOND_BANK_KEYS and pos + SECOND_BANK not in poss
+            and pos + SECOND_BANK not in keep}
 
 
 def _layer_needs_write(desired_layer: dict[int, tuple[int, bytes]],
@@ -924,7 +953,8 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
     for idx in sorted(desired.layers):
         # A modelled key owns its second bank. Added to `desired` itself, not just to the
         # payload, so the read-back verify checks that each blanked slot really came back empty.
-        desired.layers[idx].update(_own_second_bank(desired.layers[idx]))
+        desired.layers[idx].update(_own_second_bank(desired.layers[idx],
+                                                    desired.keep_second_bank.get(idx, set())))
         if full or current is None or _layer_needs_write(desired.layers[idx],
                                                          current.layers.get(idx, {})):
             ops.append(WriteOp(R.WRITE_LAYER_DATA,
