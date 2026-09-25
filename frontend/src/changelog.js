@@ -3,6 +3,20 @@
 // what they can now do, what stopped happening.
 const CHANGELOG = [
   {
+    version: "0.4.0",
+    date: "2026-09-25",
+    notes: [
+      "Home-row mods type in order. A key with a tap and a hold was written in the keyboard's four-behaviour form, which holds the tap back, so on fast typing the next letter came out first (\"efw\" for \"few\") or a letter went missing. It is now written the way NayaFlow writes it, and fast typing comes out clean.",
+      "Interrupt Flavor does what the settings page says. With nothing chosen it shows Balanced, and Balanced is now what reaches the keyboard; before, an unset flavour went out as Hold-Preferred, which turns home-row keys into modifiers on fast rolls.",
+      "A double-tap OpenFlow cannot write yet is left on the keyboard and named in the flash report. It used to be erased without a word, so a double-tap set in NayaFlow could disappear on the first flash from OpenFlow.",
+      "Pinch and Spread are labelled as such when you split them, instead of - and +. A pair such as Volume set on pinch & spread without splitting it now flashes as that pair; it used to flash as zoom whatever you chose. Screen Brightness is offered as a pair too.",
+      "Importing a module profile file, such as a Create Companion export, gives you every gesture the module has, with the file's bindings in place of the defaults. A split dial in the file lands on the dial's two directions.",
+      "Interface scaling keeps the value you set. On the Bindings and LED Map pages the layers column can be hidden, so the keyboard picture gets the room, and the picture no longer shrinks more than it should as the interface is enlarged.",
+      "Module profiles named \"(on board)\" say what that means: a copy kept from a read that matched none of your saved profiles.",
+      "Behind the scenes: module firmware updates, a guided repair for halves that no longer connect, and recovery for a half left in the bootloader. These stay held back in this build, like the keyboard firmware update.",
+    ],
+  },
+  {
     version: "0.3.1",
     date: "2026-09-22",
     notes: [
