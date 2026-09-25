@@ -238,13 +238,17 @@ for _name in (os.environ.get("OPENFLOW_ENABLE_RECOVERY_OPS") or "").split(","):
 
 def public_list() -> list[dict]:
     """Registry for the UI: what each op is, its danger, whether it is enabled, its confirm text.
-    No frames, no device access."""
+    No frames, no device access.
+
+    Read through BY_ID, in REGISTRY's order: REGISTRY keeps the shipped definitions, and an op
+    unlocked for the session exists only in BY_ID -- which is what the send path checks. Reading
+    REGISTRY here listed an unlocked op as disabled while it would in fact run."""
     return [
         {"id": o.id, "label": o.label, "desc": o.desc, "danger": o.danger,
          "provenance": o.provenance, "enabled": o.enabled, "confirm": o.confirm,
          "args": list(o.args), "needs": o.needs,
          "command": f"{C.CATEGORY_NAMES.get(o.cat, hex(o.cat)) if hasattr(C, 'CATEGORY_NAMES') else hex(o.cat)}/{o.sub:#06x}"}
-        for o in REGISTRY
+        for o in (BY_ID[r.id] for r in REGISTRY)
     ]
 
 

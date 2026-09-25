@@ -108,6 +108,15 @@ export default function Settings() {
   const [logmeta, setLogmeta] = useState({});
   const [recovery, setRecovery] = useState([]);
   const [pairPlan, setPairPlan] = useState(null);
+  // The repair runs from a plan, never blind: the backend's own answer decides, and the reason
+  // it cannot run is the button's title. It was a hardcoded disabled button, so a session that
+  // unlocked the repair (OPENFLOW_ENABLE_PAIRING_REPAIR) still had no way to start it.
+  const pairingBlocker = !pairPlan ? "Plan the repair first"
+    : pairPlan.refused ? `Refused: ${pairPlan.refused}`
+      : !pairPlan.enabled ? "Locked: OpenFlow was not started with pairing repair unlocked"
+        : pairPlan.opsDisabled?.length ? `Locked: these steps are not unlocked: ${pairPlan.opsDisabled.join(", ")}`
+          : null;
+  const canRunPairing = !!pairPlan?.armToken && !pairingBlocker;
   const { out, busy, run } = useRunLog();
   const [err, setErr] = useState(null);
   const { data: stream } = useDeviceStream();
@@ -320,8 +329,9 @@ export default function Settings() {
                     NayaFlow's pairing operation as one reviewed sequence: both halves' addresses are
                     stored <strong>before</strong> anything is cleared, each half is pointed at the
                     other, the old links and bonds are dropped, both halves restart, and the link is
-                    verified. Planning only reads. Running is wired but <strong>disabled</strong> until
-                    it is watched on a spare pair, and it forgets every Bluetooth host on both halves.
+                    verified. Planning only reads. Running is <strong>locked</strong> unless OpenFlow
+                    was started with pairing repair unlocked, and it forgets every Bluetooth host on
+                    both halves.
                   </p>
                   <SettingRow label="Plan the repair"
                     control={<>
@@ -329,7 +339,18 @@ export default function Settings() {
                         onClick={() => run("Pairing repair plan", () => api.pairingRepairPlan().then((p) => { setPairPlan(p); return p; }))}>Plan</Button>
                       <Button disabled={busy || !connected}
                         onClick={() => run("Pairing verify", () => api.pairingRepairVerify())}>Verify link</Button>
-                      <Button variant="danger" disabled title="Wired, enabled after testing on a spare pair">Run (disabled)</Button>
+                      <Button variant="danger" disabled={!canRunPairing || busy || !connected}
+                        title={pairingBlocker || "Run the steps above, in order"}
+                        onClick={async () => {
+                          if (await confirmDialog({
+                            title: "Run the split-link repair?",
+                            message: "Both halves are pointed at each other, every Bluetooth pairing on both halves is forgotten (your computers too), and both halves restart. Keep both halves plugged in until it finishes.",
+                            confirmLabel: "Run repair", tone: "danger" })) {
+                            // A plan is spent once run: the halves restart, so another run needs a fresh one.
+                            run("Pairing repair", () => api.pairingRepair(pairPlan.armToken, true)
+                              .finally(() => setPairPlan(null)));
+                          }
+                        }}>Run</Button>
                     </>}
                     desc={<>
                       {!pairPlan && <>Reads both halves and lists every step with its exact command. Nothing is sent.</>}

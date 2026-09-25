@@ -147,3 +147,19 @@ def test_an_enabled_forced_op_sends_the_right_frame(monkeypatch):
     monkeypatch.setitem(ro.BY_ID, "reset_normal", dataclasses.replace(ro.BY_ID["reset_normal"], enabled=True))
     svc.run_recovery_op("left", "reset_normal", force=True)
     assert sent == [(0xEE, 0x10CE, b"")]
+
+
+def test_a_session_unlocked_op_is_listed_as_enabled(monkeypatch):
+    """The list the UI draws must say what the send path will do. It read the shipped REGISTRY,
+    so an op unlocked with OPENFLOW_ENABLE_RECOVERY_OPS showed "Disabled" and would still run."""
+    import importlib
+    monkeypatch.setenv("OPENFLOW_ENABLE_RECOVERY_OPS", "ble_unpair_all")
+    try:
+        mod = importlib.reload(ro)
+        listed = {o["id"]: o["enabled"] for o in mod.public_list()}
+        assert listed["ble_unpair_all"] is True
+        assert listed["erase_chip"] is False, "only the named op is unlocked"
+        assert [o["id"] for o in mod.public_list()] == [o.id for o in mod.REGISTRY], "order kept"
+    finally:
+        monkeypatch.delenv("OPENFLOW_ENABLE_RECOVERY_OPS")
+        importlib.reload(ro)
