@@ -62,6 +62,8 @@ describe("axis halves", () => {
     expect(parseAxisHalfId("b-123")).toBeNull();
     expect(axisHalfNames("vertical:tune:1_finger")).toEqual(["Up", "Down"]);
     expect(axisHalfNames("rotate:tune")).toEqual(["Rotate left", "Rotate right"]);
+    expect(axisHalfNames("pinch&spread:tune:2_fingers")).toEqual(["Pinch", "Spread"]);
+    expect(axisHalfNames("pinch&spread:touch:2_fingers")).toEqual(["Pinch", "Spread"]);
     expect(axisHalfNames("odd")).toEqual(["–", "+"]);
   });
 });

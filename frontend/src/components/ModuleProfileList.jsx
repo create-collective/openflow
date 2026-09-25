@@ -28,6 +28,12 @@ export const moduleImg = (type, side) =>
     : type === "touch" ? "/modules/v2/touch-right.png"
       : `/modules/v2/${type}.png`;
 
+// A read that finds a module config matching no saved profile keeps it as "<closest> (on board)"
+// (backend module_profiles.capture_from_device); a second one gets a number. Users asked what
+// the suffix means, so the row says it.
+export const ON_BOARD_NOTE = " (on board) means this profile was found on the keyboard during a read and matched no saved profile, so it was kept as a copy. A number after it means another such copy existed.";
+export const isOnBoardCopy = (name) => /\(on board\)( \d+)?$/.test(name || "");
+
 export default function ModuleProfileList({ bays, boardKnown = false }) {
   if (!bays) return null;
   return (
@@ -50,7 +56,7 @@ export default function ModuleProfileList({ bays, boardKnown = false }) {
             key={s.label}
             type="button"
             className={"modprof-row" + (entry?.onBoard ? " live" : "") + (pending ? " pending" : "")}
-            title={`${s.label}: ${name}.${pending ? " Not on the board yet: the next flash writes it." : ""}${split ? " The left and right bays currently differ; choosing here sets both." : ""} Open on the Modules page.`}
+            title={`${s.label}: ${name}.${isOnBoardCopy(name) ? ON_BOARD_NOTE : ""}${pending ? " Not on the board yet: the next flash writes it." : ""}${split ? " The left and right bays currently differ; choosing here sets both." : ""} Open on the Modules page.`}
             onClick={() => bays.onManage(s.type, s.side)}
           >
             <img className="modprof-img" src={moduleImg(s.type, s.side)} alt="" />

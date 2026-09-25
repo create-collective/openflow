@@ -1305,6 +1305,18 @@ def apply_module_layout(desired: DesiredState, conn, mod_read: dict) -> dict:
             code = r["action_code"] or ""
             if code and " - " not in code:
                 spec["plus" if (r["direction"] or "+") == "+" else "minus"] = code
+            elif code:
+                # A combined row of two KEY actions ("C_VOL_DOWN - C_VOL_UP" on pinch & spread)
+                # is a binding per half, not the axis's motion. Skipping it wrote the default
+                # motion instead, so any pair picked for an unsplit pinch flashed as zoom. The
+                # read-back compare (rest._module_gestures) already expects these halves. A
+                # motion pair keeps the path above, which owns selectors and invert. An
+                # explicit split half still wins over the pair.
+                minus, plus = module_fields.split_pair(code)
+                if (minus and plus and module_fields.motion_record(minus) is None
+                        and module_fields.motion_record(plus) is None):
+                    spec["minus"] = spec["minus"] or minus
+                    spec["plus"] = spec["plus"] or plus
         else:
             bindings.setdefault(cid, {})[beh] = r["action_code"]
 

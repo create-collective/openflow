@@ -42,6 +42,11 @@ MODULE_ACTIONS = [
     {"code": "C_REWIND", "label": "Rewind", "actionType": "key", "group": "Media"},
     {"code": "C_MUTE", "label": "Mute", "actionType": "key", "group": "Media"},
     # Display & LED (Tune)
+    # The pair, for a two-way gesture (pinch & spread, the dial) without splitting it. NayaFlow
+    # offers the same one ("C_BRIGHTNESS_DEC - C_BRIGHTNESS_INC",
+    # docs/reference/nayacore-action-vocabulary.json). Its keyboard-LED pair is not here: an LED
+    # action has no known module-field record, so it cannot be flashed onto a gesture yet.
+    {"code": "C_BRIGHTNESS_DEC - C_BRIGHTNESS_INC", "label": "Screen Brightness", "actionType": "value", "group": "Display & LED"},
     {"code": "C_BRIGHTNESS_INC", "label": "Screen Brightness Up", "actionType": "key", "group": "Display & LED"},
     {"code": "C_BRIGHTNESS_DEC", "label": "Screen Brightness Down", "actionType": "key", "group": "Display & LED"},
     {"code": "LED_BRIGHTNESS_UP", "label": "Keyboard LED Brightness Up", "actionType": "LED", "group": "Display & LED"},

@@ -6,7 +6,7 @@ import GestureRow from "../components/modules/GestureRow";
 import ModuleRail from "../components/modules/ModuleRail";
 import ModuleSettingsTab from "../components/modules/ModuleSettingsTab";
 import ModuleVisual from "../components/modules/ModuleVisual";
-import { moduleImg } from "../components/ModuleProfileList";
+import { isOnBoardCopy, moduleImg, ON_BOARD_NOTE } from "../components/ModuleProfileList";
 import Badge from "../components/ui/Badge";
 import Card from "../components/ui/Card";
 import Disclosure from "../components/ui/Disclosure";
@@ -152,6 +152,11 @@ export default function Modules() {
                 items={[{ id: "bindings", label: "Bindings" }, { id: "settings", label: "Settings" }]} />
               {sync && (
                 <Disclosure className="module-note" label="Sync details">{sync.detail}</Disclosure>
+              )}
+              {isOnBoardCopy(config.name) && (
+                <Disclosure className="module-note" label="What does (on board) mean?">
+                  {ON_BOARD_NOTE.trim()}
+                </Disclosure>
               )}
 
               {ed.tab === "bindings" && (

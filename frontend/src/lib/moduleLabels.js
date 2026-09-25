@@ -116,6 +116,9 @@ export function statusBadge({ unsupported, flashable, locked }) {
 export const AXIS_HALF_LABEL = {
   vertical: ["Up", "Down"], horizontal: ["Left", "Right"],
   rotate: ["Rotate left", "Rotate right"],
+  // Minus is fingers together (zoom out), plus is fingers apart (zoom in):
+  // backend module_fields.AXIS_HALVES, proved on hardware 2026-09-18.
+  "pinch&spread": ["Pinch", "Spread"],
 };
 export function axisHalfNames(behavior) {
   const head = (behavior || "").split(":")[0];

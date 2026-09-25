@@ -388,6 +388,45 @@ def test_a_profile_already_on_the_board_is_still_written_when_it_differs():
     print(f"  kept slot {slot} rewritten: three-finger tap -> B explicitly, one-finger tap -> empty (locked)")
 
 
+def _tune_pinch(rows):
+    """The Tune slot's pinch & spread fields (0x14 pinch, 0x15 spread) after a flash plan."""
+    conn = _db({0: BASE})
+    for code, direction in rows:
+        conn.execute("INSERT INTO module_bindings (module_config_id,behavior,action_code,direction) "
+                     "VALUES (?,?,?,?)", (TUNE, "pinch&spread:tune:2_fingers", code, direction))
+    conn.commit()
+    d = F.DesiredState()
+    d.profile_id = PID
+    d.layers[0], d.leds[0] = {}, {}
+    layout = F.apply_module_layout(d, conn, MOD_READ)
+    conn.close()
+    cfg = d.modules[layout["slot_for"][TUNE]]
+    return cfg[0x14], cfg[0x15]
+
+
+def test_an_unsplit_pinch_bound_to_a_key_pair_writes_the_keys_not_zoom():
+    """Volume on the unsplit pinch & spread used to flash as zoom: the combined row was skipped
+    and the axis fell back to its own motion. Pinch is the minus half, spread the plus."""
+    pinch, spread = _tune_pinch([("C_VOL_DOWN - C_VOL_UP", "+")])
+    assert pinch == (R.KEY_PRESS, R.encode_keypress("key", "C_VOL_DOWN"))
+    assert spread == (R.KEY_PRESS, R.encode_keypress("key", "C_VOL_UP"))
+    print("  pinch -> volume down, spread -> volume up")
+
+
+def test_an_explicit_half_wins_over_the_pair():
+    pinch, spread = _tune_pinch([("C_VOL_DOWN - C_VOL_UP", "+"), ("A", "-")])
+    assert pinch == (R.KEY_PRESS, R.encode_keypress("key", "A"))
+    assert spread == (R.KEY_PRESS, R.encode_keypress("key", "C_VOL_UP"))
+    print("  split pinch -> A, spread keeps the pair's volume up")
+
+
+def test_the_zoom_pair_still_writes_zoom_motion():
+    pinch, spread = _tune_pinch([("mouse - ZOOM_OUT - ZOOM_IN", "+")])
+    assert pinch == (R.TWO_WORD, R.encode_two_word(8, -1))
+    assert spread == (R.TWO_WORD, R.encode_two_word(8, +1))
+    print("  the stock zoom pair is still category 8, -1 / +1")
+
+
 def test_a_kept_touch_at_its_firmware_defaults_sends_nothing():
     """M1 / M2 over an EMPTY Touch slot is not a difference -- empty IS left / right click there.
     Until 2026-09-09 every flash wrote mask 1 / mask 2 into 0x0b / 0x0c for the stock profile."""
