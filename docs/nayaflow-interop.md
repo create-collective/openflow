@@ -19,8 +19,10 @@ normally from then on.
 
 A key on the Create stores its behaviours in two places. The tap and the hold live at the key's
 own position. The double tap and the tap + hold live in a **second bank**, at that position plus
-0x52. Nothing in NayaFlow's interface can reach the second bank: it has no double-tap or
-tap + hold editor, so as far as its profile is concerned those records do not exist.
+0x52. NayaFlow 1.25 and later can set double taps and tap + holds too, and writes them in the same
+forms OpenFlow now uses. What it cannot do is *remove* one: for a key with no double tap or
+tap + hold, its serializer writes no second-bank record at all (read from NayaCore 6.11.0's own
+code, `Key::serializeBindingData`, 2026-09-26), so whatever the board already holds there stays.
 
 NayaFlow flashes as a sparse diff. It writes only the records its own profile holds, then reads
 the board back and compares. So when a key carries second-bank data that NayaFlow's profile does

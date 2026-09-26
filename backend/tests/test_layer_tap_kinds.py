@@ -72,15 +72,23 @@ def test_a_keypress_slot_of_zeros_is_still_unset():
     assert kr.translate(0x03, raw, ORDER_TO_LAYER) == [("press", "key", "RETURN")]
 
 
-def test_an_unseen_kind_stays_raw_with_the_kind_visible():
-    """Guessing is what produced RAW_p00:02m00. A kind nobody has captured keeps its bytes and
-    names its kind, so the next capture can identify it and a re-flash refuses it."""
-    raw = bytes.fromhex("0c0100c80003000000000000002800070000000000")   # 0c = LAYER_TO in a hold
+def test_a_kind_with_no_plain_form_stays_raw_with_the_kind_visible():
+    """Guessing is what produced RAW_p00:02m00. A type with no plain record (0a, sticky_key, is
+    only a name in NayaCore's table) keeps its bytes and names its type, so a re-flash refuses it."""
+    raw = bytes.fromhex("0a0100c80003000000000000002800070000000000")
     got = kr.translate(0x03, raw, ORDER_TO_LAYER)
     assert got[0] == ("press", "key", "RETURN")
-    assert got[1][0] == "hold" and str(got[1][2]) == "RAW_k0c:03000000"
+    assert got[1][0] == "hold" and str(got[1][2]) == "RAW_k0a:03000000"
     with pytest.raises(R.RemapEncodeError):
         R.encode_keypress("key", got[1][2])
+
+
+def test_every_type_a_plain_record_can_have_decodes_in_a_half_too():
+    """The kinds are ordinary record types (NayaCore's serializeBindingPairData writes each half's
+    zmk_behaviour), so a Force Layer hold is a Force Layer, not an unknown."""
+    raw = bytes.fromhex("0c0100c80002000000000000002800070000000000")   # 0c = TO_LAYER in a hold
+    assert kr.translate(0x03, raw, ORDER_TO_LAYER) == [
+        ("press", "key", "RETURN"), ("hold", "layer_rude_toggle", f"TO_LAYER_{LAYER2}")]
 
 
 def test_onekey_records_are_unchanged():

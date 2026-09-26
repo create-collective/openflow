@@ -205,6 +205,35 @@ def encode_holdtap_param(kind: int, flavour: int, term: int, hold_kp: bytes, tap
     raise RemapEncodeError(f"not a hold-tap type: {kind:#x}")
 
 
+def encode_binding_pair(flavour: int, term: int, tap: tuple[int, bytes], hold: tuple[int, bytes]) -> bytes:
+    """The 0x03 tap/hold pair as NayaCore's serializeBindingPairData writes it:
+    <hold type> <tap type> <flavour> <term u16 LE> hold param1+param2 (8) tap param1+param2 (8).
+
+    `tap` and `hold` are (record type, plain param) -- any record a key can hold, since each half
+    is a whole binding. A plain param is 0, 4 or 8 bytes (keymap_read.PLAIN_PARAM_LEN) and is
+    zero-filled to the 8 a half carries.
+    """
+    if flavour not in HOLD_TAP_FLAVOURS:
+        raise RemapEncodeError(
+            f"hold-tap flavour {flavour} is out of range {HOLD_TAP_FLAVOURS.start}-"
+            f"{HOLD_TAP_FLAVOURS.stop - 1}; an invalid flavour stops the keyboard until it is "
+            "power-cycled")
+    halves = []
+    for typ, param in (hold, tap):
+        if len(param) > 8:
+            raise RemapEncodeError(f"a record of type {typ:#04x} with {len(param)} bytes does not fit a half")
+        halves.append(param.ljust(8, b"\x00"))
+    return (bytes([hold[0] & 0xFF, tap[0] & 0xFF, flavour & 0xFF]) + (term & 0xFFFF).to_bytes(2, "little")
+            + halves[0] + halves[1])
+
+
+def wrap_onekey(term: int, typ: int, param: bytes) -> tuple[int, bytes]:
+    """A key's record inside NayaCore's 0x10 wrapper (Key::wrapDblTapRecord): <term u16 LE>
+    <inner type> <inner param>. Every record of a key that has a double-tap or tap+hold goes out
+    this way, in both banks -- the wrapper is what makes the keyboard wait for a second tap."""
+    return HOLD_TAP_ONEKEY, (term & 0xFFFF).to_bytes(2, "little") + bytes([typ & 0xFF]) + param
+
+
 def encode_layer_param(target: int) -> bytes:
     """MO/TO/TOGGLE/layer-switch param = target layer index, u32 LE."""
     return (target & 0xFFFFFFFF).to_bytes(4, "little")

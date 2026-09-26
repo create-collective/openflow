@@ -289,18 +289,17 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
                     "reason": _drop_reason(culprit["at"], culprit["ac"], culprit.get("error")),
                     "effect": "this key keeps whatever the keyboard already had on it",
                 })
-            # double-tap / tap+hold are a second hold-tap record at pos + 0x52
+            # double-tap / tap+hold are a second record at pos + 0x52
             try:
-                second = _second_bank_record(rows, term, flavour)
-            except R.RemapEncodeError as e:
+                second = _second_bank_record(rows, term, flavour, layer_order)
+            except R.RemapEncodeError:
                 second = None
-                culprit = next(r for r in rows if _behaviour(r) in ("double_tap", "tap_hold")
-                               and not _encodes_as_keypress(r))
+                culprit = _second_bank_culprit(rows, layer_order)
                 d.dropped.append({
                     "layer": idx, "position": pos,
                     "actionCode": culprit["ac"], "actionType": culprit["at"],
                     "behavior": _behaviour(culprit),
-                    "reason": _drop_reason(culprit["at"], culprit["ac"], str(e)),
+                    "reason": _drop_reason(culprit["at"], culprit["ac"], culprit["error"]),
                     "effect": "this key keeps whatever double-tap and tap+hold the keyboard "
                               "already had",
                 })
@@ -414,52 +413,121 @@ def _drop_reason(action_type: str | None, code: str | None, error: str | None = 
 
 
 def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: dict) -> tuple[int, bytes] | None:
-    """One position's binding row(s) -> (type, param). Handles key/modifier/shortcut, layer
-    switches, bluetooth, and tap+hold (a 'press' row + a 'hold' row)."""
-    press = next((r for r in rows if r["beh"] in ("press", "tap", None)), rows[0])
-    hold = next((r for r in rows if r["beh"] == "hold"), None)
-    at, code = press["at"], press["ac"]
-    # Double-tap and tap+hold live in the SECOND bank, but they only ever fire if the primary
-    # record is a hold-tap: that record is what runs the tapping-term state machine that can
-    # notice a second tap. A plain KEY_PRESS fires the instant it is pressed and the second bank
-    # is never consulted. Measured 2026-09-21 (SCRUM-109): Tap A + Double-tap B with Hold empty
-    # produced "aa" on a double tap and never "b"; filling Hold with anything "fixed" it, because
-    # that flipped the primary to a hold-tap. So a key with either second-bank behaviour gets a
-    # hold-tap primary even with no hold action -- with the hold slot EMPTY (four zero bytes),
-    # which is the device's own convention for an unset half (SCRUM-96) and reads back as no
-    # hold. A tap-only key stays a plain keypress: promoting it would add tapping-term latency
-    # to a key that has nothing to wait for.
-    second_bank = any(_behaviour(r) in ("double_tap", "tap_hold") for r in rows)
-    can_be_tap = at in ("key", "modifier", *R.CHORD_ACTION_TYPES) or code == R.EMPTY_KEYPRESS
+    """A key's PRIMARY record, its tap and hold, in the form NayaCore 6.11.0 writes it
+    (naya_remap::Key::serializeBindingData, read from its code 2026-09-26):
 
-    if hold is not None or (second_bank and can_be_tap):
-        tap_kp = _keypress(at, code)
-        if hold is not None and hold["at"] == "layer_polite_hold":
-            # A layer in the hold slot: ZMK's layer-tap, which a stock board carries on its
-            # Enter and Backspace keys (hold for layer 2). The slot holds the layer INDEX and the
-            # header's hold-kind byte says so (SCRUM-110). Written as the 0x03 form, because
-            # that is byte for byte what the board holds for these keys -- a profile read from a
-            # stock board and flashed back must not rewrite them -- and the 0x10 form with a
-            # layer hold has never been seen on hardware.
-            order = _target_order(hold["ac"], layer_order)
-            if order is None:
-                raise R.RemapEncodeError(f"hold layer {hold['ac']!r} is not in this profile")
-            return R.HOLD_TAP_HOME, R.encode_holdtap_param(
-                R.HOLD_TAP_HOME, flavour, term, R.encode_layer_param(order), tap_kp,
-                hold_kind=R.LAYER_HOLD)
-        # The record TYPE changes how the key types, not just what it is called. 0x10 (OneKey)
-        # is the four-behaviour record: its tap waits for a possible double-tap, so it lands on
-        # release or after the tapping term, and a key pressed meanwhile goes out first. On a
-        # home-row mod that swaps letters ("few" -> "efw") and drops some. 0x03 (MOD_TAP) sends
-        # the tap in order. Measured 2026-09-25 (tools/c11_homerow_timing.py): D/F/J/K as
-        # hold-mod/tap-letter, same flavour and term, 0x10 garbled 5 fast sentences of 5 and 0x03
-        # typed them clean. NayaFlow draws the line in the same place: in its captured flash
-        # (tests/hold-tap-fixture.json) every tap+hold key is 0x03 except the one that also has a
-        # second-bank record. So 0x10 only when the second bank is in play.
-        hold_kp = _keypress(hold["at"], hold["ac"]) if hold is not None else bytes(4)
-        typ = R.HOLD_TAP_ONEKEY if second_bank else R.HOLD_TAP_HOME
-        return typ, R.encode_holdtap_param(typ, flavour, term, hold_kp, tap_kp)
+        tap + hold   the 0x03 pair
+        tap          the tap as a record of its own
+        hold         the 0x03 pair with a Disabled tap   (NayaCore: the hold alone, see _bank)
+        neither      NONE -- reached only by a key whose behaviours are all in the second bank
 
+    and, when the key has a double-tap or tap+hold, inside the 0x10 wrapper. The wrapper is what
+    runs the tapping-term wait in which a second tap can be noticed: a bare keypress fires on
+    press and the second bank is never consulted (SCRUM-109, measured 2026-09-21: Tap A +
+    Double-tap B typed "aa"). Up to 0.4.0 that was fixed by writing the tap as a 24-byte hold-tap
+    with an empty hold; NayaCore wraps the keypress itself, 7 bytes.
+
+    The record TYPE of a tap+hold key changes how it types, not only what it is called. Wrapped,
+    the tap waits for a possible double-tap, so it lands on release or after the tapping term and
+    a key pressed meanwhile goes out first; on a home-row mod that swaps letters ("few" -> "efw").
+    The bare 0x03 sends the tap in order (tools/c11_homerow_timing.py, 2026-09-25). So a key is
+    wrapped only when it has a second-bank behaviour, which is also exactly NayaCore's rule.
+    """
+    rec = _bank(_slot_row(rows, "tap"), _slot_row(rows, "hold"), term, flavour, layer_order,
+                primary=True)
+    if rec is None:
+        return None
+    return R.wrap_onekey(term, *rec) if _has_second_bank(rows) else rec
+
+
+def _second_bank_record(rows: list, term: int, flavour: int,
+                        layer_order: dict | None = None) -> tuple[int, bytes] | None:
+    """A key's double-tap / tap+hold -> its second-bank record (position + 0x52), or None if the
+    key has neither.
+
+    The same rules as the primary bank with the double-tap in the tap position and the tap+hold
+    in the hold position, and always inside the 0x10 wrapper. A double-tap alone is its own
+    record (7 bytes for a key), not a pair with an empty half.
+
+    Raises RemapEncodeError when a behaviour here cannot be encoded, so the caller keeps the
+    board's record rather than letting _own_second_bank blank it.
+    """
+    dt, th = _slot_row(rows, "double_tap"), _slot_row(rows, "tap_hold")
+    if dt is None and th is None:
+        return None
+    rec = _bank(dt, th, term, flavour, layer_order or {}, primary=False)
+    if rec is None:
+        culprit = _second_bank_culprit(rows, layer_order or {})
+        raise R.RemapEncodeError(culprit["error"] or f"no encoder for action type {culprit['at']!r}")
+    return R.wrap_onekey(term, *rec)
+
+
+def _bank(first: dict | None, second: dict | None, term: int, flavour: int, layer_order: dict,
+          *, primary: bool) -> tuple[int, bytes] | None:
+    """One bank's record. `first` is its tap-side behaviour (tap, or double-tap), `second` its
+    hold-side one (hold, or tap+hold).
+
+    One deliberate difference from NayaCore. With only the hold-side behaviour set, NayaCore
+    writes that action as a record of its own, and a record of its own fires on a TAP: its
+    "hold only" key types the hold action on a tap, and in the second bank its "tap+hold only"
+    lands where the double-tap goes and reads back (and types) as a double-tap. Here the pair is
+    written instead, with the empty half Disabled -- the exact bytes NayaCore writes when a user
+    sets that half to Disabled, so NayaFlow can read it. Tap+hold then swallows a quick second
+    tap, as a tap+hold must.
+    """
+    if first is None and second is None:
+        # The primary of a key with only second-bank behaviours: nothing on a single tap.
+        return (R.NONE_BEH, b"") if primary else None
+    if second is None:
+        return _record_for(first, layer_order)
+    tap, hold = _half(first, layer_order), _half(second, layer_order)
+    if tap is None or hold is None:
+        return None
+    return R.HOLD_TAP_HOME, R.encode_binding_pair(flavour, term, tap, hold)
+
+
+def _half(row: dict | None, layer_order: dict) -> tuple[int, bytes] | None:
+    """One half of a pair as (record type, plain param). An absent half is Disabled."""
+    if row is None:
+        return R.NONE_BEH, b""
+    rec = _record_for(row, layer_order)
+    if rec is None and row["at"] in (*_LAYER_TYPES_WITH_ENCODERS, "layer_polite_oneshot"):
+        # Said outright, as a layer-tap's hold always has been (SCRUM-110): the layer is gone,
+        # there is no index to write.
+        raise R.RemapEncodeError(f"{_behaviour(row)} layer {row['ac']!r} is not in this profile")
+    return rec
+
+
+def _slot_row(rows: list, behaviour: str) -> dict | None:
+    """The row for one of the four behaviours. A row with no behaviour is a tap."""
+    return next((r for r in rows if (_behaviour(r) or "tap") == behaviour), None)
+
+
+def _has_second_bank(rows: list) -> bool:
+    return any(_behaviour(r) in ("double_tap", "tap_hold") for r in rows)
+
+
+def _second_bank_culprit(rows: list, layer_order: dict) -> dict:
+    """The double-tap / tap+hold row that could not be encoded, with the encoder's words."""
+    for r in rows:
+        if _behaviour(r) not in ("double_tap", "tap_hold"):
+            continue
+        try:
+            if _half(r, layer_order) is None:
+                return {**r, "error": None}
+        except R.RemapEncodeError as e:
+            return {**r, "error": str(e)}
+    return {**next(r for r in rows if _behaviour(r) in ("double_tap", "tap_hold")), "error": None}
+
+
+def _record_for(row: dict, layer_order: dict) -> tuple[int, bytes] | None:
+    """One action as a record of its own (type, param) -- what it is on a key with one behaviour,
+    and what either half of a pair carries. None if there is no encoder for it."""
+    at, code = row["at"], row["ac"]
+    if code == R.EMPTY_KEYPRESS or at == "keypress":
+        # Known bytes whatever type the row carries (see _keypress); "keypress" is the module
+        # rows' name for a key, which the hold and second-bank halves always accepted.
+        return R.KEY_PRESS, _keypress(at, code)
     if at in ("key", "modifier", *R.CHORD_ACTION_TYPES):
         return R.KEY_PRESS, _keypress(at, code)
     if at == "none":
@@ -532,32 +600,6 @@ def _binding_rows_to_record(rows: list, term: int, flavour: int, layer_order: di
         cmd = R.NAYA_COMMANDS_REV.get(code)
         return None if cmd is None else (R.NAYA_SYSTEM, R.encode_layer_param(cmd))
     return None   # macros, LED-system, unknown -> not encoded here (see plan)
-
-
-def _second_bank_record(rows: list, term: int, flavour: int) -> tuple[int, bytes] | None:
-    """A position's double_tap / tap_hold rows -> the secondary-bank hold-tap record.
-
-    The secondary bank reuses the ordinary hold-tap shape: its TAP slot is the key's double-tap
-    and its HOLD slot is the key's tap+hold. Either may be absent, in which case that slot is an
-    empty keypress -- which is exactly what the device showed for the LED gestures and for keys
-    with only one of the two bound.
-    """
-    dt = next((r for r in rows if _behaviour(r) == "double_tap"), None)
-    th = next((r for r in rows if _behaviour(r) == "tap_hold"), None)
-    if dt is None and th is None:
-        return None
-    empty = bytes(4)
-    tap_kp = _keypress(dt["at"], dt["ac"]) if dt is not None else empty
-    hold_kp = _keypress(th["at"], th["ac"]) if th is not None else empty
-    return R.HOLD_TAP_ONEKEY, R.encode_holdtap_param(R.HOLD_TAP_ONEKEY, flavour, term, hold_kp, tap_kp)
-
-
-def _encodes_as_keypress(row) -> bool:
-    try:
-        _keypress(row["at"], row["ac"])
-        return True
-    except R.RemapEncodeError:
-        return False
 
 
 def _behaviour(row) -> str:

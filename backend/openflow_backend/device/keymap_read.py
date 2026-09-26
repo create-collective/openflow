@@ -195,6 +195,22 @@ MODULE_TYPE, UNKNOWN_02 = 0x78, 0x02
 # header, e.g. home-row mods). Same body: header + hold(4) + pad(4) + tap(4) + pad(4),
 # so the header length is len(param) - 16 either way.
 HOLD_TAP_TYPES = (0x10, 0x03)
+# How NayaCore 6.11.0 (NayaFlow 1.25) lays these out, read from its own code: the mac build keeps
+# its symbols, so naya_remap::Key::serializeBindingData / serializeBindingPairData /
+# wrapDblTapRecord and Key::readBytes could be read directly (2026-09-26).
+#
+#   0x03 is a tap/hold PAIR: [hold type][tap type][flavour][term u16] + hold(8) + tap(8). The two
+#        type bytes are ordinary record types, and each half is a whole binding, param1 + param2
+#        -- the "pad" is param2, which Bluetooth, LED and mouse actions use.
+#   0x10 is a WRAPPER: [term u16][inner record type][inner param]. NayaCore puts a key's records
+#        in it whenever the key has a double-tap or tap+hold, and its reader simply decodes the
+#        inner record. The 24-byte form everyone had seen is the wrapper around a pair; around a
+#        plain key it is 7 bytes, around a Disabled one 3.
+ONEKEY_WRAPPER = 0x10
+# What a record type carries as a plain record, which is also how much of a pair half it uses
+# (NayaCore's Binding::serializeBindingData). NONE and TRANS carry nothing.
+PLAIN_PARAM_LEN = {0x00: 8, 0x01: 4, 0x05: 4, 0x06: 4, 0x08: 4, 0x09: 8,
+                   0x0B: 4, 0x0C: 4, 0x0D: 4, 0x0F: 8}
 # A mouse button on a KEY: the two-word record a module gesture uses, [category u32][mask u32]
 # with category 3. Written since C9 (a real left click from a key position) but never READ --
 # a board carrying one decoded to a raw "t0xf" unknown, so a mouse key could be flashed and then
@@ -304,24 +320,48 @@ def translate(typ: int, param: bytes, order_to_layer: dict[int, str]) -> list[tu
         return f"{prefix}{order_to_layer.get(tgt, tgt)}"
 
     def slot(beh: str, kind: int, raw: bytes) -> list[tuple[str, str, str]]:
-        """One half of a hold-tap, decoded by the KIND byte its header carries for it.
+        """One half of a hold-tap: a whole binding, decoded by the record type its header
+        carries for it and the 8 bytes (param1 + param2) that follow.
 
-        The header's first two bytes are per-slot behaviour kinds, [hold][tap], not the constant
-        01 01 every OneKey capture happened to show. A stock layer-tap (hold Enter/Backspace ->
-        layer 2) is `05 01` with the hold slot holding a layer INDEX; fed to the keypress decoder
-        that came out as RAW_p00:02m00 (SCRUM-110). An empty half is four zero bytes -- but only
-        for a keypress slot: for a layer slot the same bytes mean layer 0, a real target.
+        The header's first two bytes are those types, [hold][tap], not the constant 01 01 every
+        OneKey capture happened to show. A stock layer-tap (hold Enter/Backspace -> layer 2) is
+        `05 01` with the hold half holding a layer INDEX; fed to the keypress decoder that came
+        out as RAW_p00:02m00 (SCRUM-110). Any type a plain record can have may sit here, and
+        decodes exactly as that plain record would.
         """
-        if kind == KEY_PRESS:
-            # Either half may be empty and that half is then simply not bound. On the second
-            # bank this is routine: a key with a tap+hold but no double-tap is written with an
-            # empty TAP slot (flash._second_bank_record), and the reverse for the other.
-            return [] if raw == EMPTY_SLOT else [(beh, *decode_keypress(raw))]
-        if kind == LAYER_HOLD:
-            return [(beh, "layer_polite_hold", layer_code("MO_LAYER_", raw))]
-        # A kind nobody has seen. Keep the bytes AND the kind visible, so a re-flash refuses it
-        # (RAW_ never encodes) and the next capture can name it, rather than guessing a keypress.
-        return [(beh, "key", Unmapped(f"k{kind:02x}:{raw.hex()}"))]
+        if kind == KEY_PRESS and raw[:4] == EMPTY_SLOT:
+            # An unset half as OpenFlow wrote it up to 0.4.0: a keypress of nothing. Only for a
+            # keypress half -- for a layer half the same bytes mean layer 0, a real target.
+            return []
+        if kind == NONE_BEH:
+            # How NayaCore writes a half the user set to Disabled, and how OpenFlow writes an
+            # unset half next to a set one. Either way the half does nothing, and saying so
+            # keeps the pair intact on a re-flash.
+            return [(beh, "none", "DISABLE")]
+        if kind == TRANS:
+            return [(beh, "trans", "TRANSPARENT")]
+        if kind in PLAIN_PARAM_LEN:
+            got = translate(kind, raw[:PLAIN_PARAM_LEN[kind]], order_to_layer)
+            if got:
+                return [(beh, at, code) for _b, at, code in got]
+        # A type with no plain form, or a value its decoder does not know. Keep the bytes AND
+        # the type visible, so a re-flash refuses it (RAW_ never encodes) rather than guessing.
+        shown = raw.hex() if raw[4:] != EMPTY_SLOT else raw[:4].hex()
+        return [(beh, "key", Unmapped(f"k{kind:02x}:{shown}"))]
+
+    if typ == ONEKEY_WRAPPER:
+        # [term u16][inner type][inner param]: the key's real record, wrapped because the key
+        # has a double-tap or tap+hold. Decoded as the record it wraps. A Disabled or
+        # Transparent record carries no param, so it is named here rather than dropped: wrapped,
+        # it is a behaviour (the key waits for a second tap), not an absence.
+        if len(param) < 3 or param[2] == ONEKEY_WRAPPER:
+            return [("press", f"t{typ:#x}", Unmapped(param.hex()))]
+        inner_type, inner = param[2], param[3:]
+        if inner_type == NONE_BEH:
+            return [("press", "none", "DISABLE")]
+        if inner_type == TRANS:
+            return [("press", "trans", "TRANSPARENT")]
+        return translate(inner_type, inner, order_to_layer)
 
     if typ == KEY_PRESS:
         if len(param) < 3:
@@ -331,12 +371,12 @@ def translate(typ: int, param: bytes, order_to_layer: dict[int, str]) -> list[tu
     if typ in (TRANS, NONE_BEH):
         return []
     if typ in HOLD_TAP_TYPES and len(param) >= 16:
-        h = len(param) - 16          # header length (8 for 0x10, 5 for 0x03)
-        # Both real header lengths carry the kinds at the same place, 5 and 4 bytes before the
-        # hold slot. A shorter header has never been seen; read it as keypress/keypress rather
-        # than index off the front of the record.
+        # Only 0x03 gets here now (0x10 is unwrapped above), and its header is 5 bytes.
+        h = len(param) - 16
+        # The types sit 5 and 4 bytes before the hold half. A shorter header has never been
+        # seen; read it as keypress/keypress rather than index off the front of the record.
         hold_kind, tap_kind = (param[h - 5], param[h - 4]) if h >= 5 else (KEY_PRESS, KEY_PRESS)
-        hold_raw, tap_raw = param[h:h + 4], param[h + 8:h + 12]
+        hold_raw, tap_raw = param[h:h + 8], param[h + 8:h + 16]
         return slot("press", tap_kind, tap_raw) + slot("hold", hold_kind, hold_raw)
     if typ == LAYER_HOLD:
         return [("press", "layer_polite_hold", layer_code("MO_LAYER_"))]
