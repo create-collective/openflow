@@ -2018,8 +2018,12 @@ def _compare(module_type: str, fields: dict, app_bindings: dict, convention: str
                 # A profile whose axis is UNBOUND says so with an empty row, and answering
                 # "MOUSE_LEFT" for it made a capture of a board that really has nothing there
                 # differ from the board forever -- so it could never be marked live, and every
-                # read minted another copy of it.
-                app = dflt if (combined is None or " - " in str(combined)) else (combined or None)
+                # read minted another copy of it. An axis with NO row is its stock state, which
+                # for pinch & spread is nothing (module_fields.axis_stock).
+                if combined is None and module_fields.axis_stock(module_type, gesture) is None:
+                    app = None
+                else:
+                    app = dflt if (combined is None or " - " in str(combined)) else (combined or None)
             row = {"gesture": gesture, "half": sign, "field": idx}
             if fw is not None and device is None:
                 # The Touch's one-finger cursor: the firmware drives this half itself while the
@@ -2079,7 +2083,12 @@ def _same_action(device, app) -> bool:
     # LED_BRIGHTNESS_UP, the board said an empty keypress, and there is no third state to
     # move to. It permanently blocked the profile from reading as live and minted a fresh
     # capture each time. The board is carrying what this action looks like on the board.
-    if device == remap.EMPTY_KEYPRESS and not remap.encodable(app):
+    #
+    # Since 2026-09-26 OpenFlow writes the real LED record, which reads back by name. What stays
+    # here is NayaFlow's form: its single-gesture LED binding is a keypress of nothing (a NayaCore
+    # case bug), so a board NayaFlow flashed reads as the LED action it was meant to be, and the
+    # next OpenFlow flash replaces it with a record that works.
+    if device == remap.EMPTY_KEYPRESS and remap.is_led_code(app):
         return True
     parts = lambda v: sorted(t.strip().upper() for t in str(v).split("+"))
     return parts(device) == parts(app)
@@ -2098,6 +2107,9 @@ def _decode_field(module_type: str, idx: int, typ, val: bytes, convention: str |
     try:
         if typ == remap.KEY_PRESS:
             return keymap_read.decode_keypress(val)[1]
+        if typ == remap.RGB_SYS:
+            # The keyboard's own LED actions, the record a key carries (2026-09-26).
+            return keymap_read.decode_rgb_system(val) or f"RAW_{val.hex()}"
         if typ == remap.TWO_WORD:
             category, selector = remap.decode_two_word(val)
             if category == remap.MOUSE_CATEGORY:

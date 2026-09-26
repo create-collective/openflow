@@ -83,6 +83,9 @@ def gesture_kind(module_type: str, behavior: str) -> str | None:
 # old claim that Track has no keypress gesture fields -- it has the same fields, and we had
 # only ever seen them holding mouse masks.
 MOUSE_ACTION_TYPES = {"mouse"}
+# The keyboard's own LED actions: the key's rgb_ug record, which a gesture field takes too (proved on
+# the owner's Tune pinch 2026-09-26, tools/c14_tune_pinch_probe.py).
+LED_ACTION_TYPES = {"LED"}
 CLICKABLE_KINDS = {"keypress", "mouse_button"}
 
 
@@ -92,7 +95,7 @@ def action_ok_for_kind(action_type: str, field_kind: str | None) -> bool:
     if action_type == "none":
         return True
     if field_kind in CLICKABLE_KINDS:
-        return action_type in KEYPRESS_ACTION_TYPES | MOUSE_ACTION_TYPES
+        return action_type in KEYPRESS_ACTION_TYPES | MOUSE_ACTION_TYPES | LED_ACTION_TYPES
     if field_kind == "axis":
         return action_type == "value"
     return False  # no device field, or an action kind we have not seen written
@@ -164,7 +167,7 @@ AXIS_HALVES = {
         # trackpad convention. Zoom is NOT flipped per OS and needs no exception for that:
         # convention_sign only touches category 4.
         "pinch&spread:tune:2_fingers": {"-": 0x14, "+": 0x15, "category": 8,
-                                    "default": ZOOM_PAIR},
+                                    "default": ZOOM_PAIR, "stock": None},
     },
     "TOUCH": {
         "vertical:touch:1_finger":    {"-": 0x05, "+": 0x06, "category": 1,
@@ -184,7 +187,7 @@ AXIS_HALVES = {
         # See the Tune entry: the same zoom axis and the same category, one block earlier
         # because a Touch has no dial and its 2-finger block starts at 0x0d.
         "pinch&spread:touch:2_fingers": {"-": 0x11, "+": 0x12, "category": 8,
-                                      "default": ZOOM_PAIR},
+                                      "default": ZOOM_PAIR, "stock": None},
     },
 }
 
@@ -274,6 +277,19 @@ def splittable_axes(module_type: str) -> dict:
         head = g.split(":")[0]
         return AXIS_ORDER.index(head) if head in AXIS_ORDER else len(AXIS_ORDER)
     return {g: halves[g] for g in sorted(halves, key=rank) if g not in locked}
+
+
+def axis_stock(module_type: str, gesture: str):
+    """What an axis does when the profile has no row for it: the pair the stock profiles ship with,
+    or None for nothing at all.
+
+    Its motion pair (`default`) names what the two fields mean; this is only the starting state.
+    For pinch & spread they differ: NayaFlow ships it EMPTY and, on the owner's Tune (2026-09-26,
+    tools/c14_tune_pinch_probe.py), an empty pinch does nothing -- no firmware zoom. So OpenFlow's
+    stock pinch is empty too, and zoom is one pick away in the palette.
+    """
+    half = axis_halves(module_type).get(gesture) or {}
+    return half.get("stock", half.get("default"))
 
 
 def axis_halves(module_type: str) -> dict:

@@ -44,10 +44,6 @@ from openflow_backend.device import remap as R                         # noqa: E
 
 TYPES = ("TOUCH", "TRACK", "TUNE")
 STOCK = {"TOUCH": ("TOUCH_WINDOWS",), "TRACK": ("TRACK_LEFT", "TRACK_RIGHT"), "TUNE": ("TUNE",)}
-# LED actions have no module-field encoding yet: the flash leaves the board's field alone. Kept
-# out of the sweep until the Tune probe settles what NayaFlow's record does on the hardware
-# (memory: tune-led-brightness-module-fields); pinned separately below.
-LED_CODES = {"LED_BRIGHTNESS_UP", "LED_BRIGHTNESS_DOWN"}
 
 
 class KeepOpen:
@@ -153,12 +149,12 @@ def _singles():
         for cat in tab["categories"]:
             for a in cat["actions"]:
                 at = a.get("actionType") or a.get("type")
-                if at in ("key", "modifier", "shortcut_alias", "mouse"):
+                if at in ("key", "modifier", "shortcut_alias", "mouse", "LED"):
                     out.add(a["code"])
     for a in MA.MODULE_ACTIONS:
-        if a["actionType"] not in ("value", "none", "LED") and a["code"]:
+        if a["actionType"] not in ("value", "none") and a["code"]:
             out.add(a["code"])
-    return sorted(out - LED_CODES)
+    return sorted(out)
 
 
 def _pairs():
@@ -294,9 +290,25 @@ def test_a_capture_flashed_back_is_not_captured_again(key):
     assert (e.get("matched"), e["differs"], _drift(e)) == (cap, 0, [])
 
 
-# --- LED: pinned as it is today, until the Tune probe ------------------------------------------------ #
+# --- LED: the key's own record, on any gesture --------------------------------------------------------- #
 
-def test_led_brightness_on_a_gesture_is_not_written_yet():
-    """Today the flash leaves the field alone for an LED action (module_layout._encode_gesture).
-    When LED support lands this flips: replace it with the round trip."""
-    assert ml._encode_gesture(0x19, "LED_BRIGHTNESS_UP") is None
+def test_led_brightness_on_a_gesture_is_the_keys_own_led_record():
+    """What NayaCore writes for its "LED Brightness" pinch pair, and what dims / brightens the
+    backlight on the owner's Tune (tools/c14_tune_pinch_probe.py, 2026-09-26)."""
+    assert ml._encode_gesture(0x19, "LED_BRIGHTNESS_UP") == (R.RGB_SYS, bytes.fromhex("0700000000000000"))
+    assert ml._encode_gesture(0x14, "LED_BRIGHTNESS_DOWN") == (R.RGB_SYS, bytes.fromhex("0800000000000000"))
+
+
+def test_an_empty_pinch_is_the_stock_state_on_both_sides():
+    """NayaFlow ships pinch & spread empty and an empty pinch does nothing on the hardware, so a
+    profile with no pinch row flashes it empty and reads an empty pinch as itself."""
+    for mtype, axis in (("TUNE", "pinch&spread:tune:2_fingers"), ("TOUCH", "pinch&spread:touch:2_fingers")):
+        rows = [r for r in _stock_rows(STOCK[mtype][0]) if r[0] != axis]
+        c = _db()
+        cid = _profile(c, mtype, rows)
+        c.execute("DELETE FROM module_bindings WHERE module_config_id=? AND behavior=?", (cid, axis))
+        written = _flash(c, mtype, cid, _nayaflow_slot(mtype))
+        half = MF.axis_halves(mtype)[axis]
+        assert written[half["-"]] == (R.NONE_BEH, b"") and written[half["+"]] == (R.NONE_BEH, b"")
+        e = _entry(c, written, cid, mtype)
+        assert (e.get("matched"), e["differs"]) == (cid, 0), _drift(e)

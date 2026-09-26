@@ -460,16 +460,28 @@ def keypress_type(action_code: str) -> str:
     return "key"
 
 
+def is_led_code(action_code: str) -> bool:
+    """One of the keyboard's own LED actions (LED_BRIGHTNESS_UP, LED_EFFECT, ...): the rgb_ug
+    record a key carries, and -- proved on the owner's Tune 2026-09-26 -- a module gesture too."""
+    try:
+        encode_rgb_system(action_code)
+        return True
+    except Exception:
+        return False
+
+
 def encodable(action_code: str) -> bool:
     """Can this action_code be written into a module gesture field at all?
 
-    Mouse buttons and anything that resolves to a keypress can. LED brightness cannot: it is in
-    the action list because NayaFlow offers it, but there is no HID record for "turn the
-    keyboard's own LEDs up", and the board stores EMPTY_KEYPRESS for it.
+    Mouse buttons, anything that resolves to a keypress, and the LED actions. LED was refused
+    until 2026-09-26: its record was unknown, and NayaFlow's own single-gesture LED binding comes
+    out as a keypress of nothing (a NayaCore case bug, memory tune-led-brightness-module-fields).
+    The record is the key's own rgb_ug one, and on a Tune pinch it dims and brightens the
+    backlight.
     """
     if not action_code:
         return False
-    if action_code in MOUSE_MASK:
+    if action_code in MOUSE_MASK or is_led_code(action_code):
         return True
     try:
         encode_keypress(keypress_type(action_code), action_code)

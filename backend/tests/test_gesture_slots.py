@@ -69,13 +69,14 @@ def test_backfill_is_additive_and_idempotent():
     assert after_two == after_one, "backfill is not idempotent"
     kept = conn.execute("SELECT * FROM module_bindings WHERE id='keep-me'").fetchone()
     assert kept["action_code"] == "C_MUTE", "backfill clobbered an existing binding"
-    # The pinch axis is the one slot seeded WITH a value rather than unbound, because an
-    # axis row that says nothing still flashes the stock motion (see _ensure_gesture_slots).
-    zoom = conn.execute(
+    # Pinch & spread is seeded UNBOUND, as NayaFlow ships it (2026-09-26): an empty pinch does
+    # nothing on the hardware, and the flash now writes an unbound axis as nothing, so the row and
+    # the board agree. It was seeded as zoom while the flash still wrote an axis's stock motion
+    # whatever its row said.
+    pinch = conn.execute(
         "SELECT * FROM module_bindings WHERE behavior='pinch&spread:tune:2_fingers'"
     ).fetchone()
-    assert zoom["action_type"] == "value"
-    assert zoom["action_code"] == "mouse - ZOOM_OUT - ZOOM_IN"
+    assert pinch["action_code"] == "" and pinch["action_type"] == "none"
     unbound = conn.execute(
         "SELECT * FROM module_bindings WHERE behavior='tap:tune:1_finger'"
     ).fetchone()

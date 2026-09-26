@@ -83,7 +83,8 @@ export function targetLabel(t) {
 // locked to one record type: the same field takes a keypress OR a mouse button, and the TYPE
 // byte decides. Proven on hardware twice: Tune 0x08 took both, and NayaFlow wrote KEYPRESS
 // records into the Track button fields that normally hold masks.
-const CLICK_TYPES = new Set(["key", "modifier", "shortcut_alias", "mouse"]);
+// LED since 2026-09-26: a gesture field takes the key's own LED record (proved on a Tune pinch).
+const CLICK_TYPES = new Set(["key", "modifier", "shortcut_alias", "mouse", "LED"]);
 export function okForKind(actionType, fieldKind) {
   if (actionType === "none") return true;
   if (fieldKind === "keypress" || fieldKind === "mouse_button") return CLICK_TYPES.has(actionType);

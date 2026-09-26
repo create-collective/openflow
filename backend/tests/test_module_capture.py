@@ -428,38 +428,34 @@ def test_a_capture_of_an_axis_the_board_leaves_empty_can_still_be_live():
         _fields = keep
 
 
-def test_an_action_with_no_hid_record_matches_the_empty_keypress_the_board_stores():
-    """LED_BRIGHTNESS_UP/DOWN sit on the Tune 3-finger swipes in the stock profile, and the
-    board carries a KEY_PRESS whose payload is all zeros for them -- a claimed gesture with no
-    HID output, distinct from an unbound field (record type NONE, no payload).
-
-    Comparing decoded strings called that a difference on every read, and it was one no flash
-    could resolve: there is no third state to move to. The Tune profile could never read as
-    live and every read minted another capture of it.
-    """
+def test_nayaflows_dead_led_keypress_still_reads_as_the_led_action():
+    """LED_BRIGHTNESS_UP/DOWN sit on the Tune 3-finger swipes in the stock profile. NayaFlow writes
+    them as a KEY_PRESS whose payload is all zeros -- a NayaCore case bug; on the owner's Tune
+    (2026-09-26) that record does nothing. OpenFlow now writes the real LED record, which reads
+    back by name. NayaFlow's form still counts as the LED action it was meant to be, so reading a
+    board NayaFlow flashed does not mint a copy, and the next OpenFlow flash replaces it."""
     from openflow_backend.api import rest as R
     from openflow_backend.device import remap
 
-    assert not remap.encodable("LED_BRIGHTNESS_UP"), "if this becomes encodable, write it"
-    assert remap.encodable("F17") and remap.encodable("M1")
-
+    assert remap.encodable("LED_BRIGHTNESS_UP"), "the LED record is known now"
     assert R._same_action(remap.EMPTY_KEYPRESS, "LED_BRIGHTNESS_UP")
     assert R._same_action(remap.EMPTY_KEYPRESS, "LED_BRIGHTNESS_DOWN")
-    # It must NOT swallow a real difference: an action that CAN be encoded and is not there
-    # is still drift, and an unbound field is still not the same as a claimed one.
+    # It must NOT swallow a real difference: any other action that is not there is still drift,
+    # and an unbound field is still not the same as a claimed one.
     assert not R._same_action(remap.EMPTY_KEYPRESS, "F17")
     assert not R._same_action(None, "LED_BRIGHTNESS_UP")
-    print("  the empty keypress matches an unencodable action, and nothing else")
+    print("  NayaFlow's empty keypress matches an LED action, and nothing else")
 
 
 def test_the_flashable_badge_is_false_for_an_action_that_cannot_be_encoded():
-    """The badge promises the edit reaches the keyboard. That needs a field AND an encoding;
-    LED brightness has the field and no encoding, so it was promising a write that never
-    happened."""
+    """The badge promises the edit reaches the keyboard. That needs a field AND an encoding.
+    LED brightness was the case this was written for; it encodes since 2026-09-26, so a code
+    with no encoder stands in for it."""
     from openflow_backend.device import module_fields, remap
     beh = "swipe_up:tune:3_fingers"
     assert module_fields.gesture_has_device_field("TUNE", beh), "the field exists"
-    assert not remap.encodable("LED_BRIGHTNESS_UP"), "but the action does not encode"
+    assert remap.encodable("LED_BRIGHTNESS_UP"), "LED brightness reaches the keyboard now"
+    assert not remap.encodable("NOT_AN_ACTION"), "an action with no encoder does not"
     print("  field present, action unencodable -> not flashable")
 
 

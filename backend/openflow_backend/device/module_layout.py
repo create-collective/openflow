@@ -312,11 +312,14 @@ def overlay(template, module_type, bindings, axes=None, settings=None, conventio
         rec = _encode_gesture(idx, code, convention)
         if rec is not None:
             out[idx] = rec
-    # Every axis, including one the profile has no row for: the read expects the axis's stock
-    # motion there, so that is what gets written rather than whatever the template held.
+    # Every axis, including one the profile has no row for: that is the axis's stock state
+    # (module_fields.axis_stock) -- its stock motion, or nothing for pinch & spread -- which is
+    # what the read expects there, rather than whatever the template held.
     for gesture in module_fields.axis_halves(module_type):
-        for idx, rec in encode_axis(module_type, gesture, (axes or {}).get(gesture, {}),
-                                    convention).items():
+        spec = (axes or {}).get(gesture)
+        if spec is None:
+            spec = {"unbound": True} if module_fields.axis_stock(module_type, gesture) is None else {}
+        for idx, rec in encode_axis(module_type, gesture, spec, convention).items():
             out[idx] = rec
     # Settings were never written at all: set_module_setting stored them in the app and the
     # overlay copied the device's own values straight back, so every slider on the Modules page
@@ -409,10 +412,12 @@ def _encode_gesture(idx, code, convention=None):
         category, selector = motion
         return (R.TWO_WORD, R.encode_two_word(
             category, module_fields.convention_sign(category, selector, convention)))
+    if R.is_led_code(code):
+        # The keyboard's own LED actions: the same rgb_ug record a key carries. NayaCore writes
+        # exactly this for its "LED Brightness" pinch pair, and on the owner's Tune it dims and
+        # brightens the backlight (tools/c14_tune_pinch_probe.py, 2026-09-26).
+        return (R.RGB_SYS, R.encode_rgb_system(code))
     if not R.encodable(code):
-        # LED brightness and friends. The board already carries an empty keypress on those
-        # gestures, and the template passes it through untouched -- writing something of our
-        # own invention over it would be a guess about firmware we have not seen.
         return None
     # The branch is chosen from the shape of the code, not hardcoded to "key". Hardcoding it
     # meant a chord never reached the shortcut_alias branch, so no modifier could be bound to

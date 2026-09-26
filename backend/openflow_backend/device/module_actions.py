@@ -44,9 +44,11 @@ MODULE_ACTIONS = [
     # Display & LED (Tune)
     # The pair, for a two-way gesture (pinch & spread, the dial) without splitting it. NayaFlow
     # offers the same one ("C_BRIGHTNESS_DEC - C_BRIGHTNESS_INC",
-    # docs/reference/nayacore-action-vocabulary.json). Its keyboard-LED pair is not here: an LED
-    # action has no known module-field record, so it cannot be flashed onto a gesture yet.
+    # docs/reference/nayacore-action-vocabulary.json). The keyboard-LED pair is NayaFlow's own
+    # V_LED_BRIGHTNESS, code verbatim: each half is the rgb_ug record a key carries, proved on a
+    # Tune pinch 2026-09-26 (tools/c14_tune_pinch_probe.py).
     {"code": "C_BRIGHTNESS_DEC - C_BRIGHTNESS_INC", "label": "Screen Brightness", "actionType": "value", "group": "Display & LED"},
+    {"code": "LED - LED_BRIGHTNESS_DOWN - LED_BRIGHTNESS_UP", "label": "Keyboard LED Brightness", "actionType": "value", "group": "Display & LED"},
     {"code": "C_BRIGHTNESS_INC", "label": "Screen Brightness Up", "actionType": "key", "group": "Display & LED"},
     {"code": "C_BRIGHTNESS_DEC", "label": "Screen Brightness Down", "actionType": "key", "group": "Display & LED"},
     {"code": "LED_BRIGHTNESS_UP", "label": "Keyboard LED Brightness Up", "actionType": "LED", "group": "Display & LED"},

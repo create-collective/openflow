@@ -611,13 +611,12 @@ def _ensure_touch_defaults(conn) -> None:
 #   * pinch & spread is an AXIS, like vertical and horizontal: one combined row that the
 #     split control breaks into a pinch half and a spread half. It is listed here because
 #     NayaFlow leaves both fields empty, so a fresh profile has no row to edit.
-_ZOOM = "mouse - ZOOM_OUT - ZOOM_IN"   # module_fields.ZOOM_PAIR, spelled here to keep
-                                       # db/ from importing device/ at module scope.
 _GESTURE_SLOTS = {
     "TUNE": (
         "tap:tune:1_finger",                    # blank in NayaFlow; device field 0x08
-        # Seeded AS zoom, not unbound: see _ensure_gesture_slots. Fields 0x14/0x15.
-        ("pinch&spread:tune:2_fingers", _ZOOM, "value"),
+        # Seeded unbound, as NayaFlow ships it: an empty pinch does nothing (owner's Tune,
+        # 2026-09-26), and Zoom is one pick away in the palette. Fields 0x14/0x15.
+        "pinch&spread:tune:2_fingers",
         # NayaFlow exposes only the combined "rotate:tune:dial" binding; these are the two
         # halves, at 0x22/0x23. The earlier doubt ("Touch carries the identical pair and has no
         # dial") came from a Touch map probed at a 36-field hybrid slot -- a real Touch config
@@ -630,7 +629,7 @@ _GESTURE_SLOTS = {
     "TOUCH": (
         "tap:touch:1_finger",           # left click; device field 0x0b
         "tap:touch:2_fingers",          # NayaFlow default: right click; device field 0x0c
-        ("pinch&spread:touch:2_fingers", _ZOOM, "value"),   # fields 0x11/0x12
+        "pinch&spread:touch:2_fingers",                      # fields 0x11/0x12, unbound
     ),
 }
 
@@ -643,11 +642,10 @@ def _ensure_gesture_slots(conn) -> None:
     get_modules so the flash/diff path sees ordinary bindings with real ids.
 
     An entry is either a behavior (seeded unbound) or (behavior, code, action_type) for one
-    that has to be seeded WITH a value. Only the pinch axis needs the second form, and it
-    needs it because encode_axis writes an axis's stock motion whenever neither half
-    carries an override and never consults the combined row: a row seeded unbound would
-    read "Unassigned" in the UI while the flash put a zoom pair on the board, which is the
-    app-says-X / board-says-Y split that keeps a profile adrift forever."""
+    that has to be seeded WITH a value. Pinch & spread used the second form, seeded as zoom,
+    because the flash once wrote an axis's stock motion whatever its row said; since 2026-09-26
+    the flash writes an unbound axis as nothing, so pinch is seeded unbound, as NayaFlow ships
+    it. Profiles already seeded with zoom keep it."""
     now = _now()
     for mtype, behaviors in _GESTURE_SLOTS.items():
         for m in conn.execute("SELECT id FROM module_configs WHERE type=?", (mtype,)).fetchall():
