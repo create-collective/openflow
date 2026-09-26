@@ -38,14 +38,25 @@ BASE = {"touch:keyboard_left": TOUCH, "touch:keyboard_right": TOUCH,
         "track:keyboard_left": TRACK_L, "track:keyboard_right": TRACK_R,
         "tune:keyboard_left": TUNE, "tune:keyboard_right": TUNE}
 
+def _as_written(mtype, n):
+    """A slot of `n` filler fields as OpenFlow writes it for a profile with no bindings: every
+    gesture unbound, every axis its stock motion, the rest passed through. That is what "the
+    board already carries this profile" means once the flash owns every gesture it models
+    (2026-09-26, tests/test_module_flash_read_parity.py) -- a slot of raw filler in the gesture
+    fields would be a board carrying something else."""
+    tmpl = {i: (R.KEY_PRESS, b"\x04") for i in range(n)}
+    return [{"field": i, "type": t, "value": v.hex()}
+            for i, (t, v) in sorted(ml.overlay(tmpl, mtype, {}, {}).items())]
+
+
 # The board carries the four stock profiles. Track Left is the clean 15-field config.
 MOD_READ = {
     "by_uuid": {TRACK_R: 1, TUNE: 2, TOUCH: 3, TRACK_L: 4},
     "slots": {
-        1: [{"field": i, "type": R.KEY_PRESS, "value": "04"} for i in range(36)],
-        2: [{"field": i, "type": R.KEY_PRESS, "value": "04"} for i in range(36)],
-        3: [{"field": i, "type": R.KEY_PRESS, "value": "04"} for i in range(31)],
-        4: [{"field": i, "type": R.KEY_PRESS, "value": "04"} for i in range(15)],
+        1: _as_written("TRACK", 36),
+        2: _as_written("TUNE", 36),
+        3: _as_written("TOUCH", 31),
+        4: _as_written("TRACK", 15),
     },
 }
 
@@ -400,7 +411,10 @@ def _tune_pinch(rows):
     d.layers[0], d.leds[0] = {}, {}
     layout = F.apply_module_layout(d, conn, MOD_READ)
     conn.close()
-    cfg = d.modules[layout["slot_for"][TUNE]]
+    slot = layout["slot_for"][TUNE]
+    # No write when the board already holds it (the stock zoom): then the board's own fields.
+    cfg = d.modules.get(slot) or {f["field"]: (f["type"], bytes.fromhex(f["value"]))
+                                  for f in MOD_READ["slots"][slot]}
     return cfg[0x14], cfg[0x15]
 
 
@@ -482,8 +496,9 @@ def test_module_settings_reach_the_device():
     assert out[0x07] == (R.KEY_PRESS, bytes([0])), "a toggle is 1/0"
     assert out[0x06] == (R.KEY_PRESS, bytes([0])), "0 is a real value, not 'unset'"
     assert out[0x02] == template[0x02], "a setting not being changed is left alone"
-    for _, val in out.values():
-        assert len(val) == 1, "a settings field is one byte; four would be a keypress"
+    for idx in MF.setting_fields("TUNE").values():
+        if idx in out:
+            assert len(out[idx][1]) == 1, "a settings field is one byte; four would be a keypress"
     print("  settings land in their fields as single bytes")
 
 

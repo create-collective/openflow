@@ -111,6 +111,10 @@ def test_a_new_profile_is_templated_from_the_cleanest_slot_of_its_type():
 
 
 def test_the_overlay_changes_only_the_gestures_and_keeps_the_rest():
+    """The overlay owns every gesture and axis the profile models -- a gesture with no row is
+    unbound, as the read calls it (tests/test_module_flash_read_parity.py) -- and nothing else:
+    every field it does not model passes through from the template."""
+    from openflow_backend.device import module_fields as MF
     layer1 = dict(BASE_BAYS, **{"track:keyboard_left": TRACK_ALT})
     out = ml.plan({0: BASE_BAYS, 1: layer1}, TYPES, DEVICE_LIST, DEVICE_SLOTS)
     tmpl = out["templates"][TRACK_ALT]
@@ -118,9 +122,14 @@ def test_the_overlay_changes_only_the_gestures_and_keeps_the_rest():
     cfg = ml.overlay(tmpl, "TRACK", {"tap:track:button_1": "M2"})
     assert len(cfg) == len(tmpl), "overlay must not add or drop fields"
     assert cfg[0x0B] == (R.TWO_WORD, R.encode_two_word(R.MOUSE_CATEGORY, R.MOUSE_MASK["M2"]))
-    untouched = [i for i in tmpl if i != 0x0B]
-    assert all(cfg[i] == tmpl[i] for i in untouched), "every other field must pass through"
-    print(f"  1 field changed, {len(untouched)} passed through untouched")
+    gestures = MF.writable_fields("TRACK")
+    axes = {h[s] for h in MF.axis_halves("TRACK").values() for s in "-+"}
+    for g, i in gestures.items():
+        if g != "tap:track:button_1":
+            assert cfg[i] == (R.NONE_BEH, b""), f"{g} has no row, so it is written unbound"
+    untouched = [i for i in tmpl if i not in set(gestures.values()) | axes]
+    assert all(cfg[i] == tmpl[i] for i in untouched), "every field the profile does not model passes through"
+    print(f"  gestures and axes follow the profile, {len(untouched)} other fields passed through")
 
 
 def test_a_gesture_field_takes_a_keypress_as_readily_as_a_mouse_button():

@@ -10,7 +10,6 @@ import { targetSerialFor } from "../lib/targetKeyboard";
 import Button from "./ui/Button";
 import Modal from "./ui/Modal";
 import Notice from "./ui/Notice";
-import Toggle from "./ui/Toggle";
 
 // "Flash to keyboard" — previews the diff (dry-run) first, then requires an explicit
 // confirm. Confirm performs the real write: the backend takes a fresh device read first
@@ -88,7 +87,6 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
       visibleHalves(data?.status?.halves || [], getShowAllKeyboards()), "left");
     return s ? { target: s } : {};
   };
-  const [collectOrphans, setCollectOrphans] = useState(false);
   // Bindings the plan could not encode. Declared here because it was NOT: setDropped was called
   // in the flash handler and `dropped` read in the result panel, with no useState between them,
   // so every real flash threw "setDropped is not defined" AFTER the device had already been
@@ -113,7 +111,6 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
     setState("loading");
     setError("");
     setWrote(false);
-    setCollectOrphans(false);      // never carried over from a previous preview
     try {
       const res = await api.flashPreview({ profileId: activeProfileId(), ...targetBody() });
       setPreview(res);
@@ -135,7 +132,7 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
         recovery
           ? { mode: "recovery", acknowledgeRecovery: true, profileId: activeProfileId(),
               ...targetBody() }
-          : { full: false, profileId: activeProfileId(), collectOrphans, ...targetBody() });
+          : { full: false, profileId: activeProfileId(), collectOrphans: true, ...targetBody() });
       setResult(res);
       // The flash reads the modules back on success, so publish that rather than making the
       // user read again to see the result of a write we just checked. If the follow-up read
@@ -328,17 +325,21 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
           </Notice>
         )}
 
-        {/* Module slots the board carries that this profile does not reference. They are
-            invisible otherwise -- one has sat on the reference board for weeks reading back
-            as "unknown" -- and removing one drops a list entry and blanks a slot, so it is
-            asked for per flash rather than done quietly as part of "write everything". */}
+        {/* Module slots the board carries that this profile does not reference. Removed on every
+            flash since 2026-09-26, as NayaFlow does: as an opt-in box, testers left it unticked
+            and every stale slot kept reading back (and being captured) as a profile. Listed here
+            so the removal is never silent; warn tone because it is permanent. */}
         {state === "preview" && preview?.orphans?.length > 0 && (
           <Notice tone="warn" icon={null} className="flash-orphans">
-            <Toggle variant="check" checked={collectOrphans} onChange={setCollectOrphans}
-              label={<>Also remove {preview.orphans.length} unused module slot{preview.orphans.length === 1 ? "" : "s"}</>} />
+            <strong>
+              Removes {preview.orphans.length} unused module slot{preview.orphans.length === 1 ? "" : "s"}
+            </strong>
             <div className="flash-orphans-detail">
               {preview.orphans.map((o) => `Slot ${o.slot}${o.name ? ` (${o.name})` : ""}`).join(", ")}
-              {" is on the keyboard but not used by this profile. Removal is permanent."}
+              {preview.orphans.length === 1 ? " is" : " are"}
+              {" on the keyboard but not used by this profile, so this flash removes "}
+              {preview.orphans.length === 1 ? "it" : "them"}
+              {" from the keyboard. Your saved module profiles are not affected."}
             </div>
           </Notice>
         )}

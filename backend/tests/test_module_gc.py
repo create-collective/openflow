@@ -156,3 +156,12 @@ def test_orphans_are_found_from_the_device_slots_not_from_a_keymap_read():
     assert any("blank module slot" in op.label for op in plan), \
         "given the real slots, the orphan is found"
     print("  orphans come from the module read, not from the (empty) keymap one")
+
+
+def test_a_flash_collects_unused_slots_unless_told_not_to():
+    """On by default since 2026-09-26, as NayaFlow does it. The dialog's opt-in box was left
+    unticked by testers, so every stale slot kept being read back and captured as a profile."""
+    from openflow_backend.api import rest
+    assert rest._collects_orphans({}) is True
+    assert rest._collects_orphans({"collectOrphans": True}) is True
+    assert rest._collects_orphans({"collectOrphans": False}) is False

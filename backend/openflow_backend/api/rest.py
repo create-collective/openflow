@@ -1812,9 +1812,9 @@ def _build_entries(read: dict) -> list:
             d = bindings.setdefault(r["module_config_id"], {})
             is_half = (cfg is not None
                        and r["behavior"] in module_fields.axis_halves(cfg["type"])
-                       and code and " - " not in code and r["direction"] in ("-", "+"))
+                       and code and " - " not in code and (r["direction"] or "+") in ("-", "+"))
             if is_half:
-                d[(r["behavior"], r["direction"])] = code
+                d[(r["behavior"], r["direction"] or "+")] = code
             else:
                 d[r["behavior"]] = r["action_code"]
             # Invert is not a flag on the device -- it is a SELECTOR SWAP, so the only way to
@@ -1986,7 +1986,8 @@ def _compare(module_type: str, fields: dict, app_bindings: dict, convention: str
             row["locked"] = True
             same = True
         else:
-            same = _same_action(device, app) or (row.get("firmwareDefault", False) and not app)
+            same = (_same_action(device, app) or (row.get("firmwareDefault", False) and not app)
+                    or _same_record(idx, typ, val, app, convention))
         differs += 0 if same else 1
         gestures.append({**row, "device": device, "app": app, "differs": not same})
 
@@ -2030,7 +2031,7 @@ def _compare(module_type: str, fields: dict, app_bindings: dict, convention: str
                 row["locked"] = True
                 same = True
             else:
-                same = _same_action(device, app)
+                same = _same_action(device, app) or _same_record(idx, typ, val, app, convention)
             differs += 0 if same else 1
             gestures.append({**row, "device": device, "app": app, "differs": not same})
     return gestures, differs
@@ -2039,6 +2040,25 @@ def _compare(module_type: str, fields: dict, app_bindings: dict, convention: str
 # A Track config is 15 fields; anything past that is orphaned data from a previous module
 # (NayaFlow writes a shorter config over a longer one without truncating).
 _EXPECTED_FIELDS = {"TRACK": 15}
+
+
+def _same_record(idx: int, typ, val: bytes, app, convention: str | None = None) -> bool:
+    """Does the board's record for this field hold exactly what the flash writes for `app`?
+
+    The bytes are the truth. Names are not: the key table has more than one name for some keys
+    (PAGE_UP / PG_UP, ENTER / RETURN), and a few codes keep only what fits a keypress
+    ("[LALT] + TAB" is stored as TAB, since the bracket means Alt is already held; "LALT + CLICK"
+    as the Alt bit alone). Compared by name, every one of those read back as a change the user
+    never made and minted an "(on board)" copy on each read (tests/test_module_flash_read_parity.py).
+    Encoding `app` with the flash's own encoder and comparing records cannot disagree that way.
+    """
+    if not app or typ is None:
+        return False
+    try:
+        rec = module_layout._encode_gesture(idx, app, convention)
+    except Exception:
+        return False
+    return rec is not None and rec == (typ, bytes(val))
 
 
 def _same_action(device, app) -> bool:
@@ -2087,6 +2107,13 @@ def _decode_field(module_type: str, idx: int, typ, val: bytes, convention: str |
     except Exception:
         return f"RAW_{val.hex()}"
     return f"RAW_{val.hex()}"
+
+
+def _collects_orphans(body: dict) -> bool:
+    """Does this flash remove the module slots the profile does not use? Yes unless the caller
+    says collectOrphans=false (debugging): NayaFlow removes them on every flash, and an opt-in
+    box was left unticked by testers, so stale slots kept being read back as profiles."""
+    return body.get("collectOrphans", True) is not False
 
 
 def _device_slots(mod_read) -> set | None:
@@ -2247,10 +2274,12 @@ async def flash_write(body: dict = Body(default={})) -> dict:
         result = flash_mod.flash(
             desired, transport=transport, dest=dest, current=current, full=full,
             dry_run=False,
-            # Removing a module slot the board carries and this profile does not reference.
-            # Opt-in per flash: it drops a list entry and blanks a slot, which is the one
-            # destructive thing a flash can do, so the caller asks rather than us deciding.
-            collect_orphans=bool(body.get("collectOrphans")),
+            # Removing a module slot the board carries and this profile does not reference. On
+            # for every flash since 2026-09-26, as NayaFlow does it: as an opt-in box, testers
+            # left it unticked and every stale slot kept being read back (and captured) as a
+            # profile. The preview lists the slots it removes; collectOrphans=false still
+            # opts out, for debugging.
+            collect_orphans=_collects_orphans(body),
             device_slots=_device_slots(mod_read),
             # A recovery flash targets a board we could not read, so do not claim a verify we
             # cannot trust; report it as sent-unverified and let the caller re-read if it can.

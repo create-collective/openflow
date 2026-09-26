@@ -17,6 +17,7 @@ UUID is the join key that lets a name survive a read (see keymap_import).
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -191,6 +192,10 @@ def delete(config_id: str) -> dict:
         conn.close()
 
 
+# A capture's own suffix, " (on board)" or " (on board) 3", stripped before naming a copy of it.
+_ON_BOARD = re.compile(r"(?: \(on board\)(?: \d+)?)+$")
+
+
 def capture_from_device(entries: list[dict]) -> list[dict]:
     """Give the board's own module state a profile of its own.
 
@@ -227,8 +232,10 @@ def capture_from_device(entries: list[dict]) -> list[dict]:
     try:
         for e in todo:
             cid = str(uuid.uuid4())
-            # Name it after the profile it drifted from, so the pair reads as what it is.
-            base = f"{e['name']} (on board)"
+            # Name it after the profile it drifted from, so the pair reads as what it is. A copy
+            # taken from a copy counts on from the original ("X (on board) 2"), never
+            # "X (on board) (on board)" (owner's call, 2026-09-26).
+            base = f"{_ON_BOARD.sub('', e['name'])} (on board)"
             taken = {r["name"] for r in conn.execute(
                 "SELECT name FROM module_configs WHERE name = ? OR name LIKE ?",
                 (base, base + " %"))}

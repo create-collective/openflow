@@ -184,3 +184,21 @@ if __name__ == "__main__":
         print(fn.__name__)
         fn()
     print("\nOK")
+
+
+def test_a_copy_of_a_copy_is_numbered_not_nested():
+    """The closest profile to a drifted board can itself be a copy. Its copy used to be named
+    "Naya Track Left (on board) (on board)"; it counts on from the original instead (owner's
+    call, 2026-09-26)."""
+    from openflow_backend.device import module_fields as MF
+    conn = _db(dict(_DEVICE, **{"tap:track:button_1": "M2"}))
+    first = _run(conn, _read())["captured"][0]
+    assert first["name"] == "Naya Track Left (on board)"
+    # Now the board drifts from the copy too: button 2 presses M4. The copy is the closest.
+    idx = MF.writable_fields("TRACK")["tap:track:button_2"]
+    read = _read()
+    read["slots"][SLOT] = [({**f, "value": R.encode_mouse_button("M4").hex()} if f["field"] == idx else f)
+                           for f in read["slots"][SLOT]]
+    second = _run(conn, read)["captured"][0]
+    assert second["name"] == "Naya Track Left (on board) 2", second["name"]
+    print(f"  copy of a copy -> {second['name']!r}")

@@ -94,14 +94,18 @@ def test_unbinding_a_module_gesture_clears_the_field():
     assert out[idx] == (0x07, b""), out[idx]
 
 
-def test_a_gesture_absent_from_bindings_still_passes_through():
-    """The distinction that was collapsed: not-managed must keep the template's value, while
-    explicitly-unbound must clear. Getting this wrong in the other direction would wipe fields
-    the profile never mentioned."""
+def test_a_gesture_absent_from_bindings_is_written_unbound():
+    """Reversed on 2026-09-26. This used to keep the template's value for a gesture the profile
+    had no row for, so a flash would not "wipe fields the profile never mentioned". But the read
+    calls a gesture with no row unbound, and the app shows it that way too (its backfill inserts
+    an empty row for exactly these gestures), so keeping the board's value meant every read of
+    such a profile disagreed with its own flash and minted an "(on board)" copy with no edit
+    made (tests/test_module_flash_read_parity.py). It covers only the gestures OpenFlow models;
+    every other field of the slot still passes through."""
     gesture, idx = _tune_tap_field()
     template = {idx: (R.KEY_PRESS, bytes.fromhex("04000700"))}
     out = ML.overlay(template, "TUNE", {})
-    assert out[idx] == template[idx], "an unmanaged field was modified"
+    assert out[idx] == (R.NONE_BEH, b""), "a gesture with no row is unbound, as the read calls it"
 
 
 def test_binding_a_gesture_still_works():

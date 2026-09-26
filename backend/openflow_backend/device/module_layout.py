@@ -286,18 +286,17 @@ def overlay(template, module_type, bindings, axes=None, settings=None, conventio
     """
     out = dict(template)
     for gesture, idx in module_fields.writable_fields(module_type).items():
-        # "absent from bindings" and "present but unbound" are different instructions and were
-        # collapsed into one `if not code: continue`. So unbinding a gesture in the UI was a
-        # no-op on the board: the template's old value passed straight through and the field
-        # kept whatever it had.
-        if gesture not in bindings:
-            continue                       # not managed here -- the template owns this field
-        code = bindings[gesture]
+        # Unbound -> the NONE record, empty value, whether the row says "" or the profile has no
+        # row for the gesture at all. Captured from NayaCore twice: `01 0b 07 00` (the "enable all
+        # modules" flash that silently cleared Track Right button 1) and `08 07 00` in the
+        # flash-3 table.
+        #
+        # A gesture with no row used to be left to the template, so the board kept whatever it
+        # had there, while the read calls a gesture with no row unbound: every read of such a
+        # profile disagreed with its own flash and minted an "(on board)" copy
+        # (tests/test_module_flash_read_parity.py).
+        code = bindings.get(gesture)
         if not code:
-            # Explicitly unbound -> the NONE record, empty value. Captured from NayaCore twice:
-            # `01 0b 07 00` (the "enable all modules" flash that silently cleared Track Right
-            # button 1) and `08 07 00` in the flash-3 table. flash.py already emits this exact
-            # record for stale fields.
             out[idx] = (R.NONE_BEH, b"")
             continue
         if module_fields.gesture_locked(module_type, gesture):
@@ -313,8 +312,11 @@ def overlay(template, module_type, bindings, axes=None, settings=None, conventio
         rec = _encode_gesture(idx, code, convention)
         if rec is not None:
             out[idx] = rec
-    for gesture, spec in (axes or {}).items():
-        for idx, rec in encode_axis(module_type, gesture, spec, convention).items():
+    # Every axis, including one the profile has no row for: the read expects the axis's stock
+    # motion there, so that is what gets written rather than whatever the template held.
+    for gesture in module_fields.axis_halves(module_type):
+        for idx, rec in encode_axis(module_type, gesture, (axes or {}).get(gesture, {}),
+                                    convention).items():
             out[idx] = rec
     # Settings were never written at all: set_module_setting stored them in the app and the
     # overlay copied the device's own values straight back, so every slider on the Modules page
@@ -373,6 +375,10 @@ def encode_axis(module_type, gesture, spec, convention=None):
             if rec is not None:
                 out[idx] = rec
                 continue
+        if spec.get("unbound"):
+            # The user cleared the axis (flash._resolve_axis): nothing on this half.
+            out[idx] = (R.NONE_BEH, b"")
+            continue
         # The selector belongs to the HALF, not to the sign. On the Tune scroll axes the half
         # that fires on a right swipe is the one holding -1, so deriving the selector from the
         # sign would rewrite the board's motion records the moment a direction label was fixed.
