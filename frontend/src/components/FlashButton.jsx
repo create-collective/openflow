@@ -3,7 +3,6 @@ import { invalidateDeviceState, setModuleRead } from "../lib/deviceState";
 import useDoneFlag from "../lib/useDoneFlag";
 import { api } from "../lib/api.js";
 import { getActiveProfileId } from "../lib/activeProfile";
-import { hasReadDevice } from "../lib/deviceActions";
 import { useDeviceStream } from "../lib/deviceStream";
 import { getShowAllKeyboards, visibleHalves } from "../lib/showAllKeyboards";
 import { targetSerialFor } from "../lib/targetKeyboard";
@@ -20,8 +19,12 @@ import Notice from "./ui/Notice";
 // The active profile (lib/activeProfile, shared with every page). A flash MUST name one: the
 // layers table spans every profile, so an unscoped plan would write whichever one the DB
 // happened to return last. If nothing is selected we send nothing and let the backend refuse
-// by name, better than guessing which keymap goes on the keyboard. The read gate
-// (hasReadDevice) lives with the read itself in lib/deviceActions.
+// by name, better than guessing which keymap goes on the keyboard.
+//
+// There is no "read the keyboard first" gate (removed 2026-09-26). The flash takes its own fresh
+// read of the board and plans against it, so the gate protected nothing the write needs; all it
+// did was force an import, and an import after an edit mints an "(on board)" copy of the board's
+// older state -- the clutter this project is trying to get rid of.
 function activeProfileId() {
   return getActiveProfileId() || undefined;
 }
@@ -93,7 +96,6 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
   // written. The write succeeded and the UI reported a failure -- the worst way round.
   // tools/check-undefined.mjs only looks at hooks and components, which is why it passed.
   const [dropped, setDropped] = useState([]);
-  const readOk = hasReadDevice();
   // Bays the first layer leaves unset. Layer 0 is where a module profile is pulled to both
   // sides and every other layer inherits from; a gap there leaves that module unconfigured on
   // the keyboard, so Confirm is off until it is filled (the route refuses it too).
@@ -180,7 +182,7 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
       <Button onClick={close} disabled={state === "writing"}>
         {state === "done" ? "Close" : "Cancel"}
       </Button>
-      {RECOVERY_OFFERED && state !== "done" && !readOk && !recovery && (
+      {RECOVERY_OFFERED && state !== "done" && !recovery && (
         <Button
           onClick={() => setRecovery(true)}
           title="For a keyboard that can no longer be read. Overwrites everything."
@@ -192,15 +194,13 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
         <Button
           variant="primary"
           onClick={confirmFlash}
-          disabled={state === "writing" || (!readOk && !recovery) || bayGaps.length > 0}
+          disabled={state === "writing" || bayGaps.length > 0}
           title={
             bayGaps.length > 0
               ? "Layer 0 leaves a module bay unset; fill it on the Bindings board first"
               : recovery
               ? "Overwrites the keyboard without reading it first"
-              : readOk
-              ? "Writes this profile to the keyboard, then reads it back to verify"
-              : "Read the keyboard first"
+              : "Writes this profile to the keyboard, then reads it back to verify"
           }
         >
           {state === "writing"
@@ -358,12 +358,6 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
           </Notice>
         )}
 
-        {!readOk && !recovery && (
-          <Notice>
-            Read the keyboard first (Bindings → Read from keyboard). Flashing without it
-            would write over a state the app has not seen.
-          </Notice>
-        )}
         {recovery && (
           <Notice>
             <strong>Recovery flash.</strong> The board is not read first, so nothing can be

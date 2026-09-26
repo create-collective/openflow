@@ -15,18 +15,6 @@ import { setActiveProfileId } from "./activeProfile";
 import { setModuleRead } from "./deviceState";
 import { reloadProfiles } from "./profilesStore";
 
-// Has the keyboard been read in this app session? Flashing is gated on it: until the board has
-// been read, the app's idea of the keymap may not match what is on the keyboard, and edits
-// would be flashed over an unknown state. sessionStorage, so it lasts the window, not the machine.
-const READ_KEY = "openflow.deviceRead";
-export function hasReadDevice() {
-  try {
-    return Boolean(sessionStorage.getItem(READ_KEY));
-  } catch {
-    return false;
-  }
-}
-
 const DONE_MS = 5000;
 const EMPTY = { busy: null, err: null, readNote: null, saved: null, justRead: false };
 
@@ -75,7 +63,6 @@ export async function readKeyboard(target = null) {
       for (const m of r.modules) byUuid[m.uuid] = m;
       setModuleRead(byUuid);
     }
-    try { sessionStorage.setItem(READ_KEY, String(Date.now())); } catch { /* ignore */ }
     for (const l of [...readListeners]) {
       // A page's follow-up failing does not undo a read that worked.
       try { await l(r); } catch { /* the page reports its own errors */ }

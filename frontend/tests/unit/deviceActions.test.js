@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 
 describe("readKeyboard", () => {
-  it("reloads the profiles, switches to the read's profile, tells the pages, marks the session", async () => {
+  it("reloads the profiles, switches to the read's profile, tells the pages", async () => {
     profiles.push({ id: "p9", name: "Read 1", layers: [] });
     api.readKeyboard.mockResolvedValue({
       profileId: "p9", bindings: 12, layers: 2, warnings: [],
@@ -33,7 +33,6 @@ describe("readKeyboard", () => {
     });
     const seen = [];
     const off = actions.onDeviceRead((r) => { seen.push(r.profileId); });
-    expect(actions.hasReadDevice()).toBe(false);
 
     const r = await actions.readKeyboard();
 
@@ -42,7 +41,6 @@ describe("readKeyboard", () => {
     expect(getProfiles().profiles.map((p) => p.id)).toEqual(["p1", "p9"]);
     expect(getActiveProfileId()).toBe("p9");
     expect(seen).toEqual(["p9"]);
-    expect(actions.hasReadDevice()).toBe(true);
     expect(getDeviceState().modules).toEqual({ u1: { uuid: "u1", type: "TOUCH" } });
     const s = actions.getDeviceActions();
     expect(s.busy).toBeNull();
@@ -63,7 +61,6 @@ describe("readKeyboard", () => {
 
     expect(r).toBeNull();
     expect(listener).not.toHaveBeenCalled();
-    expect(actions.hasReadDevice()).toBe(false);
     expect(getActiveProfileId()).toBeNull();
     const s = actions.getDeviceActions();
     expect(s.busy).toBeNull();
@@ -78,7 +75,6 @@ describe("readKeyboard", () => {
     actions.onDeviceRead(() => { throw new Error("page broke"); });
     const r = await actions.readKeyboard();
     expect(r.profileId).toBe("p1");
-    expect(actions.hasReadDevice()).toBe(true);
     expect(actions.getDeviceActions().err).toBeNull();
   });
 });
