@@ -3,6 +3,20 @@
 // what they can now do, what stopped happening.
 const CHANGELOG = [
   {
+    version: "0.5.0",
+    date: "2026-09-26",
+    notes: [
+      "Keys with a double-tap, hold or tap+hold are written the way NayaFlow writes them, in far fewer bytes, and NayaFlow can read them back. A key set up in NayaFlow no longer shows a RAW value: it reads as what it does (LALT + F4, say) and flashes back unchanged instead of being left out.",
+      "Any of the four behaviours can hold any action, not only a key: a layer switch or a Bluetooth device can be a double-tap, and a key that switches layers on tap can have a double-tap too. A behaviour set to Disabled shows as Disabled, and one OpenFlow cannot write is kept on the keyboard rather than erased.",
+      "Module profiles stop piling up \"(on board)\" copies. A profile you flash and read back without editing it matches itself; before, many came back as a new copy on every read, and even straight after a flash.",
+      "What you pick for an axis is what gets written. Choosing Vertical Scroll (or any motion) for pinch & spread or a swipe used to write the axis's default motion whatever you chose; clearing an axis now leaves it empty, and a key pair on an inverted axis comes out the right way round.",
+      "Keyboard LED brightness works on the Tune. Any gesture can raise or lower the backlight, a swipe one step at a time, and the new Keyboard LED Brightness pair makes pinch and spread dim and brighten smoothly. Picking an LED action used to write nothing, so the gesture kept its old binding. NayaFlow's own LED swipes never worked; they are still recognised on a read, and the next flash from OpenFlow replaces them with ones that do.",
+      "Pinch & spread starts empty, as it does in NayaFlow. Zoom is one pick away, and profiles already set to zoom keep it.",
+      "Flashing no longer asks you to read the keyboard first: the flash reads it itself. Module slots the profile does not use are removed on every flash, as NayaFlow does, and the preview lists which ones.",
+      "Shortcuts with two names (Page Up and PG_UP, Enter and Return) no longer count as a change, and a copy of a copy is named \"(on board) 2\" rather than \"(on board) (on board)\".",
+    ],
+  },
+  {
     version: "0.4.0",
     date: "2026-09-25",
     notes: [

@@ -1,7 +1,7 @@
 {
   "name": "openflow-frontend",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "description": "OpenFlow renderer — faithful rebuild of the NayaFlow UI on an open backend.",
   "license": "Apache-2.0",
