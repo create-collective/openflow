@@ -100,13 +100,64 @@ def _to_millivolts(raw: int) -> int:
 
 
 def _battery_percent(millivolts: int) -> int:
-    """Map a cell voltage in mV onto 1-100% across the 3.3 V - 4.2 V window.
+    """A MODULE's charge: its cell voltage in mV, linear across 3.3 V - 4.2 V.
 
-    One helper for both the keyboard and its modules; they were separate copies of the same
-    curve written at different scales, which is how the units drifted apart.
+    This is NayaCore's own module formula, read from its code (Naya_Device::
+    getModuleBatteryPercentage: `(clamp(mV, 3300, 4200) - 3300) * 100 / 900`, at least 1), so a
+    module reads the same percentage here as in NayaFlow. The keyboard has its own curve below.
     """
     clamped = max(3300, min(4200, millivolts))
     return max(1, min(100, ((clamped - 3300) * 100) // 900))
+
+
+# A lithium-ion cell's resting voltage against its charge, the widely used 4.2 V table. A
+# straight line from 3.3 V to 4.2 V puts a cell resting at 4.08 V at 86%; it is nearer 85-90%
+# on this curve, and the real shape matters most in the middle, where a straight line reads
+# several points high.
+_LIION_CURVE = ((3270, 0), (3610, 5), (3690, 10), (3710, 15), (3730, 20), (3750, 25),
+                (3770, 30), (3790, 35), (3800, 40), (3820, 45), (3840, 50), (3850, 55),
+                (3870, 60), (3910, 65), (3950, 70), (3980, 75), (4020, 80), (4080, 85),
+                (4110, 90), (4150, 95), (4200, 100))
+
+# Where the keyboard's charger stops, by firmware. Measured on the owner's boards 2026-09-26, both
+# on USB and flat for 30 minutes: 3.28.7 holds the cell at ~4.2 V (4193 / 4206 mV), 3.41.0 at
+# ~4.07-4.10 V (4067 / 4091 mV, and the same range in captures back to 2026-09-07). The owner's
+# 3.35.4 also read low (about 80% on the old 4.2 V scale); only 3.28.7 has ever read full. So the
+# change came after 3.28.7, and the owner chose 3.30 as the boundary: 3.31.1 onward stops near
+# 4.1 V. 3.29.1 is the one release left on the 4.2 V side unmeasured -- a one-line move if it
+# turns out low too. Release notes say nothing about charging in any of them.
+_KB_FULL_MV_LOW_CUTOFF = 4060         # at or above this, on the low-cutoff firmware, the cell is full
+_KB_LOW_CUTOFF_FROM = (3, 30, 0)
+
+
+def _liion_charge(millivolts: int) -> float:
+    """Charge in % (0-100, float) for a resting cell voltage, from _LIION_CURVE."""
+    if millivolts <= _LIION_CURVE[0][0]:
+        return 0.0
+    for (v0, p0), (v1, p1) in zip(_LIION_CURVE, _LIION_CURVE[1:]):
+        if millivolts <= v1:
+            return p0 + (p1 - p0) * (millivolts - v0) / (v1 - v0)
+    return 100.0
+
+
+def _keyboard_full_mv(firmware: str | None) -> int:
+    """The voltage the keyboard's charger stops at, for this firmware; 4.2 V when unknown."""
+    from .firmware_upload import _version_tuple
+    version = _version_tuple(firmware) if firmware else ()
+    return _KB_FULL_MV_LOW_CUTOFF if version and version >= _KB_LOW_CUTOFF_FROM else 4200
+
+
+def _keyboard_battery_percent(millivolts: int, firmware: str | None = None) -> int:
+    """The KEYBOARD's charge, 1-100%: a lithium-ion curve, scaled so the voltage this firmware's
+    charger stops at reads 100%.
+
+    NayaFlow shows no keyboard percentage at all (only the raw voltage, on its diagnostics page),
+    so this has nothing to agree with there. Until 2026-09-26 it used the module's straight
+    3.3-4.2 V line, which is why every board on 3.41.0 -- whose charger stops near 4.1 V -- never
+    read above 85-88% however long it charged.
+    """
+    full = _liion_charge(_keyboard_full_mv(firmware))
+    return max(1, min(100, round(100 * _liion_charge(millivolts) / full)))
 
 
 def _link_views(halves: list[dict]) -> dict:
@@ -605,7 +656,7 @@ class DeviceService:
                 mv = self._fold(half, _to_millivolts((p[0] << 8) | p[1]) if p is not None and len(p) >= 2 else None)
                 if mv is not None:
                     snap["batteryMillivolts"] = mv
-                    snap["batteryPercent"] = _battery_percent(mv)
+                    snap["batteryPercent"] = _keyboard_battery_percent(mv, ident.get("firmwareVersion"))
 
                 # Module: presence from DETECT, type from the handshake address (see status_all).
                 handshake = _first_payload(t.send_command(dest, C.CAT_MODULE, C.MOD_SEND_HANDSHAKE, timeout=1.5))
@@ -840,7 +891,7 @@ class DeviceService:
         if volts:
             volts.sort()
             mv = _to_millivolts(volts[len(volts) // 2])
-            info["batteryPercent"] = _battery_percent(mv)
+            info["batteryPercent"] = _keyboard_battery_percent(mv, info.get("firmwareVersion"))
             info["batteryMillivolts"] = mv
 
         payload = _first_payload(t.send_command(dest, C.CAT_BLE, C.BLE_GET_ADDRESS))
