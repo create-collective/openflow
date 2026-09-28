@@ -472,6 +472,43 @@ def _identify_in_bootloader(side: str, catalog: list, timeout: float = 90.0) -> 
         time.sleep(2.0)
 
 
+
+def image_only_mode() -> bool:
+    """OPENFLOW_FIRMWARE_IMAGE_ONLY=1: upload the MCUboot image alone and have the bootloader
+    schedule the swap (firmware_upload.flash(vendor_trailer=False, confirm=True)), instead of the
+    vendor resource whose trailer arms the swap as the last chunk lands.
+
+    For one kind of half: the one that took the whole vendor resource, rebooted, and dropped it.
+    Image-only keeps the half in its bootloader after the upload, so the bootloader is asked
+    whether slot 1 holds a valid image BEFORE anything is scheduled, and its console can be read
+    if it does not. A session setting, like the other gates, never the default: the vendor path
+    is the one every successful flash has taken."""
+    return os.environ.get("OPENFLOW_FIRMWARE_IMAGE_ONLY") == "1"
+
+
+def _bootloader_console(side: str, seconds: float = 4.0) -> str:
+    """Whatever a half's bootloader has printed, from every recovery port of that side (the log
+    port streams it; the SMP port says nothing). Best effort: an empty string when there is no
+    bootloader left to ask."""
+    import serial
+    out = []
+    for d in rec.find_recovery_ports():
+        if d.side != side:
+            continue
+        try:
+            with serial.Serial(d.port, 115200, timeout=0.2) as s:
+                s.dtr = True
+                s.rts = True
+                buf, end = b"", time.monotonic() + seconds
+                while time.monotonic() < end:
+                    buf += s.read(4096)
+            if buf.strip():
+                out.append(f"[{d.port}] " + buf.decode("utf-8", "replace").strip())
+        except Exception:                           # noqa: BLE001 -- best effort by design
+            continue
+    return "\n".join(out)
+
+
 def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
                    allow_older: bool = False, accept_unknown_running: bool = False,
                    flash_fn=None) -> dict:
@@ -504,8 +541,14 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
                   running=running.get("createFirmware"), pidSide=state.get("pidSide"),
                   pidGeneration=state.get("pidGeneration"), armToken=arm)
 
-    plan = fw.plan(image, catalog, allow_older=allow_older, state=state, vendor_trailer=True,
-                   accept_unknown_running=accept_unknown_running)
+    image_only = image_only_mode()
+    if image_only:
+        log.event("upload", "note", side=side,
+                  detail="image-only upload (OPENFLOW_FIRMWARE_IMAGE_ONLY): the image alone is "
+                         "written, the bootloader is asked whether slot 1 holds a valid image, and "
+                         "only then is a permanent swap scheduled")
+    plan = fw.plan(image, catalog, allow_older=allow_older, state=state,
+                   vendor_trailer=not image_only, accept_unknown_running=accept_unknown_running)
     replaced = getattr(plan, "running", None) or {}
     if replaced.get("identifiedBy"):
         # Said in the log in so many words: this is the one run where the image being replaced
@@ -567,15 +610,28 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
             timing["done"] = True
             _log_chunk_timing(log, side, timing, STALL_MS)
             log.event("swap.verify", "start", side=side,
-                      detail="the image is written; the bootloader is carrying out the swap "
-                             "and answers nothing until it is done. This can take a couple "
-                             "of minutes.")
+                      detail=("the image is written; checking that the bootloader accepts it "
+                              "before anything is scheduled") if image_only else
+                             ("the image is written; the bootloader is carrying out the swap "
+                              "and answers nothing until it is done. This can take a couple "
+                              "of minutes."))
 
     log.event("slot.erase", "start", side=side)
     t0 = time.monotonic()
-    result = flash_fn(image, catalog, arm=arm, allow_older=allow_older, vendor_trailer=True,
-                      state=state, progress=progress,
-                      accept_unknown_running=accept_unknown_running)
+    try:
+        result = flash_fn(image, catalog, arm=arm, allow_older=allow_older,
+                          vendor_trailer=not image_only, confirm=image_only,
+                          state=state, progress=progress,
+                          accept_unknown_running=accept_unknown_running)
+    except Exception:
+        # Whatever the bootloader printed is the one account of WHY an image was not taken (a
+        # user's right half dropped a complete 3.41.0 upload and booted 3.30.1, 2026-09-29, and
+        # nothing said why). Read it now, while the half may still be in the bootloader: the
+        # failure path resets stranded halves right after this.
+        text = _bootloader_console(side)
+        log.event("bootloader.console", "note", side=side,
+                  detail=text or "the bootloader's console had nothing to say (or was gone)")
+        raise
     log.event("upload", "ok", side=side, took_ms=int((time.monotonic() - t0) * 1000),
               written=result.get("written"), swap=result.get("swap"))
     if not timing.get("done"):

@@ -112,6 +112,8 @@ def wired(monkeypatch, tmp_path):
     # the reset stubbed here, and the tests about recovery patch what they assert on.
     monkeypatch.setattr(P, "RECOVERY_WAIT", 0.0)
     monkeypatch.setattr(P.rec, "os_reset", lambda port: None)
+    # A failed upload reads the bootloader's console, which opens real COM ports.
+    monkeypatch.setattr(P, "_bootloader_console", lambda side, seconds=4.0: "")
 
     # Entering the bootloader is a send_command the FakeSvc swallows, so the side is tracked here.
     orig = FakeSvc._with_transport
@@ -693,3 +695,55 @@ def test_the_procedure_waits_for_both_halves_to_re_link(wired, monkeypatch):
     text = Path(r["log"]).read_text(encoding="utf-8")
     assert "both halves answering; the keyboard has re-linked" in text
     assert "No left device found" not in text, "nothing after the settle may report it missing"
+
+
+# --- a half whose bootloader dropped the vendor resource (2026-09-29) ------------------------ #
+
+def _lines(r):
+    return [json.loads(x) for x in Path(r["log"]).read_text(encoding="utf-8").splitlines()
+            if x.strip()]
+
+
+def test_image_only_mode_uploads_the_image_and_asks_for_a_permanent_swap(wired, monkeypatch):
+    """OPENFLOW_FIRMWARE_IMAGE_ONLY=1: no vendor trailer, and the bootloader is asked to schedule
+    a PERMANENT swap -- a test swap would revert on the next reset."""
+    seen = {}
+    real = wired["flash"]
+
+    def spy(image, catalog, **kw):
+        seen.update(kw)
+        return real(image, catalog, **kw)
+    wired["flash"] = spy
+    monkeypatch.setenv("OPENFLOW_FIRMWARE_IMAGE_ONLY", "1")
+    r = _run(wired, {"right": "kb_fwr.bin"})
+    assert r["ok"] is True, r
+    assert seen["vendor_trailer"] is False and seen["confirm"] is True
+    assert any("image-only upload" in (x.get("detail") or "") for x in _lines(r))
+
+
+def test_the_vendor_trailer_stays_the_default(wired, monkeypatch):
+    seen = {}
+    real = wired["flash"]
+
+    def spy(image, catalog, **kw):
+        seen.update(kw)
+        return real(image, catalog, **kw)
+    wired["flash"] = spy
+    monkeypatch.delenv("OPENFLOW_FIRMWARE_IMAGE_ONLY", raising=False)
+    r = _run(wired, {"right": "kb_fwr.bin"})
+    assert r["ok"] is True
+    assert seen["vendor_trailer"] is True and seen["confirm"] is False
+
+
+def test_a_failed_upload_records_what_the_bootloader_said(wired, monkeypatch):
+    """The bootloader's console is the only account of why an image was not taken, and it is
+    read before the failure path resets the half out of the bootloader."""
+    def refused(image, catalog, **kw):
+        raise P.fw.UploadRefused("after upload, slot 1 reports no image")
+    wired["flash"] = refused
+    monkeypatch.setattr(P, "_bootloader_console",
+                        lambda side, seconds=4.0: "[COM7] I: Image in the secondary slot is not valid!")
+    r = _run(wired, {"right": "kb_fwr.bin"})
+    assert r["ok"] is False
+    said = [x for x in _lines(r) if x["step"] == "bootloader.console"]
+    assert said and "secondary slot is not valid" in said[0]["detail"]
