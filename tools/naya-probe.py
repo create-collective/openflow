@@ -9,6 +9,14 @@ ports, asks questions, and prints the answers. Unplugging it mid-run costs nothi
     python naya-probe.py --watch-log 20  # also listen to a bootloader's console for 20 s
                                          #   (unplug/replug the half while it listens to
                                          #    capture MCUboot's boot messages)
+    python naya-probe.py --bootloader right
+                                         # the one exception to read-only: RESTARTS the right
+                                         #   half into its bootloader, reads both flash slots
+                                         #   (what is installed, what is waiting, their flags)
+                                         #   and the slot sizes, then restarts it back into
+                                         #   its application. Two restarts; nothing is written
+                                         #   to flash. It is what to run after a firmware
+                                         #   update that did not take.
 
 What it does
   1. Lists every serial port, decoding Naya's product ids: which half, whether it is running
@@ -229,6 +237,10 @@ def app_reads(ser, dest):
 SMP_VERSION = 1
 SMP_OP_READ, SMP_GROUP_IMAGE = 0, 1
 SMP_ID_IMAGE_STATE, SMP_ID_IMAGE_SLOT_INFO, SMP_ERR_ENOTSUP = 0, 6, 8
+SMP_OP_WRITE, SMP_GROUP_OS, SMP_ID_OS_RESET = 2, 0, 5
+# The application's "restart into the bootloader" (nayactl CAT_RESET / RESET_MCU_BOOT), the same
+# command OpenFlow's firmware procedure sends before an upload.
+CAT_RESET, RESET_MCU_BOOT = 0xEE, 0x10AE
 RESPONSE_GRACE, SETTLE_AFTER_OPEN = 0.03, 0.25
 
 
@@ -406,10 +418,69 @@ def watch_console(port, seconds):
     return {"bytes": len(text), "text": text.decode("utf-8", "replace")}
 
 
+def naya_ports(side=None, mode=None):
+    out = []
+    for p in comports():
+        info = pid_info(p.pid) if p.vid == NAYA_VID else None
+        if info and (side is None or info["side"] == side) and (mode is None or info["mode"] == mode):
+            out.append((p, info))
+    return out
+
+
+def enter_bootloader(side):
+    """--bootloader: restart one half into MCUboot, as OpenFlow's firmware procedure does before
+    an upload, and wait for its bootloader ports. Writes nothing to the half's flash."""
+    app = naya_ports(side, "app")
+    if not app:
+        return {"entered": False, "why": f"no {side} half running its application on USB"}
+    port = app[0][0].device
+    print(f"\nRestarting the {side} half ({port}) into its bootloader. Its lights go off; that is "
+          "expected, and it is brought back at the end.")
+    try:
+        with open_port(port) as ser:
+            ser.dtr = True
+            ser.rts = True
+            cdc_handshake(ser, DEST[side])
+            ser.write(cdc_build(DEST[side], CAT_RESET, RESET_MCU_BOOT))
+            ser.flush()
+    except serial.SerialException:
+        pass                                          # it reboots mid-reply
+    deadline = time.monotonic() + 45.0
+    while time.monotonic() < deadline:
+        if naya_ports(side, "mcuboot"):
+            time.sleep(1.0)                           # let the second CDC port enumerate too
+            return {"entered": True, "from_port": port}
+        time.sleep(0.5)
+    return {"entered": False, "from_port": port,
+            "why": "the bootloader did not appear on USB within 45 s"}
+
+
+def leave_bootloader(report, side):
+    """Send `os reset` to the half's bootloader so it boots its application again."""
+    entry = next((b for b in report["bootloaders"] if b["side"] == side and b.get("smp_port")), None)
+    ports = [entry["smp_port"]] if entry else [p.device for p, _ in naya_ports(side, "mcuboot")]
+    for port in ports:
+        try:
+            smp_talk(port, smp_request(SMP_OP_WRITE, SMP_GROUP_OS, SMP_ID_OS_RESET), timeout=2.0)
+        except Exception:                             # noqa: BLE001 -- the reset drops the port
+            pass
+    deadline = time.monotonic() + 60.0
+    while time.monotonic() < deadline:
+        if naya_ports(side, "app"):
+            return {"back_in_application": True}
+        time.sleep(1.0)
+    return {"back_in_application": False,
+            "why": "not back in its application after 60 s: unplug and replug that half"}
+
+
 # ------------------------------------------------------------------------------------------- #
-def probe(watch_log=0.0):
+def probe(watch_log=0.0, bootloader_side=None):
     report = {"at": datetime.now().isoformat(timespec="seconds"), "python": sys.version.split()[0],
               "platform": sys.platform, "ports": [], "halves": [], "bootloaders": [], "notes": []}
+    if bootloader_side:
+        report["enter_bootloader"] = enter_bootloader(bootloader_side)
+        print(f"  {report['enter_bootloader']}")
+        watch_log = max(watch_log, 10.0)
 
     ports = list(comports())
     print(f"\n{len(ports)} serial port(s) on this machine")
@@ -555,9 +626,15 @@ def probe(watch_log=0.0):
                           "rerun with --watch-log 20 and replug the half while it listens)")
         report["bootloaders"].append(entry)
 
+    if bootloader_side and (report["enter_bootloader"].get("entered")
+                            or naya_ports(bootloader_side, "mcuboot")):
+        print(f"\nBringing the {bootloader_side} half back into its application ...")
+        report["leave_bootloader"] = leave_bootloader(report, bootloader_side)
+        print(f"  {report['leave_bootloader']}")
+
     out = Path(__file__).with_name(f"naya-probe-{datetime.now():%Y%m%d-%H%M%S}.json")
     out.write_text(json.dumps(report, indent=1), encoding="utf-8")
-    print(f"\nSaved {out}\nSend that file back. Nothing was written to the keyboard.")
+    print(f"\nSaved {out}\nSend that file back. Nothing was written to the keyboard's flash.")
     return report
 
 
@@ -565,8 +642,11 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Read-only probe of a Naya Create over USB.")
     ap.add_argument("--watch-log", type=float, default=0.0, metavar="SECONDS",
                     help="listen to a bootloader half's console this long (replug it meanwhile)")
+    ap.add_argument("--bootloader", choices=("left", "right"),
+                    help="restart this half into its bootloader, read both flash slots, and "
+                         "restart it back into its application (writes nothing to flash)")
     args = ap.parse_args()
     try:
-        probe(args.watch_log)
+        probe(args.watch_log, args.bootloader)
     except KeyboardInterrupt:
         print("\nstopped")
