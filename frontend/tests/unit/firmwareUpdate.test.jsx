@@ -181,6 +181,31 @@ describe("FirmwareUpdate", () => {
     expect(screen.getByRole("button", { name: /downgrade to 3\.35\.4/i })).toBeEnabled();
   });
 
+  it("asks before replacing firmware it has no copy of, and says so to the backend", async () => {
+    // A user's right half runs the factory 3.30.1, which no NayaFlow release carries. It can be
+    // replaced, but not put back, so Flash waits for the user to say they understand.
+    const FACTORY = {
+      ...PLAN,
+      halves: [PLAN.halves[0], { ...PLAN.halves[1], currentVersion: "3.30.1" }],
+      targets: {
+        left: PLAN.targets.left,
+        right: { ...PLAN.targets.right, currentVersion: "3.30.1", unchanged: false,
+                 unknownCurrent: true },
+      },
+    };
+    api.firmwareUpdatePlan.mockResolvedValue(FACTORY);
+    const flash = vi.spyOn(api, "flashFirmware").mockResolvedValue({ id: "flash-x", running: true });
+    render(<FirmwareUpdate connected />);
+    await userEvent.click(screen.getByRole("button", { name: /update keyboard firmware/i }));
+    await screen.findByText(/no copy of the firmware being replaced/i);
+    const go = screen.getByRole("button", { name: /flash 3\.41\.0/i });
+    expect(go).toBeDisabled();
+    await userEvent.click(screen.getByLabelText(/I understand/i));
+    expect(go).toBeEnabled();
+    await userEvent.click(go);
+    expect(flash).toHaveBeenCalledWith({ right: "v1.25.1/kb_fwr.bin" }, false, true);
+  });
+
   it("offers to download a version this machine does not hold, then lets it be flashed", async () => {
     // Images are not shipped with OpenFlow, so "we do not have it" is the normal first state and
     // has to be recoverable from inside the dialog rather than being a dead end.

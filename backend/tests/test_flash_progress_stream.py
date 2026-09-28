@@ -273,7 +273,7 @@ def test_the_route_answers_with_a_run_id_long_before_the_flash_is_done(monkeypat
     started = threading.Event()
 
     def fake_run(svc, targets, catalog, *, allow_older=False, log_dir=None, on_event=None,
-                 flash_fn=None):
+                 flash_fn=None, **kw):
         started.set()
         on_event({"step": "preflight.capture", "phase": "start", "label": "Backing up"})
         release.wait(5)

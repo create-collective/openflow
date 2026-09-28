@@ -108,6 +108,61 @@ def test_a_device_that_will_not_identify_itself_is_refused(images):
         fw.plan(images / "kb_fwl.bin", CATALOG, state=state_ok(identified=False))
 
 
+# --- firmware we do not hold, replaced on the user's say-so --------------------------------- #
+# A user's right half runs 3.30.1, a factory build no NayaFlow release carries (checked against
+# the 1.15.0, 1.15.1, 1.17.2 and 1.17.3 installers, 2026-09-28). It is still Naya-signed -- the
+# bootloader boots nothing else -- so it can be written over once the user accepts there is no
+# way back; side and generation then come from the product id, and nothing else is loosened.
+FACTORY_HASH = "1675961002e1bc11b749287554957f0ada716bea046111239f83616b7e6e7ba2"
+
+
+def state_unknown(pid=0x00D3, side="right", generation="A"):
+    s = {"state": "ok", "port": "COM9", "images": [
+        {"slot": 0, "active": True, "hash": FACTORY_HASH, "identified": False},
+        {"slot": 1, "active": False, "hash": "036059b2", "identified": False}]}
+    if pid is not None:
+        s.update({"pid": pid, "pidSide": side, "pidGeneration": generation})
+    return s
+
+
+def test_unknown_firmware_is_refused_until_the_user_accepts_it(images):
+    with pytest.raises(fw.UploadRefused, match="accept_unknown_running"):
+        fw.plan(images / "kb_fwr.bin", CATALOG, state=state_unknown())
+
+
+def test_accepted_unknown_firmware_is_replaced_using_the_product_id(images):
+    p = fw.plan(images / "kb_fwr.bin", CATALOG, state=state_unknown(),
+                accept_unknown_running=True)
+    assert p.running["identifiedBy"] == "usb product id"
+    assert (p.running["side"], p.running["generation"]) == ("right", "A")
+    assert p.arm_token == FACTORY_HASH, "still armed by the device's own reported hash"
+
+
+def test_accepting_unknown_firmware_still_refuses_the_wrong_side_or_generation(images):
+    with pytest.raises(fw.UploadRefused, match="left and right|Left and right"):
+        fw.plan(images / "kb_fwl.bin", CATALOG, state=state_unknown(),
+                accept_unknown_running=True)
+    with pytest.raises(fw.UploadRefused, match="generation"):
+        fw.plan(images / "kb_fwl.bin", CATALOG,
+                state=state_unknown(pid=0x106F, side="left", generation="B"),
+                accept_unknown_running=True)
+
+
+def test_accepting_unknown_firmware_needs_a_product_id_that_says_both(images):
+    for s in (state_unknown(pid=None), state_unknown(generation=None)):
+        with pytest.raises(fw.UploadRefused, match="product id did not"):
+            fw.plan(images / "kb_fwr.bin", CATALOG, state=s, accept_unknown_running=True)
+
+
+def test_accepting_unknown_firmware_changes_nothing_for_known_firmware(images):
+    """The flag is about images we do not hold. A known image whose product id disagrees with
+    it is still refused, flag or no flag."""
+    lying = state_ok()
+    lying.update({"pid": 0x00D3, "pidSide": "right", "pidGeneration": "A"})
+    with pytest.raises(fw.UploadRefused, match="disagree"):
+        fw.plan(images / "kb_fwl.bin", CATALOG, state=lying, accept_unknown_running=True)
+
+
 def test_a_device_that_did_not_answer_is_refused(images):
     with pytest.raises(fw.UploadRefused, match="did not report its image state"):
         fw.plan(images / "kb_fwl.bin", CATALOG,

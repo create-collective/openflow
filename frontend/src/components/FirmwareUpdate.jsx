@@ -84,6 +84,9 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [logText, setLogText] = useState("");
+  // Replacing firmware we hold no copy of is allowed, but only once the user has read that it
+  // cannot be put back. Cleared whenever the choice it was given for changes.
+  const [acceptUnknown, setAcceptUnknown] = useState(false);
   const { run: anyRun, events: anyEvents } = useFlashProgress();
   // The stream carries module runs too (device/module_procedure.py); this dialog shows keyboard
   // runs only, or a module run's steps would be drawn as a keyboard flash.
@@ -109,6 +112,7 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
   async function openDialog() {
     setError("");
     setLogText("");
+    setAcceptUnknown(false);
     setOpen(true);
     const p = await load("");
     if (!p) return;
@@ -122,6 +126,7 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
 
   async function chooseVersion(v) {
     setVersion(v);
+    setAcceptUnknown(false);
     const p = await load(v);
     setChosen(defaultChoice(p));
   }
@@ -137,7 +142,7 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
         targets[side] = t.image;
         if (t.downgrade) older = true;
       }
-      const state = await api.flashFirmware(targets, older);
+      const state = await api.flashFirmware(targets, older, unknownChosen.length > 0 && acceptUnknown);
       // Show the run at once rather than waiting for the stream's first tick: the POST's reply
       // is already the run's opening snapshot.
       seedFlashProgress(state);
@@ -196,6 +201,10 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
   const anyChosen = Object.entries(chosen).some(([side, on]) => on && targets[side]?.present);
   const downgrading = Object.entries(chosen)
     .some(([side, on]) => on && targets[side]?.downgrade);
+  // Chosen halves running firmware OpenFlow has no copy of (a factory build, say).
+  const unknownChosen = (plan?.halves || [])
+    .filter((h) => chosen[h.side] && targets[h.side]?.present && targets[h.side]?.unknownCurrent);
+  const needsAccept = unknownChosen.length > 0 && !acceptUnknown;
   const gateOff = plan && plan.flashEnabled === false;
   // SCRUM-114: NayaFlow's rule, "Please ensure NO modules are connected to both of your Create
   // halves". The backend refuses too; this says it before anyone presses the button.
@@ -222,11 +231,12 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
       <Button
         variant={downgrading ? "danger" : "primary"}
         onClick={start}
-        disabled={starting || gateOff || !anyChosen || docked}
+        disabled={starting || gateOff || !anyChosen || docked || needsAccept}
         title={
           gateOff ? "Firmware flashing is switched off in this build"
             : docked ? "Undock the modules first"
             : !anyChosen ? "Choose a half to update"
+            : needsAccept ? "Confirm above that the current firmware can be replaced"
             : downgrading ? "Writes an older firmware than the half runs now"
             : "Backs the keyboard up, writes the firmware, then verifies it"
         }
@@ -360,6 +370,20 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
               </Notice>
             )}
             {fetchError && <Notice tone="err" title="The download did not finish">{fetchError}</Notice>}
+
+            {unknownChosen.length > 0 && (
+              <Notice tone="warn" title="OpenFlow has no copy of the firmware being replaced">
+                {unknownChosen.map((h) => `The ${h.side} half runs ${h.currentVersion}`).join("; ")}
+                , which is not in any NayaFlow release OpenFlow knows (factory firmware, most
+                likely). It is still Naya&apos;s own firmware and can be replaced safely, but once
+                it is, OpenFlow cannot put it back.
+                <label className="fw-accept">
+                  <input type="checkbox" checked={acceptUnknown}
+                    onChange={(e) => setAcceptUnknown(e.target.checked)} />
+                  {" "}I understand, replace it with {version}
+                </label>
+              </Notice>
+            )}
 
             {downgrading && (
               <Notice tone="warn" title="This writes an older firmware than the half runs now">

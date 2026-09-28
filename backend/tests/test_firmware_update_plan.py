@@ -130,6 +130,19 @@ def test_a_downgrade_is_named_as_one_and_an_unchanged_version_too(images):
     assert targets["right"]["downgrade"] is False and targets["right"]["unchanged"] is True
 
 
+def test_firmware_we_hold_no_image_of_is_named_before_the_bootloader(images):
+    """The user's case: left on 3.41.0, right on the factory 3.30.1 no release carries. The
+    screen has to ask about replacing it before the half goes dark, not after."""
+    svc = Svc([{"port": "COM5", "pid": PID_LEFT_A, "side": "left"},
+               {"port": "COM8", "pid": PID_RIGHT_A, "side": "right"}],
+              {"COM5": "3.41.0", "COM8": "3.30.1"})
+    targets = _plan(svc, "?version=3.41.0")["targets"]
+    assert targets["right"]["unknownCurrent"] is True
+    assert targets["left"]["unknownCurrent"] is False
+    # Not a downgrade and not unchanged: 3.30.1 has no release order to compare.
+    assert targets["right"]["downgrade"] is False and targets["right"]["unchanged"] is False
+
+
 def test_a_half_already_in_the_bootloader_is_not_given_a_target(images):
     """It is mid-recovery. Starting a procedure on it would enter a bootloader it is already in."""
     svc = Svc([{"port": "COM30", "pid": PID_LEFT_MCUBOOT, "side": "left"}], {})

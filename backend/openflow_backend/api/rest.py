@@ -239,6 +239,7 @@ async def flash_firmware(body: dict = Body(...)) -> dict:
         return await run_in_threadpool(
             fw.flash, path, _firmware_catalog_raw(), arm=body.get("arm", ""),
             slot=int(body.get("slot", 1)), allow_older=bool(body.get("allow_older", False)),
+            accept_unknown_running=bool(body.get("accept_unknown_running", False)),
             confirm=bool(body.get("confirm", False)),
             vendor_trailer=bool(body.get("vendor_trailer", True)))
     except (fw.UploadRefused, TransportError, ValueError, KeyError) as e:
@@ -254,8 +255,11 @@ async def flash_procedure_run(body: dict = Body(...)) -> dict:
     the single-step primitive for our own testing; this one is the supervised sequence, and the
     only path that produces a log. Same gate: refused while FIRMWARE_FLASH_ENABLED is False.
 
-    Body: {"targets": {"left": "kb_fwl.bin", "right": "kb_fwr.bin"}, "allow_older": false}
+    Body: {"targets": {"left": "kb_fwl.bin", "right": "kb_fwr.bin"}, "allow_older": false,
+           "accept_unknown_running": false}
     Either side may be omitted. A downgrade needs allow_older, as it does everywhere else.
+    Replacing firmware the catalogue does not hold (a factory build, say) needs
+    accept_unknown_running: it is still Naya's, but OpenFlow cannot put it back.
 
     RETURNS IMMEDIATELY with the run's opening snapshot (SCRUM-102). A measured run is four to ten
     minutes; a request held open that long tells the user nothing while it is open, and a screen
@@ -290,12 +294,14 @@ async def flash_procedure_run(body: dict = Body(...)) -> dict:
     svc = get_service()
     catalog = _firmware_catalog_raw()
     allow_older = bool(body.get("allow_older", False))
+    accept_unknown = bool(body.get("accept_unknown_running", False))
     sides = [s for s in ("left", "right") if s in resolved]
 
     if bool(body.get("wait", False)):
         try:
             return await run_in_threadpool(proc.run, svc, resolved, catalog,
-                                           allow_older=allow_older)
+                                           allow_older=allow_older,
+                                           accept_unknown_running=accept_unknown)
         except (TransportError, ValueError, KeyError) as e:
             raise HTTPException(status_code=400, detail=str(e))
 
@@ -308,6 +314,7 @@ async def flash_procedure_run(body: dict = Body(...)) -> dict:
 
     def work(on_event):
         return proc.run(svc, resolved, catalog, allow_older=allow_older,
+                        accept_unknown_running=accept_unknown,
                         log_dir=run_dir, on_event=on_event)
 
     try:
@@ -715,6 +722,8 @@ async def firmware_update_plan(version: str = "") -> dict:
         return next((im.get("releaseOrder") for im in _firmware_catalog_raw()
                      if im.get("createFirmware") == version_string), None)
 
+    known_versions = {im.get("createFirmware") for im in _firmware_catalog_raw()
+                      if im.get("target") == "keyboard" and im.get("createFirmware")}
     targets: dict[str, dict] = {}
     if version:
         entry = by_version.get(version) or {}
@@ -741,6 +750,14 @@ async def firmware_update_plan(version: str = "") -> dict:
                                     and not (have and want) and want_order < have_order)
             t["downgrade"] = older_by_number or older_by_release
             t["unchanged"] = bool(have and want and want == have)
+            # Firmware the catalogue has no image of (a factory build: one user's right half
+            # shipped with 3.30.1, which no NayaFlow release carries). Writing over it needs the
+            # user's say-so -- OpenFlow cannot put it back -- and the screen asks BEFORE the half
+            # is sent to its bootloader. Judged by version number, because the image hash is only
+            # readable in the bootloader: a half on a pre-1.14.5 image (those declare no number)
+            # is asked too, which costs a checkbox; plan() decides by hash either way.
+            t["unknownCurrent"] = bool(h.get("currentVersion")) and \
+                h.get("currentVersion") not in known_versions
             targets[h["side"]] = t
 
     return {"flashEnabled": FIRMWARE_FLASH_ENABLED,

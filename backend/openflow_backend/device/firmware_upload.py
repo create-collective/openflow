@@ -450,10 +450,33 @@ def _is_downgrade(active: dict, target: dict) -> str | None:
     return None
 
 
+def _identify_by_pid(state: dict, active: dict) -> dict:
+    """The running image we do not hold, identified by the half's USB product id instead.
+
+    Every image a Create will boot is signed with Naya's key, so an image missing from the
+    catalogue is a Naya build we never archived -- a factory firmware, for one: a user's right half
+    shipped with 3.30.1, which no NayaFlow release carries (checked, 2026-09-28). What the
+    catalogue gave us for it was the half's SIDE and FLASH GENERATION, and a wrong generation is
+    what can brick a half. The product id encodes both (recovery.pid_info, NayaCore's own table,
+    and what NayaCore itself picks an image by), so it answers that question instead. Without both
+    readings there is still nothing to decide from, and nothing is written.
+
+    What is lost is the way back: OpenFlow cannot restore firmware it does not hold. The caller
+    has to have said that is acceptable (accept_unknown_running)."""
+    side, gen = state.get("pidSide"), state.get("pidGeneration")
+    if side not in ("left", "right") or gen not in ("A", "B"):
+        raise UploadRefused(
+            "the image this half is running is not one we hold, and its USB product id did not "
+            "say both its side and its flash generation, so there is nothing to choose the right "
+            f"image by. Nothing was written. Its hash is {active.get('hash')}.")
+    return {**active, "side": side, "generation": gen, "createFirmware": None,
+            "releaseOrder": None, "identifiedBy": "usb product id"}
+
+
 def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
          chunk: int = DEFAULT_CHUNK, allow_older: bool = False,
          state: dict | None = None, slot_info: dict | None = None,
-         vendor_trailer: bool = True) -> UploadPlan:
+         vendor_trailer: bool = True, accept_unknown_running: bool = False) -> UploadPlan:
     """Run every interlock and return what an upload would do. Writes nothing.
 
     `state` is a recovery.read_running_image() result; it is read from the device when omitted.
@@ -489,13 +512,19 @@ def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
     active = next((i for i in state.get("images") or [] if i.get("slot") == 0), None)
     if active is None:
         raise UploadRefused("the half reported no primary slot.")
-    if not active.get("identified"):
+    if active.get("identified"):
+        _pid_agrees_with_image(state, active)
+    elif accept_unknown_running:
+        # Side and generation now come from the product id itself, so checking the product id
+        # against them would compare a reading with itself. The downgrade check below has no
+        # version to go on and passes; the confirmation is what stands in for both.
+        active = _identify_by_pid(state, active)
+    else:
         raise UploadRefused(
-            "the image this half is running is not one we hold, so we cannot tell which side or "
-            "flash generation it is. Writing on that basis is exactly the mistake the catalogue "
-            f"exists to prevent. Its hash is {active.get('hash')}.")
-
-    _pid_agrees_with_image(state, active)
+            "the image this half is running is not one we hold (its hash is "
+            f"{active.get('hash')}). It is still Naya's firmware -- a Create boots nothing else -- "
+            "but writing over it cannot be undone from OpenFlow, because we have no copy to put "
+            "back. Confirm that in the update dialog (accept_unknown_running) to go ahead.")
     if active.get("side") != target.get("side"):
         raise UploadRefused(
             f"this is the {active.get('side')} half and {path.name} is the "
@@ -636,7 +665,7 @@ def _stream_chunks(send, image_id, raw, sha, chunk, progress, untouched) -> int:
 def upload(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
            chunk: int = DEFAULT_CHUNK, allow_older: bool = False, progress=None,
            state: dict | None = None, slot_info: dict | None = None,
-           vendor_trailer: bool = True) -> dict:
+           vendor_trailer: bool = True, accept_unknown_running: bool = False) -> dict:
     """Write an image to a half in recovery. Called only by flash(); on its own it leaves an
     image in the secondary slot that never boots (unless `vendor_trailer`, whose bytes arm the
     swap by themselves -- see the note at the top).
@@ -649,7 +678,8 @@ def upload(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
     here -- image only, trailer written afterwards -- has not been.
     """
     p = plan(image_path, catalog, slot=slot, chunk=chunk, allow_older=allow_older,
-             state=state, slot_info=slot_info, vendor_trailer=vendor_trailer)
+             state=state, slot_info=slot_info, vendor_trailer=vendor_trailer,
+             accept_unknown_running=accept_unknown_running)
     if arm != p.arm_token:
         raise UploadRefused(
             "not armed. Pass arm= the hash this half reports for its running image "
@@ -774,7 +804,7 @@ def _settled_image_state(port: str, side: str | None = None, timeout: float | No
 def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
           chunk: int = DEFAULT_CHUNK, allow_older: bool = False, confirm: bool = False,
           progress=None, state: dict | None = None, slot_info: dict | None = None,
-          vendor_trailer: bool = True) -> dict:
+          vendor_trailer: bool = True, accept_unknown_running: bool = False) -> dict:
     """The whole sequence: upload -> re-read the slot -> schedule the swap -> reset.
 
     Every upload() interlock applies (it runs first, on one device read shared with the plan).
@@ -802,9 +832,10 @@ def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
         slot_info = _live_slot_info(state)
     result = upload(image_path, catalog, arm=arm, slot=slot, chunk=chunk,
                     allow_older=allow_older, progress=progress, state=state, slot_info=slot_info,
-                    vendor_trailer=vendor_trailer)
+                    vendor_trailer=vendor_trailer, accept_unknown_running=accept_unknown_running)
     p = plan(image_path, catalog, slot=slot, chunk=chunk, allow_older=allow_older, state=state,
-             slot_info=slot_info, vendor_trailer=vendor_trailer)
+             slot_info=slot_info, vendor_trailer=vendor_trailer,
+             accept_unknown_running=accept_unknown_running)
     armed = p.arms_on_upload
 
     want = _hex(p.target.get("plaintextSha256"))

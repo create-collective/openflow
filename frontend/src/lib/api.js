@@ -49,8 +49,11 @@ export const api = {
   // Starts the supervised firmware procedure and returns the run's opening snapshot -- it does
   // NOT wait for the flash. Progress arrives on the stream (sse:flash-progress); flashRun() is
   // the catch-up for a page that reloads mid-run.
-  flashFirmware: (targets, allowOlder = false) =>
-    req("POST", "/rpc/flash-procedure", { targets, allow_older: allowOlder }),
+  // acceptUnknown: the user agreed to replace firmware OpenFlow holds no copy of (and so cannot
+  // put back). The backend refuses such a half without it.
+  flashFirmware: (targets, allowOlder = false, acceptUnknown = false) =>
+    req("POST", "/rpc/flash-procedure",
+      { targets, allow_older: allowOlder, accept_unknown_running: acceptUnknown }),
   flashRun: (since = 0) => req("GET", `/api/flash-runs/current?since=${since}`),
   // Module firmware (backend device/module_procedure.py): what an update would do and what stops
   // it, read-only; then the run, which returns its opening snapshot and streams like a keyboard

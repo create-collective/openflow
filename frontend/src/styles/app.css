@@ -626,6 +626,7 @@ img:not([draggable="true"]) {
 }
 .fw-expect { margin: var(--sp-2) 0 0; padding-left: var(--sp-5); }
 .fw-expect li { margin-bottom: var(--sp-1); }
+.fw-accept { display: block; margin-top: var(--sp-2); font-weight: 600; cursor: pointer; }
 
 .fw-steps {
   list-style: none;

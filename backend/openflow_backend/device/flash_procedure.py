@@ -473,7 +473,8 @@ def _identify_in_bootloader(side: str, catalog: list, timeout: float = 90.0) -> 
 
 
 def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
-                   allow_older: bool = False, flash_fn=None) -> dict:
+                   allow_older: bool = False, accept_unknown_running: bool = False,
+                   flash_fn=None) -> dict:
     """Enter the bootloader, write, come back, confirm. One half, fully logged.
 
     Verification here is of THIS half only. The other half is deliberately not read: mid-upgrade
@@ -503,7 +504,17 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
                   running=running.get("createFirmware"), pidSide=state.get("pidSide"),
                   pidGeneration=state.get("pidGeneration"), armToken=arm)
 
-    plan = fw.plan(image, catalog, allow_older=allow_older, state=state, vendor_trailer=True)
+    plan = fw.plan(image, catalog, allow_older=allow_older, state=state, vendor_trailer=True,
+                   accept_unknown_running=accept_unknown_running)
+    replaced = getattr(plan, "running", None) or {}
+    if replaced.get("identifiedBy"):
+        # Said in the log in so many words: this is the one run where the image being replaced
+        # is not in the catalogue and cannot be put back by OpenFlow.
+        log.event("identify", "note", side=side,
+                  detail=f"the running image ({replaced.get('hash')}) is not one OpenFlow "
+                         f"holds; side {replaced.get('side')} and flash generation "
+                         f"{replaced.get('generation')} come from the USB product id, and "
+                         "the user confirmed it may be replaced without a way back")
     log.event("upload", "start", side=side, bytes=plan.total_bytes, chunks=plan.chunks,
               target=plan.target.get("createFirmware"), imageId=plan.upload_image_id)
 
@@ -563,7 +574,8 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
     log.event("slot.erase", "start", side=side)
     t0 = time.monotonic()
     result = flash_fn(image, catalog, arm=arm, allow_older=allow_older, vendor_trailer=True,
-                      state=state, progress=progress)
+                      state=state, progress=progress,
+                      accept_unknown_running=accept_unknown_running)
     log.event("upload", "ok", side=side, took_ms=int((time.monotonic() - t0) * 1000),
               written=result.get("written"), swap=result.get("swap"))
     if not timing.get("done"):
@@ -834,6 +846,7 @@ def restore_lighting(svc, log: RunLog) -> None:
 
 
 def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
+        accept_unknown_running: bool = False,
         log_dir: Path | None = None, flash_fn=None, on_event=None) -> dict:
     """The whole procedure. `targets` maps side -> image path, one or both halves.
 
@@ -859,7 +872,7 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
     run_dir.mkdir(parents=True, exist_ok=True)
     log = RunLog(run_dir / "run.log",
                  {"sides": list(sides), "images": {k: str(v) for k, v in targets.items()},
-                  "allowOlder": allow_older},
+                  "allowOlder": allow_older, "acceptUnknownRunning": accept_unknown_running},
                  on_event=on_event)
 
     # Hold the service lock for the WHOLE procedure, not just the reads inside it.
@@ -889,7 +902,8 @@ def run(svc, targets: dict, catalog: list, *, allow_older: bool = False,
 
         for side in sides:
             flash_one_half(svc, side, Path(targets[side]), catalog, log,
-                           allow_older=allow_older, flash_fn=flash_fn)
+                           allow_older=allow_older, flash_fn=flash_fn,
+                           accept_unknown_running=accept_unknown_running)
 
         await_halves(svc, log)
         restore_brightness(svc, sides, log)
