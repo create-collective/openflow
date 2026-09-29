@@ -30,3 +30,38 @@ frontend/playwright-report/
 # Desktop app build (root package.json: electron + electron-builder)
 /node_modules/
 /release/
+
+# The rules below came from the NayaOS monorepo's .gitignore, which covered this folder until it
+# became its own repository (2026-09-29).
+
+# Credentials. Nothing here should ever carry a live token: the history is permanent and this
+# repo is expected to go public. Keep the example file, never the real one.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Where the in-app reports are sent, baked into a build by backend/openflow_backend.spec. An
+# automation webhook url that can only fire one rule; the build reads it from here or from
+# OPENFLOW_REPORT_WEBHOOK, so the url never enters the history.
+backend/report-sink.json
+
+# Device material. A raw QSPI dump can hold the plaintext MCUboot key; USB captures hold HID
+# keystrokes; live-session run folders hold BLE addresses and hardware ids.
+device/dumps/
+device/run-*/
+**/qspi_dump*.bin
+**/*flashdump*
+**/*.rawdump
+**/*qspi*report*.json
+**/*.pcap
+**/*.pcapng
+
+# Reports tools/naya-probe.py and tools/naya-restart-probe.py write on a user's machine
+tools/naya-probe-*.json
+tools/naya-restart-probe-*.json
+
+# Run logs (dev backend/frontend stdout)
+*.log

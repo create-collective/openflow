@@ -1,25 +1,12 @@
 # OpenFlow: backend tests, frontend checks and the Playwright route walk, on every push.
 #
-# The repository root is the NayaOS monorepo, so only the directories OpenFlow needs are checked
-# out: openflow/ itself, docs/reference/ (shortcut data the backend serves), device/out and
-# device/userdata-snapshot (captured device traces the backend tests decode, and the database
-# snapshot the app seeds from) and tools/ (the converters those tests exercise). The release matrix that builds the
-# installers lives in openflow-release.yml and runs on openflow-v* tags only.
+# The release matrix that builds the installers lives in openflow-release.yml and runs on
+# openflow-v* tags only.
 name: openflow-ci
 
 on:
   push:
-    paths:
-      - "openflow/**"
-      - "docs/reference/**"
-      - "device/userdata-snapshot/**"
-      - ".github/workflows/openflow-*.yml"
   pull_request:
-    paths:
-      - "openflow/**"
-      - "docs/reference/**"
-      - "device/userdata-snapshot/**"
-      - ".github/workflows/openflow-*.yml"
   workflow_dispatch:
 
 defaults:
@@ -32,21 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            openflow
-            docs/reference
-            device/out
-            device/userdata-snapshot
-            tools
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
       - name: install
-        working-directory: openflow/backend
+        working-directory: backend
         run: pip install -e ".[dev]"
       - name: pytest
-        working-directory: openflow/backend
+        working-directory: backend
         run: python -m pytest -q
 
   frontend:
@@ -54,35 +34,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            openflow
-            docs/reference
-            device/out
-            device/userdata-snapshot
-            tools
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
       - name: install the backend (the route walk runs against it)
-        working-directory: openflow/backend
+        working-directory: backend
         run: pip install -e ".[dev]"
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: openflow/frontend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
       - name: npm ci
-        working-directory: openflow/frontend
+        working-directory: frontend
         run: npm ci
       - name: verify (check-undefined, style budget, vitest, build)
-        working-directory: openflow/frontend
+        working-directory: frontend
         run: npm run verify
       - name: playwright chromium
-        working-directory: openflow/frontend
+        working-directory: frontend
         run: npx playwright install --with-deps chromium
       - name: route walk
-        working-directory: openflow/frontend
+        working-directory: frontend
         run: npm run e2e
         env:
           CI: "1"
@@ -91,5 +64,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: route-walk-screenshots
-          path: openflow/frontend/tests/e2e/shots
+          path: frontend/tests/e2e/shots
           if-no-files-found: ignore

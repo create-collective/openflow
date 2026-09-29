@@ -16,7 +16,6 @@ on:
 defaults:
   run:
     shell: bash
-    working-directory: openflow
 
 jobs:
   build:
@@ -56,24 +55,19 @@ jobs:
       OPENFLOW_REPORT_WEBHOOK: ${{ secrets.OPENFLOW_REPORT_WEBHOOK }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            openflow
-            docs/reference
-            device/userdata-snapshot
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
       - name: backend with the build extra
-        working-directory: openflow/backend
+        working-directory: backend
         run: pip install -e ".[build]"
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: |
-            openflow/package-lock.json
-            openflow/frontend/package-lock.json
+            package-lock.json
+            frontend/package-lock.json
       - name: npm ci (shell and renderer)
         run: |
           npm ci
@@ -102,11 +96,11 @@ jobs:
         with:
           name: openflow-${{ matrix.os }}
           path: |
-            openflow/release/*.exe
-            openflow/release/*.dmg
-            openflow/release/*.AppImage
-            openflow/release/*.deb
-            openflow/release/SHA256SUMS-*.txt
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+            release/SHA256SUMS-*.txt
           if-no-files-found: error
 
   release:
