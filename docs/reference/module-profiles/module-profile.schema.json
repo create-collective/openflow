@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/traviswye/NayaOS/docs/reference/module-profiles/module-profile.schema.json",
+  "$id": "https://github.com/create-collective/openflow/docs/reference/module-profiles/module-profile.schema.json",
   "title": "OpenFlow module profile",
   "description": "One profile for a Naya Create module (Touch, Track, Tune or Float). This is the interchange format the Modules page imports and exports; it is deliberately not the shape of the database rows. See the three examples beside this file for a real profile of each type.",
   "type": "object",

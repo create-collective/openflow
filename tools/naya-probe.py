@@ -32,7 +32,7 @@ What it does
   4. Writes everything, including raw replies, to naya-probe-<timestamp>.json next to this
      file. Send that file back.
 
-Facts this relies on, all measured on real Creates by the OpenFlow project (traviswye/NayaOS):
+Facts this relies on, all measured on real Creates by the OpenFlow project (create-collective/openflow):
   * Naya's USB vendor id is 0x37D1. pid & 0xEFFF: 0x064 left app, 0x06F left MCUboot,
     0x0C8 right app, 0x0D3 right MCUboot; bit 0x1000 set = flash generation B.
   * A half in MCUboot answers SMP on ONE of its two ports; the other is a log port that accepts

@@ -13,7 +13,7 @@ the only thing that reaches the firmware directory is a byte-for-byte match for 
 already identified. Nothing uncatalogued can be fetched -- the path comes from the catalogue, not
 from the caller -- so this is not a general-purpose downloader and must not become one.
 
-WHERE FROM. `OPENFLOW_FIRMWARE_SOURCE`, defaulting to the nayaHistory archive, which is where
+WHERE FROM. `OPENFLOW_FIRMWARE_SOURCE`, defaulting to the create-legacy-firmware archive, which is where
 every NayaFlow installer this project has unpacked was kept. The layout there is exactly the
 catalogue's `historyPath`: <source>/v1.25.1/kb_fwl.bin.
 
@@ -40,7 +40,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-SOURCE_DEFAULT = "https://raw.githubusercontent.com/traviswye/nayaHistory/main/firmware-history"
+SOURCE_DEFAULT = "https://raw.githubusercontent.com/create-collective/create-legacy-firmware/main/firmware-history"
 TIMEOUT_S = 30.0
 # An image is 663552 bytes. The ceiling is a sanity bound on a source that answers with something
 # else entirely -- an HTML error page, or a redirect to one -- not a real limit on image size.

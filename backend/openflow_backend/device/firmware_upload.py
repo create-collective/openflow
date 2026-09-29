@@ -6,7 +6,7 @@ before this file is even imported; and `flash()` refuses to run unless the calle
 explicit arming token computed from the device's own reported state.
 
 THE SEQUENCE is NayaCore's, and it is stock MCUboot/SMP in every release the company shipped
-(nayaHistory/FLASHING-PROCEDURE.md): upload the image to the secondary slot, mark it pending,
+(create-legacy-firmware/FLASHING-PROCEDURE.md): upload the image to the secondary slot, mark it pending,
 reset so the bootloader swaps. `upload()` is the first step only; `flash()` is all three, with
 a slot re-read between upload and mark so a wrong image is never marked bootable.
 
@@ -101,7 +101,7 @@ from . import recovery as rec
 SMP_OP_WRITE = 2
 SMP_ID_IMAGE_UPLOAD = 1
 # Standard mcumgr ids (Zephyr and mynewt agree, and NayaCore speaks stock SMP in every release --
-# nayaHistory/FLASHING-PROCEDURE.md). `image state` WRITE marks an uploaded image pending;
+# create-legacy-firmware/FLASHING-PROCEDURE.md). `image state` WRITE marks an uploaded image pending;
 # `os reset` makes MCUboot swap to it on the boot that follows.
 SMP_ID_IMAGE_STATE = rec.SMP_ID_IMAGE_STATE      # 0: read lists slots, write sets pending
 SMP_ID_OS_RESET = 5

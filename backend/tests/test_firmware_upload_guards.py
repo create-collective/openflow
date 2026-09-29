@@ -292,7 +292,7 @@ def test_chunk_count_matches_the_image_size(images):
 
 # --- the swap: mark pending + reset (what upload() alone never does) ------------------------- #
 # Ids are stock mcumgr: image group 1 / state 0 / upload 1; os group 0 / reset 5. NayaCore speaks
-# stock SMP in every release (nayaHistory/FLASHING-PROCEDURE.md), so these are not guesses.
+# stock SMP in every release (create-legacy-firmware/FLASHING-PROCEDURE.md), so these are not guesses.
 
 def _decode_header(frame: bytes) -> dict:
     import base64

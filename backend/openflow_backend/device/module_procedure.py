@@ -3,7 +3,7 @@ keyboard flash (device/flash_procedure.py).
 
 MEASURED, not inferred: NayaFlow 1.25.1 updating a Touch 2.1.2 -> 2.3.3 on a 3.41.0 left half,
 captured with USBPcap and NayaCore's own log on 2026-09-23 (device/out/module-fw-touch1-20260923*,
-docs in nayaHistory FLASHING-PROCEDURE.md). NayaCore v6.11.0 does this:
+docs in create-legacy-firmware FLASHING-PROCEDURE.md). NayaCore v6.11.0 does this:
 
   1. MODULE_FILE_FW_VERSION: which bundle the left half already holds. If it is the one being
      installed, the upload is SKIPPED.

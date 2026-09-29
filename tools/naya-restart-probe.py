@@ -21,7 +21,7 @@ stuck restarts look identical up to that handover and then nothing appears on th
 cable is replugged. Reports from other computers (macOS, Linux, other Windows PCs), other
 cables and ports, and generation-B boards say whether that is this PC or the keyboard.
 
-Facts this relies on, measured on real Creates by the OpenFlow project (traviswye/NayaOS):
+Facts this relies on, measured on real Creates by the OpenFlow project (create-collective/openflow):
   * Naya's USB vendor id is 0x37D1. pid & 0xEFFF: 0x064 left app, 0x06F left bootloader,
     0x0C8 right app, 0x0D3 right bootloader; bit 0x1000 set = flash generation B.
   * The keyboard's command channel wakes on MEDIA_ID_REQUEST (0xFE/0x1001) followed by

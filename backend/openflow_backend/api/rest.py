@@ -138,7 +138,7 @@ def _firmware_catalog() -> list[dict]:
             "releaseOrder": img.get("releaseOrder"),       # chronological; newest first in the UI
             "era": img.get("era"),
             "channel": img.get("channel") or "official",   # beta images: recognised, not offered
-            # Where it sits in nayaHistory/firmware-history. Also the id the page joins on: the
+            # Where it sits in create-legacy-firmware/firmware-history. Also the id the page joins on: the
             # library endpoint reports what is held BY PATH, and an entry with none is one that
             # has no file of its own (a .sfb userapp inside FlashMemory.bin) and so can never be
             # downloaded on its own.

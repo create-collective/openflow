@@ -1,7 +1,7 @@
 """The committed firmware catalogue keeps the promises the flasher relies on.
 
 docs/reference/firmware-catalog.json is built by tools/build_firmware_catalog.py from the
-nayaHistory manifests, and firmware_upload.plan() trusts what it says about side, flash generation
+create-legacy-firmware manifests, and firmware_upload.plan() trusts what it says about side, flash generation
 and hashes. These tests pin the invariants a regenerated catalogue must keep: nothing here reads
 hardware or the (private) image files, only the committed metadata.
 """

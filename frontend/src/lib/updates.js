@@ -3,9 +3,9 @@
 // after that prefix; stripping only a leading `v` (as Settings once did) compared "openflow-v0.1.0"
 // with "0.1.0" and reported an update forever.
 export const REPOS = {
-  app: "traviswye/openflow",
-  companion: "traviswye/create-companion",
-  firmware: "traviswye/openflow-firmware",
+  app: "create-collective/openflow",
+  companion: "create-collective/create-companion",
+  firmware: "create-collective/create-legacy-firmware",
   // The CLI our device communication is built on (Cory Bennett, Apache-2.0), vendored under
   // backend/openflow_backend/_vendor/nayactl; see VENDOR.md there.
   nayactl: "Qonfused/nayactl",
