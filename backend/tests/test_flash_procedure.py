@@ -89,6 +89,14 @@ def _halves(left_fw="3.35.4", right_fw="3.35.4"):
                       "pairAddress": "FA:4A:56:71:5F:51", "allPairs": ["FA:4A:56:71:5F:51"]}}
 
 
+class _SilentTap:
+    def __init__(self, text=""):
+        self.text = text
+
+    def stop(self):
+        return self.text
+
+
 class _Plan:
     total_bytes, chunks, upload_image_id = 663552, 1296, 2
     target = {"createFirmware": "3.41.0"}
@@ -112,8 +120,10 @@ def wired(monkeypatch, tmp_path):
     # the reset stubbed here, and the tests about recovery patch what they assert on.
     monkeypatch.setattr(P, "RECOVERY_WAIT", 0.0)
     monkeypatch.setattr(P.rec, "os_reset", lambda port: None)
-    # A failed upload reads the bootloader's console, which opens real COM ports.
+    # A failed upload reads the bootloader's console, and the upload holds its log port open:
+    # both open real COM ports.
     monkeypatch.setattr(P, "_bootloader_console", lambda side, seconds=4.0: "")
+    monkeypatch.setattr(P, "_console_tap", lambda side, smp_port: _SilentTap())
 
     # Entering the bootloader is a send_command the FakeSvc swallows, so the side is tracked here.
     orig = FakeSvc._with_transport
@@ -747,3 +757,28 @@ def test_a_failed_upload_records_what_the_bootloader_said(wired, monkeypatch):
     assert r["ok"] is False
     said = [x for x in _lines(r) if x["step"] == "bootloader.console"]
     assert said and "secondary slot is not valid" in said[0]["detail"]
+
+
+def test_the_chunk_size_is_a_session_setting_and_defaults_to_nayacores(wired, monkeypatch):
+    seen = {}
+    real = wired["flash"]
+
+    def spy(image, catalog, **kw):
+        seen.update(kw)
+        return real(image, catalog, **kw)
+    wired["flash"] = spy
+    monkeypatch.delenv("OPENFLOW_FIRMWARE_CHUNK", raising=False)
+    assert _run(wired, {"right": "kb_fwr.bin"})["ok"] is True
+    assert seen["chunk"] == 512
+    for value, want in (("256", 256), ("16", 512), ("99999", 512), ("abc", 512)):
+        monkeypatch.setenv("OPENFLOW_FIRMWARE_CHUNK", value)
+        assert P.chunk_size() == want, value
+
+
+def test_what_the_bootloader_printed_during_the_upload_is_kept(wired, monkeypatch):
+    """The log port is held open across the upload; what it caught is logged, failure or not."""
+    monkeypatch.setattr(P, "_console_tap",
+                        lambda side, smp_port: _SilentTap("I: Image upload complete"))
+    r = _run(wired, {"right": "kb_fwr.bin"})
+    said = [x for x in _lines(r) if x["step"] == "bootloader.console"]
+    assert said and "upload complete" in said[0]["detail"]

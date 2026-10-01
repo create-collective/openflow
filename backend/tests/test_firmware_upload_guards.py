@@ -933,3 +933,15 @@ def test_a_bootloader_that_never_answers_after_the_upload_does_not_reset(tmp_pat
         fw.flash(tmp_path / "kb_fwl.bin", _target_catalog(res), arm=RUNNING_HASH,
                  state=state_ok(), vendor_trailer=True)
     assert (0, 5, 2) not in _kinds(log), "no reset when what landed could not be checked"
+
+
+def test_a_half_that_rebooted_into_its_application_is_said_to_have(monkeypatch):
+    """A user's right half reset into its application the moment the upload ended. That is
+    reported at once, and not as 'still in the bootloader' five minutes later."""
+    class Port:
+        vid, pid, device = 0x37D1, 0x00C8, "COM8"            # right half, application
+    monkeypatch.setattr(fw.rec, "image_state", lambda port: (_ for _ in ()).throw(OSError("gone")))
+    monkeypatch.setattr(fw.rec, "find_recovery_ports", lambda: [])
+    monkeypatch.setattr(fw.rec, "comports", lambda: [Port()])
+    with pytest.raises(fw.UploadRefused, match="rebooted by itself into its application"):
+        fw._settled_image_state("COM6", side="right", timeout=60)

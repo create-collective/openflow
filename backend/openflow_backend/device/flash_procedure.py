@@ -486,6 +486,76 @@ def image_only_mode() -> bool:
     return os.environ.get("OPENFLOW_FIRMWARE_IMAGE_ONLY") == "1"
 
 
+def chunk_size() -> int:
+    """OPENFLOW_FIRMWARE_CHUNK: bytes per upload frame for this session, 32 to 4096. Unset or
+    out of range is NayaCore's own 512 (firmware_upload.DEFAULT_CHUNK). A diagnostic setting, for
+    a half whose bootloader takes every chunk and then rejects what it stored."""
+    try:
+        n = int(os.environ.get("OPENFLOW_FIRMWARE_CHUNK") or 0)
+    except ValueError:
+        n = 0
+    return n if 32 <= n <= fw.MAX_CHUNK else fw.DEFAULT_CHUNK
+
+
+class _ConsoleTap:
+    """Hold a half's bootloader LOG port open for the whole upload and keep what it prints.
+
+    Read afterwards, the console is gone: on a user's right half the bootloader reset the moment
+    the last chunk landed and booted its application, and a read five minutes later found nothing
+    (2026-10-01). Held open from before the first chunk, whatever the bootloader says up to the
+    reset is kept, and if it comes back into the bootloader the port is reopened and followed for
+    `follow_s` more seconds. Best effort and read-only: it sends nothing."""
+
+    def __init__(self, side: str, smp_port: str | None, follow_s: float = 60.0):
+        import threading
+        self.side, self.smp_port, self.follow_s = side, smp_port, follow_s
+        self._stop = threading.Event()
+        self._buf = bytearray()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def start(self) -> "_ConsoleTap":
+        self._thread.start()
+        return self
+
+    def _note(self, text: str) -> None:
+        self._buf += f"\n[{datetime.now().strftime('%H:%M:%S')} {text}]\n".encode()
+
+    def _run(self) -> None:
+        import serial
+        gone_at = None
+        while not self._stop.is_set():
+            port = next((d.port for d in rec.find_recovery_ports()
+                         if d.side == self.side and d.port != self.smp_port), None)
+            if port is None:
+                if gone_at is None:
+                    gone_at = time.monotonic()
+                    self._note("bootloader log port gone")
+                if time.monotonic() - gone_at > self.follow_s:
+                    return
+                time.sleep(0.2)
+                continue
+            gone_at = None
+            try:
+                with serial.Serial(port, 115200, timeout=0.2) as s:
+                    s.dtr = True
+                    s.rts = True
+                    self._note(f"listening on {port}")
+                    while not self._stop.is_set():
+                        self._buf += s.read(4096)
+            except Exception as e:                  # noqa: BLE001 -- the port vanishing is data
+                self._note(f"{port} closed: {type(e).__name__}")
+                time.sleep(0.2)
+
+    def stop(self) -> str:
+        self._stop.set()
+        self._thread.join(timeout=5.0)
+        return bytes(self._buf).decode("utf-8", "replace").strip()
+
+
+def _console_tap(side: str, smp_port: str | None) -> "_ConsoleTap":
+    return _ConsoleTap(side, smp_port).start()
+
+
 def _bootloader_console(side: str, seconds: float = 4.0) -> str:
     """Whatever a half's bootloader has printed, from every recovery port of that side (the log
     port streams it; the SMP port says nothing). Best effort: an empty string when there is no
@@ -547,7 +617,12 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
                   detail="image-only upload (OPENFLOW_FIRMWARE_IMAGE_ONLY): the image alone is "
                          "written, the bootloader is asked whether slot 1 holds a valid image, and "
                          "only then is a permanent swap scheduled")
-    plan = fw.plan(image, catalog, allow_older=allow_older, state=state,
+    chunk = chunk_size()
+    if chunk != fw.DEFAULT_CHUNK:
+        log.event("upload", "note", side=side,
+                  detail=f"{chunk}-byte chunks (OPENFLOW_FIRMWARE_CHUNK), not NayaCore's "
+                         f"{fw.DEFAULT_CHUNK}")
+    plan = fw.plan(image, catalog, allow_older=allow_older, state=state, chunk=chunk,
                    vendor_trailer=not image_only, accept_unknown_running=accept_unknown_running)
     replaced = getattr(plan, "running", None) or {}
     if replaced.get("identifiedBy"):
@@ -618,20 +693,24 @@ def flash_one_half(svc, side: str, image: Path, catalog: list, log: RunLog, *,
 
     log.event("slot.erase", "start", side=side)
     t0 = time.monotonic()
+    # Whatever the bootloader prints is the one account of WHY an image was not taken (a user's
+    # right half dropped two complete uploads and booted 3.30.1, 2026-09-29 and 10-01, and nothing
+    # said why), so its log port is held open for the whole upload.
+    tap = _console_tap(side, state.get("port"))
     try:
-        result = flash_fn(image, catalog, arm=arm, allow_older=allow_older,
+        result = flash_fn(image, catalog, arm=arm, allow_older=allow_older, chunk=chunk,
                           vendor_trailer=not image_only, confirm=image_only,
                           state=state, progress=progress,
                           accept_unknown_running=accept_unknown_running)
     except Exception:
-        # Whatever the bootloader printed is the one account of WHY an image was not taken (a
-        # user's right half dropped a complete 3.41.0 upload and booted 3.30.1, 2026-09-29, and
-        # nothing said why). Read it now, while the half may still be in the bootloader: the
-        # failure path resets stranded halves right after this.
-        text = _bootloader_console(side)
+        # Read before the failure path resets stranded halves out of the bootloader.
+        text = tap.stop() or _bootloader_console(side)
         log.event("bootloader.console", "note", side=side,
                   detail=text or "the bootloader's console had nothing to say (or was gone)")
         raise
+    said = tap.stop()
+    if said:
+        log.event("bootloader.console", "note", side=side, detail=said)
     log.event("upload", "ok", side=side, took_ms=int((time.monotonic() - t0) * 1000),
               written=result.get("written"), swap=result.get("swap"))
     if not timing.get("done"):

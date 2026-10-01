@@ -765,6 +765,15 @@ def _slot_flags(images: list | None, slot: int) -> dict | None:
 SETTLED_TIMEOUT = 300.0
 
 
+def _in_application(side: str) -> bool:
+    """Is this half on USB running its application (not its bootloader)? From the product id."""
+    for p in rec.comports():
+        info = rec.pid_info(p.pid) if p.vid == rec.NAYA_VID else None
+        if info and info.get("side") == side and info.get("mode") == "app":
+            return True
+    return False
+
+
 def _settled_image_state(port: str, side: str | None = None, timeout: float | None = None):
     """Read the slot table AFTER an upload, waiting out the bootloader's post-upload silence.
 
@@ -792,6 +801,15 @@ def _settled_image_state(port: str, side: str | None = None, timeout: float | No
                 return rec.image_state(d.port), d.port
             except Exception as e:                   # noqa: BLE001 -- retried until the deadline
                 last = e
+        if side and _in_application(side):
+            # Not a busy bootloader: the half rebooted straight into its application. Waiting out
+            # the rest of the five minutes and then calling it "still in the bootloader" is what
+            # a user's right half got twice (2026-09-29, 2026-10-01) -- wrong on both counts.
+            raise UploadRefused(
+                "the upload completed, and then the half rebooted by itself into its application "
+                "instead of staying in the bootloader, so what landed could not be checked. It is "
+                "running whatever its primary slot holds; nothing was scheduled by OpenFlow."
+                ) from last
         if time.monotonic() >= deadline:
             raise UploadRefused(
                 f"the upload completed but the bootloader did not answer for {timeout:.0f}s "
