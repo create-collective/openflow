@@ -68,7 +68,7 @@ cd backend && pip install -e ".[dev,build]" && cd ..
 npm install
 
 npm run build:win            # frontend -> sidecar -> sidecar smoke test -> NSIS installer + portable exe
-npm run build:mac            # dmg (unsigned: right-click > Open the first time)
+npm run build:mac            # dmg (unsigned on a developer machine: right-click > Open the first time)
 npm run build:linux          # AppImage + deb (see "Installing on Linux" below)
 ```
 
@@ -80,8 +80,17 @@ against the Vite dev server and the venv backend (OPENFLOW_DEV=1).
 
 The one version number is `__version__` in `backend/openflow_backend/__init__.py`; `npm run
 version:sync` stamps it into the two `package.json` files and `version:check` (part of
-`build:app` and CI) refuses to build when they drift. Builds are unsigned for now, so Windows
-SmartScreen shows its "unknown publisher" prompt on first launch.
+`build:app` and CI) refuses to build when they drift.
+
+Local builds are unsigned. The release workflow signs when it is given the means to:
+`scripts/ci-signing.mjs` runs before electron-builder and, with the Apple secrets present (a
+Developer ID certificate and an App Store Connect key), turns on signing and notarization for
+the two Mac rows; with the Azure Artifact Signing secrets present it signs the Windows
+executables, the installer and the portable build. Without them the build is unsigned, as
+before, and Windows shows its "unknown publisher" prompt on first launch. A partial set of
+secrets fails the job rather than shipping something that only looks signed. The script's
+header lists every secret and variable by name; they live at the organisation level so Create
+Companion's release reads the same ones.
 
 The release workflow builds Linux on the oldest Ubuntu runner on purpose: the frozen backend
 needs a glibc at least as new as the build machine's, so the CI build runs on Ubuntu 22.04,

@@ -2,9 +2,14 @@
 #
 # Each runner freezes the backend for its own platform and hands it to electron-builder.
 # PyInstaller cannot cross-compile, so every platform we ship needs its own runner: there is
-# no way to build the macOS sidecar from Windows. Windows (nsis + portable), macOS (dmg,
-# unsigned, one row per architecture) and Linux (AppImage + deb, SCRUM-70) are here. Everyday
-# checks live in openflow-ci.yml.
+# no way to build the macOS sidecar from Windows. Windows (nsis + portable), macOS (dmg, one
+# row per architecture) and Linux (AppImage + deb, SCRUM-70) are here. Everyday checks live in
+# openflow-ci.yml.
+#
+# Signing: Windows through Azure Artifact Signing, macOS with a Developer ID certificate plus
+# notarization. Both switch on by themselves once the secrets and variables named in the
+# "code signing" step exist (scripts/ci-signing.mjs has the list); until then the builds are
+# unsigned, as they always were.
 name: openflow-release
 
 on:
@@ -46,7 +51,6 @@ jobs:
             target: --linux AppImage deb --x64
     runs-on: ${{ matrix.os }}
     env:
-      CSC_IDENTITY_AUTO_DISCOVERY: "false"     # unsigned builds: do not go looking for certificates
       # Where the in-app report form sends things, baked into the build so a tester can file
       # one with no setup. Only ever an automation webhook url: the secret in it fires a
       # single rule that creates a single issue, and can read or edit nothing. Add it under
@@ -80,8 +84,25 @@ jobs:
             echo "tag ${GITHUB_REF_NAME} does not match version ${v} (bump __version__, npm run version:sync)"
             exit 1
           fi
+      - name: code signing (on when its secrets exist, otherwise an unsigned build)
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+          AZURE_SIGNING_PUBLISHER: ${{ vars.AZURE_SIGNING_PUBLISHER }}
+        run: node scripts/ci-signing.mjs
       - name: build (version check, renderer, sidecar, sidecar smoke, electron-builder)
         run: npm run build:app -- ${{ matrix.target }}
+      - name: the artefacts are signed (when signing is on)
+        run: node scripts/ci-signing.mjs --verify
       - name: checksums
         env:
           SUMS_FOR: ${{ matrix.os }}     # not process.platform: both Mac rows report darwin
