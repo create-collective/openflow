@@ -2,6 +2,11 @@
 // updater. The monorepo tags OpenFlow releases `openflow-v0.1.0`, so the version is what is left
 // after that prefix; stripping only a leading `v` (as Settings once did) compared "openflow-v0.1.0"
 // with "0.1.0" and reported an update forever.
+// The community organization the Create's open software lives under, and its knowledge base
+// (GitHub Pages, from create-collective/Create-knowledge-base).
+export const ORG = "create-collective";
+export const KNOWLEDGE_BASE_URL = "https://create-collective.github.io/Create-knowledge-base/";
+
 export const REPOS = {
   app: "create-collective/openflow",
   companion: "create-collective/create-companion",

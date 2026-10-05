@@ -19,7 +19,7 @@ import { useDeviceStream } from "../lib/deviceStream";
 import { setShowAllKeyboards, useShowAllKeyboards } from "../lib/showAllKeyboards";
 import { THEME_PREFERENCES, setThemePreference, useThemePreference } from "../lib/theme";
 // Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
-import { REPOS, checkRelease } from "../lib/updates";
+import { ORG, REPOS, checkRelease } from "../lib/updates";
 
 // The rail, as the storyboard draws it: an icon per section (Tabler Icons, MIT, Pawel Kuna:
 // settings, device-desktop, database, tool, file-text, info-circle).
@@ -476,9 +476,12 @@ export default function Settings() {
 
                   <h3 className="settings-section tight">Source</h3>
                   <div className="settings-links">
+                    <a href={`https://github.com/${ORG}`} target="_blank" rel="noreferrer">create-collective ↗</a>
                     <a href={`https://github.com/${REPOS.app}`} target="_blank" rel="noreferrer">OpenFlow ↗</a>
                     <a href={`https://github.com/${REPOS.companion}`} target="_blank" rel="noreferrer">Create Companion ↗</a>
-                    <a href={`https://github.com/${REPOS.firmware}`} target="_blank" rel="noreferrer">Firmware ↗</a>
+                    {/* "Legacy": Naya's own firmware, preserved. Community open-source firmware
+                        gets its own link here when it exists. */}
+                    <a href={`https://github.com/${REPOS.firmware}`} target="_blank" rel="noreferrer">Legacy Firmware ↗</a>
                   </div>
                 </Card>
               )}

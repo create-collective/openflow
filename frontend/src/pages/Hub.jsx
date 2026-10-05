@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useDeviceStream } from "../lib/deviceStream";
-import { REPOS, checkRelease } from "../lib/updates";
+import { KNOWLEDGE_BASE_URL, ORG, REPOS, checkRelease } from "../lib/updates";
 import { notesFor } from "../changelog";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -117,7 +117,27 @@ export default function Hub() {
             </div>
           </Card>
 
-          <h2 className="hub-section">Other Software for the Create</h2>
+          <h2 className="hub-section">Other Software and Resources for the Create</h2>
+          {/* The create-collective organization first, then what it publishes: the knowledge base,
+              then its software. nayactl is Cory Bennett's, not the org's, so it comes last. */}
+          <Card title="create-collective GitHub">
+            <p className="hub-text">
+              The community organization behind OpenFlow, Create Companion and the knowledge base:
+              every project's source, releases and issues.
+            </p>
+            <a className="hub-link" href={`https://github.com/${ORG}`} target="_blank" rel="noreferrer">
+              create-collective on GitHub ↗
+            </a>
+          </Card>
+          <Card title="Create Knowledge Base">
+            <p className="hub-text">
+              The open knowledge base for the Naya Create: hardware, protocol, firmware, recovery
+              and host software.
+            </p>
+            <a className="hub-link" href={KNOWLEDGE_BASE_URL} target="_blank" rel="noreferrer">
+              Open the knowledge base ↗
+            </a>
+          </Card>
           <Card title="Create Companion">
             <p className="hub-text">
               The host-side engine that turns the Create&apos;s module gestures into dynamic, profiled
