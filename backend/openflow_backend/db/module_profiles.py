@@ -147,9 +147,19 @@ def rename(config_id: str, name: str) -> dict:
         conn.close()
 
 
-def delete(config_id: str) -> dict:
+class ProfileInUse(ValueError):
+    """The profile is still what some layers' module bays run. A ValueError, so a caller that
+    only knows the plain refusal still gets one; the endpoint tells it apart (409) so the page
+    can offer to delete it anyway."""
+
+
+def delete(config_id: str, force: bool = False) -> dict:
     """Remove a profile. Refuses the last one of its type: a module with no profile at all
-    cannot be driven, and the device needs a config in the bay for the module to work."""
+    cannot be driven, and the device needs a config in the bay for the module to work.
+
+    A profile some layers' bays still run is refused too (ProfileInUse), unless `force`: then
+    those bay assignments are removed with it, the user having been told which layers they are.
+    Those layers then run whatever their base layer's bay runs, or nothing chosen."""
     conn = connect()
     try:
         row = conn.execute("SELECT type, name FROM module_configs WHERE id=?", (config_id,)).fetchone()
@@ -172,22 +182,24 @@ def delete(config_id: str) -> dict:
             "LEFT JOIN profiles p ON p.id = b.profile_id "
             "LEFT JOIN layers l ON l.id = b.layer_id "
             "WHERE b.module_config_id = ? ORDER BY p.name, l.order_id", (config_id,)))
-        if used:
-            def _where(u):
-                layer = u["layer"] or "layer %s" % u["ord"]
-                return "%s / %s" % (u["profile"] or "a keymap profile", layer)
-            where = sorted({_where(u) for u in used})
-            raise ValueError(
+        def _where(u):
+            layer = u["layer"] or "layer %s" % u["ord"]
+            return "%s / %s" % (u["profile"] or "a keymap profile", layer)
+        where = sorted({_where(u) for u in used})
+        if used and not force:
+            raise ProfileInUse(
                 f"{row['name']!r} is still assigned to a module bay on "
                 + ", ".join(where)
                 + ". Point those layers at another profile first -- deleting it here would "
                   "silently change what those layers run.")
 
+        # Forced: the bay assignments go first, or the foreign key refuses the profile's row.
+        conn.execute("DELETE FROM module_config_bindings WHERE module_config_id=?", (config_id,))
         conn.execute("DELETE FROM module_bindings WHERE module_config_id=?", (config_id,))
         conn.execute("DELETE FROM module_settings WHERE module_config_id=?", (config_id,))
         conn.execute("DELETE FROM module_configs WHERE id=?", (config_id,))
         conn.commit()
-        return {"ok": True, "id": config_id, "name": row["name"]}
+        return {"ok": True, "id": config_id, "name": row["name"], "unassigned": where}
     finally:
         conn.close()
 

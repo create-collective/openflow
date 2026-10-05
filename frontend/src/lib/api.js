@@ -17,7 +17,11 @@ async function req(method, path, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.detail || `${method} ${path} failed (${res.status})`);
+    // The status rides along, so a caller can tell one refusal from another (409 = a module
+    // profile still in use, which the Modules page offers to delete anyway).
+    const err = new Error(data.detail || `${method} ${path} failed (${res.status})`);
+    err.status = res.status;
+    throw err;
   }
   return data;
 }
@@ -83,7 +87,8 @@ export const api = {
   moduleVariants: () => req("GET", "/api/module-variants"),
   createModuleProfile: (variant, name) => req("POST", "/rpc/create-module-profile", { variant, name }),
   renameModuleProfile: (configId, name) => req("POST", "/rpc/rename-module-profile", { configId, name }),
-  deleteModuleProfile: (configId) => req("POST", "/rpc/delete-module-profile", { configId }),
+  deleteModuleProfile: (configId, force = false) =>
+    req("POST", "/rpc/delete-module-profile", { configId, force }),
   exportModuleProfile: (configId) => req("POST", "/rpc/export-module-profile", { configId }),
   importModuleProfile: (profile, name) => req("POST", "/rpc/import-module-profile", { profile, name }),
   // The only call that writes to the keyboard. The confirm token is required by the

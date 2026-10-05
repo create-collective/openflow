@@ -158,6 +158,58 @@ def test_delete_removes_its_bindings_too():
     print("  deleting a profile takes its bindings with it")
 
 
+def _assigned_tune(conn):
+    """Two Tune profiles, the second running in a bay of 'Naya Default Windows / Keypad'."""
+    a = mp.create("TUNE")
+    b = mp.create("TUNE", name="Naya Tune Fast")
+    conn.execute("INSERT INTO profiles VALUES ('P1', 'Naya Default Windows')")
+    conn.execute("INSERT INTO layers VALUES ('L1', 'Keypad', 1, 'P1')")
+    conn.execute("INSERT INTO module_config_bindings (profile_id, layer_id, module_config_id, "
+                 "binding_location) VALUES ('P1', 'L1', ?, 'tune:keyboard_left')", (b["id"],))
+    conn.commit()
+    return a, b
+
+
+def test_a_profile_layers_still_run_is_refused_as_in_use():
+    """Its own error type, so the page can offer 'Delete anyways' for this refusal only."""
+    conn = _db()
+    with _patch(conn):
+        _, b = _assigned_tune(conn)
+        try:
+            mp.delete(b["id"])
+        except mp.ProfileInUse as e:
+            assert "Naya Default Windows / Keypad" in str(e)
+        else:
+            raise AssertionError("deleted a profile that a layer still runs")
+    assert conn.execute("SELECT COUNT(*) c FROM module_configs WHERE id=?", (b["id"],)).fetchone()["c"] == 1
+
+
+def test_delete_anyways_removes_the_profile_and_its_bay_assignments():
+    conn = _db()
+    with _patch(conn):
+        _, b = _assigned_tune(conn)
+        out = mp.delete(b["id"], force=True)
+    assert out["unassigned"] == ["Naya Default Windows / Keypad"]
+    for table, col in (("module_configs", "id"), ("module_config_bindings", "module_config_id"),
+                       ("module_bindings", "module_config_id")):
+        n = conn.execute(f"SELECT COUNT(*) c FROM {table} WHERE {col}=?", (b["id"],)).fetchone()["c"]
+        assert n == 0, f"{n} row(s) left in {table}"
+
+
+def test_delete_anyways_still_keeps_the_last_profile_of_a_type():
+    conn = _db()
+    with _patch(conn):
+        only = mp.create("TUNE")
+        try:
+            mp.delete(only["id"], force=True)
+        except mp.ProfileInUse:
+            raise AssertionError("the last-profile refusal must not be the in-use one")
+        except ValueError as e:
+            assert "only" in str(e).lower()
+        else:
+            raise AssertionError("force deleted the last Tune profile")
+
+
 if __name__ == "__main__":
     for fn in (test_the_stock_track_buttons_are_the_real_defaults,
                test_new_profiles_append_below_their_own_variant,

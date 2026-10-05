@@ -1683,7 +1683,11 @@ async def delete_module_profile(body: dict = Body(...)) -> dict:
     """Remove a profile. Refuses the last one of its type -- a module with no profile cannot be
     driven, and the device needs a config in the bay for it to work at all."""
     try:
-        return await run_in_threadpool(mprof.delete, body.get("configId"))
+        return await run_in_threadpool(mprof.delete, body.get("configId"),
+                                       bool(body.get("force", False)))
+    except mprof.ProfileInUse as e:
+        # 409, not 400: the page offers "Delete anyway" for this refusal and no other.
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except sqlite3.IntegrityError as e:

@@ -8,6 +8,7 @@ import ModuleSettingsTab from "../components/modules/ModuleSettingsTab";
 import ModuleVisual from "../components/modules/ModuleVisual";
 import { isOnBoardCopy, moduleImg, ON_BOARD_NOTE } from "../components/ModuleProfileList";
 import Badge from "../components/ui/Badge";
+import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Disclosure from "../components/ui/Disclosure";
 import Notice from "../components/ui/Notice";
@@ -120,7 +121,19 @@ export default function Modules() {
           ) : null}
         </div>
       </div>
-      {ed.err && <Card><Notice tone="err">{ed.err}</Notice></Card>}
+      {ed.err && (
+        <Card>
+          <Notice tone="err" action={ed.inUse && (
+            // Only for the in-use refusal: the message above names the layers it would change.
+            <span className="btn-row">
+              <Button variant="danger" size="sm" onClick={ed.deleteAnyway}>Delete anyways</Button>
+              <Button size="sm" onClick={ed.cancelDelete}>Cancel</Button>
+            </span>
+          )}>
+            {ed.err}
+          </Notice>
+        </Card>
+      )}
 
       <div className="module-layout">
         <ModuleRail

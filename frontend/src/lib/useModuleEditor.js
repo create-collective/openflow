@@ -21,6 +21,8 @@ export default function useModuleEditor() {
   const [tab, setTab] = useState("bindings");
   const [activeTarget, setActiveTarget] = useState(null);
   const [err, setErr] = useState(null);
+  // The profile whose delete was refused because layers still run it (see deleteProfile).
+  const [inUse, setInUse] = useState(null);
   // What is actually flashed on the keyboard, per module config (null = not read yet). Held
   // outside the component so it survives navigating to another page and back: a read costs a
   // COM-port round trip and is a whole-app fact, not this page's state.
@@ -102,15 +104,27 @@ export default function useModuleEditor() {
       tone: "danger",
     });
     if (!ok) return;
+    await deleteProfile(m, false);
+  }
+
+  // `force` deletes a profile that layers' module bays still run, taking those assignments with
+  // it. Offered only after the backend's in-use refusal (409), whose message names the layers,
+  // so the user has read which ones before choosing it.
+  async function deleteProfile(m, force) {
     setErr(null);
+    setInUse(null);
     try {
-      await api.deleteModuleProfile(m.id);
+      await api.deleteModuleProfile(m.id, force);
       if (selectedId === m.id) setSelectedId(null);
       await load();
     } catch (e) {
       setErr(e.message);
+      if (e.status === 409 && !force) setInUse(m);
     }
   }
+  const deleteAnyway = () => inUse && deleteProfile(inUse, true);
+  // Cancel clears the banner; nothing was changed by the refused delete.
+  const cancelDelete = () => { setInUse(null); setErr(null); };
 
   const config = modules.find((m) => m.id === selectedId) || null;
 
@@ -418,7 +432,7 @@ export default function useModuleEditor() {
     untargeted, targets, targetBindings, onDevice, deviceByGesture, isLive, entryFor,
     pairFor, pairForHalf, isPairHalf, axisFor, openAxes,
     // status
-    err, setErr, importing, imported, busy,
+    err, setErr, importing, imported, busy, inUse, deleteAnyway, cancelDelete,
     // rail editing
     adding, setAdding, renaming, renameVal, setRenameVal, startRename, commitRename,
     cancelRename: () => setRenaming(null),
