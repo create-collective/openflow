@@ -129,6 +129,9 @@
   /* borders */
   --border: var(--neutral20);
   --border-strong: var(--neutral30);
+  /* The rim around a LIGHT LED outline on Bindings (KeymapBoard). Nothing in dark mode, where
+     a white outline already stands out against the dark caps. */
+  --led-rim: transparent;
   --border-focus: var(--accent);
 
   /* accent */
@@ -192,6 +195,9 @@
 
   --border: var(--neutral87);
   --border-strong: var(--neutral80);
+  /* In light mode a white (or near-white) LED outline sits on a white cap and a white board and
+     the key loses its edge, so it gets the ordinary key-border gray on both sides of it. */
+  --led-rim: var(--border-strong);
 
   --accent: var(--brand-cyan-deep);
   --accent-hover: var(--brand-cyan);

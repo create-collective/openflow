@@ -61,6 +61,21 @@ function contrastText(hex) {
   return lum > 0.6 ? "var(--text-on-light)" : "var(--text-on-dark)";
 }
 
+// A color bright enough to vanish against light mode's white caps (white, pale yellow, ...).
+export function isLight(hex) {
+  const n = parseInt(String(hex || "").replace("#", ""), 16);
+  if (Number.isNaN(n)) return false;
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 > 0.8;
+}
+
+// The cap's silhouette once, as a rect or a path, with whatever paint it is given.
+function CapShape({ shape, ...paint }) {
+  return shape.rect
+    ? <rect x={shape.rect.x} y={shape.rect.y} width={shape.rect.w} height={shape.rect.h}
+        rx={shape.rect.rx} {...paint} />
+    : <path d={shape.d} {...paint} />;
+}
+
 // One keycap: the exact NayaFlow SVG silhouette for its position, filled/stroked,
 // with the resolved legend centered per-shape.
 function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, names }) {
@@ -92,6 +107,11 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, 
     : led ? led.hex
       : "var(--border-strong)";
   const strokeWidth = led && !selected ? 3.5 : 2;
+  // A light LED color (the spacebars set to white, say) disappears against light mode's white
+  // caps and board, and the key loses its whole edge. Under such an outline goes a wider stroke
+  // in --led-rim -- the key-border gray in light mode, transparent in dark -- so a thin rim of
+  // gray shows on both sides of the white.
+  const rim = led && !selected && isLight(led.hex) ? strokeWidth + 2 : 0;
   const wrap = KEY_WRAPPERS[pos] || {};
   return (
     <button
@@ -107,11 +127,16 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, 
     >
       <svg width={w} height={h} viewBox={shape.viewBox} fill="none"
         style={{ position: "absolute", inset: 0, display: "block", overflow: "visible" }}>
-        {shape.rect ? (
-          <rect x={shape.rect.x} y={shape.rect.y} width={shape.rect.w} height={shape.rect.h}
-            rx={shape.rect.rx} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+        {rim > 0 ? (
+          // Three layers so the gray shows on BOTH sides of the light outline: the cap's fill,
+          // then the wider gray rim, then the LED color on top of it.
+          <>
+            <CapShape shape={shape} fill={fill} stroke="none" />
+            <CapShape shape={shape} fill="none" stroke="var(--led-rim)" strokeWidth={rim} data-testid="led-rim" />
+            <CapShape shape={shape} fill="none" stroke={stroke} strokeWidth={strokeWidth} />
+          </>
         ) : (
-          <path d={shape.d} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+          <CapShape shape={shape} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
         )}
       </svg>
       {legend.layer && (
