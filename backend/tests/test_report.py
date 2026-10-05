@@ -21,7 +21,7 @@ from openflow_backend import report  # noqa: E402
 # would otherwise leak in and the no-sink cases would pass for the wrong reason.
 _ENV = ("OPENFLOW_JIRA_EMAIL", "OPENFLOW_JIRA_TOKEN", "OPENFLOW_JIRA_URL",
         "OPENFLOW_JIRA_PROJECT", "OPENFLOW_JIRA_PARENT", "OPENFLOW_JIRA_SPRINT",
-        "OPENFLOW_JIRA_WEBHOOK")
+        "OPENFLOW_JIRA_WEBHOOK", "OPENFLOW_REPORT_RELAY")
 
 
 class _Svc:
@@ -183,3 +183,94 @@ def test_a_malformed_config_is_ignored_rather_than_fatal(monkeypatch, tmp_path):
     (tmp_path / report.JIRA_FILE).write_text("{not json at all", encoding="utf-8")
     assert report.jira_config() is None      # no sink, but no exception either
     print("  a broken config file leaves no sink rather than breaking the page")
+
+
+# --- screenshots (2026-10-05) ---------------------------------------------------------------- #
+# A tester's installer files through the automation webhook, which carries text only. The relay
+# (relay/report-relay/) holds the Jira token as its own secret and attaches the screenshots.
+
+import base64  # noqa: E402
+
+PNG = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 64).decode("ascii")
+SHOT = {"name": "screen shot.png", "type": "image/png", "data": PNG}
+
+
+def test_the_relay_is_preferred_and_carries_the_screenshots(monkeypatch, tmp_path):
+    _clean(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENFLOW_REPORT_RELAY", "https://openflow-report-relay.example.workers.dev")
+    monkeypatch.setenv("OPENFLOW_JIRA_WEBHOOK", "https://automation.atlassian.com/pro/hooks/abc")
+    sent = {}
+
+    def fake_relay(url, summary, description, form, attachments):
+        sent.update(url=url, attachments=attachments)
+        return {"ok": True, "key": "SCRUM-500", "attached": len(attachments), "failed": []}
+
+    def never(*a, **k):
+        raise AssertionError("the webhook must not run when a relay is configured")
+    monkeypatch.setattr(report, "submit_to_relay", fake_relay)
+    monkeypatch.setattr(report, "submit_to_webhook", never)
+    out = report.file_report(_Svc(), {"title": "t", "happened": "h", "attachments": [SHOT]},
+                             {"app": {}})
+    assert out["ok"] is True and out["sink"] == "relay" and out["key"] == "SCRUM-500"
+    assert out["attached"] == 1
+    a = sent["attachments"][0]
+    assert a["type"] == "image/png" and a["bytes"].startswith(b"\x89PNG") and a["name"] == "screen shot.png"
+    assert report.sink_kind(report.jira_config()) == "relay"
+    assert report.carries_attachments(report.jira_config()) is True
+
+
+def test_a_webhook_files_the_text_and_says_the_screenshots_stayed_behind(monkeypatch, tmp_path):
+    _clean(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENFLOW_JIRA_WEBHOOK", "https://automation.atlassian.com/pro/hooks/abc")
+    monkeypatch.setattr(report, "submit_to_webhook", lambda *a, **k: {"status": 200})
+    out = report.file_report(_Svc(), {"title": "t", "happened": "h", "attachments": [SHOT, SHOT]},
+                             {"app": {}})
+    assert out["ok"] is True and out["attached"] == 0 and out["attachSkipped"] == 2
+    assert report.carries_attachments(report.jira_config()) is False
+
+
+def test_a_bad_screenshot_is_refused_before_anything_is_filed(monkeypatch, tmp_path):
+    _clean(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENFLOW_REPORT_RELAY", "https://relay.example")
+
+    def never(*a, **k):
+        raise AssertionError("nothing may be filed when an attachment is refused")
+    monkeypatch.setattr(report, "submit_to_relay", never)
+    for bad, why in (({**SHOT, "type": "application/x-msdownload"}, "PNG"),
+                     ({**SHOT, "data": "!!not base64!!"}, "could not be read"),
+                     ({**SHOT, "data": base64.b64encode(b"x" * (5 * 1024 * 1024 + 1)).decode()}, "5 MB")):
+        out = report.file_report(_Svc(), {"title": "t", "happened": "h", "attachments": [bad]}, {"app": {}})
+        assert out["ok"] is False and why in out["reason"], out["reason"]
+    out = report.file_report(_Svc(), {"title": "t", "happened": "h", "attachments": [SHOT] * 6}, {"app": {}})
+    assert out["ok"] is False and "at most 5" in out["reason"]
+
+
+def test_the_token_path_attaches_after_it_creates_the_issue(monkeypatch, tmp_path):
+    _clean(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENFLOW_JIRA_EMAIL", "someone@example.com")
+    monkeypatch.setenv("OPENFLOW_JIRA_TOKEN", "not-a-real-token")
+    monkeypatch.setattr(report, "_jira_post", lambda cfg, fields: {"key": "SCRUM-7"})
+    attached = []
+    monkeypatch.setattr(report, "_jira_attach", lambda cfg, key, a: attached.append((key, a["name"])))
+    out = report.file_report(_Svc(), {"title": "t", "happened": "h", "attachments": [SHOT]}, {"app": {}})
+    assert out["ok"] is True and out["key"] == "SCRUM-7" and out["attached"] == 1
+    assert attached == [("SCRUM-7", "screen shot.png")]
+
+
+def test_every_request_says_it_is_openflow(monkeypatch):
+    """Cloudflare's bot check refuses Python's default agent (error 1010) before a request
+    reaches the relay; the first real test report was turned away that way (2026-10-05)."""
+    seen = {}
+
+    class Reply:
+        status = 200
+        def read(self): return b'{"ok": true, "key": "SCRUM-1", "attached": 0}'
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def fake_urlopen(req, timeout=None):
+        seen["ua"] = req.get_header("User-agent")
+        return Reply()
+    monkeypatch.setattr(report.urllib.request, "urlopen", fake_urlopen)
+    report.submit_to_relay("https://relay.example", "s", "d", {}, [])
+    assert seen["ua"].startswith("OpenFlow/"), seen

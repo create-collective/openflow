@@ -69,20 +69,31 @@ datas += [
 # The value comes from OPENFLOW_REPORT_WEBHOOK, or from backend/report-sink.json (gitignored) if
 # that exists. Neither is in the repository, so the URL never enters git history. A build with
 # neither still succeeds -- the app then offers the report to be copied or saved.
-_sink = os.environ.get("OPENFLOW_REPORT_WEBHOOK", "").strip()
+#
+# The report RELAY (relay/report-relay/, OPENFLOW_REPORT_RELAY) is baked the same way and is
+# preferred when present: a Cloudflare Worker that holds the Jira token itself and is the one
+# sink that carries screenshots. Its URL, like the webhook's, can only file reports.
 _sink_src = BACKEND / "report-sink.json"
-if not _sink and _sink_src.is_file():
-    _sink = json.loads(_sink_src.read_text(encoding="utf-8")).get("webhook", "").strip()
-if _sink:
-    if not _sink.startswith("https://"):
-        raise SystemExit("openflow_backend.spec: the report webhook must be an https url")
+_sink_file = json.loads(_sink_src.read_text(encoding="utf-8")) if _sink_src.is_file() else {}
+_sinks = {
+    "webhook": (os.environ.get("OPENFLOW_REPORT_WEBHOOK", "").strip()
+                or str(_sink_file.get("webhook") or "").strip()),
+    "relay": (os.environ.get("OPENFLOW_REPORT_RELAY", "").strip()
+              or str(_sink_file.get("relay") or "").strip()),
+}
+_sinks = {k: v for k, v in _sinks.items() if v}
+if _sinks:
+    for _k, _v in _sinks.items():
+        if not _v.startswith("https://"):
+            raise SystemExit(f"openflow_backend.spec: the report {_k} must be an https url")
     _sink_out = BACKEND / "build" / "report-sink.json"
     _sink_out.parent.mkdir(parents=True, exist_ok=True)
-    _sink_out.write_text(json.dumps({"webhook": _sink}), encoding="utf-8")
+    _sink_out.write_text(json.dumps(_sinks), encoding="utf-8")
     datas += [(str(_sink_out), "resources")]
-    print(f"openflow_backend.spec: in-app reports will go to {_sink.split('/')[2]}")
+    for _k, _v in _sinks.items():
+        print(f"openflow_backend.spec: in-app reports: {_k} at {_v.split('/')[2]}")
 else:
-    print("openflow_backend.spec: no report webhook configured; reports will be copy/save only")
+    print("openflow_backend.spec: no report sink configured; reports will be copy/save only")
 
 hiddenimports = (
     collect_submodules("uvicorn")                        # lifespan/loop/http classes are resolved by name

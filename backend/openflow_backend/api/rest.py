@@ -1486,7 +1486,10 @@ async def report_context(identifiers: bool = False) -> dict:
     last = await run_in_threadpool(dstate.load_status, False)
     ctx = await run_in_threadpool(report.collect_context, svc, dl.entries(40), last)
     cfg = report.jira_config()
-    ctx["sink"] = None if cfg is None else ("webhook" if cfg.get("webhook") else "jira")
+    ctx["sink"] = report.sink_kind(cfg)
+    # Whether a screenshot attached on the page would reach the issue: the relay and the API
+    # token attach files, the automation webhook carries text only.
+    ctx["attachments"] = report.carries_attachments(cfg)
     return ctx if identifiers else report.redact(ctx)
 
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { api } from "../lib/api";
 import Badge from "../components/ui/Badge";
@@ -22,6 +22,33 @@ const FIELDS = [
     placeholder: "1. Open Bindings\n2. Select a key\n3. …" },
 ];
 
+// Screenshots: the limits the backend and the relay enforce (report.py, relay/report-relay).
+export const MAX_SHOTS = 5;
+export const MAX_SHOT_BYTES = 5 * 1024 * 1024;
+const SHOT_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+
+/** A File (picked or pasted) as {name, type, data: base64, url} for the page, or an error. */
+export function readShot(file) {
+  return new Promise((resolve, reject) => {
+    if (!SHOT_TYPES.includes(file.type)) {
+      reject(new Error(`${file.name || "That file"} is not a PNG, JPEG, WebP or GIF image.`));
+      return;
+    }
+    if (file.size > MAX_SHOT_BYTES) {
+      reject(new Error(`${file.name || "That image"} is over 5 MB.`));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Could not read ${file.name || "that image"}.`));
+    reader.onload = () => {
+      const url = String(reader.result);
+      resolve({ name: file.name || `screenshot-${Date.now()}.png`, type: file.type,
+                data: url.slice(url.indexOf(",") + 1), url });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function BugReport() {
   const { pathname } = useLocation();
   const [form, setForm] = useState({ title: "", happened: "", expected: "", steps: "", contact: "" });
@@ -31,6 +58,46 @@ export default function BugReport() {
   const [result, setResult] = useState(null);
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState(false);
+  const [shots, setShots] = useState([]);
+  // The list as of the last change, for adding to it from an async read without a stale count.
+  const shotsRef = useRef(shots);
+  useEffect(() => { shotsRef.current = shots; }, [shots]);
+  const pickRef = useRef(null);
+
+  const addShots = useCallback(async (files) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    setErr("");
+    const read = [];
+    const problems = [];
+    for (const f of list) {
+      try {
+        read.push({ ...(await readShot(f)), id: `${Date.now()}-${read.length}-${f.name}` });
+      } catch (e) {
+        problems.push(e.message);
+      }
+    }
+    const room = Math.max(0, MAX_SHOTS - shotsRef.current.length);
+    if (read.length > room) problems.push(`Attach at most ${MAX_SHOTS} screenshots.`);
+    const added = read.slice(0, room);
+    shotsRef.current = [...shotsRef.current, ...added];
+    setShots(shotsRef.current);
+    if (problems.length) setErr(problems.join(" "));
+  }, []);
+
+  // A screenshot pasted anywhere on the page (Win+Shift+S, then Ctrl+V) is attached, unless it
+  // is being pasted into a text field as text.
+  useEffect(() => {
+    if (result) return undefined;
+    const onPaste = (e) => {
+      const images = Array.from(e.clipboardData?.files || []).filter((f) => f.type.startsWith("image/"));
+      if (!images.length) return;
+      e.preventDefault();
+      addShots(images);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [addShots, result]);
 
   // Reloaded when the identifier switch moves, so the preview is always the thing that would
   // actually be sent rather than a sample of it.
@@ -50,7 +117,8 @@ export default function BugReport() {
       // `page` is where the user was BEFORE opening this form, which is the useful one; the
       // form's own route never is.
       const r = await api.reportBug({ ...form, includeIdentifiers: identifiers,
-                                      page: sessionStorage.getItem("openflow.lastPage") || pathname });
+                                      page: sessionStorage.getItem("openflow.lastPage") || pathname,
+                                      attachments: shots.map(({ name, type, data }) => ({ name, type, data })) });
       setResult(r);
       if (!r.ok && r.configured) setErr(r.reason || "the report could not be filed");
     } catch (e) {
@@ -86,7 +154,16 @@ export default function BugReport() {
   function again() {
     setResult(null);
     setForm({ title: "", happened: "", expected: "", steps: "", contact: "" });
+    setShots([]);
   }
+
+  // Can a screenshot reach the issue from this build? The relay and the API token attach files;
+  // the automation webhook carries text only; with no sink the report is copied or saved.
+  const shotsTravel = !!context?.attachments;
+  const shotNote = !shots.length ? null
+    : shotsTravel ? null
+      : sink ? "This build's tracker takes text only, so the screenshots will not be sent with the report. Keep them and send them separately."
+        : "With no tracker configured the report is copied or saved, and the screenshots stay on this computer. Send them along with it.";
 
   return (
     <div className="report-page">
@@ -109,6 +186,9 @@ export default function BugReport() {
             : undefined}>
           Thank you. It is logged as {result.key || "a new item"} and will be read.
           {result.note ? ` (${result.note})` : ""}
+          {result.attached > 0 && ` ${result.attached} screenshot${result.attached === 1 ? " is" : "s are"} attached.`}
+          {result.attachSkipped > 0 && " The screenshots could not go with it: this build's tracker takes text only."}
+          {result.attachFailed?.length > 0 && ` ${result.attachFailed.length} screenshot(s) did not attach: ${result.attachFailed.map((f) => f.name).join(", ")}.`}
           <div className="report-again"><Button onClick={again}>Report something else</Button></div>
         </Notice>
       ) : result ? (
@@ -150,6 +230,31 @@ export default function BugReport() {
               <input className="mac-input report-input" value={form.contact} onChange={set("contact")}
                 placeholder="Email or GitHub handle, if you want a reply" />
             </label>
+            <div className="report-field">
+              <span className="report-label">Screenshots (optional)</span>
+              <div className="report-shots">
+                {shots.map((s) => (
+                  <figure className="report-shot" key={s.id}>
+                    <img src={s.url} alt={s.name} className="report-shot-img" />
+                    <figcaption className="report-shot-name" title={s.name}>{s.name}</figcaption>
+                    <button type="button" className="report-shot-x" title={`Remove ${s.name}`}
+                      aria-label={`Remove ${s.name}`}
+                      onClick={() => setShots((all) => all.filter((x) => x.id !== s.id))}>✕</button>
+                  </figure>
+                ))}
+              </div>
+              <div className="report-shot-actions">
+                <Button size="sm" onClick={() => pickRef.current?.click()}
+                  disabled={shots.length >= MAX_SHOTS}>Attach screenshot</Button>
+                <span className="report-hint">
+                  or paste one (Win+Shift+S, then Ctrl+V). Up to {MAX_SHOTS}, 5 MB each.
+                </span>
+                <input ref={pickRef} type="file" hidden multiple accept={SHOT_TYPES.join(",")}
+                  data-testid="shot-input"
+                  onChange={(e) => { addShots(e.target.files); e.target.value = ""; }} />
+              </div>
+              {shotNote && <Notice size="sm" tone="warn" className="report-shot-note">{shotNote}</Notice>}
+            </div>
           </Card>
 
           <Card className="report-card" title="What will be sent">

@@ -57,6 +57,10 @@ jobs:
       # Settings > Secrets and variables > Actions. Without it the build still succeeds and
       # the app falls back to offering the report to be copied or saved.
       OPENFLOW_REPORT_WEBHOOK: ${{ secrets.OPENFLOW_REPORT_WEBHOOK }}
+      # The report relay (relay/report-relay/): the Worker that holds the Jira token and is the
+      # one sink that carries screenshots. Preferred over the webhook when set. Its URL can
+      # only file reports; kept as a secret so it stays out of logs, like the webhook.
+      OPENFLOW_REPORT_RELAY: ${{ secrets.OPENFLOW_REPORT_RELAY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

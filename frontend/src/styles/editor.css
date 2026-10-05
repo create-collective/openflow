@@ -2036,6 +2036,44 @@ textarea.report-input { resize: vertical; line-height: 1.5; font-family: inherit
 .report-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .report-hint { color: var(--text-muted); font-size: 12px; }
 .report-again { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+/* Screenshots attached to a report: thumbnails with a remove button, then the attach row. */
+.report-shots { display: flex; flex-wrap: wrap; gap: 10px; }
+.report-shots:empty { display: none; }
+.report-shot {
+  position: relative;
+  width: 132px;
+  margin: 0 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+.report-shot-img { display: block; width: 100%; height: 84px; object-fit: cover; }
+.report-shot-name {
+  padding: 4px 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.report-shot-x {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+.report-shot-x:hover { background: var(--bg-hover); }
+.report-shot-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.report-shot-note { margin-top: 8px; }
 
 /* --- Information page (additive) ---------------------------------------------------------- */
 .info-page { padding-bottom: 24px; }

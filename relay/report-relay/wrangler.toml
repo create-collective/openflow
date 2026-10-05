@@ -1,0 +1,17 @@
+# OpenFlow's report relay (src/index.js): in-app bug reports, screenshots included, into Jira.
+# Deploy from this folder with `npx wrangler deploy`; the two secrets are set once with
+# `npx wrangler secret put JIRA_EMAIL` and `npx wrangler secret put JIRA_TOKEN`.
+name = "openflow-report-relay"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Not secrets: the same values as backend/openflow_backend/report.py's JIRA_DEFAULTS.
+[vars]
+JIRA_URL = "https://traviswye.atlassian.net"
+JIRA_PROJECT = "SCRUM"
+JIRA_PARENT = "SCRUM-79"
+JIRA_ISSUE_TYPE_ID = "10003"
+JIRA_LABELS = "user-reported,needs-triage"
+JIRA_SPRINT = "9"
+JIRA_SPRINT_FIELD = "customfield_10020"
