@@ -168,7 +168,7 @@ function KeyCap({ pos, data, mode, selected, onSelectKey, layerMap, ledOutline, 
         // their bottom-left cut away, and a corner-pinned star sat outside the silhouette -- on
         // the neighbour, or on the module bay next to Backspace (SCRUM-111). See keyshapes.badgeAnchor.
         <span className="kc-multi" style={badgeAnchor(shape)}
-          title={`${behaviours} behaviours: ${Object.keys(data.bindings).join(", ")}`}>
+          title={`${behaviours} behaviors: ${Object.keys(data.bindings).join(", ")}`}>
           ★
         </span>
       )}

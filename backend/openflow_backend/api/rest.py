@@ -694,7 +694,7 @@ async def firmware_update_plan(version: str = "") -> dict:
         """The one image for this half at this version, with every reason it might not be."""
         entry = by_version.get(want)
         if entry is None:
-            return {"side": side, "reason": f"no flashable {want} image is catalogued"}
+            return {"side": side, "reason": f"no flashable {want} image is cataloged"}
         for im in entry["images"]:
             if im.get("side") != side:
                 continue
@@ -1865,7 +1865,7 @@ def _build_entries(read: dict) -> list:
         if mtype is None:
             out.append({"uuid": uuid, "slot": slot, "unknown": True,
                         "note": "on the device but not in the app's module configs, and the "
-                                "module list carries no recognisable type for it"})
+                                "module list carries no recognizable type for it"})
             continue
         fields = {int(f["field"]): (f["type"], bytes.fromhex(f["value"]))
                   for f in read["slots"].get(slot, read["slots"].get(str(slot), []))}

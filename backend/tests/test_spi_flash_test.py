@@ -118,7 +118,7 @@ def test_an_unrecognised_length_is_refused_rather_than_partly_parsed():
     d = S.decode(b"\x00" * 26)
     assert d["layout"] is None and "partitions" not in d
     assert d["raw"] == "00" * 26
-    assert "unrecognised" in d["note"]
+    assert "unrecognized" in d["note"]
 
 
 def test_no_response_and_garbage_both_report_rather_than_raise():

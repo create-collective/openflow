@@ -394,22 +394,22 @@ def _match_catalog(path: Path, raw: bytes, catalog: list) -> dict:
         return by_hash[0]
     if by_hash:
         raise UploadRefused(
-            f"{len(by_hash)} catalogue entries share this file's hash; the catalogue is "
+            f"{len(by_hash)} catalog entries share this file's hash; the catalog is "
             "inconsistent and nothing is chosen from it.")
     by_name = [e for e in catalog or [] if e.get("file") == path.name]
     if not by_name:
         raise UploadRefused(
-            f"{path.name} is not in the firmware catalogue. Only catalogued images may be "
-            "written, because the catalogue is what says which side and flash generation an "
+            f"{path.name} is not in the firmware catalog. Only cataloged images may be "
+            "written, because the catalog is what says which side and flash generation an "
             "image is for.")
     if any(e.get("blobSha256") for e in by_name):
         raise UploadRefused(
-            f"{path.name} is a catalogued name, but this file's bytes match none of the "
-            f"{len(by_name)} catalogued image(s) of that name (sha256 {blob[:16]}...). A known "
+            f"{path.name} is a cataloged name, but this file's bytes match none of the "
+            f"{len(by_name)} cataloged image(s) of that name (sha256 {blob[:16]}...). A known "
             "name with unknown contents is exactly what must not be written.")
     if len(by_name) > 1:
         raise UploadRefused(
-            f"{path.name} is ambiguous: {len(by_name)} catalogue entries carry that name and none "
+            f"{path.name} is ambiguous: {len(by_name)} catalog entries carry that name and none "
             "has a blob hash to tell them apart.")
     return by_name[0]
 
@@ -425,7 +425,7 @@ def _pid_agrees_with_image(state: dict, active: dict) -> None:
         if theirs and active.get(mine) and theirs != active[mine]:
             raise UploadRefused(
                 f"the USB product id {state.get('pid'):#06x} says this half is {key[3:].lower()} "
-                f"{theirs}, but the image it runs is catalogued as {active[mine]}. Two sources "
+                f"{theirs}, but the image it runs is cataloged as {active[mine]}. Two sources "
                 "disagree about what this half is, so nothing is written to it.")
 
 
@@ -501,7 +501,7 @@ def plan(image_path: str | Path, catalog: list, *, slot: int = 1,
             "different slot.")
     if not target.get("flashable"):
         why = "; ".join(target.get("withheldBecause") or ["it is not marked flashable"])
-        raise UploadRefused(f"{path.name} is catalogued but withheld: {why}")
+        raise UploadRefused(f"{path.name} is cataloged but withheld: {why}")
 
     state = state if state is not None else rec.read_running_image(catalog)
     if state.get("state") != "ok":
@@ -859,7 +859,7 @@ def flash(image_path: str | Path, catalog: list, *, arm: str, slot: int = 1,
     want = _hex(p.target.get("plaintextSha256"))
     if len(want) != 64:
         raise UploadRefused(
-            f"{p.image_path.name} has no catalogued plaintext hash, so the slot it landed in "
+            f"{p.image_path.name} has no cataloged plaintext hash, so the slot it landed in "
             "cannot be checked. " + ("The resource's own trailer has already scheduled a "
             f"{p.trailer.get('swap')} swap; MCUboot will validate the image before swapping."
             if armed else "Nothing is scheduled; the primary image is untouched."))
@@ -1046,7 +1046,7 @@ def plan_module_bundle(image_path: str | Path, catalog: list, *, chunk: int = DE
             "that contains it is.")
     if not target.get("flashable"):
         why = "; ".join(target.get("withheldBecause") or ["it is not marked flashable"])
-        raise UploadRefused(f"{path.name} is catalogued but withheld: {why}")
+        raise UploadRefused(f"{path.name} is cataloged but withheld: {why}")
 
     state = state if state is not None else rec.read_running_image(catalog)
     if state.get("state") != "ok":

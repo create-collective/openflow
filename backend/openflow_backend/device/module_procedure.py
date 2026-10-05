@@ -179,7 +179,7 @@ def choose_bundle(catalog: list, keyboard_version: str | None, version: str | No
     if version:
         entry = next((e for e in bundles if e.get("moduleFirmware") == version), None)
         if entry is None:
-            raise ModuleRefused(f"no module firmware {version} in the catalogue. Nothing was written.")
+            raise ModuleRefused(f"no module firmware {version} in the catalog. Nothing was written.")
         if not entry.get("flashable"):
             why = "; ".join(entry.get("withheldBecause") or ["it is not marked flashable"])
             raise ModuleRefused(f"module firmware {version} is withheld: {why}")
@@ -604,7 +604,7 @@ def plan(svc, catalog: list, firmware_root: Path | None, version: str | None = N
         else (fitting[0] if fitting else None)
     if chosen is None:
         block("no-version", f"No module firmware we hold works on keyboard firmware {kb}."
-                            if not version else f"Module firmware {version} is not in the catalogue.")
+                            if not version else f"Module firmware {version} is not in the catalog.")
         return out
     running = (m or {}).get("firmwareVersion")
     have, want = fw._version_tuple(running), fw._version_tuple(chosen["version"])

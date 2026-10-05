@@ -364,8 +364,8 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
                 Firmware images are not shipped with OpenFlow.
                 {fetchable
                   ? " Downloading gets every file this version needs — both halves, both flash"
-                    + " generations — and checks each one against the catalogue before keeping it."
-                  : ` The catalogue lists ${version}, but there is no record of where to fetch it`
+                    + " generations — and checks each one against the catalog before keeping it."
+                  : ` The catalog lists ${version}, but there is no record of where to fetch it`
                     + " from, so it cannot be downloaded here."}
               </Notice>
             )}

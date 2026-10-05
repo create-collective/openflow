@@ -99,7 +99,7 @@ def test_a_withheld_image_is_refused(images):
 
 def test_an_uncatalogued_file_is_refused(images):
     (images / "mystery.bin").write_bytes(b"\x00" * 16)
-    with pytest.raises(fw.UploadRefused, match="not in the firmware catalogue"):
+    with pytest.raises(fw.UploadRefused, match="not in the firmware catalog"):
         fw.plan(images / "mystery.bin", CATALOG, state=state_ok())
 
 
@@ -395,7 +395,7 @@ def test_flash_never_marks_an_image_with_no_catalogued_plaintext_hash(images, mo
     nothing after the upload is sent -- not even the state read."""
     log = []
     _patch_transport(monkeypatch, _fake_bootloader(RUNNING_HASH, log))
-    with pytest.raises(fw.UploadRefused, match="no catalogued plaintext hash"):
+    with pytest.raises(fw.UploadRefused, match="no cataloged plaintext hash"):
         fw.flash(images / "kb_fwl_old.bin", CATALOG, arm=RUNNING_HASH, state=state_ok(),
                  chunk=1024, allow_older=True)
     assert set(_kinds(log)) == {(1, 6, 0), (1, 1, 2)}, "only the slot map read and upload chunks may have been sent"

@@ -75,7 +75,7 @@ def test_bytes_that_do_not_match_the_catalogue_are_not_kept(tmp_path):
     we can identify, so it does not become a file the flasher could later pick up."""
     row = F.fetch_one(entry(), tmp_path, opener=opener_for(b"an html error page"))
     assert row["ok"] is False
-    assert "does not match the catalogue" in row["reason"]
+    assert "does not match the catalog" in row["reason"]
     assert "Nothing was written" in row["reason"]
     assert list(tmp_path.rglob("*")) == [], "not even a partial file"
 
@@ -133,9 +133,9 @@ def test_a_version_pulls_every_image_that_version_needs(tmp_path):
 
 def test_nothing_outside_the_catalogue_can_be_named(tmp_path):
     """The caller chooses WHICH catalogued images, never where they come from."""
-    with pytest.raises(F.FetchRefused, match="nothing in the catalogue"):
+    with pytest.raises(F.FetchRefused, match="nothing in the catalog"):
         F.fetch([entry()], tmp_path, paths=["../../../secrets.bin"], opener=opener_for())
-    with pytest.raises(F.FetchRefused, match="nothing in the catalogue"):
+    with pytest.raises(F.FetchRefused, match="nothing in the catalog"):
         F.fetch([entry()], tmp_path, versions=["9.9.9"], opener=opener_for())
 
 

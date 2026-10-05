@@ -102,7 +102,7 @@ def decode(raw) -> dict:
     count = LAYOUTS.get(len(raw))
     if count is None:
         return {"length": len(raw), "layout": None, "raw": raw.hex(),
-                "note": f"unrecognised SPI flash test layout ({len(raw)} bytes; known lengths "
+                "note": f"unrecognized SPI flash test layout ({len(raw)} bytes; known lengths "
                         f"are {', '.join(str(n) for n in sorted(LAYOUTS))}); reported raw"}
 
     out: dict = {

@@ -65,7 +65,7 @@ STEP_LABELS = {
     "version.confirm": "Restarting and confirming the new version (can take a few minutes)",
     "halves.settle": "Waiting for both halves to re-link",
     "brightness.restore": "Restoring LED brightness",
-    "lighting.restore": "Putting the lights back to their stored colours",
+    "lighting.restore": "Putting the lights back to their stored colors",
     "verify.compare": "Comparing the keyboard against the backup",
     "run.end": "Finished",
     # The module firmware procedure (device/module_procedure.py) writes to the same kind of log.
@@ -973,7 +973,7 @@ def restore_lighting(svc, log: RunLog) -> None:
     try:
         r = svc.restore_lighting("left")             # the central half drives both halves' LEDs
         log.event("lighting.restore", "ok", layers=r.get("layers") if isinstance(r, dict) else None,
-                  detail="stored colours and animations re-sent to both halves")
+                  detail="stored colors and animations re-sent to both halves")
     except Exception as e:                          # noqa: BLE001 -- cosmetic, never fatal
         log.event("lighting.restore", "fail",
                   detail=f"{type(e).__name__}: {e} (the flash itself is unaffected; a power "

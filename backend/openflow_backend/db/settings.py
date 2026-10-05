@@ -76,7 +76,7 @@ SETTINGS_SCHEMA = [
             # (The 2026-09-14 attempt could not tell, because breathe on layer 1 and swirl on layer
             # 2 repainted over the override on every switch; the owner's test used solid layers.)
             {"id": "led_action_override", "label": "LED Action Override", "kind": "select",
-             "desc": "How long an LED action overrides the colourmap.",
+             "desc": "How long an LED action overrides the colormap.",
              "options": ["until keyboard restart", "until next layer change"],
              "default": "until keyboard restart", "provenance": VERIFIED,
              "device_key": "385426f7-e454-4174-babe-4ca4a670cbe2",

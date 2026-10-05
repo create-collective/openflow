@@ -152,7 +152,7 @@ export default function Hub() {
             <p className="hub-text">
               Command-line communication with the Naya Create, by Cory Bennett. OpenFlow talks to
               the keyboard through nayactl: it is built on this project and ships a copy of it
-              under the Apache 2.0 licence.
+              under the Apache 2.0 license.
             </p>
             <a className="hub-link" href={`https://github.com/${REPOS.nayactl}`} target="_blank" rel="noreferrer">
               nayactl on GitHub ↗

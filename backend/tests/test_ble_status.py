@@ -110,7 +110,7 @@ def test_an_unfamiliar_layout_is_never_guessed_at():
     d = B.decode("001122")
     assert d["layout"] is None
     assert d["raw"] == "001122"
-    assert "unrecognised" in d["note"]
+    assert "unrecognized" in d["note"]
 
 
 def test_garbage_does_not_raise():

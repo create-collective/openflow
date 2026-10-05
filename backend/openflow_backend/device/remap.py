@@ -215,8 +215,8 @@ def encode_binding_pair(flavour: int, term: int, tap: tuple[int, bytes], hold: t
     """
     if flavour not in HOLD_TAP_FLAVOURS:
         raise RemapEncodeError(
-            f"hold-tap flavour {flavour} is out of range {HOLD_TAP_FLAVOURS.start}-"
-            f"{HOLD_TAP_FLAVOURS.stop - 1}; an invalid flavour stops the keyboard until it is "
+            f"hold-tap flavor {flavour} is out of range {HOLD_TAP_FLAVOURS.start}-"
+            f"{HOLD_TAP_FLAVOURS.stop - 1}; an invalid flavor stops the keyboard until it is "
             "power-cycled")
     halves = []
     for typ, param in (hold, tap):
@@ -279,8 +279,8 @@ def encode_hold_tap(tap: tuple[str, str], hold: tuple[str, str],
     """
     if flavour not in HOLD_TAP_FLAVOURS:
         raise RemapEncodeError(
-            f"hold-tap flavour {flavour} is out of range {HOLD_TAP_FLAVOURS.start}-"
-            f"{HOLD_TAP_FLAVOURS.stop - 1}; an invalid flavour stops the keyboard until it is "
+            f"hold-tap flavor {flavour} is out of range {HOLD_TAP_FLAVOURS.start}-"
+            f"{HOLD_TAP_FLAVOURS.stop - 1}; an invalid flavor stops the keyboard until it is "
             "power-cycled")
     return encode_holdtap_param(type_byte, flavour, term,
                                 encode_keypress(*hold), encode_keypress(*tap))

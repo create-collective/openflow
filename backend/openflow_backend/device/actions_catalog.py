@@ -170,16 +170,16 @@ def _lighting():
         _a("LED_BRIGHTNESS_DOWN", "Bright -", "LED", name="Lighting brightness down"),
         _a("LED_SPEED_UP", "Speed +", "LED", name="Lighting effect speed up"),
         _a("LED_SPEED_DOWN", "Speed -", "LED", name="Lighting effect speed down"),
-        _a("LED_COLOR_WHITE", "White", "LED", name="Lighting colour: white"),
-        _a("LED_COLOR_RED", "Red", "LED", name="Lighting colour: red"),
-        _a("LED_COLOR_GREEN", "Green", "LED", name="Lighting colour: green"),
-        _a("LED_COLOR_BLUE", "Blue", "LED", name="Lighting colour: blue"),
+        _a("LED_COLOR_WHITE", "White", "LED", name="Lighting color: white"),
+        _a("LED_COLOR_RED", "Red", "LED", name="Lighting color: red"),
+        _a("LED_COLOR_GREEN", "Green", "LED", name="Lighting color: green"),
+        _a("LED_COLOR_BLUE", "Blue", "LED", name="Lighting color: blue"),
         # The remaining five of NayaFlow's nine; bytes from NayaCore's own table (keymap_read).
-        _a("LED_COLOR_CYAN", "Cyan", "LED", name="Lighting colour: cyan"),
-        _a("LED_COLOR_MAGENTA", "Magenta", "LED", name="Lighting colour: magenta"),
-        _a("LED_COLOR_YELLOW", "Yellow", "LED", name="Lighting colour: yellow"),
-        _a("LED_COLOR_ORANGE", "Orange", "LED", name="Lighting colour: orange"),
-        _a("LED_COLOR_PINK", "Pink", "LED", name="Lighting colour: pink"),
+        _a("LED_COLOR_CYAN", "Cyan", "LED", name="Lighting color: cyan"),
+        _a("LED_COLOR_MAGENTA", "Magenta", "LED", name="Lighting color: magenta"),
+        _a("LED_COLOR_YELLOW", "Yellow", "LED", name="Lighting color: yellow"),
+        _a("LED_COLOR_ORANGE", "Orange", "LED", name="Lighting color: orange"),
+        _a("LED_COLOR_PINK", "Pink", "LED", name="Lighting color: pink"),
     ]
 
 

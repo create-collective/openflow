@@ -448,7 +448,7 @@ export default function Settings() {
 
                   <h3 className="settings-section tight">Firmware library</h3>
                   {!firmware?.images?.length
-                    ? <div className="empty">No firmware images catalogued.</div>
+                    ? <div className="empty">No firmware images cataloged.</div>
                     : <FirmwareLibrary images={firmware.images} />}
 
                 </Card>

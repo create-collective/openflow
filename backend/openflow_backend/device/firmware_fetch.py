@@ -159,13 +159,13 @@ def fetch_one(entry: dict, dest: Path, *, opener=None, force: bool = False) -> d
     row = {"path": rel, "file": entry.get("file"),
            "version": entry.get("createFirmware") or entry.get("moduleFirmware")}
     if not rel:
-        return {**row, "ok": False, "reason": "this catalogue entry has no usable path"}
+        return {**row, "ok": False, "reason": "this catalog entry has no usable path"}
     want = (entry.get("blobSha256") or "").lower()
     if len(want) != 64:
         # Without a digest there is nothing to check a download against, and an unverified
         # firmware image is exactly what this module exists to avoid.
         return {**row, "ok": False,
-                "reason": "the catalogue has no sha256 for this image, so a download could not "
+                "reason": "the catalog has no sha256 for this image, so a download could not "
                           "be verified and is not attempted"}
 
     out = dest / rel
@@ -187,7 +187,7 @@ def fetch_one(entry: dict, dest: Path, *, opener=None, force: bool = False) -> d
         # way, because from the flasher's point of view they are the same thing -- bytes we
         # cannot identify.
         return {**row, "ok": False, "bytes": len(raw),
-                "reason": f"what arrived does not match the catalogue (expected {want[:12]}…, "
+                "reason": f"what arrived does not match the catalog (expected {want[:12]}…, "
                           f"got {got[:12]}…). Nothing was written."}
 
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -219,7 +219,7 @@ def fetch(catalog: list, dest: Path, *, versions: list | None = None, paths: lis
                 or im.get("versionLabel") in versions):
             wanted.append(im)
     if not wanted:
-        raise FetchRefused("nothing in the catalogue matches that request")
+        raise FetchRefused("nothing in the catalog matches that request")
 
     rows = [fetch_one(im, dest, opener=opener, force=force) for im in wanted]
     kept = [r for r in rows if r.get("kept")]

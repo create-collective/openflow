@@ -66,7 +66,7 @@ export function displayAction(code, labelFor) {
                   + "gestures. It is not the same as unassigned." };
   }
   if (code.startsWith("RAW_")) {
-    return { text: "Unrecognised", muted: true,
+    return { text: "Unrecognized", muted: true,
              title: `The field holds ${code.slice(4)}, which OpenFlow cannot name yet. It is left `
                   + "exactly as it is unless you bind something else here." };
   }

@@ -278,7 +278,7 @@ export default function ModuleFirmwareUpdate({ connected = true, force = false }
                 )}
               >
                 Firmware is not shipped with OpenFlow. The download is checked against the
-                catalogue before it is kept.
+                catalog before it is kept.
               </Notice>
             )}
 

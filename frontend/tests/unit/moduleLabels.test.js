@@ -32,7 +32,7 @@ describe("action labels", () => {
     const labelFor = (c) => c;
     expect(displayAction("", labelFor)).toEqual({ text: "Unassigned", muted: true });
     expect(displayAction("RAW_p00:00m00", labelFor).text).toBe("Keyboard action");
-    expect(displayAction("RAW_ab12", labelFor).text).toBe("Unrecognised");
+    expect(displayAction("RAW_ab12", labelFor).text).toBe("Unrecognized");
     expect(displayAction("RAW_ab12", labelFor).title).toContain("ab12");
     expect(displayAction("F13", labelFor)).toEqual({ text: "F13", muted: false });
   });

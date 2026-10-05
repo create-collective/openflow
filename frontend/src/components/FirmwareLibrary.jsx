@@ -118,7 +118,7 @@ export default function FirmwareLibrary({ images }) {
       <p className="page-sub fw-lib-intro">
         Every firmware image OpenFlow has classified, by what it targets and which NayaFlow
         release bundled it — so a specific version can be picked for an up/downgrade. This is the
-        catalogue, not the flasher: use “Update firmware” above, which backs the keyboard up,
+        catalog, not the flasher: use “Update firmware” above, which backs the keyboard up,
         writes one half at a time and verifies the result. Images are downloaded on demand and
         checked against the hash recorded here before they are kept.
       </p>
@@ -131,7 +131,7 @@ export default function FirmwareLibrary({ images }) {
           title={!known
             ? "Still finding out which images are on this machine"
             : missingPaths.length === 0
-            ? "Every image in the catalogue is already on this machine"
+            ? "Every image in the catalog is already on this machine"
             : `Downloads ${missingPaths.length} file(s) — about ${megabytes(missingBytes)}`}
         >
           {busy === "all" ? "Downloading…"

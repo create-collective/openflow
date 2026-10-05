@@ -259,7 +259,7 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
             {/* What the flash will write, one row per kind, as storyboard view 09 draws it. */}
             <ul className="flash-diff">
               <li><FlashGlyph name="layers" /><span><b>{g.layers}</b> layer{g.layers === 1 ? "" : "s"}</span></li>
-              <li><FlashGlyph name="palette" /><span><b>{g.colors}</b> colour map{g.colors === 1 ? "" : "s"}</span></li>
+              <li><FlashGlyph name="palette" /><span><b>{g.colors}</b> color map{g.colors === 1 ? "" : "s"}</span></li>
               {g.layerList > 0 && (
                 <li title="Tells the keyboard which layer is which. Written only when the board disagrees.">
                   <FlashGlyph name="list" /><span>Layer list</span>

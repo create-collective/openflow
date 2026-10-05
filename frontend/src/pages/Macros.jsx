@@ -148,7 +148,7 @@ export default function Macros() {
           behind Details. */}
       <Notice className="macros-notice" title="Your macros are saved in OpenFlow"
         detailsLabel="Why is this unavailable?"
-        details={<>The keyboard reserves the macro behaviour type but implements no macro table:
+        details={<>The keyboard reserves the macro behavior type but implements no macro table:
           every write to it is acknowledged and discarded, and Naya&rsquo;s own software never
           writes one either. Building them here is safe; they simply do not reach the board.</>}>
         They can&rsquo;t be assigned to keys or run on this keyboard yet.

@@ -102,7 +102,7 @@ def decode(raw) -> dict:
         # Firmware changed the struct, or this is a different device. Do not guess at a layout we
         # have never seen -- say so and hand back the bytes.
         return {"length": len(raw), "layout": None, "raw": raw.hex(),
-                "note": f"unrecognised BLE status layout ({len(raw)} bytes, expected "
+                "note": f"unrecognized BLE status layout ({len(raw)} bytes, expected "
                         f"{LAYOUT_LENGTH}); reported raw"}
 
     out: dict = {"length": len(raw), "layout": f"{LAYOUT_LENGTH}-byte", "raw": raw.hex()}

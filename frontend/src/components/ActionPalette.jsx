@@ -297,7 +297,7 @@ export default function ActionPalette({
               </Badge>
             </div>
             <Notice size="sm" tone="warn" className="palette-note">
-              Macros cannot be bound to a key yet. The keyboard reserves the macro behaviour type
+              Macros cannot be bound to a key yet. The keyboard reserves the macro behavior type
               but implements no macro table, so a bound macro would never reach the board. You can
               still build and edit them on the Macros page.
             </Notice>
