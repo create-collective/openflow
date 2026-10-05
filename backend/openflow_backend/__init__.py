@@ -5,4 +5,4 @@ Speaks the recovered localhost REST/SSE contract to a rebuilt React renderer,
 and drives the keyboard over USB CDC using the vendored nayactl protocol layer.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"

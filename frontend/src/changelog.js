@@ -3,6 +3,22 @@
 // what they can now do, what stopped happening.
 const CHANGELOG = [
   {
+    version: "0.6.0",
+    date: "2026-10-05",
+    notes: [
+      "A bug report can carry screenshots: attach them, or paste one anywhere on the report page (Win+Shift+S, then Ctrl+V). Up to five images go to the issue with the report.",
+      "Devices › Troubleshooting has a split-link check for a right half that will not connect. It reads both halves and says what to do first: plug both in, update the half on older firmware, or run the guided split-link repair, which the check opens for you.",
+      "The pairing check now looks at each half's bond list as well as the address it points at, so two halves that point at each other but are not actually bonded no longer read as paired.",
+      "Read settings replaces Dump settings, which returned nothing on current firmware. It shows what the selected half reports: firmware, Bluetooth addresses and bonds, battery and module. Timeouts, host OS and LED brightness can be set but not read back from the keyboard.",
+      "The battery reads 100% when the keyboard is full, on any firmware.",
+      "A module profile still used by a layer can be deleted anyway, or the warning dismissed.",
+      "With LED Colors on in light mode, a key with a white LED keeps a gray edge instead of disappearing into the board.",
+      "The Hub links the create-collective organization on GitHub, the Create Knowledge Base and Create Companion. About links the source for OpenFlow, Create Companion and the legacy firmware.",
+      "All text in the app uses American spelling.",
+      "Keyboard firmware updates, the guided split-link repair and recovery tools stay held back in this build.",
+    ],
+  },
+  {
     version: "0.5.0",
     date: "2026-09-26",
     notes: [
