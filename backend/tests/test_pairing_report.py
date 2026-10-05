@@ -87,3 +87,74 @@ def test_no_pair_address_reported_is_unknown_not_a_failure():
 
 def test_nothing_connected():
     assert pairing_report([])["state"] == "incomplete"
+
+
+def deep(side, addr, paired_to, peers, fw="3.41.0"):
+    h = half(side, addr, paired_to)
+    h["ble"]["pairedPeers"] = peers
+    h["firmwareVersion"] = fw
+    return h
+
+
+def test_pointing_at_each_other_with_an_empty_bond_table_is_not_paired():
+    """A user's left half pointed at its partner with an EMPTY bond table and the link down
+    (2026-09-25); the address cross-check alone called that paired."""
+    got = pairing_report([deep("left", L_ADDR, R_ADDR, []), deep("right", R_ADDR, L_ADDR, [L_ADDR])])
+    assert got["state"] == "bond-missing", got
+    assert got["missing"] == ["left"]
+    assert "is empty" in got["detail"]
+
+
+def test_bond_tables_holding_the_partner_are_paired():
+    got = pairing_report([deep("left", L_ADDR, R_ADDR, [R_ADDR.lower()]),
+                          deep("right", R_ADDR, L_ADDR, [OTHER, L_ADDR])])
+    assert got["state"] == "paired", got
+
+
+def test_no_bond_table_read_is_not_a_failure():
+    """Poll data carries no bond table; that must not turn a working pair into a broken one."""
+    got = pairing_report([half("left", L_ADDR, R_ADDR), half("right", R_ADDR, L_ADDR)])
+    assert got["state"] == "paired", got
+
+
+# --- split_link_verdict --------------------------------------------------------------------
+
+from openflow_backend.device.service import split_link_verdict   # noqa: E402
+
+
+def verdict(left, right, partner):
+    halves = [h for h in (left, right) if h is not None]
+    return split_link_verdict(halves, pairing_report(halves), partner)
+
+
+def test_split_link_ok_when_bonded_and_the_right_answers_through_the_left():
+    v = verdict(deep("left", L_ADDR, R_ADDR, [R_ADDR]), deep("right", R_ADDR, L_ADDR, [L_ADDR]),
+                {"reached": True, "firmwareVersion": "3.41.0"})
+    assert v["state"] == "ok" and v["action"] is None
+
+
+def test_split_link_needs_both_halves_on_usb():
+    v = verdict(deep("left", L_ADDR, R_ADDR, [R_ADDR]), None, None)
+    assert v["state"] == "connect-both"
+    assert "left half is on USB" in v["detail"]
+
+
+def test_firmware_mismatch_comes_before_pairing_and_compares_numerically():
+    """The pairing repair refuses while firmware differs, so that is the first fix. 3.9 is
+    older than 3.10, which a text comparison gets backwards."""
+    v = verdict(deep("left", L_ADDR, R_ADDR, [], fw="3.10.0"),
+                deep("right", R_ADDR, L_ADDR, [], fw="3.9.0"), None)
+    assert v["state"] == "firmware-mismatch" and v["action"] == "update-firmware"
+    assert "update the right half" in v["detail"]
+
+
+def test_a_missing_bond_sends_you_to_the_pairing_repair():
+    v = verdict(deep("left", L_ADDR, R_ADDR, []), deep("right", R_ADDR, L_ADDR, [L_ADDR]),
+                {"reached": False, "firmwareVersion": None})
+    assert v["state"] == "re-pair" and v["action"] == "pairing-repair"
+
+
+def test_bonded_but_unreachable_is_a_link_down():
+    v = verdict(deep("left", L_ADDR, R_ADDR, [R_ADDR]), deep("right", R_ADDR, L_ADDR, [L_ADDR]),
+                {"reached": False, "firmwareVersion": None})
+    assert v["state"] == "link-down" and v["action"] == "restart"

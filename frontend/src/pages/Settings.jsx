@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { confirmDialog } from "../lib/dialogs";
 import { applyInterfaceScaling } from "../lib/scaling";
@@ -96,7 +97,16 @@ function DeviceGate({ connected, children }) {
 }
 
 export default function Settings() {
-  const [tab, setTab] = useState("behavior");
+  // A link can open a tab, and a section on it: Devices › Troubleshooting sends a keyboard
+  // whose halves are not bonded to ?tab=troubleshooting&section=split-link.
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(() => (SECTIONS.some((t) => t.id === params.get("tab")) ? params.get("tab") : "behavior"));
+  const jumpTo = params.get("section");
+  useEffect(() => {
+    if (!jumpTo) return undefined;
+    const id = setTimeout(() => document.getElementById(jumpTo)?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    return () => clearTimeout(id);
+  }, [jumpTo, tab]);
   const [settings, setSettings] = useState(null);
   const [status, setStatus] = useState([]);
   const [backups, setBackups] = useState({ backups: [], dir: "" });
@@ -324,7 +334,7 @@ export default function Settings() {
                       </div>
                     );
                   })}
-                  <h3 className="settings-section">Guided split-link repair</h3>
+                  <h3 className="settings-section" id="split-link">Guided split-link repair</h3>
                   <p className="page-sub" style={{ marginBottom: 12 }}>
                     NayaFlow's pairing operation as one reviewed sequence: both halves' addresses are
                     stored <strong>before</strong> anything is cleared, each half is pointed at the

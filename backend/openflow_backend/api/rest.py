@@ -1645,6 +1645,24 @@ async def dump_settings(body: dict = Body(default={})) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/rpc/read-settings")
+async def read_settings(body: dict = Body(default={})) -> dict:
+    svc = get_service()
+    try:
+        return await run_in_threadpool(svc.read_settings, body.get("side", "left"))
+    except TransportError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/split-link-check")
+async def split_link_check() -> dict:
+    svc = get_service()
+    try:
+        return await run_in_threadpool(svc.split_link_check)
+    except TransportError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/rpc/check-for-updates")
 async def check_for_updates() -> dict:
     # OpenFlow has no external update dependency. Always report up to date.

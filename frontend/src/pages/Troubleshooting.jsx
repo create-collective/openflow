@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import BleSlots from "../components/BleSlots";
 import { useShowAllKeyboards, visibleHalves } from "../lib/showAllKeyboards";
@@ -67,6 +68,7 @@ const PAIRING = {
   paired: { tone: "ok", text: "Halves paired" },
   "half-paired": { tone: "warn", text: "One half only" },
   "not-paired": { tone: "err", text: "Not bonded" },
+  "bond-missing": { tone: "err", text: "Bond missing" },
   incomplete: { tone: "warn", text: "Both halves needed" },
   unknown: { tone: "warn", text: "No pair address" },
 };
@@ -206,6 +208,15 @@ export default function Troubleshooting() {
   const [err, setErr] = useState(null);
   const [side, setSide] = useState("left");
   const { out, busy, run, clear } = useRunLog();
+  // The split-link check keeps its verdict apart from the output box: the verdict is the
+  // answer, with the fix beside it; the readings it came from go to the box below.
+  const [linkCheck, setLinkCheck] = useState(null);
+  const navigate = useNavigate();
+  const checkSplitLink = async () => {
+    setLinkCheck(null);
+    const res = await run("Check split link", api.splitLinkCheck);
+    if (res) setLinkCheck(res.verdict);
+  };
   const [live, setLive] = useState(false);   // read in this session, not restored from cache
   const [released, setReleased] = useState(false);
   const [ignored, setIgnored] = useState([]);
@@ -617,9 +628,29 @@ export default function Troubleshooting() {
               <SettingRow label="Generate report" desc="Collect device information and diagnostics."
                 control={<Button size="sm" disabled={busy}
                   onClick={() => run("Diagnostics report", api.diagnostics)}>Generate</Button>} />
-              <SettingRow label="Dump settings" desc="Read the selected half's stored settings."
+              <SettingRow label="Read settings"
+                desc="What the selected half reports: firmware, Bluetooth addresses and bonds, battery, module. Timeouts, host OS and LED brightness can be written but not read back."
+                control={<Button size="sm" disabled={busy || side === "dongle"}
+                  onClick={() => run("Read settings", () => api.readSettings(side))}>Read</Button>} />
+              <SettingRow label="Check split link"
+                desc="Both halves on USB: firmware, bonds, and whether the right half answers through the left."
                 control={<Button size="sm" disabled={busy}
-                  onClick={() => run("Dump settings", () => api.dumpSettings(side))}>Read</Button>} />
+                  onClick={checkSplitLink}>Check</Button>} />
+              {linkCheck && (
+                <Notice size="sm" tone={linkCheck.tone} title={linkCheck.title}
+                  onDismiss={() => setLinkCheck(null)}
+                  action={linkCheck.action === "pairing-repair" ? (
+                    <Button size="sm" onClick={() => navigate("/settings?tab=troubleshooting&section=split-link")}>
+                      Open the split-link repair &rarr;
+                    </Button>
+                  ) : linkCheck.action === "update-firmware" ? (
+                    <Button size="sm" onClick={() => navigate("/settings?tab=firmware")}>
+                      Open Firmware &rarr;
+                    </Button>
+                  ) : null}>
+                  {linkCheck.detail}
+                </Notice>
+              )}
               <SettingRow label="Test SPI flash" desc="Run the device's flash diagnostic."
                 control={<Button size="sm" disabled={busy}
                   onClick={() => run("SPI flash self-test", () => api.sendCommand("repair_flash", [], { side }))}>Run test</Button>} />

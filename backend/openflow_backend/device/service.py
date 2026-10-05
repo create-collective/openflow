@@ -273,6 +273,26 @@ def _pairing_verdict(halves: list[dict]) -> dict:
     if not paired_to(left) and not paired_to(right):
         return {"state": "unknown", "detail": "neither half reported a pair address."}
     if l_ok and r_ok:
+        # Pointing at each other is not the same as bonded to each other. Where a half reported
+        # its bond table (pairedPeers, deep reads only), its partner must be in it: a user's
+        # left half pointed correctly with an EMPTY table, the link was down, and this check
+        # used to call it paired (2026-09-25). No table read is not a failure; it is unknown.
+        def peers(h):
+            p = (h.get("ble") or {}).get("pairedPeers")
+            return None if p is None else [x.upper() for x in p]
+        missing = [(side, peers(h)) for side, h, other in (("left", left, right),
+                                                             ("right", right, left))
+                   if peers(h) is not None and addr(other) not in peers(h)]
+        if missing:
+            side, table = missing[0]
+            both = len(missing) == 2
+            return {"state": "bond-missing",
+                    "detail": (f"both halves point at each other, but {'neither half holds' if both else f'the {side} half holds no'} "
+                               f"bond with its partner (its bond table "
+                               f"{'is empty' if not table else 'lists ' + ', '.join(table)}). "
+                               "The split link cannot come up like this; the pairing repair "
+                               "re-creates the bond."),
+                    "missing": [m[0] for m in missing]}
         return {"state": "paired",
                 "detail": f"each half is bonded to the other ({addr(left)} <-> {addr(right)})."}
     if l_ok or r_ok:
@@ -283,6 +303,54 @@ def _pairing_verdict(halves: list[dict]) -> dict:
     return {"state": "not-paired",
             "detail": f"neither half points at the other. Left is bonded to "
                       f"{paired_to(left) or 'nothing'}, right to {paired_to(right) or 'nothing'}."}
+
+
+def split_link_verdict(halves: list[dict], pairing: dict, partner_via_left: dict | None) -> dict:
+    """One verdict on the split link, with the fix to try first. Pure, so it is testable.
+
+    What naya-probe does for a user who sends it back, done in the app: both halves' firmware,
+    addresses and bond tables (through `pairing`, from a deep read), and whether the right half
+    answers THROUGH the left half's port, which it does only while the split link is up.
+    `partner_via_left` is {"reached": bool, "firmwareVersion": ...}, or None when the left half
+    could not be asked at all. The fixes are ordered as they must be applied: the pairing repair
+    refuses while the firmware differs, so a mismatch comes first.
+    """
+    by_side = {h.get("side"): h for h in halves if h.get("connected")}
+    left, right = by_side.get("left"), by_side.get("right")
+    if left is None or right is None:
+        gone = "right" if left is not None else "left" if right is not None else "both"
+        return {"state": "connect-both", "tone": "warn", "action": None,
+                "title": "Plug both halves in with USB",
+                "detail": (f"Only the {('left' if gone == 'right' else 'right')} half is on USB. "
+                           if gone != "both" else "No half is on USB. ")
+                          + "The check reads each half over its own cable."}
+    fl, fr = left.get("firmwareVersion"), right.get("firmwareVersion")
+    if fl and fr and fl != fr:
+        def vt(v):
+            return tuple(int(x) for x in str(v).split(".") if x.isdigit())
+        older = "right" if vt(fr) < vt(fl) else "left"
+        return {"state": "firmware-mismatch", "tone": "err", "action": "update-firmware",
+                "title": "The halves run different firmware",
+                "detail": f"Left is on {fl}, right on {fr}. Halves on different firmware do not "
+                          f"link, and the pairing repair refuses until they match: update the "
+                          f"{older} half first."}
+    state = pairing.get("state")
+    if state in ("not-paired", "half-paired", "bond-missing", "unknown"):
+        return {"state": "re-pair", "tone": "err", "action": "pairing-repair",
+                "title": "The halves are not bonded to each other",
+                "detail": f"{pairing.get('detail') or ''} Run the guided split-link repair."}
+    reached = (partner_via_left or {}).get("reached")
+    if reached is False:
+        return {"state": "link-down", "tone": "warn", "action": "restart",
+                "title": "Bonded, but the link is down",
+                "detail": "Each half is bonded to the other, yet the right half does not answer "
+                          "through the left. Unplug both halves and plug them back in. If the "
+                          "link still does not come up, run the guided split-link repair."}
+    return {"state": "ok", "tone": "ok", "action": None,
+            "title": "The split link is up",
+            "detail": "Same firmware on both halves, each bonded to the other"
+                      + (", and the right half answers through the left." if reached
+                         else ". (The left half could not be asked to reach the right.)")}
 
 
 # The order two halves are drawn in, everywhere. A keyboard has a left and a right and the
@@ -925,6 +993,15 @@ class DeviceService:
             p = self._ble_ask(t, dest, C.BLE_GET_PAIR_ADDRESS, caps_key)
             if p is not None and len(p) >= 6:
                 ble["pairAddress"] = ":".join(f"{b:02X}" for b in p[:6])
+            # The bond table: [count][address x count], the peers this half actually holds a bond
+            # with. A half can point at its partner (pairAddress) and still have forgotten it:
+            # a user's left half read pair = the right's address and an EMPTY table, and the
+            # split link was down while the address check said "paired" (2026-09-25). So the
+            # table is read too, and an empty one ([0]) is kept apart from no answer at all.
+            p = self._ble_ask(t, dest, C.BLE_GET_ALL_PAIRS, caps_key)
+            if p is not None and len(p) >= 1 and p[0] <= 8 and len(p) >= 1 + 6 * p[0]:
+                ble["pairedPeers"] = [":".join(f"{b:02X}" for b in p[1 + 6 * k:7 + 6 * k])
+                                      for k in range(p[0])]
             p = self._ble_ask(t, dest, C.BLE_GET_DONGLE_ADDR, caps_key)
             if p is not None and len(p) >= 6:
                 ble["dongleAddress"] = ":".join(f"{b:02X}" for b in p[:6])
@@ -1281,6 +1358,76 @@ class DeviceService:
 
     def dump_settings(self, side: str) -> dict:
         return self.text_command(side, "dump_settings")
+
+    def read_settings(self, side: str) -> dict:
+        """What one half reports about itself, read with the binary commands every firmware
+        answers -- the replacement for "Dump settings", whose text command 3.41.0 no longer
+        answers (docs/remap-protocol-live.md: every text command returns nothing).
+
+        The old text dump is still tried, and kept when an older firmware answers it. Timeouts,
+        host OS and LED brightness are not here: the firmware takes them but has no command to
+        read them back."""
+        halves = self.status_all(verbose=True)
+        h = next((x for x in halves if x.get("side") == side and x.get("connected")), None)
+        if h is None:
+            raise TransportError(f"the {side} half is not connected over USB")
+        try:
+            text = (self.text_command(side, "dump_settings").get("reply") or "").strip()
+        except Exception:                           # noqa: BLE001 -- the dump is optional
+            text = ""
+        ble = dict(h.get("ble") or {})
+        ble.pop("slots", None)                      # the Bluetooth page's view, not a setting
+        return {
+            "ok": True, "side": side,
+            "firmwareVersion": h.get("firmwareVersion"),
+            "hardwareId": h.get("hardwareId"),
+            "bleAddress": h.get("bleAddress"),
+            "batteryPercent": h.get("batteryPercent"),
+            "batteryMillivolts": h.get("batteryMillivolts"),
+            "bluetooth": ble,
+            "module": h.get("module"),
+            "textDump": text or None,
+            "notReadable": ["idle and sleep timeouts", "host OS", "LED brightness"],
+        }
+
+    def split_link_check(self) -> dict:
+        """The split-link check: naya-probe's reads, done in the app. Read-only.
+
+        A deep read of both halves (firmware, own and pair address, bond table, link state), and
+        one more question: does the right half answer THROUGH the left half's port? The left
+        relays a command to its partner only while the split link is up, so that answer is the
+        link itself rather than a flag about it. Then one verdict with the fix to try first."""
+        halves = self.status_all(verbose=True)
+        kid = next((h.get("keyboardId") for h in halves
+                    if h.get("connected") and h.get("side") == "left"), None)
+        board = [h for h in halves if kid is None or h.get("keyboardId") == kid]
+        pairing = pairing_report(board)
+
+        partner = None
+        if any(h.get("side") == "left" and h.get("connected") for h in board):
+            def ask(t, dest, dev):
+                p = _first_payload(t.send_command(self._dest_for_side("right"),
+                                                  C.CAT_SYSTEM, C.SYS_GET_FW_VERSION, timeout=2.0))
+                # An EMPTY payload is not an answer: a left half with no link replies with one.
+                version = format_fw_version(p) if p and len(p) >= 4 else None
+                return {"reached": version is not None, "firmwareVersion": version}
+            try:
+                partner = self._with_transport("left", ask)
+            except TransportError:
+                partner = None
+
+        def snap(h):
+            ble = h.get("ble") or {}
+            return {"side": h.get("side"), "connected": bool(h.get("connected")),
+                    "port": h.get("port"), "firmwareVersion": h.get("firmwareVersion"),
+                    "bleAddress": h.get("bleAddress"),
+                    "pairAddress": ble.get("pairAddress") or h.get("pairAddress"),
+                    "pairedPeers": ble.get("pairedPeers"),
+                    "link": (pairing.get("links") or {}).get(h.get("side"))}
+        return {"halves": [snap(h) for h in board if h.get("side") in ("left", "right")],
+                "pairing": {k: pairing.get(k) for k in ("state", "detail", "missing")},
+                "partnerViaLeft": partner,
+                "verdict": split_link_verdict(board, pairing, partner)}
 
     # --- keymap read (REMAP) ---------------------------------------------------
 

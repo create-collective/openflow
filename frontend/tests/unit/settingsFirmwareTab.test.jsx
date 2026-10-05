@@ -7,6 +7,7 @@
 // from that instead of taking a reading of its own.
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const stream = { data: null };
@@ -45,7 +46,7 @@ beforeEach(async () => {
 afterEach(() => vi.clearAllMocks());
 
 async function openFirmwareTab() {
-  render(<Settings />);
+  render(<MemoryRouter><Settings /></MemoryRouter>);
   await screen.findByRole("tab", { name: /firmware/i });
   await userEvent.click(screen.getByRole("tab", { name: /firmware/i }));
 }
@@ -59,14 +60,14 @@ describe("Settings → Firmware", () => {
   });
 
   it("enables as soon as the stream reports a half, with no tab change", async () => {
-    const { rerender } = render(<Settings />);
+    const { rerender } = render(<MemoryRouter><Settings /></MemoryRouter>);
     await screen.findByRole("tab", { name: /firmware/i });
     await userEvent.click(screen.getByRole("tab", { name: /firmware/i }));
     expect(await screen.findByRole("button", { name: /update keyboard firmware/i })).toBeDisabled();
 
     // The keyboard is plugged in while the tab sits open: the next tick of the stream carries it.
     stream.data = { status: { halves: [half()] } };
-    rerender(<Settings />);
+    rerender(<MemoryRouter><Settings /></MemoryRouter>);
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /update keyboard firmware/i })).toBeEnabled());

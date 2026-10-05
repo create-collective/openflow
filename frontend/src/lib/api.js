@@ -152,6 +152,8 @@ export const api = {
   textCommand: (side, command, force = false) =>
     req("POST", "/rpc/text-command", { side, command, force }),
   dumpSettings: (side) => req("POST", "/rpc/dump-settings", { side }),
+  readSettings: (side) => req("POST", "/rpc/read-settings", { side }),
+  splitLinkCheck: () => req("GET", "/api/split-link-check"),
   checkForUpdates: () => req("POST", "/rpc/check-for-updates"),
 
   flashPreview: (body = {}) => req("POST", "/rpc/flash-preview", body),
