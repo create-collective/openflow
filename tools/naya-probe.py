@@ -17,6 +17,16 @@ ports, asks questions, and prints the answers. Unplugging it mid-run costs nothi
                                          #   its application. Two restarts; nothing is written
                                          #   to flash. It is what to run after a firmware
                                          #   update that did not take.
+    python naya-probe.py --spi-flash-test right
+                                         # runs NayaCore's own SPI-flash self-test on the right
+                                         #   half (while it runs its application) and decodes the
+                                         #   per-partition verdict. This is the diagnose step of
+                                         #   NayaFlow's "repair flash"; it does NOT format, erase
+                                         #   or touch firmware or keymaps, but it is NOT pure
+                                         #   read-only either -- it writes and reads back a small
+                                         #   test file on each storage partition, exactly as
+                                         #   NayaCore does. It answers "is this unit's SPI flash
+                                         #   healthy?" without reformatting anything.
 
 What it does
   1. Lists every serial port, decoding Naya's product ids: which half, whether it is running
@@ -116,9 +126,10 @@ KNOWN_IMAGES = {
 # ------------------------------------------------------------------------------------------- #
 SOURCE_HOST, EOT = 0xAA, 0x04
 DEST = {"left": 0x50, "right": 0x51}
-CAT_SYSTEM, CAT_BLE = 0xFE, 0xBE
+CAT_SYSTEM, CAT_BLE, CAT_FLASH = 0xFE, 0xBE, 0xFA
 SYS_MEDIA_ID_REQUEST, SYS_GET_FW_VERSION = 0x1001, 0x1002
 BLE_GET_PAIR_ADDRESS, BLE_GET_ALL_PAIRS, BLE_GET_ADDRESS = 0x1002, 0x1005, 0x1008
+FLASH_TEST = 0x1001
 
 
 def xor_checksum(data):
@@ -229,6 +240,123 @@ def app_reads(ser, dest):
         peers = [m for m in (mac(allp[1 + k * 6:7 + k * 6]) for k in range(allp[0])) if m]
     out["allPairs"] = peers if allp else None
     return out
+
+
+# ------------------------------------------------------------------------------------------- #
+# SPI-flash self-test (0xFA/0x1001), decoded. Ported from OpenFlow's device/spi_flash_test.py,
+# which was validated against both halves of a healthy 3.41.0 Create on 2026-09-10. This is the
+# diagnose step of NayaFlow's "repair flash"; it writes and reads back a test file per partition
+# but never formats, erases, or touches firmware/keymaps. Response layout, from NayaCore's own
+# output format: 2 header bytes + N partitions x 6 bytes (status + five signed return codes), with
+# 32 bytes = 5 partitions (left/dongle) and 20 bytes = 3 partitions (right).
+# ------------------------------------------------------------------------------------------- #
+FLASH_LAYOUTS = {32: 5, 20: 3}                        # response length -> partition count
+FLASH_STATUS_NAMES = {0: "Not Detected", 1: "Detected", 2: "Formatted", 3: "Mounted", 4: "Erased"}
+FLASH_RC_NAMES = {0: "Success", -1: "Generic Error", -22: "EINVAL", -84: "LFS_ERR_CORRUPT"}
+FLASH_RC_FIELDS = ("open", "mount", "fileOpen", "fileRead", "fileWrite")  # NayaCore's print order
+FLASH_HEALTHY_STATUS = 3                               # Mounted
+
+
+def spiflash_decode(raw):
+    """SPIFLASH_TEST payload bytes -> per-partition diagnosis. Never raises."""
+    raw = bytes(raw or b"")
+    if not raw:
+        return {"length": 0, "layout": None, "note": "the half returned no flash self-test"}
+    count = FLASH_LAYOUTS.get(len(raw))
+    if count is None:
+        return {"length": len(raw), "layout": None, "raw": raw.hex(),
+                "note": f"unrecognized SPI flash test layout ({len(raw)} bytes; known lengths are "
+                        f"{', '.join(str(n) for n in sorted(FLASH_LAYOUTS))}); reported raw"}
+    partitions = []
+    for i in range(count):
+        blk = raw[2 + i * 6:2 + i * 6 + 6]
+        status = blk[0]
+        codes = {}
+        for n, name in enumerate(FLASH_RC_FIELDS):
+            v = int.from_bytes(blk[1 + n:2 + n], "big", signed=True)
+            codes[name] = {"value": v, "name": FLASH_RC_NAMES.get(v, f"Error ({v})"), "ok": v == 0}
+        failing = sorted(k for k, c in codes.items() if not c["ok"])
+        partitions.append({"index": i, "status": status,
+                           "statusName": FLASH_STATUS_NAMES.get(status, f"Unknown (0x{status:02x})"),
+                           "returnCodes": codes, "errored": bool(failing),
+                           "failingOperations": failing, "mounted": status == FLASH_HEALTHY_STATUS,
+                           "raw": blk.hex()})
+    return {"length": len(raw), "layout": f"{len(raw)}-byte", "partitionCount": count,
+            "raw": raw.hex(), "headerUnknown": raw[:2].hex(), "partitions": partitions,
+            "errored": any(p["errored"] for p in partitions),
+            "erroredPartitions": [p["index"] for p in partitions if p["errored"]]}
+
+
+def spiflash_summary(decoded):
+    """A one-line verdict."""
+    if not decoded or not decoded.get("layout"):
+        return {"state": "unknown", "detail": (decoded or {}).get("note")}
+    parts = decoded.get("partitions") or []
+    bad = [p for p in parts if p["errored"]]
+    if bad:
+        which = ", ".join(f"#{p['index']} ({p['statusName']}: {', '.join(p['failingOperations'])})"
+                          for p in bad)
+        return {"state": "errors",
+                "detail": f"{len(bad)} of {len(parts)} partitions report errors: {which}."}
+    unmounted = [p for p in parts if not p["mounted"]]
+    if unmounted:
+        which = ", ".join(f"#{p['index']} ({p['statusName']})" for p in unmounted)
+        return {"state": "not-mounted",
+                "detail": f"No errors, but {len(unmounted)} of {len(parts)} partitions are not "
+                          f"mounted: {which}."}
+    return {"state": "ok", "detail": f"All {len(parts)} partitions mounted with no errors."}
+
+
+def spi_flash_test(side):
+    """Run NayaCore's SPI-flash self-test on the half that is running its application. Writes and
+    reads a test file per partition (no format/erase); returns the decoded verdict."""
+    app = naya_ports(side, "app")
+    if not app:
+        boot = naya_ports(side, "mcuboot")
+        why = (f"the {side} half is in its bootloader; let it boot into its application first "
+               "(unplug/replug it) and run again" if boot
+               else f"no {side} half is running its application on USB")
+        print(f"\nSPI FLASH SELF-TEST ({side}): skipped -- {why}")
+        return {"side": side, "ok": False, "why": why}
+    port = app[0][0].device
+    print(f"\nSPI FLASH SELF-TEST ({side.upper()}) on {port} -- NayaCore's own diagnose step. This "
+          "writes and reads a small test file on each storage partition; it does not format, erase "
+          "or touch firmware or keymaps.")
+    result = {"side": side, "port": port, "ok": False}
+    try:
+        with open_port(port) as ser:
+            ser.dtr = True
+            ser.rts = True
+            time.sleep(0.1)
+            ser.read(4096)
+            if not cdc_handshake(ser, DEST[side]):
+                result["why"] = "no handshake: the port is there but the application did not answer"
+                print(f"  {result['why']}")
+                return result
+            # The self-test does real flash I/O across every partition, so it can take several
+            # seconds; a damaged chip is exactly the case that runs slow, so wait generously.
+            got = cdc_send(ser, cdc_build(DEST[side], CAT_FLASH, FLASH_TEST), timeout=20.0)
+    except serial.SerialException as e:
+        result["why"] = f"could not open {port}: {e}"
+        print(f"  {result['why']}")
+        if "denied" in str(e).lower() or "busy" in str(e).lower():
+            print("  -> another program holds this port. Close NayaFlow / OpenFlow and run again.")
+        return result
+    frames = [f for f in got if f["category"] == CAT_FLASH] or got
+    payload = bytes(frames[0]["payload"]) if frames else b""
+    decoded = spiflash_decode(payload)
+    verdict = spiflash_summary(decoded)
+    result.update({"ok": bool(payload), "raw": payload.hex(), "diagnosis": decoded,
+                   "summary": verdict})
+    if not payload:
+        print("  no answer -- the application did not return a flash self-test (is the half on "
+              "firmware old enough to lack it? note it and send the file back)")
+        return result
+    print(f"  verdict: {verdict['state'].upper()} -- {verdict['detail']}")
+    for p in decoded.get("partitions") or []:
+        flags = ", ".join(p["failingOperations"]) if p["errored"] else "clean"
+        print(f"  partition #{p['index']}: {p['statusName']:12} return codes {flags}")
+    return result
 
 
 # ------------------------------------------------------------------------------------------- #
@@ -474,7 +602,7 @@ def leave_bootloader(report, side):
 
 
 # ------------------------------------------------------------------------------------------- #
-def probe(watch_log=0.0, bootloader_side=None):
+def probe(watch_log=0.0, bootloader_side=None, spi_flash_test_side=None):
     report = {"at": datetime.now().isoformat(timespec="seconds"), "python": sys.version.split()[0],
               "platform": sys.platform, "ports": [], "halves": [], "bootloaders": [], "notes": []}
     if bootloader_side:
@@ -632,6 +760,9 @@ def probe(watch_log=0.0, bootloader_side=None):
         report["leave_bootloader"] = leave_bootloader(report, bootloader_side)
         print(f"  {report['leave_bootloader']}")
 
+    if spi_flash_test_side:
+        report["spi_flash_test"] = spi_flash_test(spi_flash_test_side)
+
     out = Path(__file__).with_name(f"naya-probe-{datetime.now():%Y%m%d-%H%M%S}.json")
     out.write_text(json.dumps(report, indent=1), encoding="utf-8")
     print(f"\nSaved {out}\nSend that file back. Nothing was written to the keyboard's flash.")
@@ -645,8 +776,12 @@ if __name__ == "__main__":
     ap.add_argument("--bootloader", choices=("left", "right"),
                     help="restart this half into its bootloader, read both flash slots, and "
                          "restart it back into its application (writes nothing to flash)")
+    ap.add_argument("--spi-flash-test", choices=("left", "right"), dest="spi_flash_test",
+                    help="run NayaCore's SPI-flash self-test on this half (while it runs its "
+                         "application) and decode the per-partition verdict. Does NOT format or "
+                         "erase, but writes/reads a test file per partition (not pure read-only)")
     args = ap.parse_args()
     try:
-        probe(args.watch_log, args.bootloader)
+        probe(args.watch_log, args.bootloader, args.spi_flash_test)
     except KeyboardInterrupt:
         print("\nstopped")
