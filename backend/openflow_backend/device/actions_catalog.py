@@ -9,7 +9,7 @@ Organized into the tabs NayaFlow uses:
 
 Action *codes* are functional facts (must match firmware/DB); labels are OpenFlow's
 own (clean reskin). `actionType` matches NayaFlow's key_bindings.action_type so data
-round-trips. Some actions are marked comingSoon (present for parity, not yet wired).
+round-trips.
 """
 
 from __future__ import annotations
@@ -33,14 +33,7 @@ LAYER_ACTION_TYPES = {
 }
 
 # Behavior slots (the "OneKey" multi-behavior-per-key feature). "Tap" is the
-# primary (stored as 'tap'; legacy 'press' reads as 'tap'). Tap/Hold/Double Tap/
-# Tap+Hold are editable and stored offline in the DB; flashing them to the device
-# waits on the REMAP layer-data codec. Double Tap+Hold stays experimental — it may
-# exceed Naya's firmware and belongs to the fully-open OneKey firmware track.
-# Tap and Hold are the only slots Naya's firmware actually stores + honors. A live
-# read + reflash test (2026-09-01) proved NayaFlow drops Double Tap and Tap + Hold on
-# flash — they're half-finished firmware slots — so they're disabled + flagged
-# experimental like Double Tap + Hold until the open OneKey firmware lands.
+# primary (stored as 'tap'; legacy 'press' reads as 'tap').
 # A key holds FOUR behaviours, stored as TWO hold-tap records 0x52 apart: the primary bank is
 # tap + hold, the secondary bank is double-tap + tap+hold. Confirmed live 2026-09-03 by capturing
 # NayaFlow writing both records and then pressing the key (b / zzz / x / yyy). Read, write and
@@ -57,7 +50,7 @@ BEHAVIOR_SLOTS = [
 ]
 
 
-def _a(code, label, action_type="key", coming_soon=False, name=None):
+def _a(code, label, action_type="key", name=None):
     """One palette entry.
 
     `label` is the keycap legend and stays terse -- a palette button is a 44px grid cell that
@@ -65,8 +58,6 @@ def _a(code, label, action_type="key", coming_soon=False, name=None):
     tooltips and for anywhere the value is shown as prose rather than on a key.
     """
     d = {"code": code, "label": label, "actionType": action_type}
-    if coming_soon:
-        d["comingSoon"] = True
     if name:
         d["name"] = name
     return d

@@ -203,7 +203,7 @@ function createWindow(port) {
     // The window and taskbar icon. The packaged build gets it from electron-builder; in dev
     // mode nothing else sets it and the window wore the Electron default.
     icon: path.join(__dirname, "..", "build", "icon.png"),
-    backgroundColor: "#0e0e11",      // the dark theme's --bg until the theme work lands
+    backgroundColor: "#0e0e11",      // the dark theme's --bg: what shows before the page paints
     autoHideMenuBar: true,           // native frame; the menu is there behind Alt
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),

@@ -216,7 +216,7 @@ async def flash_firmware(body: dict = Body(...)) -> dict:
     from the UI."""
     if not FIRMWARE_FLASH_ENABLED:
         raise HTTPException(status_code=400, detail=(
-            "Firmware flashing is wired but disabled until it is verified on a donor unit. "
+            "Firmware flashing is held back in this release (OPENFLOW_ENABLE_FIRMWARE_FLASH). "
             "Nothing was sent."))
     import os
     from pathlib import Path as _P
@@ -272,7 +272,7 @@ async def flash_procedure_run(body: dict = Body(...)) -> dict:
     """
     if not FIRMWARE_FLASH_ENABLED:
         raise HTTPException(status_code=400, detail=(
-            "Firmware flashing is wired but disabled until it is verified on a donor unit. "
+            "Firmware flashing is held back in this release (OPENFLOW_ENABLE_FIRMWARE_FLASH). "
             "Nothing was sent."))
     import os
     from pathlib import Path as _P
@@ -402,7 +402,7 @@ async def flash_module_firmware(body: dict = Body(...)) -> dict:
     shipped with the left half's firmware (firmware_upload.require_module_pairing)."""
     if not FIRMWARE_FLASH_ENABLED:
         raise HTTPException(status_code=400, detail=(
-            "Firmware flashing is wired but disabled until it is verified on a donor unit. "
+            "Firmware flashing is held back in this release (OPENFLOW_ENABLE_FIRMWARE_FLASH). "
             "Nothing was sent."))
     import os
     from pathlib import Path as _P
@@ -438,7 +438,7 @@ async def module_flash_procedure_run(body: dict = Body(default={})) -> dict:
     """
     if not FIRMWARE_FLASH_ENABLED:
         raise HTTPException(status_code=400, detail=(
-            "Firmware flashing is wired but disabled until it is verified on a donor unit. "
+            "Firmware flashing is held back in this release (OPENFLOW_ENABLE_FIRMWARE_FLASH). "
             "Nothing was sent."))
     from ..config import firmware_dir, logs_dir
     from ..device import flash_runs as runs
@@ -491,7 +491,14 @@ async def recovery_read() -> dict:
     """What a half sitting in MCUboot recovery is running, matched against the catalogue, plus the
     bootloader's slot map (`image slot info`) when it answers one. Reads only; opens the recovery
     port for two SMP reads and closes it. This is the read that pins how uploads are addressed
-    (work-queue step 3): expect `slotInfo.slots[*].uploadImageId` and a 1048576-byte slot."""
+    (work-queue step 3): expect `slotInfo.slots[*].uploadImageId` and a 1048576-byte slot.
+
+    The Information page offers it as "Check what it runs" on its bootloader banner (owner's
+    call, 2026-10-09: read-only checks are on in the first public build). Refused while a flash
+    runs: the flasher holds the same bootloader port, and a read must never land in its stream."""
+    from ..device import flash_runs as runs
+    if runs.active():
+        raise HTTPException(status_code=409, detail="A firmware flash is running; check again once it has finished.")
     return await run_in_threadpool(recovery_mod.read_running_image, _firmware_catalog_raw())
 
 
@@ -1661,12 +1668,6 @@ async def split_link_check() -> dict:
         return await run_in_threadpool(svc.split_link_check)
     except TransportError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post("/rpc/check-for-updates")
-async def check_for_updates() -> dict:
-    # OpenFlow has no external update dependency. Always report up to date.
-    return {"updateAvailable": False, "reason": "OpenFlow has no external update source"}
 
 
 @router.get("/api/update-safe")

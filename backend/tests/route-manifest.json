@@ -46,7 +46,6 @@
   "MOUNT /",
   "POST /rpc/add-macro-step",
   "POST /rpc/add-macro-steps",
-  "POST /rpc/check-for-updates",
   "POST /rpc/clear-ble-profile",
   "POST /rpc/clear-device-log",
   "POST /rpc/clear-key-binding",

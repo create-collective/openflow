@@ -15,10 +15,10 @@ import Notice from "./ui/Notice";
 // half needs is decided from its product id at flash time, and holding three of them is how that
 // decision fails later.
 //
-// DOWNLOADABLE IS NOT FLASHABLE, and conflating them hid most of the archive. The module bundles
-// and the dongle image are withheld from FLASHING until that path is proven on a donor unit; two
-// pre-production keyboard images are withheld because nobody can say which side they are. None
-// of that is a reason to refuse someone a copy of the file. Every entry with a file of its own
+// DOWNLOADABLE IS NOT FLASHABLE, and conflating them hid most of the archive. Some images are
+// withheld from FLASHING: the dongle image (no hardware to prove it on), module apps that are not
+// shipping modules, and pre-production keyboard images nobody can place by side. None of that is
+// a reason to refuse someone a copy of the file. Every entry with a file of its own
 // can be downloaded; whether it can then be written to a keyboard is the badge on its row.
 //
 // Entries with no file of their own -- the .sfb userapps extracted from FlashMemory.bin -- get no

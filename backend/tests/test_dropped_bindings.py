@@ -39,9 +39,9 @@ def test_an_encodable_binding_produces_no_drop():
 
 def test_every_known_unencodable_type_has_a_reason_a_user_can_act_on():
     """Not a generic 'unsupported'. Each says what is actually wrong."""
+    # Disabled and Transparent are not here: both are written (NONE and TRANS records in
+    # flash._record_for), so neither can drop.
     for at, code, expect in [
-        ("none", "DISABLE", "Disabled"),
-        ("trans", "TRANSPARENT", "Transparent"),
         # BT_OUT / USB_DEVICE are written since 2026-09-09; only an unknown output drops.
         ("out", "BT_SOMETHING_ELSE", "Wireless"),
         ("macro", "some-uuid", "macro table"),

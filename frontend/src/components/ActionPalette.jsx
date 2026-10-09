@@ -176,7 +176,6 @@ export default function ActionPalette({
     for (const t of tabs) {
       for (const c of t.categories || []) {
         for (const a of c.actions || []) {
-          if (a.comingSoon) continue;
           const s = rate({ code: a.code, label: a.label, name: a.name, alias: a.alias,
                            group: c.name, tooltip: a.tooltip });
           if (s) push(`${a.actionType}/${a.code}`,
@@ -364,10 +363,10 @@ export default function ActionPalette({
                       // Disabled by CLASS, not attribute: a disabled control gets no hover, so
                       // its title never showed -- and the palette is disabled whenever no key
                       // is selected, which is exactly when people read it to decide.
-                      className={"palette-key" + (a.comingSoon ? " soon" : "") + (disabled ? " disabled" : "")}
-                      aria-disabled={disabled || a.comingSoon || undefined}
-                      title={a.comingSoon ? `${a.name || a.label} (coming soon)` : describe(a)}
-                      onClick={() => !disabled && !a.comingSoon
+                      className={"palette-key" + (disabled ? " disabled" : "")}
+                      aria-disabled={disabled || undefined}
+                      title={describe(a)}
+                      onClick={() => !disabled
                         && onPick({ actionCode: a.code, actionType: a.actionType })}
                     >
                       {(() => {
