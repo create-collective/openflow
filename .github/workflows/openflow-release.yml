@@ -6,6 +6,11 @@
 # row per architecture) and Linux (AppImage + deb, SCRUM-70) are here. Everyday checks live in
 # openflow-ci.yml.
 #
+# In-app updates: electron-builder writes latest.yml / latest-mac.yml / latest-linux.yml next to
+# the installers (the GitHub publish target in package.json; nothing is uploaded by it). They go
+# on the draft release with the installers, the two Mac rows' files merged into one by the
+# release job; installed copies read them only once the owner publishes the release.
+#
 # Signing: Windows through Azure Artifact Signing, macOS with a Developer ID certificate plus
 # notarization. Both switch on by themselves once the secrets and variables named in the
 # "code signing" step exist (scripts/ci-signing.mjs has the list); until then the builds are
@@ -107,13 +112,16 @@ jobs:
         run: npm run build:app -- ${{ matrix.target }}
       - name: the artefacts are signed (when signing is on)
         run: node scripts/ci-signing.mjs --verify
+      - name: name this Mac row's update file by its architecture (the release job merges them)
+        if: runner.os == 'macOS'
+        run: mv release/latest-mac.yml "release/latest-mac-$(uname -m).yml"
       - name: checksums
         env:
           SUMS_FOR: ${{ matrix.os }}     # not process.platform: both Mac rows report darwin
         run: |
           node -e '
             const fs = require("fs"), crypto = require("crypto");
-            const out = fs.readdirSync("release").filter(f => /\.(exe|dmg|AppImage|deb)$/.test(f))
+            const out = fs.readdirSync("release").filter(f => /\.(exe|dmg|zip|AppImage|deb)$/.test(f))
               .map(f => crypto.createHash("sha256").update(fs.readFileSync("release/" + f)).digest("hex") + "  " + f);
             fs.writeFileSync("release/SHA256SUMS-" + process.env.SUMS_FOR + ".txt", out.join("\n") + "\n");
             console.log(out.join("\n"));'
@@ -123,8 +131,11 @@ jobs:
           path: |
             release/*.exe
             release/*.dmg
+            release/*.zip
             release/*.AppImage
             release/*.deb
+            release/latest*.yml
+            release/*.blockmap
             release/SHA256SUMS-*.txt
           if-no-files-found: error
 
@@ -135,10 +146,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
+      - name: one latest-mac.yml for both Mac builds
+        run: node scripts/merge-mac-update-info.mjs artifacts
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*

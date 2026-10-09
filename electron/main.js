@@ -17,7 +17,8 @@
 //   * a clean stop: /rpc/shutdown with the token (the backend closes the keyboard's port),
 //     then the process tree is killed if it has not gone within two seconds;
 //   * the sidecar's output lands in <data dir>/logs/sidecar.log, named in the error dialog when
-//     the backend fails to start or dies.
+//     the backend fails to start or dies;
+//   * an update installs only on a click and never during a flash (electron/updater.js).
 
 const { app, BrowserWindow, Menu, dialog, screen, shell } = require("electron");
 const { spawn, spawnSync } = require("child_process");
@@ -27,6 +28,7 @@ const http = require("http");
 const net = require("net");
 const os = require("os");
 const path = require("path");
+const { setupUpdates } = require("./updater");
 
 const DEV = process.env.OPENFLOW_DEV === "1";
 const PREFERRED_PORT = 3001;
@@ -228,7 +230,40 @@ function createWindow(port) {
   }
 }
 
+// The backend's answer to "may OpenFlow close for an update now?". No answer counts as no: a
+// flash cannot be ruled out.
+async function updateSafe() {
+  try {
+    const { status, json } = await httpJson("GET", `http://127.0.0.1:${backendPort}/api/update-safe`, null, 3000);
+    if (status === 200 && json && typeof json.safe === "boolean") return json;
+  } catch {}
+  return { safe: false, reason: "OpenFlow's backend did not answer; try again in a moment." };
+}
+
+// `--update-now`: check, download and install with no window and no backend, then exit. For
+// the updater test (scripts/updater-e2e.mjs); the window's Install button runs the same code.
+async function updateNow() {
+  backendStopped = true;
+  const updates = setupUpdates({
+    dataDir, getWindow: () => null,
+    updateSafe: async () => ({ safe: true, reason: null }),
+    stopBackend: async () => {},
+  });
+  const found = await updates.check().catch((e) => ({ error: e.message }));
+  if (found.error || !found.available) {
+    updates.log(`--update-now: ${found.error || "nothing to install"}`);
+    app.exit(found.error ? 1 : 0);
+    return;
+  }
+  const r = await updates.install({ silent: true, restart: false });
+  if (!r.installing) {
+    updates.log(`--update-now: ${r.error || r.blocked}`);
+    app.exit(1);
+  }
+}
+
 async function start() {
+  if (process.argv.includes("--update-now")) return updateNow();
   buildMenu();
   backendPort = await findFreePort(PREFERRED_PORT);
   startBackend(backendPort);
@@ -241,6 +276,13 @@ async function start() {
     app.exit(1);
     return;
   }
+  setupUpdates({
+    dataDir,
+    getWindow: () => win,
+    updateSafe,
+    // Closing for an install is a quit like any other: no "backend stopped" dialog.
+    stopBackend: () => { quitting = true; return stopBackend(); },
+  });
   createWindow(backendPort);
 }
 

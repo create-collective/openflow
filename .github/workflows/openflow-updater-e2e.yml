@@ -1,0 +1,80 @@
+# The in-app updater, end to end: an installed OpenFlow updates itself to 9.9.9 from a release
+# served on localhost (scripts/updater-e2e.mjs), on Windows, macOS and Linux. The builds are
+# signed exactly as the release signs them, because the updater checks that: Squirrel.Mac takes
+# only an update signed like the running app, and on Windows the installer's publisher is
+# compared with the one the app was built for. Nothing here is uploaded anywhere but the logs.
+
+name: openflow-updater-e2e
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "electron/**"
+      - "package.json"
+      - "scripts/updater-e2e.mjs"
+      - "scripts/ci-signing.mjs"
+      - ".github/workflows/openflow-updater-e2e.yml"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  e2e:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-22.04]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: backend with the build extra
+        working-directory: backend
+        run: pip install -e ".[build]"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - name: npm ci (shell and renderer)
+        run: |
+          npm ci
+          npm --prefix frontend ci
+      - name: AppImage runtime and a display (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libfuse2 xvfb
+      - name: code signing, as the release does it
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+          AZURE_SIGNING_PUBLISHER: ${{ vars.AZURE_SIGNING_PUBLISHER }}
+        run: node scripts/ci-signing.mjs
+      - name: an old build updates itself to 9.9.9
+        run: node scripts/updater-e2e.mjs
+      - name: updater logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-e2e-logs-${{ matrix.os }}
+          path: |
+            ~/AppData/Roaming/OpenFlow/logs/
+            ~/Library/Application Support/OpenFlow/logs/
+            ~/.local/share/OpenFlow/logs/
+          if-no-files-found: ignore
