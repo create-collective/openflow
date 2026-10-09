@@ -82,15 +82,17 @@ The one version number is `__version__` in `backend/openflow_backend/__init__.py
 version:sync` stamps it into the two `package.json` files and `version:check` (part of
 `build:app` and CI) refuses to build when they drift.
 
-Local builds are unsigned. The release workflow signs when it is given the means to:
-`scripts/ci-signing.mjs` runs before electron-builder and, with the Apple secrets present (a
-Developer ID certificate and an App Store Connect key), turns on signing and notarization for
-the two Mac rows; with the Azure Artifact Signing secrets present it signs the Windows
-executables, the installer and the portable build. Without them the build is unsigned, as
-before, and Windows shows its "unknown publisher" prompt on first launch. A partial set of
-secrets fails the job rather than shipping something that only looks signed. The script's
-header lists every secret and variable by name; they live at the organisation level so Create
-Companion's release reads the same ones.
+Local builds are unsigned; release builds are signed. `scripts/ci-signing.mjs` runs before
+electron-builder and, with the Apple secrets present (a Developer ID certificate and an App
+Store Connect key), turns on signing and notarization for the two Mac rows; with the Azure
+Artifact Signing secrets present it signs the Windows executables, the installer and the
+portable build. Both sets are in place: Windows releases are signed since 0.6.0, and macOS
+releases are signed and notarized from the first release after 0.6.0, so the dmg's app opens
+on a double-click. Without the secrets (a fork, say) the build is unsigned, as before, and
+Windows shows its "unknown publisher" prompt on first launch. A partial set of secrets fails
+the job rather than shipping something that only looks signed. The script's header lists
+every secret and variable by name; they are repository secrets here and in Create Companion,
+whose release reads the same names.
 
 The release workflow builds Linux on the oldest Ubuntu runner on purpose: the frozen backend
 needs a glibc at least as new as the build machine's, so the CI build runs on Ubuntu 22.04,
