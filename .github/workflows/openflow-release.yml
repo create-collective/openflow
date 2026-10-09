@@ -42,10 +42,12 @@ jobs:
           # never started. An Intel build DOES run on Apple Silicon through Rosetta, so when
           # runner minutes matter more than speed, keep the x64 row alone and drop the arm64
           # one. macOS runners bill at 10x the Linux rate on a private repository.
+          # dmg AND zip: the zip is what an installed copy's updater downloads (Squirrel.Mac
+          # takes nothing else), and a target named here replaces package.json's mac.target.
           - os: macos-latest
-            target: --mac dmg --arm64
+            target: --mac dmg zip --arm64
           - os: macos-15-intel
-            target: --mac dmg --x64
+            target: --mac dmg zip --x64
           # Linux: an AppImage that runs on most distributions, and a .deb that also installs
           # the udev rule (build/linux/70-openflow.rules) letting the user open the keyboard's
           # serial ports. Built on the OLDEST Ubuntu image on purpose: the frozen sidecar links

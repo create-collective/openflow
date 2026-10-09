@@ -58,8 +58,12 @@ for (const p of parsed) {
     files.push(entry);
   }
 }
-if (!files.some((e) => /arm64/.test(e[0])) || !files.some((e) => !/arm64/.test(e[0]))) {
-  console.error(`expected files for both Apple Silicon and Intel, got: ${[...urls].join(", ")}`);
+// Each architecture needs its zip: Squirrel.Mac, which installs the update, takes nothing else,
+// and a file listing only dmgs would leave every installed Mac unable to update (0.7.0 shipped
+// that way because the workflow's --mac target dropped the zip).
+const zip = (arm) => [...urls].some((u) => u.endsWith(".zip") && /arm64/.test(u) === arm);
+if (!zip(true) || !zip(false)) {
+  console.error(`expected a .zip for both Apple Silicon and Intel, got: ${[...urls].join(", ")}`);
   process.exit(1);
 }
 
