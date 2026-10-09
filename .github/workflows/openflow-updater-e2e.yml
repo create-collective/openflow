@@ -25,6 +25,11 @@ jobs:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    env:
+      # electron-builder skips signing in a pull request unless told otherwise; this test needs
+      # the signature (Squirrel.Mac refuses an unsigned update). A pull request from a fork gets
+      # no secrets from GitHub anyway, so nothing would be signed there.
+      CSC_FOR_PULL_REQUEST: "true"
     strategy:
       fail-fast: false
       matrix:

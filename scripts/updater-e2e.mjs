@@ -93,7 +93,9 @@ const INSTALL = {
     },
     version() {
       if (!existsSync(this.exe)) return null;
-      return execFileSync("powershell", ["-NoProfile", "-Command", `(Get-Item -LiteralPath '${this.exe}').VersionInfo.ProductVersion`], { encoding: "utf8" }).trim();
+      // Windows keeps four parts ("0.6.0.0"); the app's version is the first three.
+      const v = execFileSync("powershell", ["-NoProfile", "-Command", `(Get-Item -LiteralPath '${this.exe}').VersionInfo.ProductVersion`], { encoding: "utf8" }).trim();
+      return v.split(".").slice(0, 3).join(".");
     },
   },
   darwin: {
