@@ -1,7 +1,7 @@
 {
   "name": "openflow",
   "productName": "OpenFlow",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "OpenFlow desktop app: the Electron shell around the frozen Python backend and the built renderer.",
   "homepage": "https://github.com/create-collective/openflow",
