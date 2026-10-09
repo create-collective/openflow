@@ -2,21 +2,23 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useDeviceStream } from "../lib/deviceStream";
-import { KNOWLEDGE_BASE_URL, ORG, REPOS, checkRelease } from "../lib/updates";
+import { KNOWLEDGE_BASE_URL, ORG, REPOS } from "../lib/updates";
 import { notesFor } from "../changelog";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import { KVList, KVRow } from "../components/ui/KV";
 import Notice from "../components/ui/Notice";
 import LinuxAccessNotice, { accessFix } from "../components/LinuxAccessNotice";
+import AppUpdates, { AskAboutUpdates, useUpdateState } from "../components/AppUpdates";
 
 // The front door: the header, then the Create with one button into Bindings; beside it the
-// backend, the keyboard on USB, what is new in this version with an opt-in release check,
-// and the Create Companion, the host-side engine that pairs with this app.
+// backend, the keyboard on USB, what is new in this version with OpenFlow's own updates (and,
+// once only, the question whether to look for them weekly), and the Create Companion, the
+// host-side engine that pairs with this app.
 export default function Hub() {
   const [sys, setSys] = useState(null);
   const [err, setErr] = useState(null);
-  const [update, setUpdate] = useState(null);
+  const [updates, refreshUpdates] = useUpdateState();
   const { data: stream, connected } = useDeviceStream();
   const navigate = useNavigate();
 
@@ -45,6 +47,7 @@ export default function Hub() {
       </header>
 
       <LinuxAccessNotice fix={fix} className="hub-access" />
+      <AskAboutUpdates state={updates} onAnswered={refreshUpdates} className="hub-ask-updates" />
 
       <div className="hub-body">
         <div className="hub-col">
@@ -104,17 +107,7 @@ export default function Hub() {
                 {whatsNew.notes.map((n) => <li key={n}>{n}</li>)}
               </ul>
             )}
-            <div className="hub-update">
-              <Button size="sm" busy={!!update?.checking} onClick={() => checkRelease(REPOS.app, version, setUpdate)}>
-                {update?.checking ? "Checking…" : "Check for updates"}
-              </Button>
-              {update?.error && <span className="hub-update-note err">{update.error}</span>}
-              {update?.latest && (
-                update.ahead
-                  ? <a className="hub-update-note" href={update.url} target="_blank" rel="noreferrer">{update.latest} is available ↗</a>
-                  : <span className="hub-update-note ok">Up to date{update.latest ? ` (${update.latest})` : ""}</span>
-              )}
-            </div>
+            <AppUpdates version={version} compact />
           </Card>
 
           <h2 className="hub-section">Other Software and Resources for the Create</h2>

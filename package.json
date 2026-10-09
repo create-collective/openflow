@@ -74,9 +74,17 @@
     "portable": {
       "artifactName": "${productName}-${version}-win-${arch}-portable.${ext}"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "create-collective",
+        "repo": "openflow"
+      }
+    ],
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "category": "public.app-category.utilities",
       "icon": "build/icon.png",
@@ -104,5 +112,8 @@
         "build/linux/70-openflow.rules=/usr/lib/udev/rules.d/70-openflow.rules"
       ]
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

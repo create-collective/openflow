@@ -1670,6 +1670,22 @@ async def split_link_check() -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/api/update-safe")
+async def update_safe() -> dict:
+    """Whether OpenFlow may close now to install an update of itself.
+
+    The shell asks before it stops the backend for an install (electron/updater.js), and again
+    after the download: quitting ends the backend, and a keyboard or module flash cut off that
+    way can leave a half that will not boot. Keyboard and module flashes both run through
+    flash_runs, so its flag covers both.
+    """
+    from ..device import flash_runs as runs
+    if runs.active():
+        return {"safe": False,
+                "reason": "A firmware flash is running. Install the update once it has finished."}
+    return {"safe": True, "reason": None}
+
+
 # --- flash (write) : preview only for now (dry-run); real write is Phase C ---
 
 @router.get("/api/module-variants")
