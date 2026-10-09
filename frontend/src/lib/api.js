@@ -78,6 +78,8 @@ export const api = {
   clearDeviceLog: () => req("POST", "/rpc/clear-device-log", {}),
   openLogsFolder: () => req("POST", "/rpc/open-logs-folder", {}),
   recoveryOps: () => req("GET", "/api/recovery-ops"),
+  // What a half sitting in the bootloader runs, matched to the catalogue. Reads only.
+  recoveryRead: () => req("GET", "/api/recovery-read"),
   runRecoveryOp: (op, opts = {}, force = true) => req("POST", "/rpc/run-recovery-op", { op, opts, force }),
   pairingRepairPlan: () => req("GET", "/api/pairing-repair/plan"),
   pairingRepairVerify: () => req("GET", "/api/pairing-repair/verify"),

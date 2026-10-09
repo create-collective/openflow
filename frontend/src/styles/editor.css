@@ -2116,6 +2116,9 @@ textarea.report-input { resize: vertical; line-height: 1.5; font-family: inherit
   font-size: 15px; font-weight: 600; margin-bottom: 6px;
 }
 .info-banner-detail { color: var(--text-muted); font-size: 13px; }
+/* The read-only bootloader check on that banner (components/BootloaderCheck). */
+.bootloader-check { display: grid; gap: 8px; justify-items: start; margin-top: 10px; }
+.bootloader-check-result ul { margin: 6px 0; padding-left: 18px; font-size: 13px; }
 .info-banner-help {
   margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
   color: var(--text-dim); font-size: 12px; line-height: 1.6; max-width: 78ch;

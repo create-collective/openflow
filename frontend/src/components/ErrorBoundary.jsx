@@ -42,25 +42,28 @@ export default class ErrorBoundary extends Component {
           The rest of the app still works — switch pages using the bar at the top. Nothing was written to
           your keyboard, and nothing was saved.
         </p>
-        <pre className="crash-error">{String(error?.message || error)}</pre>
         {/* After a hot-reload goes stale this is by far the most common cause, and a reload is
-            the whole fix -- worth saying before someone goes hunting through the code. */}
-        <p className="crash-hint">
-          If you are running the dev server, a hard reload (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+
-          <kbd>R</kbd>) clears a stale hot-reload, which causes this more often than a real bug.
-        </p>
+            the whole fix -- worth saying before someone goes hunting through the code. Only in a
+            development run: an installed copy has no dev server to speak of. */}
+        {import.meta.env.DEV && (
+          <p className="crash-hint">
+            If you are running the dev server, a hard reload (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+
+            <kbd>R</kbd>) clears a stale hot-reload, which causes this more often than a real bug.
+          </p>
+        )}
         <div className="btn-row">
           <Button variant="primary" onClick={() => this.setState({ error: null, info: null })}>
             Try again
           </Button>
           <Button onClick={() => window.location.reload()}>Reload</Button>
+          <Button onClick={() => { window.location.hash = "#/bug-report"; }}>Report a bug</Button>
         </div>
-        {info?.componentStack && (
-          <details className="crash-stack">
-            <summary>Component stack</summary>
-            <pre>{info.componentStack}</pre>
-          </details>
-        )}
+        {/* The why, collapsed: what a bug report needs, not what the person reads first. */}
+        <details className="crash-stack">
+          <summary>Technical details</summary>
+          <pre className="crash-error">{String(error?.message || error)}</pre>
+          {info?.componentStack && <pre>{info.componentStack}</pre>}
+        </details>
       </div>
     );
   }

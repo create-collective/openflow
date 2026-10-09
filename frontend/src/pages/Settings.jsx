@@ -84,7 +84,8 @@ function SettingsGroups({ groups, onChange }) {
       {groups.map((g) => (
         <Card key={g.group} className="settings-card" title={g.group}>
           {g.desc && <p className="settings-card-desc">{g.desc}</p>}
-          {g.fields.map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
+          {/* `hidden`: in the schema (a stored value survives) but not offered, e.g. tray_battery. */}
+          {g.fields.filter((f) => !f.hidden).map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
         </Card>
       ))}
     </div>
@@ -123,8 +124,8 @@ export default function Settings() {
   // unlocked the repair (OPENFLOW_ENABLE_PAIRING_REPAIR) still had no way to start it.
   const pairingBlocker = !pairPlan ? "Plan the repair first"
     : pairPlan.refused ? `Refused: ${pairPlan.refused}`
-      : !pairPlan.enabled ? "Locked: OpenFlow was not started with pairing repair unlocked"
-        : pairPlan.opsDisabled?.length ? `Locked: these steps are not unlocked: ${pairPlan.opsDisabled.join(", ")}`
+      : !pairPlan.enabled ? "The repair step is held back in this release; the plan shows what it would do"
+        : pairPlan.opsDisabled?.length ? `The repair step is held back in this release (${pairPlan.opsDisabled.join(", ")})`
           : null;
   const canRunPairing = !!pairPlan?.armToken && !pairingBlocker;
   const { out, busy, run } = useRunLog();
@@ -303,10 +304,11 @@ export default function Settings() {
 
                   <h3 className="settings-section">Recovery procedures</h3>
                   <p className="page-sub" style={{ marginBottom: 12 }}>
-                    Device-recovery procedures recovered from the vendor software. Each is wired and
-                    its exact command is pinned by tests, but they stay <strong>disabled</strong> until
-                    each is verified on a spare/donor unit — a mistaken one can leave a keyboard worse
-                    off. Every one runs only behind a confirmation.
+                    Device-recovery procedures recovered from the vendor software. They are
+                    <strong> held back in this release</strong>: each one restarts, writes to or
+                    erases part of the keyboard, and stays off until it has been verified on a spare
+                    keyboard, since a mistaken one can leave a keyboard worse off. When enabled, each
+                    runs only behind a confirmation.
                   </p>
                   {["reset", "recovery", "destructive"].map((danger) => {
                     const ops = recovery.filter((o) => o.danger === danger);
@@ -321,13 +323,13 @@ export default function Settings() {
                             control={
                               <Button variant={op.danger === "destructive" ? "danger" : "secondary"}
                                 disabled={!op.enabled || busy || !connected}
-                                title={!op.enabled ? `Wired, enabled after testing on a ${op.needs}` : op.confirm}
+                                title={!op.enabled ? "Held back in this release" : op.confirm}
                                 onClick={async () => { if (await confirmDialog({ title: `Run ${op.label}?`, message: op.confirm, confirmLabel: "Run", tone: op.danger === "destructive" ? "danger" : "default" })) run(op.label, () => api.runRecoveryOp(op.id)); }}>
                                 {op.enabled ? "Run" : "Disabled"}
                               </Button>
                             }
                             desc={<>
-                              {op.desc}{!op.enabled && <> — <em>wired, enabled after testing on a {op.needs}.</em></>}
+                              {op.desc}{!op.enabled && <> <em>Held back in this release.</em></>}
                               <span className="settings-command">{op.command}</span>
                             </>} />
                         ))}
