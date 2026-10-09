@@ -155,8 +155,15 @@ jobs:
           merge-multiple: true
       - name: one latest-mac.yml for both Mac builds
         run: node scripts/merge-mac-update-info.mjs artifacts
+      - name: release notes (which file is which, then the Hub's own "What's new")
+        id: notes
+        run: |
+          v="${GITHUB_REF_NAME#openflow-v}"
+          node scripts/release-notes.mjs "$v" > RELEASE_NOTES.md
+          echo "version=$v" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
+          name: OpenFlow ${{ steps.notes.outputs.version }}
+          body_path: RELEASE_NOTES.md
           files: artifacts/*
-          generate_release_notes: true
           draft: true          # the owner publishes; nothing goes public by itself
