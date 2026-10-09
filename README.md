@@ -6,8 +6,8 @@
 </p>
 
 <p align="center">
-  <b>Open-source software for the Naya Create keyboard.</b> No account, no cloud, no external dependencies.<br>
-  Bindings, layers, lighting and modules, read from the keyboard and flashed back to it, all on your computer.
+  <b>Your Keys. Your Layers. Your Lights.</b> Offline, open source, yours.<br>
+  Read your Naya Create, change any key, layer, light or module, and flash it back. No account, no cloud.
 </p>
 
 <p align="center">
@@ -23,46 +23,78 @@
   <a href="https://github.com/create-collective/openflow/releases/latest"><img alt="Download for Linux" src="https://img.shields.io/badge/Download-Linux-333333?style=for-the-badge&logo=linux&logoColor=white"></a>
 </p>
 
-<p align="center"><a href="#install">Install</a> · <a href="https://github.com/create-collective/openflow/releases">Release notes</a> · <a href="https://create-collective.github.io/Create-knowledge-base/">Knowledge base</a> · <a href="https://github.com/create-collective/openflow/issues/new">Report a bug</a></p>
+<p align="center"><a href="#install">Install</a> · <a href="#quick-start">Quick start</a> · <a href="https://github.com/create-collective/openflow/releases">Release notes</a> · <a href="https://create-collective.github.io/Create-knowledge-base/">Knowledge base</a> · <a href="https://github.com/create-collective/openflow/issues/new">Report a bug</a></p>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/bindings-dark.png">
-    <img src="docs/media/bindings-light.png" width="880" alt="The Bindings page: the Create's two halves with Esc selected, its Tap, Hold, Double Tap and Tap + Hold behaviours, and the action palette below">
-  </picture>
+  <img src="docs/media/bindings-explore.gif" width="880" alt="The Bindings page with a Create on USB: a key is selected, the action palette is browsed through its Layers, Extended, Apps and Shortcuts tabs, and a module profile is switched from the bay icons above the board">
 </p>
 
+<p align="center"><i>A Create on USB, both halves and their modules showing: pick a key, browse the action palette by layers, extended keys and app shortcuts, and switch the module profile a bay uses right on the board.</i></p>
+
 Naya has shut down, so its own app, NayaFlow, is no longer maintained, and the keyboards outlive
-it. OpenFlow is an independent rebuild that keeps the Create configurable. It talks to the
-keyboard directly over USB and needs nothing else.
+it. OpenFlow is an independent, open-source rebuild that keeps the Create configurable. It talks
+to the keyboard directly over USB and needs nothing else: no account, no server, no internet.
 
 ## Highlights
 
 | Feature | What it means for you |
 |---|---|
 | **Read, back up, flash** | Read what the keyboard holds, keep backups (automatic and by hand), and flash your changes back. Nothing is written until you press Flash, and the preview lists anything the keyboard cannot store. |
-| **OneKey: four behaviours per key** | Tap, Hold, Double Tap and Tap + Hold on the same key, with the timing the keyboard uses. |
+| **OneKey: four behaviors per key** | Tap, Hold, Double Tap and Tap + Hold on the same key, with the timing the keyboard uses. |
 | **Layers** | Add layers and move between them with keys that hold, toggle, force or stick a layer. |
-| **LED Map** | Colour every key per layer with a brush, fill and pipette, see the board as the keyboard will light it, and pick a Solid, Breathe, Swirl or Spectrum animation. |
+| **LED Map** | Color every key per layer with a brush, fill and pipette, see the board as the keyboard will light it, and pick a Solid, Breathe, Swirl or Spectrum animation. |
 | **Modules** | Touch, Tune and Track profiles: taps, swipes, the dial and scrolling by finger count, with a module profile per layer. |
 | **Actions by name** | Keys, mouse, media, Bluetooth, lighting and layer actions, plus shortcuts for 150 apps, searchable in one palette. |
 | **Devices** | What each half runs and how charged it is, Bluetooth slots, a split-link check for a half that will not connect, and a read-only check of a half sitting in its bootloader. |
 | **Signed, and it updates itself** | The Windows installer is signed and the macOS app is notarized. OpenFlow asks once whether to look for updates weekly, and installs one only when you click Install, never during a flash. |
 
+## How it works
+
+```
+ OpenFlow  ──USB──►  Naya Create (each half is a USB serial port)
+   read     what the halves hold: keymap, layers, lighting, module profiles, settings
+   edit     on your computer, in OpenFlow's own database; nothing touches the keyboard
+   flash    a preview of what will be written, then the write
+```
+
+1. **Read.** *Read from keyboard* asks both halves what they hold and brings it into a profile
+   you can edit. A board that has never been read starts from Naya's stock profile, so the app
+   never opens empty.
+2. **Edit.** Bindings, layers, the LED Map and module profiles are edited offline. The keyboard
+   does not need to be attached, and nothing is sent to it while you work.
+3. **Flash.** *Flash to keyboard* shows what will be written and lists anything the keyboard
+   cannot store, then writes it. OpenFlow backs up its own data every 30 minutes, and *Back up*
+   saves a copy whenever you like.
+
+## Quick start
+
+1. **Install** OpenFlow for your system ([Install](#install)).
+2. **Plug in both halves** over USB and open OpenFlow. The Hub shows the keyboard and its
+   modules; press **Configure**, then **Read from keyboard**.
+3. **Change a key.** Click it on the board, pick a behavior (Tap, Hold, Double Tap, Tap + Hold)
+   and choose an action from the palette below: type to search, or browse by Keyboard, Mouse,
+   Layers, Apps and the rest.
+4. **Light it.** On **LED Map**, pick a color and brush or fill keys, layer by layer.
+5. **Set up a module.** On **Modules**, choose a Touch, Tune or Track profile and give each
+   gesture an action. On the Bindings page, the bay icons above the board choose which module
+   profile each bay uses on that layer.
+6. **Flash to keyboard.** Check the preview, then write it. To keep the setup you started from,
+   press **Back up** before you change anything.
+
+## A tour
+
 <table>
   <tr>
-    <td width="50%">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/media/led-map-dark.png">
-        <img src="docs/media/led-map-light.png" alt="The LED Map: every key coloured per layer, with the brush, fill and pipette tools and the animations">
-      </picture>
-    </td>
-    <td width="50%">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/media/modules-dark.png">
-        <img src="docs/media/modules-light.png" alt="Modules: a Tune profile with its scroll gesture selected and the module actions below">
-      </picture>
-    </td>
+    <td width="50%"><img src="docs/media/hub.png" alt="The Hub: the keyboard, what is new in this version with the update check, and links to the knowledge base and Create Companion"></td>
+    <td width="50%"><img src="docs/media/bindings-live.png" alt="Bindings with a Create on USB: both halves connected with their battery levels, the Tune and Touch docked, layers on the left and module profiles below them"></td>
+  </tr>
+  <tr>
+    <td align="center"><i>The Hub</i></td>
+    <td align="center"><i>Bindings, with a Create on USB</i></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/led-map-dark.png" alt="The LED Map: every key colored per layer, with the brush, fill and pipette tools and the animations"></td>
+    <td width="50%"><img src="docs/media/modules-dark.png" alt="Modules: a Tune profile with its scroll gesture selected and the module actions below"></td>
   </tr>
   <tr>
     <td align="center"><i>LED Map</i></td>
@@ -153,6 +185,14 @@ Next to `user-data.db` you will find `backups/` (the automatic and manual backup
 `logs/sidecar.log` (what the shell captured from the backend process) and `shell/` (Chromium's
 cache and preferences, kept apart from your data on purpose). Uninstalling leaves all of it in
 place.
+
+## Roadmap
+
+- **Next:** firmware and module updates, then the recovery procedures and the split-link repair,
+  each switched on once it has been proven on more keyboards. They are built and tested; this
+  release holds them back.
+- **Later:** more languages, a tray with the battery levels, and macros on the keyboard if a
+  firmware gains a macro table.
 
 ## Building from source
 

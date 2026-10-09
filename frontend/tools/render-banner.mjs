@@ -16,8 +16,9 @@ const mark = readFileSync(join(here, "..", "public", "brand", "openflow-mark.svg
 const out = join(here, "..", "..", "docs", "media");
 mkdirSync(out, { recursive: true });
 
-// The Hub's own words, so the README and the app say the same thing.
-const TAGLINE = ["Open-Source Software for Naya Create.", "No cloud or external dependencies."];
+// Built like Create Companion's ("Your Modules. Your Apps. Dynamic Gestures.") so the two read as
+// a pair; the second line is what sets OpenFlow apart from the vendor app it replaces.
+const TAGLINE = ["Your Keys. Your Layers. Your Lights.", "Offline, open source, yours."];
 const PLATFORMS = "Windows  ·  macOS  ·  Linux  ·  Naya Create, Tune, Touch & Track";
 
 const THEMES = {
