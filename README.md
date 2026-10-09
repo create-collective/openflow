@@ -188,11 +188,35 @@ place.
 
 ## Roadmap
 
-- **Next:** firmware and module updates, then the recovery procedures and the split-link repair,
-  each switched on once it has been proven on more keyboards. They are built and tested; this
-  release holds them back.
-- **Later:** more languages, a tray with the battery levels, and macros on the keyboard if a
-  firmware gains a macro table.
+OpenFlow ships read-first. Everything that writes beyond your keymap and lighting, the operations
+that can leave a half unable to start if they go wrong, is already built and tested, and switched
+off in this release. Each comes on in a later update once it has been proven on more keyboards,
+and some wait for the Create's firmware to be opened up.
+
+**Built, held back for now**
+
+- **Keyboard firmware updates** for both halves, up or down to any catalogued version, with the
+  plan, the checks and the recovery steps built in.
+- **Module firmware updates** and **Force Update** for the Touch, Tune and Track.
+- **Recovery procedures**: restarting a half into its bootloader, unpairing, clearing split links,
+  clearing keymap data, and formatting or erasing flash. Thirteen in all, each behind a
+  confirmation.
+- **The split-link repair's repair step.** Its check and its plan already run.
+- **Recovery-mode keymap flash** for a board OpenFlow cannot read, and bringing a half out of its
+  bootloader from the app.
+
+**Waiting on open firmware**
+
+- **Macros that run on the keyboard.** The current firmware reserves a macro type but has no
+  macro table, so macros stay app-only until a firmware has one.
+- **A fifth OneKey behavior** (Double Tap + Hold) and the timing options the firmware does not
+  expose today.
+- **Community firmware**: an open firmware and a community-signed bootloader, so the Create can
+  keep improving after Naya.
+
+**Later**
+
+- More languages, and a tray showing the battery levels.
 
 ## Building from source
 
