@@ -28,7 +28,6 @@ async function req(method, path, body) {
 
 export const api = {
   systemInfo: () => req("GET", "/api/info/system"),
-  uiState: () => req("GET", "/api/ui/state"),
   devices: () => req("GET", "/api/devices"),
   ignorePort: (port) => req("POST", "/rpc/ignore-port", { port }),
   unignorePort: (port) => req("POST", "/rpc/unignore-port", { port }),
@@ -37,7 +36,6 @@ export const api = {
   // half, so it is opt-in: Device Manager does not need it, the Information page does.
   statusDeep: () => req("GET", "/api/status?verbose=1"),
   statusLastDeep: () => req("GET", "/api/status/last?deep=1"),
-  statusLive: () => req("GET", "/api/status/live"),
   statusLast: () => req("GET", "/api/status/last"),
   diagnostics: () => req("GET", "/api/diagnostics/report"),
   releaseDevice: () => req("POST", "/rpc/release-device"),
@@ -72,7 +70,6 @@ export const api = {
   // Either whole versions (what the update dialog asks for) or exact catalogue paths (what the
   // library sends, having just listed them). Nothing outside the catalogue can be named.
   fetchFirmware: (body) => req("POST", "/rpc/fetch-firmware", body),
-  flashLogs: () => req("GET", "/api/flash-logs"),
   flashLog: (id) => req("GET", `/api/flash-logs/${encodeURIComponent(id)}`),
   deviceLog: (limit = 200) => req("GET", `/api/device-log?limit=${limit}`),
   clearDeviceLog: () => req("POST", "/rpc/clear-device-log", {}),
@@ -85,7 +82,6 @@ export const api = {
   pairingRepairVerify: () => req("GET", "/api/pairing-repair/verify"),
   pairingRepair: (arm, force = true) => req("POST", "/rpc/pairing-repair", { arm, force }),
   readKeyboard: (body = {}) => req("POST", "/rpc/read-keyboard", body),
-  readModules: (body = {}) => req("POST", "/rpc/read-modules", body),
   moduleVariants: () => req("GET", "/api/module-variants"),
   createModuleProfile: (variant, name) => req("POST", "/rpc/create-module-profile", { variant, name }),
   renameModuleProfile: (configId, name) => req("POST", "/rpc/rename-module-profile", { configId, name }),
@@ -146,21 +142,14 @@ export const api = {
 
   led: (side, action, value) => req("POST", "/rpc/led", { side, action, value }),
   restoreLighting: (side = "left") => req("POST", "/rpc/restore-lighting", { side }),
-  bleProfiles: (side = "left") => req("GET", `/api/ble/profiles?side=${side}`),
   selectBleProfile: (side, index) =>
     req("POST", "/rpc/select-ble-profile", { side, index, confirm: "SELECT" }),
   clearBleProfile: (side, index) =>
     req("POST", "/rpc/clear-ble-profile", { side, index, confirm: "CLEAR" }),
-  textCommand: (side, command, force = false) =>
-    req("POST", "/rpc/text-command", { side, command, force }),
-  dumpSettings: (side) => req("POST", "/rpc/dump-settings", { side }),
   readSettings: (side) => req("POST", "/rpc/read-settings", { side }),
   splitLinkCheck: () => req("GET", "/api/split-link-check"),
-  checkForUpdates: () => req("POST", "/rpc/check-for-updates"),
 
   flashPreview: (body = {}) => req("POST", "/rpc/flash-preview", body),
-  moduleGestures: (types) =>
-    req("GET", "/api/module-gestures" + (types ? `?types=${encodeURIComponent(types)}` : "")),
 
   settings: () => req("GET", "/api/settings"),
   setSetting: (key, value) => req("POST", "/rpc/set-setting", { key, value }),

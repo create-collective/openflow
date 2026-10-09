@@ -1670,12 +1670,6 @@ async def split_link_check() -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/rpc/check-for-updates")
-async def check_for_updates() -> dict:
-    # OpenFlow has no external update dependency. Always report up to date.
-    return {"updateAvailable": False, "reason": "OpenFlow has no external update source"}
-
-
 # --- flash (write) : preview only for now (dry-run); real write is Phase C ---
 
 @router.get("/api/module-variants")

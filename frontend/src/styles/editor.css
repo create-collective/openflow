@@ -1046,11 +1046,6 @@
   cursor: not-allowed;
 }
 
-.palette-key.soon {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 /* Modules page. The rail runs the full height (it spans both grid rows), and the palette sits
    in the second column beneath the module content. 288px: wide enough that profile names do
    not wrap, since the rail carries three row actions. */

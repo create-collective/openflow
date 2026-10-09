@@ -95,7 +95,7 @@ export default function SelectedKeyPanel({
           {slots.filter((slot) => slot.enabled).map((slot) => {
             const b = bindings[slot.id];
             const isActive = activeSlot === slot.id;
-            const disabled = !slot.enabled || !label;
+            const disabled = !label;
             const text = b ? actionText(b, layerMap) : null;
             const nf = b && names[b.actionCode];
             const name = nf?.name && nf.name !== text ? nf.name : null;
@@ -116,9 +116,7 @@ export default function SelectedKeyPanel({
                   <span className="keyband-card-body">
                     <span className="keyband-card-head">
                       <span className="keyband-card-label">{slot.label}</span>
-                      {!slot.enabled
-                        ? <Badge>{slot.experimental ? "experimental" : "soon"}</Badge>
-                        : isActive && <Badge tone="accent">Selected</Badge>}
+                      {isActive && <Badge tone="accent">Selected</Badge>}
                     </span>
                     {/* A keycap, text only: the big cap already shows the icon, and for a letter
                         the icon IS the letter, so icon plus text read "A A". */}

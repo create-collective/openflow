@@ -9,7 +9,6 @@ import TopNav from "./components/shell/TopNav";
 import Hub from "./pages/Hub.jsx";
 import Troubleshooting from "./pages/Troubleshooting.jsx";
 import Settings from "./pages/Settings.jsx";
-import Placeholder from "./pages/Placeholder.jsx";
 import Bindings from "./pages/Bindings.jsx";
 import Color from "./pages/Color.jsx";
 import Modules from "./pages/Modules.jsx";

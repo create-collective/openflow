@@ -19,7 +19,6 @@ import Tabs from "../components/ui/Tabs";
 import { useDeviceStream } from "../lib/deviceStream";
 import { setShowAllKeyboards, useShowAllKeyboards } from "../lib/showAllKeyboards";
 import { THEME_PREFERENCES, setThemePreference, useThemePreference } from "../lib/theme";
-// Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
 import { ORG, REPOS, checkRelease } from "../lib/updates";
 
 // The rail, as the storyboard draws it: an icon per section (Tabler Icons, MIT, Pawel Kuna:

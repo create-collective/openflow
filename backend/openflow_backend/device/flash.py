@@ -320,8 +320,6 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
 # that is what decides the record -- not the code. Anything unlisted still reports, with the
 # type named, rather than falling through to silence.
 _DROP_REASONS = {
-    "none": "Disabled cannot be written yet.",
-    "trans": "Transparent cannot be written yet.",
     "out": "Only Wireless (BT_OUT) and USB-C (USB_DEVICE) have a known output record.",
     "LED": "Not one of the LED actions NayaCore defines (its 19 are all written).",
     "macro": "The keyboard reserves a macro type but implements no macro table, so a macro "
@@ -332,7 +330,8 @@ _DROP_REASONS = {
 
 # Layer switches DO have encoders. When one of these is dropped it is never the type that is
 # unsupported -- it is the layer it points AT that could not be resolved.
-_LAYER_TYPES_WITH_ENCODERS = ("layer_polite_hold", "layer_rude_toggle", "layer_polite_toggle")
+_LAYER_TYPES_WITH_ENCODERS = ("layer_polite_hold", "layer_rude_toggle", "layer_polite_toggle",
+                              "layer_polite_oneshot")
 
 
 def _keypress(action_type: str | None, code: str | None) -> bytes:
@@ -491,7 +490,7 @@ def _half(row: dict | None, layer_order: dict) -> tuple[int, bytes] | None:
     if row is None:
         return R.NONE_BEH, b""
     rec = _record_for(row, layer_order)
-    if rec is None and row["at"] in (*_LAYER_TYPES_WITH_ENCODERS, "layer_polite_oneshot"):
+    if rec is None and row["at"] in _LAYER_TYPES_WITH_ENCODERS:
         # Said outright, as a layer-tap's hold always has been (SCRUM-110): the layer is gone,
         # there is no index to write.
         raise R.RemapEncodeError(f"{_behaviour(row)} layer {row['ac']!r} is not in this profile")
