@@ -101,7 +101,7 @@
       "icon": "build/icon.png",
       "synopsis": "Configure the Naya Create keyboard, offline",
       "description": "Configure the Naya Create keyboard offline: key bindings, lighting, modules and macros.",
-      "maintainer": "traviswye <traviswye@gmail.com>",
+      "maintainer": "traviswye <travis.createcollective@gmail.com>",
       "syncDesktopName": true,
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     },
