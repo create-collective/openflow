@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <b>Your Keys. Your Layers. Your Lights.</b> Offline, open source, yours.<br>
+  <b>Get the most out of your keyboard.</b> Offline, open source, yours.<br>
   Read your Naya Create, change any key, layer, light or module, and flash it back. No account, no cloud.
 </p>
 
@@ -23,7 +23,7 @@
   <a href="https://github.com/create-collective/openflow/releases/latest"><img alt="Download for Linux" src="https://img.shields.io/badge/Download-Linux-333333?style=for-the-badge&logo=linux&logoColor=white"></a>
 </p>
 
-<p align="center"><a href="#install">Install</a> · <a href="#quick-start">Quick start</a> · <a href="https://github.com/create-collective/openflow/releases">Release notes</a> · <a href="https://create-collective.github.io/Create-knowledge-base/">Knowledge base</a> · <a href="https://github.com/create-collective/openflow/issues/new">Report a bug</a></p>
+<p align="center"><a href="#install">Install</a> · <a href="#quick-start">Quick start</a> · <a href="https://github.com/create-collective/openflow/releases">Release notes</a> · <a href="https://create-collective.github.io/Create-knowledge-base/">Knowledge base</a> · <a href="https://github.com/create-collective/openflow/issues/new">Report a bug</a> · <a href="https://buymeacoffee.com/traviswye">Buy me a coffee</a></p>
 
 <p align="center">
   <img src="docs/media/bindings-explore.gif" width="880" alt="The Bindings page with a Create on USB: a key is selected, the action palette is browsed through its Layers, Extended, Apps and Shortcuts tabs, and a module profile is switched from the bay icons above the board">

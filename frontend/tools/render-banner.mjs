@@ -16,10 +16,10 @@ const mark = readFileSync(join(here, "..", "public", "brand", "openflow-mark.svg
 const out = join(here, "..", "..", "docs", "media");
 mkdirSync(out, { recursive: true });
 
-// Built like Create Companion's ("Your Modules. Your Apps. Dynamic Gestures.") so the two read as
-// a pair; the second line is what sets OpenFlow apart from the vendor app it replaces.
-const TAGLINE = ["Your Keys. Your Layers. Your Lights.", "Offline, open source, yours."];
-const PLATFORMS = "Windows  ·  macOS  ·  Linux  ·  Naya Create, Tune, Touch & Track";
+// The owner's line (2026-10-09); the second is what sets OpenFlow apart from the vendor app it
+// replaces.
+const TAGLINE = ["Get the most out of your keyboard.", "Offline, open source, yours."];
+const PLATFORMS = "Windows  ·  macOS  ·  Linux  ·  Create, Tune, Touch & Track";
 
 const THEMES = {
   // --bg of the dark theme (electron/main.js), the mark's cyan, the wordmark white from the sheet.
