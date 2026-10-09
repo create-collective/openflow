@@ -35,6 +35,7 @@
   "GET /api/status/last",
   "GET /api/status/live",
   "GET /api/ui/state",
+  "GET /api/update-safe",
   "GET /api/userdata",
   "GET /docs",
   "GET /docs/oauth2-redirect",

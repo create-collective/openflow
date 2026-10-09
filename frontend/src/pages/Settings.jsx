@@ -7,6 +7,7 @@ import { pickFile, downloadJSON, safeName } from "../lib/files";
 import FirmwareLibrary from "../components/FirmwareLibrary";
 import FirmwareUpdate from "../components/FirmwareUpdate";
 import ModuleFirmwareUpdate from "../components/ModuleFirmwareUpdate";
+import AppUpdates from "../components/AppUpdates";
 import SettingField from "../components/SettingField";
 import SettingRow from "../components/ui/SettingRow";
 import useRunLog from "../lib/useRunLog";
@@ -111,7 +112,6 @@ export default function Settings() {
   const [status, setStatus] = useState([]);
   const [backups, setBackups] = useState({ backups: [], dir: "" });
   const [sys, setSys] = useState(null);
-  const [update, setUpdate] = useState(null);
   const [companion, setCompanion] = useState(null);
   const [firmware, setFirmware] = useState(null);
   const [devlog, setDevlog] = useState([]);
@@ -182,9 +182,8 @@ export default function Settings() {
   const liveHalves = (stream?.status?.halves || []).filter((h) => h.connected);
   const firmwareConnected = liveHalves.length > 0;
 
-  // One opt-in release check (lib/updates), reused for OpenFlow and Create Companion -- no
-  // forced updater.
-  const checkUpdate = () => checkRelease(REPOS.app, sys?.backendVersion, setUpdate);
+  // OpenFlow's own updates are AppUpdates (the desktop shell's updater); Create Companion keeps
+  // the opt-in release check (lib/updates), since it updates itself.
   const checkCompanion = () => checkRelease(REPOS.companion, null, setCompanion);
 
   // Route by SCOPE, not by name. This was `group !== "Interface"` vs `=== "Interface"`, so
@@ -468,21 +467,20 @@ export default function Settings() {
                 <Card className="settings-pane" title="About OpenFlow">
                   <KVRow k="OpenFlow" v={sys?.backendVersion} />
                   <KVRow k="OS" v={sys ? `${sys.os} ${sys.arch}` : null} />
+                  <h3 className="settings-section tight">Updates</h3>
+                  <AppUpdates version={sys?.backendVersion} />
+                  <p className="page-sub" style={{ marginTop: 4 }}>
+                    Updates to OpenFlow itself, from its GitHub releases. A check downloads one
+                    small file naming the newest release; nothing installs until you click
+                    Install, and never while a flash is running. Your keyboard&rsquo;s own
+                    firmware lives on the Firmware tab.
+                  </p>
                   <div className="btn-row" style={{ margin: "10px 0" }}>
-                    <Button onClick={checkUpdate}>Check OpenFlow for updates</Button>
                     <Button onClick={checkCompanion}>Check Create Companion</Button>
                   </div>
-                  {update?.checking && <div className="page-sub">Checking OpenFlow…</div>}
-                  {update?.error && <Notice tone="err">OpenFlow: {update.error}</Notice>}
-                  {update?.latest && <KVRow k="OpenFlow latest" v={`${update.latest}${update.ahead ? " (update available)" : " (up to date)"}`} />}
                   {companion?.checking && <div className="page-sub">Checking Create Companion…</div>}
                   {companion?.error && <Notice tone="err">Create Companion: {companion.error}</Notice>}
                   {companion?.latest && <KVRow k="Create Companion latest" v={companion.latest} />}
-                  <p className="page-sub" style={{ marginTop: 4 }}>
-                    Opt-in checks against GitHub Releases. OpenFlow has no forced updater. These
-                    are checks on OpenFlow itself — your keyboard&rsquo;s own firmware lives on
-                    the Firmware tab.
-                  </p>
 
                   <h3 className="settings-section tight">Source</h3>
                   <div className="settings-links">

@@ -349,6 +349,11 @@
 .hub-update-note.ok { color: var(--ok); }
 .hub-update-note.err { color: var(--err); }
 a.hub-update-note { color: var(--accent-text); font-weight: 600; text-decoration: none; }
+/* OpenFlow's own updates (components/AppUpdates): the Hub's line and Settings › About's panel. */
+.app-updates { display: grid; gap: 10px; justify-items: start; }
+.app-updates.compact { gap: 8px; }
+.app-update-notes { margin: 0; max-height: 220px; overflow: auto; white-space: pre-wrap; font: 13px/1.5 var(--font-ui, inherit); color: var(--text-muted); }
+.hub-ask-updates { margin: 0 0 16px; }
 @media (max-width: 1100px) {
   .hub-body { grid-template-columns: minmax(0, 1fr); }
 }
