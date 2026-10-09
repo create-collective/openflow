@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and setup help
+    url: https://github.com/create-collective/openflow/discussions
+    about: Ask how to set something up, share a layout, or talk about ideas.
+  - name: The Create Knowledge Base
+    url: https://create-collective.github.io/Create-knowledge-base/
+    about: Hardware, firmware, recovery and how the keyboard works.

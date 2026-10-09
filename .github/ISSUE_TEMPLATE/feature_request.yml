@@ -1,0 +1,28 @@
+name: Feature request
+description: Something OpenFlow could do for your keyboard.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What you would like
+      description: What you want to do, and what you do today instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Bindings and layers
+        - LED Map
+        - Modules
+        - Macros
+        - Devices
+        - Firmware
+        - Something else
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots, how NayaFlow did it, or links.
