@@ -158,7 +158,7 @@ export default function ModuleFirmwareUpdate({ connected = true, force = false }
         variant={force || target?.downgrade ? "danger" : "primary"}
         onClick={start}
         disabled={starting || !canStart}
-        title={gateOff ? "Firmware flashing is switched off in this build"
+        title={gateOff ? "Module firmware updates are held back in this release"
           : blockers.length ? blockers[0].text
             : needsDownload ? "Download this version first"
               : force && !forceType ? "Choose the module that is in the left bay"
@@ -202,9 +202,11 @@ export default function ModuleFirmwareUpdate({ connected = true, force = false }
         {!running && !verdict && plan && (
           <>
             {gateOff && (
-              <Notice title="Flashing is switched off in this build">
-                The procedure is wired, but the gate that lets it write is set by the environment
-                (OPENFLOW_ENABLE_FIRMWARE_FLASH) and is off here. Nothing will be sent.
+              <Notice title="Module firmware updates are held back in this release"
+                details={<>Writing is switched on by the environment variable
+                  OPENFLOW_ENABLE_FIRMWARE_FLASH=1 when OpenFlow starts; release builds ship
+                  without it.</>}>
+                You can see what the module would get, but nothing will be sent to it.
               </Notice>
             )}
 

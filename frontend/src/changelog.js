@@ -3,6 +3,19 @@
 // what they can now do, what stopped happening.
 const CHANGELOG = [
   {
+    version: "0.7.0",
+    date: "2026-10-09",
+    notes: [
+      "OpenFlow keeps itself up to date. The Hub asks once whether to check for updates every week, and nothing is checked until you say yes. A new version installs only when you click Install, in the Hub or Settings › About, and never while a flash is running. The portable build and a .deb install show a download link instead.",
+      "The Mac app is signed and notarized, so it opens with a double-click. On Windows the installer names its publisher, as it has since 0.6.0.",
+      "A half stuck in its bootloader can be checked without writing anything: Check what it runs, on Devices › Information, names the firmware the half holds and whether OpenFlow knows it.",
+      "Firmware and module updates, the recovery tools and the split-link repair's repair step say plainly that they are held back in this release. Every check that only reads still works: the split-link check, the repair's plan and the bootloader check.",
+      "When a page fails, the error page offers Reload and Report a bug, and keeps the technical details folded away for the report.",
+      "A Sticky Layer key that points at a layer missing from the profile now says which layer, like the other layer keys, instead of claiming it cannot be written.",
+      "Show Battery in Tray is gone from Settings until the desktop app has a tray to show it in.",
+    ],
+  },
+  {
     version: "0.6.0",
     date: "2026-10-05",
     notes: [

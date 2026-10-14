@@ -26,7 +26,6 @@ back to `3001`. The Electron preload sets `window.EXPOSED.bgServerPort` from arg
 | POST | `/rpc/led` | LED on/off/toggle/brightness/effect (OpenFlow-added convenience). |
 | POST | `/rpc/text-command` | ASCII text protocol passthrough. |
 | POST | `/rpc/dump-settings` | `dump_settings` text command. |
-| POST | `/rpc/check-for-updates` | Always "up to date" — no external update source. |
 
 ### `/rpc/send-nayacore-zmq-message` command events
 
@@ -50,10 +49,10 @@ One `EventSource`; named events (renderer uses `addEventListener`):
 |---|---|---|
 | `sse:ui-state-change` | 1 | `{ready}` |
 | `sse:naya-devices-stream` | 1 | `{devices:[...]}` — emitted on change (2s USB poll). |
-| `sse:flash-keymap-state` | 2 | keymap flash progress (placeholder). |
+| `sse:flash-keymap-state` | not sent | NayaFlow's keymap flash progress; a keymap flash answers its own request here. |
 | `sse:flash-progress` | — | Ours, not NayaFlow's: a firmware run's steps as they happen (SCRUM-102). `{id, running, sides, seq, events:[...], verdict}`, with only the events after the last `seq` sent. While a run is going the device poll is suspended — it would queue behind the run's service lock — and the tick becomes this one. |
-| `sse:device-operation-options` | 2 | device op options (placeholder). |
-| `sse:main-process-quit` | — | shell shutdown (Electron only). |
+| `sse:device-operation-options` | not sent | NayaFlow's device op options; nothing here uses them. |
+| `sse:main-process-quit` | not sent | NayaFlow's shell shutdown; the shell stops the backend over `/rpc/shutdown`. |
 
 ## Original routes not yet implemented
 

@@ -3,9 +3,11 @@
 NayaFlow's renderer opens one EventSource at `/sse` and listens for named events:
     sse:naya-devices-stream, sse:flash-keymap-state,
     sse:device-operation-options, sse:ui-state-change, sse:main-process-quit
-We keep those names so the rebuilt renderer's SSE hooks match. Phase 1 drives the
-device-list stream from a cheap USB-enumeration poll (no serial handshake); the
-flash-keymap / operation-options streams are placeholders until Phase 2/3.
+We keep those names so the rebuilt renderer's SSE hooks match. The device-list stream
+comes from a cheap USB-enumeration poll (no serial handshake). Three of NayaFlow's names are
+never sent here: sse:flash-keymap-state (a keymap flash answers its own request),
+sse:device-operation-options and sse:main-process-quit (the shell stops the backend over
+/rpc/shutdown instead).
 
 `sse:flash-progress` is ours, added for SCRUM-102: a firmware run's steps as they happen.
 

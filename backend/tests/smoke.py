@@ -23,8 +23,6 @@ with TestClient(app) as client:
     for path in ["/health", "/api/info/system", "/api/ui/state", "/api/devices", "/api/status"]:
         r = client.get(path)
         print(f"GET {path} -> {r.status_code} {r.json()}")
-    r = client.post("/rpc/check-for-updates")
-    print(f"POST /rpc/check-for-updates -> {r.status_code} {r.json()}")
     r = client.post("/rpc/send-nayacore-zmq-message",
                     json={"messages": ["command", "update_create_fw"]})
     print(f"POST send-zmq update_create_fw -> {r.status_code} {r.json()}")

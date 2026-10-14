@@ -7,6 +7,7 @@ import { pickFile, downloadJSON, safeName } from "../lib/files";
 import FirmwareLibrary from "../components/FirmwareLibrary";
 import FirmwareUpdate from "../components/FirmwareUpdate";
 import ModuleFirmwareUpdate from "../components/ModuleFirmwareUpdate";
+import AppUpdates from "../components/AppUpdates";
 import SettingField from "../components/SettingField";
 import SettingRow from "../components/ui/SettingRow";
 import useRunLog from "../lib/useRunLog";
@@ -19,7 +20,6 @@ import Tabs from "../components/ui/Tabs";
 import { useDeviceStream } from "../lib/deviceStream";
 import { setShowAllKeyboards, useShowAllKeyboards } from "../lib/showAllKeyboards";
 import { THEME_PREFERENCES, setThemePreference, useThemePreference } from "../lib/theme";
-// Placeholder repo paths — update to the real OpenFlow / firmware repos once public.
 import { ORG, REPOS, checkRelease } from "../lib/updates";
 
 // The rail, as the storyboard draws it: an icon per section (Tabler Icons, MIT, Pawel Kuna:
@@ -84,7 +84,8 @@ function SettingsGroups({ groups, onChange }) {
       {groups.map((g) => (
         <Card key={g.group} className="settings-card" title={g.group}>
           {g.desc && <p className="settings-card-desc">{g.desc}</p>}
-          {g.fields.map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
+          {/* `hidden`: in the schema (a stored value survives) but not offered, e.g. tray_battery. */}
+          {g.fields.filter((f) => !f.hidden).map((f) => <SettingField key={f.id} f={f} onChange={onChange} />)}
         </Card>
       ))}
     </div>
@@ -111,7 +112,6 @@ export default function Settings() {
   const [status, setStatus] = useState([]);
   const [backups, setBackups] = useState({ backups: [], dir: "" });
   const [sys, setSys] = useState(null);
-  const [update, setUpdate] = useState(null);
   const [companion, setCompanion] = useState(null);
   const [firmware, setFirmware] = useState(null);
   const [devlog, setDevlog] = useState([]);
@@ -123,8 +123,8 @@ export default function Settings() {
   // unlocked the repair (OPENFLOW_ENABLE_PAIRING_REPAIR) still had no way to start it.
   const pairingBlocker = !pairPlan ? "Plan the repair first"
     : pairPlan.refused ? `Refused: ${pairPlan.refused}`
-      : !pairPlan.enabled ? "Locked: OpenFlow was not started with pairing repair unlocked"
-        : pairPlan.opsDisabled?.length ? `Locked: these steps are not unlocked: ${pairPlan.opsDisabled.join(", ")}`
+      : !pairPlan.enabled ? "The repair step is held back in this release; the plan shows what it would do"
+        : pairPlan.opsDisabled?.length ? `The repair step is held back in this release (${pairPlan.opsDisabled.join(", ")})`
           : null;
   const canRunPairing = !!pairPlan?.armToken && !pairingBlocker;
   const { out, busy, run } = useRunLog();
@@ -182,9 +182,8 @@ export default function Settings() {
   const liveHalves = (stream?.status?.halves || []).filter((h) => h.connected);
   const firmwareConnected = liveHalves.length > 0;
 
-  // One opt-in release check (lib/updates), reused for OpenFlow and Create Companion -- no
-  // forced updater.
-  const checkUpdate = () => checkRelease(REPOS.app, sys?.backendVersion, setUpdate);
+  // OpenFlow's own updates are AppUpdates (the desktop shell's updater); Create Companion keeps
+  // the opt-in release check (lib/updates), since it updates itself.
   const checkCompanion = () => checkRelease(REPOS.companion, null, setCompanion);
 
   // Route by SCOPE, not by name. This was `group !== "Interface"` vs `=== "Interface"`, so
@@ -303,10 +302,11 @@ export default function Settings() {
 
                   <h3 className="settings-section">Recovery procedures</h3>
                   <p className="page-sub" style={{ marginBottom: 12 }}>
-                    Device-recovery procedures recovered from the vendor software. Each is wired and
-                    its exact command is pinned by tests, but they stay <strong>disabled</strong> until
-                    each is verified on a spare/donor unit — a mistaken one can leave a keyboard worse
-                    off. Every one runs only behind a confirmation.
+                    Device-recovery procedures recovered from the vendor software. They are
+                    <strong> held back in this release</strong>: each one restarts, writes to or
+                    erases part of the keyboard, and stays off until it has been verified on a spare
+                    keyboard, since a mistaken one can leave a keyboard worse off. When enabled, each
+                    runs only behind a confirmation.
                   </p>
                   {["reset", "recovery", "destructive"].map((danger) => {
                     const ops = recovery.filter((o) => o.danger === danger);
@@ -321,13 +321,13 @@ export default function Settings() {
                             control={
                               <Button variant={op.danger === "destructive" ? "danger" : "secondary"}
                                 disabled={!op.enabled || busy || !connected}
-                                title={!op.enabled ? `Wired, enabled after testing on a ${op.needs}` : op.confirm}
+                                title={!op.enabled ? "Held back in this release" : op.confirm}
                                 onClick={async () => { if (await confirmDialog({ title: `Run ${op.label}?`, message: op.confirm, confirmLabel: "Run", tone: op.danger === "destructive" ? "danger" : "default" })) run(op.label, () => api.runRecoveryOp(op.id)); }}>
                                 {op.enabled ? "Run" : "Disabled"}
                               </Button>
                             }
                             desc={<>
-                              {op.desc}{!op.enabled && <> — <em>wired, enabled after testing on a {op.needs}.</em></>}
+                              {op.desc}{!op.enabled && <> <em>Held back in this release.</em></>}
                               <span className="settings-command">{op.command}</span>
                             </>} />
                         ))}
@@ -468,21 +468,20 @@ export default function Settings() {
                 <Card className="settings-pane" title="About OpenFlow">
                   <KVRow k="OpenFlow" v={sys?.backendVersion} />
                   <KVRow k="OS" v={sys ? `${sys.os} ${sys.arch}` : null} />
+                  <h3 className="settings-section tight">Updates</h3>
+                  <AppUpdates version={sys?.backendVersion} />
+                  <p className="page-sub" style={{ marginTop: 4 }}>
+                    Updates to OpenFlow itself, from its GitHub releases. A check downloads one
+                    small file naming the newest release; nothing installs until you click
+                    Install, and never while a flash is running. Your keyboard&rsquo;s own
+                    firmware lives on the Firmware tab.
+                  </p>
                   <div className="btn-row" style={{ margin: "10px 0" }}>
-                    <Button onClick={checkUpdate}>Check OpenFlow for updates</Button>
                     <Button onClick={checkCompanion}>Check Create Companion</Button>
                   </div>
-                  {update?.checking && <div className="page-sub">Checking OpenFlow…</div>}
-                  {update?.error && <Notice tone="err">OpenFlow: {update.error}</Notice>}
-                  {update?.latest && <KVRow k="OpenFlow latest" v={`${update.latest}${update.ahead ? " (update available)" : " (up to date)"}`} />}
                   {companion?.checking && <div className="page-sub">Checking Create Companion…</div>}
                   {companion?.error && <Notice tone="err">Create Companion: {companion.error}</Notice>}
                   {companion?.latest && <KVRow k="Create Companion latest" v={companion.latest} />}
-                  <p className="page-sub" style={{ marginTop: 4 }}>
-                    Opt-in checks against GitHub Releases. OpenFlow has no forced updater. These
-                    are checks on OpenFlow itself — your keyboard&rsquo;s own firmware lives on
-                    the Firmware tab.
-                  </p>
 
                   <h3 className="settings-section tight">Source</h3>
                   <div className="settings-links">

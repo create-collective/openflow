@@ -141,12 +141,11 @@ SETTINGS_SCHEMA = [
              "provenance": APP_ONLY},
             # Input Source (keyboard-legend layout) moved to a dropdown on the virtual keyboard
             # itself, where it is actually applied -- it did nothing as a global preference here.
+            # Hidden (owner's call, 2026-10-09): the desktop app has no tray yet, so the switch did
+            # nothing anywhere. Kept in the schema so a stored value survives until the tray exists.
             {"id": "tray_battery", "label": "Show Battery in Tray", "kind": "toggle",
-             "desc": "Show battery status in the system tray / menu bar. Available in the desktop "
-                     "app; the tray does not exist in the browser build.", "default": False,
-             "provenance": APP_ONLY,
-             "deferred": "Ships with the desktop (Electron) app -- there is no system tray to draw "
-                         "into from the browser dev build.", "deferred_badge": "desktop app"},
+             "desc": "Show battery status in the system tray / menu bar.", "default": False,
+             "provenance": APP_ONLY, "hidden": True},
             {"id": "interface_scaling", "label": "Interface Scaling", "kind": "slider",
              "desc": "Zoom the interface. 0 = default.",
              "min": -500, "max": 500, "default": 0, "unit": "", "provenance": APP_ONLY},

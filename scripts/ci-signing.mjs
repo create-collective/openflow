@@ -21,7 +21,8 @@
 //     node scripts/ci-signing.mjs --check     say what would happen, change nothing
 //     node scripts/ci-signing.mjs --verify    after the build: prove the artefacts are signed
 import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { appendFileSync, existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -58,6 +59,38 @@ function plan() {
   return "signed";
 }
 
+// The Developer ID certificate goes into a keychain of our own, which electron-builder is then
+// pointed at (CSC_KEYCHAIN), instead of handing it the .p12 through CSC_LINK. electron-builder
+// 26 makes its keychain with a random password and then gives set-key-partition-list the .p12
+// password where the keychain's belongs. macOS 15 lets that through; macOS 26 (macos-latest)
+// rejects it and fails the build: "SecKeychainUnlock: The user name or passphrase you entered
+// is not correct". The partition list is what lets codesign use the key without a prompt.
+function macKeychain(scratch) {
+  const keychain = join(scratch, "openflow-signing.keychain-db");
+  const p12 = join(scratch, "developer-id.p12");
+  const password = randomBytes(24).toString("hex");
+  const security = (...cmdArgs) => execFileSync("/usr/bin/security", cmdArgs, { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] });
+  writeFileSync(p12, Buffer.from(env("APPLE_CERTIFICATE_P12"), "base64"), { mode: 0o600 });
+  try {
+    security("create-keychain", "-p", password, keychain);
+    security("set-keychain-settings", "-lut", "21600", keychain);   // stays unlocked for the whole build
+    security("unlock-keychain", "-p", password, keychain);
+    security("import", p12, "-k", keychain, "-f", "pkcs12", "-P", env("APPLE_CERTIFICATE_PASSWORD"),
+      "-T", "/usr/bin/codesign", "-T", "/usr/bin/productbuild");
+    security("set-key-partition-list", "-S", "apple-tool:,apple:,codesign:", "-s", "-k", password, keychain);
+  } finally {
+    unlinkSync(p12);
+  }
+  // codesign resolves the certificate chain only through keychains on the search list.
+  const searchList = security("list-keychains", "-d", "user").split("\n")
+    .map((line) => line.trim().replace(/^"|"$/g, "")).filter(Boolean);
+  security("list-keychains", "-d", "user", "-s", keychain, ...searchList);
+  const identities = security("find-identity", "-v", "-p", "codesigning", keychain);
+  if (!identities.includes("Developer ID Application:")) fail(`the certificate holds no Developer ID Application identity:\n${identities}`);
+  console.log(`ci-signing: keychain ready\n${identities.trim()}`);
+  return keychain;
+}
+
 function configure() {
   const mode = plan();
   if (mode === "unsigned") {
@@ -81,8 +114,7 @@ function configure() {
       const scratch = process.env.RUNNER_TEMP || tmpdir();
       const p8 = join(scratch, `AuthKey_${env("APPLE_API_KEY_ID")}.p8`);
       writeFileSync(p8, env("APPLE_API_KEY_P8") + "\n", { mode: 0o600 });
-      exportEnv("CSC_LINK", env("APPLE_CERTIFICATE_P12"));   // base64 of the .p12; electron-builder decodes it
-      exportEnv("CSC_KEY_PASSWORD", env("APPLE_CERTIFICATE_PASSWORD"));
+      exportEnv("CSC_KEYCHAIN", macKeychain(scratch));
       exportEnv("CSC_IDENTITY_AUTO_DISCOVERY", "true");
       exportEnv("APPLE_API_KEY", p8);             // electron-builder wants the PATH here
       exportEnv("APPLE_API_KEY_ID", env("APPLE_API_KEY_ID"));

@@ -11,7 +11,7 @@
 //     the largest words it has: this is the one step that needs the person at the keyboard.
 //   * what BLOCKS a start. The backend's plan returns every precondition as {code, text}; Force
 //     Update lifts the ones about a module that does not identify (plan.forceLifts), never the
-//     others -- a Track stays refused, the right half must still be unplugged.
+//     others -- the module must still be in the left bay, the right half unplugged.
 
 export const isModuleRun = (run) => !!run && String(run.id || "").startsWith("module-");
 

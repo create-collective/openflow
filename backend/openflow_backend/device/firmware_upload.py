@@ -1106,7 +1106,8 @@ def flash_module_bundle(image_path: str | Path, catalog: list, *, arm: str,
     the procedure's wait, which only ever resets a half it can see still sitting there.
 
     GATED: reached only through the FIRMWARE_FLASH_ENABLED endpoints. The upload shape matches the
-    vendor's capture; this function itself has not yet run on hardware.
+    vendor's capture, and module flashes through module_procedure, which uploads with this
+    function, have run on hardware since 2026-09-23 (a Track downgrade among them).
     """
     if state is None:
         state = rec.read_running_image(catalog)

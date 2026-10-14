@@ -233,7 +233,7 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
         onClick={start}
         disabled={starting || gateOff || !anyChosen || docked || needsAccept}
         title={
-          gateOff ? "Firmware flashing is switched off in this build"
+          gateOff ? "Firmware updates are held back in this release"
             : docked ? "Undock the modules first"
             : !anyChosen ? "Choose a half to update"
             : needsAccept ? "Confirm above that the current firmware can be replaced"
@@ -277,10 +277,12 @@ export default function FirmwareUpdate({ connected, dockedModules = [] }) {
         {!running && !verdict && plan && (
           <>
             {gateOff && (
-              <Notice title="Flashing is switched off in this build">
-                The whole procedure is wired and tested, but the gate that lets it write is set
-                by the environment (OPENFLOW_ENABLE_FIRMWARE_FLASH) and is off here. Nothing
-                below will be sent.
+              <Notice title="Firmware updates are held back in this release"
+                details={<>Writing is switched on by the environment variable
+                  OPENFLOW_ENABLE_FIRMWARE_FLASH=1 when OpenFlow starts; release builds ship
+                  without it.</>}>
+                You can choose a version and see what each half would get, but nothing below
+                will be sent to the keyboard.
               </Notice>
             )}
 

@@ -1,7 +1,7 @@
 {
   "name": "openflow",
   "productName": "OpenFlow",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "OpenFlow desktop app: the Electron shell around the frozen Python backend and the built renderer.",
   "homepage": "https://github.com/create-collective/openflow",
@@ -74,9 +74,17 @@
     "portable": {
       "artifactName": "${productName}-${version}-win-${arch}-portable.${ext}"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "create-collective",
+        "repo": "openflow"
+      }
+    ],
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "category": "public.app-category.utilities",
       "icon": "build/icon.png",
@@ -93,7 +101,7 @@
       "icon": "build/icon.png",
       "synopsis": "Configure the Naya Create keyboard, offline",
       "description": "Configure the Naya Create keyboard offline: key bindings, lighting, modules and macros.",
-      "maintainer": "traviswye <traviswye@gmail.com>",
+      "maintainer": "traviswye <travis.createcollective@gmail.com>",
       "syncDesktopName": true,
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     },
@@ -104,5 +112,8 @@
         "build/linux/70-openflow.rules=/usr/lib/udev/rules.d/70-openflow.rules"
       ]
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

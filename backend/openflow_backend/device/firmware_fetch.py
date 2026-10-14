@@ -17,11 +17,10 @@ WHERE FROM. `OPENFLOW_FIRMWARE_SOURCE`, defaulting to the create-legacy-firmware
 every NayaFlow installer this project has unpacked was kept. The layout there is exactly the
 catalogue's `historyPath`: <source>/v1.25.1/kb_fwl.bin.
 
-That archive is PRIVATE as of 2026-09-21, so an unauthenticated fetch gets a 404 dressed up as
-"not found" rather than "not allowed" -- GitHub hides private repositories rather than admitting
-to them. `OPENFLOW_FIRMWARE_TOKEN` (or GITHUB_TOKEN) is sent as a bearer token when set, which is
-how the owner fetches from it today. Until the source is public, or a public mirror exists, this
-does nothing for anybody else, and the UI says so rather than reporting a mysterious 404. Nothing
+That archive is public (since 2026-09-21), so a plain fetch works. `OPENFLOW_FIRMWARE_TOKEN` (or
+GITHUB_TOKEN) is still sent as a bearer token when set, for a private mirror; GitHub answers a
+private repository it will not admit to with a 404 dressed up as "not found", and the UI says so
+rather than reporting a mysterious 404. Nothing
 here reads or stores a token beyond passing it to the one host it was configured for.
 
 CUSTOM FIRMWARE, LATER. The plan is a community-signed bootloader and an open firmware, and at
@@ -84,10 +83,10 @@ def holdings(catalog: list, dest: Path) -> list[dict]:
     """Every catalogued image that IS a file, and whether this machine has it.
 
     Downloadable is not the same question as flashable, and conflating them was wrong twice over.
-    The module bundles and the dongle image are withheld from FLASHING until the path is proven on
-    a donor unit -- that is a statement about writing to a keyboard, not about keeping a copy of a
-    file -- and two pre-production keyboard images are withheld because nobody can say which side
-    or generation they are. All of them are part of the archive this library exists to mirror, and
+    Some images are withheld from FLASHING -- the dongle image (no hardware to prove it on), the
+    module apps that are not shipping modules, and pre-production keyboard images nobody can place
+    by side or generation -- and that is a statement about writing to a keyboard, not about keeping
+    a copy of a file. All of them are part of the archive this library exists to mirror, and
     refusing to download them left "a ton of firmware history" on screen with nine of its files
     unobtainable and no reason given. `flashable` is carried per row instead, so the page can say
     which is which.

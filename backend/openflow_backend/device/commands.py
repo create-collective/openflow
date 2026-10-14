@@ -26,20 +26,24 @@ def dispatch(svc: DeviceService, event: str, frames: list, *, side: str = "left"
         # because it can wipe staged firmware + on-device keymaps.
         if not force:
             return {"event": event, "status": "test-only", **svc.spi_flash_test(side)}
-        raise CommandError("Destructive flash repair not yet wired (needs force + confirm flow)")
+        raise CommandError("The destructive flash repair (format partition / erase chip) is a recovery "
+                           "procedure, held back in this release")
 
     if event == "clear_ble_devices":
         return {"event": event, **svc.clear_ble_devices(side, force=force)}
 
     if event == "clear_data":
-        # REMAP CLEAR ALL DATA — Phase 2 (destructive keymap wipe).
-        raise CommandError("clear_data (REMAP CLEAR_ALL_DATA) is Phase 2 work")
+        # REMAP CLEAR ALL DATA: the "clear all keymap data" recovery procedure (recovery_ops).
+        raise CommandError("clear_data is the 'clear all keymap data' recovery procedure, held back "
+                           "in this release")
 
     if event == "create_pairing_start":
-        raise CommandError("create_pairing_start (pairing workflow) is Phase 2 work")
+        raise CommandError("create_pairing_start: pairing runs through the guided split-link repair "
+                           "(Settings › Troubleshooting)")
 
     if event in ("update_create_fw", "update_module_fw"):
-        # Phase 3 — blocked on obtaining a firmware image (NayaOS open problem).
-        raise CommandError(f"{event} (firmware update) is blocked until a firmware image is obtained")
+        # Firmware updates run as a procedure with a plan and an arm token (/rpc/flash-procedure,
+        # /rpc/flash-module-procedure), never as a fire-and-forget command.
+        raise CommandError(f"{event}: firmware updates run from Settings › Firmware, not as a command")
 
     raise CommandError(f"unknown command event: {event}")

@@ -1,0 +1,67 @@
+name: Bug report
+description: Something in OpenFlow did not work the way it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If OpenFlow starts, **More › Report a bug** inside the app is quicker: it attaches the version, the page you were on and the device details for you.
+  - type: input
+    id: version
+    attributes:
+      label: OpenFlow version
+      description: Settings › About, or the Hub's "What's new" heading.
+      placeholder: "0.7.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (.deb)
+        - Linux (AppImage)
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where it happened
+      options:
+        - Installing or starting OpenFlow
+        - Reading from or flashing to the keyboard
+        - Bindings and layers
+        - LED Map
+        - Modules
+        - Macros
+        - Devices (status, Bluetooth, split link)
+        - Settings
+        - Updates
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Keyboard firmware
+      description: Devices › Information shows what each half runs. Leave empty if the keyboard is not involved.
+      placeholder: "Left 3.41.0, right 3.41.0, Tune docked"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log lines
+      description: |
+        The relevant lines from `logs/backend.log` (and `logs/sidecar.log` if OpenFlow would not start) in OpenFlow's data folder:
+        Windows `%APPDATA%\OpenFlow`, macOS `~/Library/Application Support/OpenFlow`, Linux `~/.local/share/OpenFlow`.
+      render: text

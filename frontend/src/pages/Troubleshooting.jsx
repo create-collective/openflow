@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import BleSlots from "../components/BleSlots";
+import BootloaderCheck from "../components/BootloaderCheck";
 import { useShowAllKeyboards, visibleHalves } from "../lib/showAllKeyboards";
 import useRunLog from "../lib/useRunLog";
 import Badge from "../components/ui/Badge";
@@ -423,6 +424,7 @@ export default function Troubleshooting() {
                 own. Switch it off and on again. If it comes straight back here, its firmware needs
                 reinstalling.
               </div>
+              <BootloaderCheck />
             </div>
           )}
           {/* A DIFFERENT keyboard, not merely an old reading. Everything below -- ports,

@@ -81,11 +81,11 @@ describe("Settings → Firmware", () => {
     stream.data = { status: { halves: [half()] } };
     await openFirmwareTab();
     await screen.findByText("Firmware library");
-    expect(screen.queryByRole("button", { name: /check openflow for updates/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^check for updates$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /create companion/i })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: /about/i }));
-    expect(await screen.findByRole("button", { name: /check openflow for updates/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /^check for updates$/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /firmware ↗/i })).toBeInTheDocument();
     // The About tab says nothing about the board.
     expect(screen.queryByText("Firmware library")).not.toBeInTheDocument();

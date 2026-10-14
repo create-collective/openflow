@@ -6,6 +6,11 @@
 # row per architecture) and Linux (AppImage + deb, SCRUM-70) are here. Everyday checks live in
 # openflow-ci.yml.
 #
+# In-app updates: electron-builder writes latest.yml / latest-mac.yml / latest-linux.yml next to
+# the installers (the GitHub publish target in package.json; nothing is uploaded by it). They go
+# on the draft release with the installers, the two Mac rows' files merged into one by the
+# release job; installed copies read them only once the owner publishes the release.
+#
 # Signing: Windows through Azure Artifact Signing, macOS with a Developer ID certificate plus
 # notarization. Both switch on by themselves once the secrets and variables named in the
 # "code signing" step exist (scripts/ci-signing.mjs has the list); until then the builds are
@@ -37,10 +42,12 @@ jobs:
           # never started. An Intel build DOES run on Apple Silicon through Rosetta, so when
           # runner minutes matter more than speed, keep the x64 row alone and drop the arm64
           # one. macOS runners bill at 10x the Linux rate on a private repository.
+          # dmg AND zip: the zip is what an installed copy's updater downloads (Squirrel.Mac
+          # takes nothing else), and a target named here replaces package.json's mac.target.
           - os: macos-latest
-            target: --mac dmg --arm64
+            target: --mac dmg zip --arm64
           - os: macos-15-intel
-            target: --mac dmg --x64
+            target: --mac dmg zip --x64
           # Linux: an AppImage that runs on most distributions, and a .deb that also installs
           # the udev rule (build/linux/70-openflow.rules) letting the user open the keyboard's
           # serial ports. Built on the OLDEST Ubuntu image on purpose: the frozen sidecar links
@@ -107,13 +114,16 @@ jobs:
         run: npm run build:app -- ${{ matrix.target }}
       - name: the artefacts are signed (when signing is on)
         run: node scripts/ci-signing.mjs --verify
+      - name: name this Mac row's update file by its architecture (the release job merges them)
+        if: runner.os == 'macOS'
+        run: mv release/latest-mac.yml "release/latest-mac-$(uname -m).yml"
       - name: checksums
         env:
           SUMS_FOR: ${{ matrix.os }}     # not process.platform: both Mac rows report darwin
         run: |
           node -e '
             const fs = require("fs"), crypto = require("crypto");
-            const out = fs.readdirSync("release").filter(f => /\.(exe|dmg|AppImage|deb)$/.test(f))
+            const out = fs.readdirSync("release").filter(f => /\.(exe|dmg|zip|AppImage|deb)$/.test(f))
               .map(f => crypto.createHash("sha256").update(fs.readFileSync("release/" + f)).digest("hex") + "  " + f);
             fs.writeFileSync("release/SHA256SUMS-" + process.env.SUMS_FOR + ".txt", out.join("\n") + "\n");
             console.log(out.join("\n"));'
@@ -123,8 +133,11 @@ jobs:
           path: |
             release/*.exe
             release/*.dmg
+            release/*.zip
             release/*.AppImage
             release/*.deb
+            release/latest*.yml
+            release/*.blockmap
             release/SHA256SUMS-*.txt
           if-no-files-found: error
 
@@ -135,12 +148,22 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
+      - name: one latest-mac.yml for both Mac builds
+        run: node scripts/merge-mac-update-info.mjs artifacts
+      - name: release notes (which file is which, then the Hub's own "What's new")
+        id: notes
+        run: |
+          v="${GITHUB_REF_NAME#openflow-v}"
+          node scripts/release-notes.mjs "$v" > RELEASE_NOTES.md
+          echo "version=$v" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
+          name: OpenFlow ${{ steps.notes.outputs.version }}
+          body_path: RELEASE_NOTES.md
           files: artifacts/*
-          generate_release_notes: true
           draft: true          # the owner publishes; nothing goes public by itself
