@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { baysFromHalves, readDockedModules, lastDockedModules } from "../lib/dockedModules";
 import { useDeviceStream } from "../lib/deviceStream";
 import { subscribeDeviceState, getDeviceState, deviceHasBeenRead } from "../lib/deviceState";
-import { setShortcutTable } from "../lib/shortcutNames";
+import { setShortcutOverrides, setShortcutTable } from "../lib/shortcutNames";
 import { POS_LABEL } from "../lib/layout";
 import { actionText } from "../lib/keylabels";
 import { clearSaved, useOnDeviceRead } from "../lib/deviceActions";
@@ -65,6 +65,7 @@ export default function Bindings() {
       const [acts, mac, mods] = await Promise.all([api.actions(), api.macros(), api.modules()]);
       setCatalog(acts);
       setShortcutTable(acts.shortcuts);
+      setShortcutOverrides(acts.shortcutOverrides, acts.namingPlatform);
       setMacros(mac.macros || []);
       setModuleProfiles(mods.modules || []);
     } catch (e) {

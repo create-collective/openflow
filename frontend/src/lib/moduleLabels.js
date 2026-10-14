@@ -2,7 +2,7 @@
 // Pure functions, so they are testable on their own and the page and its components share
 // one vocabulary instead of each carrying a copy.
 import { MOUSE_DIRECTIONS } from "./mousedict";
-import { shortcutInfo, shortcutLabel } from "./shortcutNames";
+import { shortcutInfo, shortcutLabel, shortcutOverrideLabel } from "./shortcutNames";
 
 export const TYPE_ORDER = ["TOUCH", "TRACK", "TUNE"];
 
@@ -41,7 +41,8 @@ export function makeLabelFor(actions) {
   // The eight single directions a split half can hold are not catalog actions (they are the
   // halves of the motion pairs), so their names come from the mouse dictionary.
   for (const d of MOUSE_DIRECTIONS) if (!byCode.has(d.code)) byCode.set(d.code, d.label);
-  return (code) => (code && byCode.get(code)) || cleanCode(code);
+  // A chord renamed for the chosen OS beats the list's label, which is the dictionary's name.
+  return (code) => (code && (shortcutOverrideLabel(code) || byCode.get(code))) || cleanCode(code);
 }
 
 // A RAW_ code is the decoder saying it could not name what the field holds. Two different

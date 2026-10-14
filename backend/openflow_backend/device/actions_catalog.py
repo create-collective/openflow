@@ -15,6 +15,7 @@ round-trips.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 # action_type -> ZMK behaviour (reference; device-constants.txt 226-233)
@@ -567,12 +568,32 @@ def _describe(action: dict, names: dict) -> dict:
     return out
 
 
-def get_catalog() -> dict:
+def naming_platform() -> str:
+    """"mac" or "win": whose names a bound chord is shown by (Settings > Shortcut Names).
+
+    Auto follows the computer the app runs on. Linux reads as Windows: its chords are the
+    Ctrl-based ones, and there is no Linux preset to name them by.
+    """
+    try:
+        from ..db import settings as _settings
+        chosen = _settings.get_value("shortcut_names")
+    except Exception:                      # no database yet: name for this computer
+        chosen = "Auto"
+    if chosen == "macOS":
+        return "mac"
+    if chosen == "Windows":
+        return "win"
+    return "mac" if sys.platform == "darwin" else "win"
+
+
+def get_catalog(platform: str | None = None) -> dict:
     from . import shortcuts as _sc
 
+    platform = platform or naming_platform()
     names = nayaflow_names()
     tabs = []
     flat: dict = {}
+    mac_presets: dict = {}
     for t in _tabs():
         cats = []
         for c in t.get("categories") or []:
@@ -580,8 +601,25 @@ def get_catalog() -> dict:
             for a in actions:
                 flat.setdefault(a["code"], {k: a[k] for k in ("label", "name", "tooltip", "alias", "aliasTooltip", "icon")
                                             if k in a})
+                if c.get("name") == "MacOS":
+                    mac_presets.setdefault(a["code"], a)
             cats.append({**c, "actions": actions})
         tabs.append({**t, "categories": cats})
+
+    # A binding stores only the chord, so a bound key or gesture is named by looking the chord
+    # up -- and the first entry found is our dictionary's, which is written for Windows: Mission
+    # Control bound on a Mac read back as "Scroll up one line". Naming for macOS, the MacOS
+    # preset's name leads wherever there is one. Naming for Windows nothing changes. The palette
+    # lists are untouched either way: each entry keeps the name of the category it sits in.
+    overrides: dict = {}
+    if platform == "mac":
+        for code, a in mac_presets.items():
+            if a.get("name") and a["name"] != flat.get(code, {}).get("name"):
+                overrides[code] = {k: a[k] for k in ("name", "tooltip", "icon") if a.get(k)}
+    for code, o in overrides.items():
+        was = flat.get(code, {})
+        flat[code] = {**({"label": was["label"]} if "label" in was else {}), **o,
+                      **({"alias": was["name"]} if was.get("name") else {})}
 
     return {
         "tabs": tabs,
@@ -598,4 +636,9 @@ def get_catalog() -> dict:
         "shortcuts": {s["code"]: {k: s[k] for k in ("name", "chord", "icon", "group", "platform")
                                   if k in s}
                       for s in _sc.all_shortcuts()},
+        # Whose names `names` uses ("mac" or "win"), and the chords renamed for it. `shortcuts`
+        # stays the dictionary as written (palette search lists it), so the frontend applies
+        # these on top wherever it names a BOUND chord (lib/shortcutNames.js).
+        "namingPlatform": platform,
+        "shortcutOverrides": overrides,
     }

@@ -11,7 +11,7 @@ import { confirmDialog } from "./dialogs";
 import { subscribeDeviceState, getDeviceState } from "./deviceState";
 import { useOnDeviceRead } from "./deviceActions";
 import { downloadJSON, pickJSONFile, safeName } from "./files";
-import { setShortcutTableFromActions } from "./shortcutNames";
+import { setShortcutOverrides, setShortcutTableFromActions } from "./shortcutNames";
 import { axisHalfNames, byGesture, gestureName, makeLabelFor, okForKind, parseAxisHalfId } from "./moduleLabels";
 
 export default function useModuleEditor() {
@@ -61,7 +61,12 @@ export default function useModuleEditor() {
     }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
-  useEffect(() => { api.actions().then(setCatalog).catch(() => {}); }, []);
+  useEffect(() => {
+    api.actions().then((c) => {
+      setShortcutOverrides(c?.shortcutOverrides, c?.namingPlatform);
+      setCatalog(c);
+    }).catch(() => {});
+  }, []);
 
   async function addProfile(variant) {
     setAdding(false);

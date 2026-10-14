@@ -132,3 +132,39 @@ def test_every_chord_still_encodes_to_the_bytes_it_claims():
             bad.append((s["chord"], s.get("bytes"), got))
     assert not bad, bad
     print(f"  all {len(SC.all_shortcuts())} chords encode to the bytes they carry")
+
+
+def test_a_bound_chord_is_named_for_the_chosen_os():
+    """Mission Control bound to a gesture read back as "Scroll up one line": a binding stores only
+    the chord, and the bound-chord lookup took the dictionary's (Windows-flavoured) name."""
+    mac = AC.get_catalog("mac")
+    assert mac["namingPlatform"] == "mac"
+    assert mac["names"]["LCTRL + UP"]["name"] == "Mission Control"
+    assert mac["names"]["LCTRL + UP"]["alias"] == "Scroll up one line", "the other name stays findable"
+    assert mac["shortcutOverrides"]["LCTRL + DOWN"]["name"].startswith("App Expos")
+    # The palette lists and the dictionary are not renamed: each entry keeps its category's name.
+    assert _one("LCTRL + UP", "shortcuts", "Caret & selection")["name"] == "Scroll up one line"
+    assert mac["shortcuts"]["LCTRL + UP"]["name"] == "Scroll up one line"
+
+    win = AC.get_catalog("win")
+    assert win["shortcutOverrides"] == {}, "naming for Windows changes nothing"
+    assert win["names"]["LCTRL + UP"]["name"] == "Scroll up one line"
+    print("  a bound chord is named for the OS the setting chooses")
+
+
+def test_the_setting_chooses_the_os(monkeypatch):
+    from openflow_backend.db import settings as S
+    try:
+        S.set_setting("shortcut_names", "macOS")
+        assert AC.naming_platform() == "mac"
+        assert AC.get_catalog()["names"]["LCTRL + UP"]["name"] == "Mission Control"
+        S.set_setting("shortcut_names", "Windows")
+        assert AC.naming_platform() == "win"
+        S.set_setting("shortcut_names", "Auto")
+        monkeypatch.setattr(AC.sys, "platform", "darwin")
+        assert AC.naming_platform() == "mac", "Auto follows this computer"
+        monkeypatch.setattr(AC.sys, "platform", "win32")
+        assert AC.naming_platform() == "win"
+    finally:
+        S.set_setting("shortcut_names", "Auto")
+    print("  Auto follows the computer; macOS and Windows override it")

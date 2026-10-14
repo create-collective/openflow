@@ -6,6 +6,7 @@ import {
   axisHalfId, axisHalfNames, byGesture, cleanCode, displayAction, gestureName, makeLabelFor,
   okForKind, parseAxisHalfId, statusBadge, targetLabel,
 } from "../../src/lib/moduleLabels";
+import { setShortcutOverrides, setShortcutTable, shortcutInfo } from "../../src/lib/shortcutNames";
 
 describe("gesture ordering and names", () => {
   it("sorts the canonical gestures first and unknown ones last", () => {
@@ -27,6 +28,22 @@ describe("action labels", () => {
     expect(labelFor("SCROLL_UP - SCROLL_DOWN")).toBe("Vertical Scroll");
     expect(labelFor("SOME_CODE - OTHER")).toBe("SOME CODE / OTHER");
     expect(cleanCode("")).toBe("—");
+  });
+  it("names a bound chord for the OS chosen in Settings, over the list's label", () => {
+    // Reported: Mission Control bound to a gesture read back as "Scroll up one line". The
+    // binding holds only the chord; the catalog's overrides say what it is called on a Mac.
+    const actions = [{ code: "LCTRL + UP", label: "Scroll up one line  (Ctrl + Up)" }];
+    setShortcutTable({ "LCTRL + UP": { name: "Scroll up one line", chord: "Ctrl + Up", platform: "any" } });
+    try {
+      setShortcutOverrides({}, "win");
+      expect(makeLabelFor(actions)("LCTRL + UP")).toBe("Scroll up one line  (Ctrl + Up)");
+      setShortcutOverrides({ "LCTRL + UP": { name: "Mission Control" } }, "mac");
+      expect(makeLabelFor(actions)("LCTRL + UP")).toBe("Mission Control (Ctrl + Up)");
+      expect(shortcutInfo("LCTRL + UP")).toMatchObject({ name: "Mission Control", platform: "mac" });
+    } finally {
+      setShortcutOverrides({}, "any");
+      setShortcutTable({});
+    }
   });
   it("keeps the two RAW cases apart from Unassigned", () => {
     const labelFor = (c) => c;

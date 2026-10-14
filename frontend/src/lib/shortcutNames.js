@@ -32,9 +32,36 @@ export function setShortcutTableFromActions(actions) {
   if (Object.keys(next).length) table = { ...table, ...next };
 }
 
-/** The dictionary entry for a code, or null. */
+// Chords renamed for the OS the names are for (Settings > Shortcut Names), from the catalog's
+// shortcutOverrides. A binding stores only the chord, and the dictionary is written for Windows,
+// so without these Mission Control bound on a Mac read back as "Scroll up one line".
+let overrides = {};
+let overridePlatform = "any";
+
+/** Apply the catalog's per-OS names on top of the dictionary. */
+export function setShortcutOverrides(map, platform) {
+  overrides = map || {};
+  overridePlatform = platform || "any";
+}
+
+/** The dictionary entry for a code, renamed for the chosen OS where it differs, or null. */
 export function shortcutInfo(code) {
-  return table[(code || "").trim()] || null;
+  const c = (code || "").trim();
+  const info = table[c] || null;
+  const o = overrides[c];
+  return info && o ? { ...info, name: o.name, platform: overridePlatform } : info;
+}
+
+/**
+ * "Name (Chord)" for a chord renamed for the chosen OS, or null when it is not renamed. For
+ * labels that come from an action list rather than the dictionary (the Modules page), which
+ * would otherwise keep the dictionary's name.
+ */
+export function shortcutOverrideLabel(code) {
+  const o = overrides[(code || "").trim()];
+  if (!o) return null;
+  const info = shortcutInfo(code);
+  return info?.chord ? `${o.name} (${info.chord})` : o.name;
 }
 
 /**

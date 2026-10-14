@@ -149,6 +149,17 @@ SETTINGS_SCHEMA = [
             {"id": "interface_scaling", "label": "Interface Scaling", "kind": "slider",
              "desc": "Zoom the interface. 0 = default.",
              "min": -500, "max": 500, "default": 0, "unit": "", "provenance": APP_ONLY},
+            # One chord can mean different things per OS: Ctrl+Up is Mission Control on a Mac and
+            # scrolls a line on Windows. A binding stores only the chord, so a bound key or
+            # gesture is named by this setting. Auto follows the computer the app runs on; the
+            # override is for building a profile for the other OS. Reported: Mission Control bound
+            # to a gesture read back as "Scroll up one line".
+            {"id": "shortcut_names", "label": "Shortcut Names", "kind": "select",
+             "desc": "Some shortcuts do different things on macOS and Windows (Ctrl + Up is "
+                     "Mission Control on a Mac and scrolls on Windows). Choose whose names bound "
+                     "keys and gestures show. Auto follows this computer.",
+             "options": ["Auto", "macOS", "Windows"], "default": "Auto",
+             "provenance": APP_ONLY},
         ],
     },
 ]
@@ -255,6 +266,18 @@ def get_settings() -> dict:
         return {"groups": groups}
     finally:
         conn.close()
+
+
+def get_value(key: str):
+    """One field's current value (stored or default)."""
+    field = _FIELD_BY_ID[key]
+    conn = connect()
+    try:
+        row = conn.execute("SELECT value FROM settings WHERE correlation_id=?",
+                           (storage_key(field),)).fetchone()
+    finally:
+        conn.close()
+    return field["default"] if row is None else _coerce(field, _from_wire(field, row["value"]))
 
 
 def set_setting(key: str, value) -> dict:
