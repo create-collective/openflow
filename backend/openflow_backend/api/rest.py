@@ -2209,6 +2209,13 @@ def _flash_preview(profile_id: str | None = None, side: str = "left",
         mod_read = get_service().read_module_configs(side, target)
     except Exception:
         pass
+    # The keymap too, best effort, to say which keys this flash empties (SCRUM-118). Without it
+    # `cleared` is None ("not known"), and the flash still checks against its own read.
+    board = None
+    try:
+        board = flash_mod.desired_from_device_read(get_service().read_keymap(side, target))
+    except Exception:
+        pass
     conn = db_connect()
     try:
         desired = flash_mod.desired_from_db(conn, profile_id)
@@ -2216,8 +2223,13 @@ def _flash_preview(profile_id: str | None = None, side: str = "left",
                   if mod_read is not None else None)
     finally:
         conn.close()
+    cleared = flash_mod.cleared_keys(desired, board) if board is not None else None
     out = flash_mod.flash(desired, dry_run=True, full=True)
     out["profileId"] = desired.profile_id
+    out["cleared"] = cleared
+    # Layers this flash would mostly clear. The UI asks for a yes before Confirm on these, and
+    # sends allowBulkClear with it.
+    out["bulkClear"] = flash_mod.bulk_clear_layers(cleared or [], board)
     out["modules"] = _layout_summary(layout)
     # Bays the first layer leaves unarmed. The UI blocks Confirm on these (SCRUM-61).
     out["baseBayGaps"] = list((layout or {}).get("baseBayGaps") or [])
@@ -2281,6 +2293,9 @@ async def flash_write(body: dict = Body(default={})) -> dict:
     fields are stale. (A key the profile DOES set owns its second bank: with no double-tap /
     tap+hold in the profile, that slot is written NONE rather than carried through, because a
     stale shadow there is exactly what made NayaFlow fail to verify; see flash._own_second_bank.)
+    A key the profile leaves EMPTY is cleared to NONE, both banks, unless the board holds it as
+    transparent (flash._apply_empty_keys); a flash that would clear most of a layer that way is
+    refused without `{"allowBulkClear": true}`.
     If the read fails, the flash is refused, because a plan built without it would blank all
     of that.
 
@@ -2335,6 +2350,17 @@ async def flash_write(body: dict = Body(default={})) -> dict:
                 "the first layer leaves module bays unset: " + ", ".join(gaps)
                 + ". Pick a profile (or 'disabled') for each on the Bindings board, or pass "
                   "allowBaseBayGaps=true to flash anyway."))
+        # Empty keys are cleared on the board now (SCRUM-118). A flash that would clear most of
+        # a layer -- a new, empty profile flashed as it is -- needs a yes first. The preview
+        # asks; this holds the line for a caller that did not, or a board that changed since.
+        if current is not None and body.get("allowBulkClear") is not True:
+            bulk = flash_mod.bulk_clear_layers(flash_mod.cleared_keys(desired, current), current)
+            if bulk:
+                raise HTTPException(status_code=400, detail=(
+                    "this flash clears most of the keys on "
+                    + ", ".join(f"layer {b['layer']} ({b['cleared']} of {b['bound']})" for b in bulk)
+                    + ": the profile leaves them empty. Give them functions, or pass "
+                      "allowBulkClear=true to clear them."))
 
         # The target keyboard, when several are attached. _require_side refuses to guess
         # between them, so an untargeted flash with two boards is stopped rather than landing
@@ -2403,6 +2429,8 @@ async def flash_write(body: dict = Body(default={})) -> dict:
 
     try:
         return await run_in_threadpool(_run)
+    except HTTPException:
+        raise         # the refusals above, as they are: wrapped below they arrived as a 500
     except flash_mod.AmbiguousProfileError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except TransportError as e:

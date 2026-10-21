@@ -131,6 +131,12 @@ class DesiredState:
     # _own_second_bank must leave these to the board. Blanking them is how a double-tap NayaFlow
     # wrote, which read back as RAW, used to vanish on the next OpenFlow flash with no report.
     keep_second_bank: dict[int, set[int]] = field(default_factory=dict)
+    # {layer: {pos}}: keys the profile leaves with no binding at all. An empty key is the
+    # user's choice, not an absence of opinion, so compute_plan writes it as NONE -- except over
+    # a key the board holds as TRANSPARENT (see _apply_empty_keys). Before this, an empty key
+    # fell through to whatever the board already had, so unassigning a key and flashing left
+    # the old function on it (SCRUM-118).
+    empty_keys: dict[int, set[int]] = field(default_factory=dict)
 
 
 def desired_from_read(read_json: dict) -> DesiredState:
@@ -153,6 +159,9 @@ def desired_from_read(read_json: dict) -> DesiredState:
 # The LED record is [led][hue u16][SATURATION]. Not brightness -- see keymap_read.hsv_to_hex for
 # the evidence. Writing brightness here is what turned every white key RED on the keyboard.
 _hex_to_hue_sat = keymap_read.hex_to_hue_sat
+# keys.color_hex when a key has no colour (db.userdata.UNSET_COLOR; repeated, not imported, so
+# the device layer does not depend on the DB package).
+UNSET_COLOR_HEX = "#xxxxxx"
 
 
 def desired_from_device_read(read: dict) -> DesiredState:
@@ -245,10 +254,12 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
             (lrow["id"],))
         # group multiple binding rows per position (tap+hold)
         by_pos: dict[int, list] = {}
-        colors: dict[int, str] = {}
+        colors: dict[int, str | None] = {}
+        key_rows: set[int] = set()
         for r in q:
             if r["p"] is None:
                 continue
+            key_rows.add(r["p"])
             # LED positions and BINDING positions are different domains, and conflating them
             # discarded colour. Layer records stop at 0x51 (FULL_LAYER_POSITIONS), but the LED
             # map is its own thing -- the DB models 97 key positions and the board reports 136
@@ -263,8 +274,10 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
             # wire: it is what would have striped the left bay purple and orange over green
             # (planned against the 2026-09-09 read). NayaFlow's own flash behaves the same
             # way -- its stored values at 90-96 never appear on the board as colours.
-            if r["color_hex"] and r["p"] <= keymap_read.LAST_KEYED_LED:
-                colors[r["p"]] = r["color_hex"]
+            if r["p"] <= keymap_read.LAST_KEYED_LED:
+                # None = "No colour" (stored as the '#xxxxxx' sentinel, or empty).
+                colors[r["p"]] = (None if r["color_hex"] in (None, "", UNSET_COLOR_HEX)
+                                  else r["color_hex"])
             if r["at"] is not None and r["p"] in FULL_LAYER_POSITIONS:
                 by_pos.setdefault(r["p"], []).append(r)
         for pos, rows in by_pos.items():
@@ -306,8 +319,17 @@ def desired_from_db(conn, profile_id: str | None = None) -> DesiredState:
                 d.keep_second_bank.setdefault(idx, set()).add(pos + SECOND_BANK)
             if second is not None:
                 d.layers[idx][pos + SECOND_BANK] = second
+        # Keys with no binding at all. Binding keys only (0x00-0x49): the module bays have their
+        # own path, and positions past the binding range have no record to clear.
+        d.empty_keys[idx] = {p for p in key_rows
+                             if p in SECOND_BANK_KEYS and p not in by_pos}
         for pos, hexc in colors.items():
-            if len(hexc) == 7 and hexc[0] == "#" and all(c in "0123456789abcdefABCDEF" for c in hexc[1:]):
+            if hexc is None:
+                # "No colour" has to be WRITTEN, as the same unset marker NayaFlow writes for
+                # '#xxxxxx' (hue 0, saturation 150; every unset LED in our board reads carries
+                # exactly that). Skipped, the LED kept whatever colour it had (SCRUM-117).
+                d.leds[idx][pos] = (0, keymap_read.UNSET_SATURATION)
+            elif len(hexc) == 7 and hexc[0] == "#" and all(c in "0123456789abcdefABCDEF" for c in hexc[1:]):
                 d.leds[idx][pos] = _hex_to_hue_sat(hexc)
     d.timeouts = _read_timeouts(conn)
     d.modules = _read_module_safe_fields(conn)
@@ -837,6 +859,99 @@ def _layer_needs_write(desired_layer: dict[int, tuple[int, bytes]],
     return any(current_layer.get(pos, empty) != rec for pos, rec in desired_layer.items())
 
 
+# --- empty keys (SCRUM-118) ------------------------------------------------- #
+
+# A flash that clears most of a layer's bindings asks first; this is how many cleared keys it
+# takes before "most" counts. None turns the confirmation off (the owner's call once empty-key
+# clearing is hardware-tested; decided 2026-10-21). The preview lists cleared keys either way.
+BULK_CLEAR_MIN_KEYS: int | None = 5
+
+
+def _board_rec(current: DesiredState | None, idx: int, pos: int) -> tuple[int, bytes]:
+    """What the board holds at one position; absent counts as NONE, as everywhere here."""
+    empty = (R.NONE_BEH, b"")
+    return current.layers.get(idx, {}).get(pos, empty) if current is not None else empty
+
+
+def _apply_empty_keys(desired: DesiredState, current: DesiredState | None) -> None:
+    """Write each key the profile leaves empty as NONE, so unassigning a key reaches the board.
+
+    A key the board holds as TRANSPARENT is left alone. A read stores a transparent key as an
+    empty one (keymap_read.translate has no binding for a plain TRANS), so every profile read
+    off a keyboard has its transparent keys blank, and clearing them would turn an upper
+    layer's fall-through keys into dead keys. To make one dead, the user picks Disabled.
+
+    Becoming part of `desired.layers` also makes the key own its second bank, so a stale
+    double-tap or tap+hold goes with it (_own_second_bank), and the verify checks the result.
+
+    With no read (`current` None: the preview, a recovery flash) nothing is known about the
+    board and the empty keys go out as NONE, which is what an absent position defaulted to
+    there anyway.
+    """
+    for idx, poss in desired.empty_keys.items():
+        layer = desired.layers.setdefault(idx, {})
+        for pos in poss:
+            if pos in layer or _board_rec(current, idx, pos)[0] == R.TRANS:
+                continue
+            layer[pos] = (R.NONE_BEH, b"")
+
+
+def _rec_codes(*recs: tuple[int, bytes]) -> list[str]:
+    """Board records -> the action codes they hold, for a person to recognise the key by."""
+    out: list[str] = []
+    for typ, param in recs:
+        try:
+            out += [str(code) for _b, _at, code in keymap_read.translate(typ, param, {})]
+        except Exception:
+            out.append(f"record {typ:#04x}")
+    return out
+
+
+def cleared_keys(desired: DesiredState, current: DesiredState | None) -> list[dict]:
+    """The keys this flash empties that DO something on the board now: what the preview lists.
+
+    A key counts when the board has a binding on it in either bank. A key that is already NONE
+    loses nothing, and a transparent one is not cleared (_apply_empty_keys), so neither is
+    listed. Without a read there is nothing to compare against, so nothing is listed."""
+    if current is None:
+        return []
+    out = []
+    for idx in sorted(desired.empty_keys):
+        for pos in sorted(desired.empty_keys[idx]):
+            prim = _board_rec(current, idx, pos)
+            second = _board_rec(current, idx, pos + SECOND_BANK)
+            if prim[0] == R.TRANS or (prim[0] == R.NONE_BEH and second[0] == R.NONE_BEH):
+                continue
+            out.append({"layer": idx, "position": pos,
+                        "was": _rec_codes(*(r for r in (prim, second) if r[0] != R.NONE_BEH))})
+    return out
+
+
+def bulk_clear_layers(cleared: list[dict], current: DesiredState | None) -> list[dict]:
+    """Layers where this flash clears most of the bindings the board has now: these need a yes.
+
+    "Most" is more than half of the keys on that layer with a binding of their own (transparent
+    keys do not count), and at least BULK_CLEAR_MIN_KEYS of them, so clearing one or two keys
+    never asks. The case this exists for is a new, empty profile: flashed as it is, it would
+    clear every key on the keyboard."""
+    if BULK_CLEAR_MIN_KEYS is None or current is None or not cleared:
+        return []
+    per_layer: dict[int, int] = {}
+    for c in cleared:
+        per_layer[c["layer"]] = per_layer.get(c["layer"], 0) + 1
+    out = []
+    for idx, n in sorted(per_layer.items()):
+        bound = 0
+        for pos in SECOND_BANK_KEYS:
+            prim = _board_rec(current, idx, pos)[0]
+            second = _board_rec(current, idx, pos + SECOND_BANK)[0]
+            if prim not in (R.NONE_BEH, R.TRANS) or second != R.NONE_BEH:
+                bound += 1
+        if n >= BULK_CLEAR_MIN_KEYS and n * 2 > bound:
+            out.append({"layer": idx, "cleared": n, "bound": bound})
+    return out
+
+
 def _module_led_values(colours: dict[str, str] | None) -> dict[int, tuple[int, int]]:
     """{"left": "#rrggbb"} -> {led index: (hue, saturation)} across that module's block."""
     out: dict[int, tuple[int, int]] = {}
@@ -991,6 +1106,7 @@ def compute_plan(desired: DesiredState, current: DesiredState | None = None, *,
     # board we have not tested this against.
     ops.extend(_layer_list_ops(desired, current))
 
+    _apply_empty_keys(desired, current)
     for idx in sorted(desired.layers):
         # A modelled key owns its second bank. Added to `desired` itself, not just to the
         # payload, so the read-back verify checks that each blanked slot really came back empty.
@@ -1182,6 +1298,7 @@ def flash(desired: DesiredState, *, transport=None, dest: int = 0x50, current: D
     the rendered frames, and a summary. dry_run=False requires a connected transport and is the
     only path that touches the device (ack-checked per frame, then verified via `reader`, a
     callable returning a fresh device read as a DesiredState)."""
+    cleared = cleared_keys(desired, current)
     plan = compute_plan(desired, current, full=full,
                         collect_orphans=collect_orphans, device_slots=device_slots)
     rendered = render_frames(plan, dest)
@@ -1194,6 +1311,7 @@ def flash(desired: DesiredState, *, transport=None, dest: int = 0x50, current: D
     }
     if dry_run:
         return {"dry_run": True, "summary": summary, "dropped": list(desired.dropped),
+                "cleared": cleared,
                 "frames": [f.hex() for _, frames in rendered for f in frames]}
 
     if transport is None:
@@ -1203,6 +1321,8 @@ def flash(desired: DesiredState, *, transport=None, dest: int = 0x50, current: D
     # everything the user asked for, and the result is the only place that can say so.
     if desired.dropped:
         out["dropped"] = list(desired.dropped)
+    if cleared:
+        out["cleared"] = cleared
     return out
 
 

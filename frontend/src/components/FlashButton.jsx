@@ -100,6 +100,13 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
   // sides and every other layer inherits from; a gap there leaves that module unconfigured on
   // the keyboard, so Confirm is off until it is filled (the route refuses it too).
   const bayGaps = preview?.baseBayGaps || [];
+  // Keys this profile leaves empty that do something on the keyboard now: the flash clears
+  // them (SCRUM-118). Null when the preview could not read the keyboard, which is "not known",
+  // not "none". When the flash clears most of a layer -- a new, empty profile flashed as it is
+  // -- Confirm waits for an explicit yes, and the route refuses without allowBulkClear too.
+  const cleared = preview?.cleared || [];
+  const bulkClear = preview?.bulkClear || [];
+  const [allowBulk, setAllowBulk] = useState(false);
   const bayGapName = (loc) => {
     const [type, side] = loc.split(":");
     return `${type.charAt(0).toUpperCase() + type.slice(1)}, ${(side || "").replace("keyboard_", "")} bay`;
@@ -113,6 +120,7 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
     setState("loading");
     setError("");
     setWrote(false);
+    setAllowBulk(false);
     try {
       const res = await api.flashPreview({ profileId: activeProfileId(), ...targetBody() });
       setPreview(res);
@@ -134,7 +142,8 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
         recovery
           ? { mode: "recovery", acknowledgeRecovery: true, profileId: activeProfileId(),
               ...targetBody() }
-          : { full: false, profileId: activeProfileId(), collectOrphans: true, ...targetBody() });
+          : { full: false, profileId: activeProfileId(), collectOrphans: true,
+              ...(allowBulk ? { allowBulkClear: true } : {}), ...targetBody() });
       setResult(res);
       // The flash reads the modules back on success, so publish that rather than making the
       // user read again to see the result of a write we just checked. If the follow-up read
@@ -172,6 +181,7 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
     setResult(null);
     setError("");
     setWrote(false);
+    setAllowBulk(false);
   }
 
   const s = preview?.summary;
@@ -194,10 +204,12 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
         <Button
           variant="primary"
           onClick={confirmFlash}
-          disabled={state === "writing" || bayGaps.length > 0}
+          disabled={state === "writing" || bayGaps.length > 0 || (bulkClear.length > 0 && !allowBulk)}
           title={
             bayGaps.length > 0
               ? "Layer 0 leaves a module bay unset; fill it on the Bindings board first"
+              : bulkClear.length > 0 && !allowBulk
+              ? "This flash clears most of a layer; tick the box above to confirm that is intended"
               : recovery
               ? "Overwrites the keyboard without reading it first"
               : "Writes this profile to the keyboard, then reads it back to verify"
@@ -325,6 +337,46 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
           </Notice>
         )}
 
+        {/* Keys this profile leaves empty that do something on the keyboard now. They are
+            cleared, so a key unassigned in the app stops doing its old thing (SCRUM-118);
+            listed so that is never a surprise. A key the keyboard holds as transparent is left
+            alone and is not counted. */}
+        {state === "preview" && cleared.length > 0 && (
+          <Notice tone="warn" className="flash-dropped"
+            title={`Clears ${cleared.length} key${cleared.length === 1 ? "" : "s"} on the keyboard`}>
+            <div>
+              This profile leaves {cleared.length === 1 ? "it" : "them"} empty, so after the
+              flash {cleared.length === 1 ? "it does" : "they do"} nothing. To keep one, give it a
+              function (or Transparent) on the Bindings board.
+            </div>
+            <ul>
+              {cleared.slice(0, 6).map((c) => (
+                <li key={`${c.layer}:${c.position}`}>
+                  Layer {c.layer}, key {c.position}
+                  {c.was?.length > 0 && <>: was <code>{c.was.join(", ")}</code></>}
+                </li>
+              ))}
+            </ul>
+            {cleared.length > 6 && <div>…and {cleared.length - 6} more.</div>}
+            {bulkClear.length > 0 && (
+              <>
+                <div style={{ marginTop: 8 }}>
+                  <strong>
+                    That is most of{" "}
+                    {bulkClear.map((b) => `layer ${b.layer} (${b.cleared} of its ${b.bound} keys with a function)`).join(", ")}.
+                  </strong>{" "}
+                  A new profile starts empty, so flashing one as it is clears the keyboard.
+                </div>
+                <label className="flash-accept">
+                  <input type="checkbox" checked={allowBulk}
+                    onChange={(e) => setAllowBulk(e.target.checked)} />
+                  {" "}Clear them: this profile is meant to leave these keys empty
+                </label>
+              </>
+            )}
+          </Notice>
+        )}
+
         {/* Module slots the board carries that this profile does not reference. Removed on every
             flash since 2026-09-26, as NayaFlow does: as an opt-in box, testers left it unticked
             and every stale slot kept reading back (and being captured) as a profile. Listed here
@@ -375,6 +427,12 @@ export default function FlashButton({ disabled = false, disabledTitle }) {
           <Notice tone={dropped.length ? "warn" : "ok"} className={dropped.length ? "flash-dropped" : ""}>
             <strong>Flashed and verified.</strong> {result.ops} operation(s),{" "}
             {result.frames} frame(s), read back with no differences.
+            {result.cleared?.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                Cleared {result.cleared.length} key{result.cleared.length === 1 ? "" : "s"} this
+                profile leaves empty.
+              </div>
+            )}
             {/* Verification only checks records the plan SET, so it passes even when a
                 binding could not be encoded. Saying "verified" and stopping there is what
                 made this class of bug invisible for so long. */}

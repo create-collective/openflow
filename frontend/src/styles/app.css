@@ -430,6 +430,8 @@ a.hub-update-note { color: var(--accent-text); font-weight: 600; text-decoration
 /* The unused-slot offer: amber, and the checkbox is the whole point, so no icon beside it. */
 .flash-orphans { margin-top: 12px; }
 .flash-orphans-detail { margin-top: 4px; font-size: 12px; color: var(--text-muted); }
+/* The "I meant to clear these keys" box a bulk clear waits on (same shape as .fw-accept). */
+.flash-accept { display: block; margin-top: var(--sp-2); font-weight: 600; cursor: pointer; }
 
 .flash-spinner {
   display: inline-block;
