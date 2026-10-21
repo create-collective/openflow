@@ -3,6 +3,15 @@
 // what they can now do, what stopped happening.
 const CHANGELOG = [
   {
+    version: "0.7.1",
+    date: "2026-10-21",
+    notes: [
+      "A key set to No color goes dark when you flash. Before, it kept whatever color it had.",
+      "A key with nothing assigned is cleared on the keyboard when you flash. Before, it kept its old functions, and reading the keyboard showed them again. The flash preview lists every key it will clear, and a flash that would clear most of a layer asks you to confirm first. Keys the keyboard holds as transparent are left as they are.",
+      "New in Settings › Shortcut Names (Auto, macOS or Windows): bound keys and gestures are named for the OS you choose. Mission Control bound to a gesture no longer reads as \"Scroll up one line\"; Auto follows this computer.",
+    ],
+  },
+  {
     version: "0.7.0",
     date: "2026-10-09",
     notes: [
